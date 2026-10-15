@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# NEVER COMMIT GAME DATA. Only our own source, configs and tooling belong here.
+# tools/git-hooks/pre-commit enforces this a second time (git config core.hooksPath tools/git-hooks).
+# ---------------------------------------------------------------------------
+
+# Original game files and working copies
+baserom/
+orig/
+game/
+*.iso
+*.gcm
+*.rvz
+*.ciso
+*.gcz
+*.wbfs
+*.nkit.*
+*.tgc
+*.dol
+*.rel
+*.str
+*.plf
+*.elf
+*.map
+*.MAP
+
+# Extracted / converted game assets (Sonic Riders uses these on disc)
+*.adx
+*.ADX
+*.sfd
+*.SFD
+*.afs
+*.AFS
+*.bnr
+*.thp
+extracted/
+assets_out/
+
+# Disassembly, recompiled output, analysis dumps (all derived from the game binary)
+build/
+asm/
+gen/
+*.s
+*.S
+recon_*.txt
+fst_listing.txt
+
+# Build products (contain recompiled game code)
+*.o
+*.obj
+*.a
+*.lib
+*.exe
+*.pdb
+*.ilk
+*.nro
+*.nso
+*.nacp
+*.npdm
+*.dksh
+*.bin
+
+# Caches / IDE
+__pycache__/
+*.pyc
+.cache/
+.vs/
+.vscode/
+.idea/
+.ninja_*
+build.ninja
+compile_commands.json
+objdiff.json
+
+# decomp-toolkit analysis output (addresses/labels derived from the binary; regenerate with
+# build/tools/dtk.exe dol split config/GXEE8P/config.yml build/GXEE8P)
+config/*/symbols.txt
+config/*/splits.txt
+config/*/_Main/

@@ -1,0 +1,18 @@
+# decomp-toolkit analysis config for Sonic Riders (USA, GXEE8P, rev 0).
+# Used only for analysis (function boundaries, jump tables, relocations, SDK/runtime
+# identification) that feeds the static recompiler. Not a matching-decomp build.
+name: main
+object: baserom/main.dol
+hash: e90a13504974b917a675d59f07014e0e817c5e5d
+symbols: config/GXEE8P/symbols.txt
+splits: config/GXEE8P/splits.txt
+detect_objects: true
+detect_strings: false  # dtk 1.8.4 produced an unaligned string symbol in _Main.rel sec 2
+write_asm: true
+
+modules:
+- object: baserom/_Main.rel
+  hash: 1607fbb1ccabf116642c3c59ee9b21c304a1db26
+  name: _Main
+  symbols: config/GXEE8P/_Main/symbols.txt
+  splits: config/GXEE8P/_Main/splits.txt

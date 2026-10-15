@@ -1,0 +1,26 @@
+#!/bin/sh
+# Refuse to commit anything that could be game data (see .gitignore).
+# Enabled with: git config core.hooksPath tools/git-hooks
+status=0
+max_bytes=524288   # our own source files are far smaller than this
+
+for f in $(git diff --cached --name-only --diff-filter=ACMR); do
+    case "$f" in
+        baserom/*|orig/*|game/*|build/*|asm/*|gen/*|extracted/*)
+            echo "pre-commit: refusing $f (game-data directory)"; status=1; continue ;;
+    esac
+    case "$(echo "$f" | tr 'A-Z' 'a-z')" in
+        *.iso|*.gcm|*.rvz|*.ciso|*.gcz|*.wbfs|*.tgc|*.dol|*.rel|*.str|*.plf|*.elf|*.map|\
+        *.adx|*.sfd|*.afs|*.bnr|*.thp|*.s|*.o|*.obj|*.a|*.nro|*.nso|*.dksh|*.bin)
+            echo "pre-commit: refusing $f (game-data/binary extension)"; status=1; continue ;;
+    esac
+    size=$(git cat-file -s ":$f" 2>/dev/null || echo 0)
+    if [ "$size" -gt "$max_bytes" ]; then
+        echo "pre-commit: refusing $f ($size bytes > $max_bytes; possible game data)"; status=1
+    fi
+done
+
+if [ $status -ne 0 ]; then
+    echo "pre-commit: commit blocked. If a file is genuinely ours, review it and adjust tools/git-hooks/pre-commit."
+fi
+exit $status
