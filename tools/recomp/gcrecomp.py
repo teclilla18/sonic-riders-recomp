@@ -43,10 +43,11 @@ LEAF = ppc2c.pass_on("WWHD_RECOMP_LEAF")
 NONLEAF = ppc2c.pass_on("WWHD_RECOMP_NONLEAF")
 GQR_STATIC = ppc2c.pass_on("WWHD_RECOMP_GQR")
 
-# Where the REL module lives in guest memory. Top of MEM1, below the FST and boot data the
-# apploader puts at the very top; the runtime lowers ArenaHi to REL_BASE so the game's heaps never
-# overlap it (the game would otherwise allocate the module from its own heap: same total memory).
-REL_BASE = 0x81500000
+# Where the REL module lives in guest memory: just above the 24 MiB of MEM1 (the runtime backs a few
+# extra MiB there; development hardware had 48 MiB at these addresses). The game still loads and
+# "links" its own copy from its heap, as on the console, so it keeps exactly its normal memory; the
+# native OSLink points that copy's header at this pre-linked image (runtime/src/rel.c).
+REL_BASE = 0x81800000
 
 
 def sext(v, bits):
@@ -182,6 +183,15 @@ class GcRecompiler:
         return end
 
     def _fixpoint(self):
+        # every direct call target is an entry (Metrowerks' _savegpr_NN/_savefpr_NN helpers are
+        # called in the middle of one routine that dtk sees as a single function)
+        for lo, hi, data in self.img.regions:
+            for i in range(0, hi - lo, 4):
+                w = struct.unpack_from(">I", data, i)[0]
+                if (w >> 26) == 18 and (w & 1):
+                    t = (sext(w & 0x03FFFFFC, 26) + (0 if w & 2 else lo + i)) & 0xFFFFFFFF
+                    if self.img.in_text(t):
+                        self.entries.add(t)
         rounds = 0
         while True:
             self._bounds()

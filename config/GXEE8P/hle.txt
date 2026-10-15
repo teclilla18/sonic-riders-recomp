@@ -1,0 +1,15 @@
+# Native replacements: ADDRESS NAME  ->  f_ADDRESS calls the runtime's hle_NAME(c).
+# The game's own code stays available as f_ADDRESS_orig. Addresses: main.dol (GXEE8P rev 0).
+
+# --- OS: context switch (runtime/src/sched.c) ---
+8000BB78 OSSaveContext
+8000BBF8 OSLoadContext
+
+# --- OS: hardware initialisation with no native counterpart ---
+8000B1C4 nop        # __OSInitAudioSystem (DSP reset, ARAM probe)
+8000B380 nop        # __OSStopAudioSystem
+8000E49C nop        # __OSInitMemoryProtection (MI protection, BAT setup in real mode via rfi)
+
+# --- OS: module linking. _Main.rel is linked natively at the recompiler's fixed base (loader.c) ---
+8000E264 OSLink     # OSLink(module, bss)
+8000E288 OSLink     # OSLinkFixed(module, bss)

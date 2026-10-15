@@ -31,7 +31,11 @@ py = sys.executable.replace("\\", "/")
 
 gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
 if not gen_c:
-    sys.exit("build/gen is empty: run `%s tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen` first" % py)
+    # the list of generated files is needed to write build.ninja: recompile once now
+    import subprocess
+    print("build/gen is empty: recompiling first")
+    subprocess.check_call([sys.executable, "tools/recomp/gcrecomp.py", "config/GXEE8P", "baserom", GEN], cwd=ROOT)
+    gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
 gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/table.c"]
 rt_c = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.c")))
 rt_cpp = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.cpp")))

@@ -11,33 +11,47 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching plan below is superseded.
 
-**Status at the end of session 1 (2026-10-15):**
-- Repo set up, with game-data guards (`.gitignore` + `tools/git-hooks/pre-commit`).
-- Original ISO moved to `<backups>\` (SHA-1 re-verified, read-only).
-- dtk analysis done: 5,202 functions.
-- Recompiler works end to end:
-  - `tools/recomp/gcrecomp.py` produces 35 C files, 207 jump tables, 0 unresolved switch dispatches.
-  - Compiles with clang (host) and devkitA64 GCC 16 (Switch).
-- Host runtime skeleton:
-  - Loads the DOL from the ISO and links `_Main.rel` at `0x81500000`.
-  - Runs the real `__start` → `__init_hardware` → `OSInit` until OS thread code calls a null callback (`dispatch to 00000000`, lr `8001003C`).
-  - That is the expected point where the **native OS layer** must take over.
-- Nothing has been run on Switch hardware yet. No hardware test is needed until something draws.
+**Status after session 2 (2026-10-15):** the game boots into its main loop on the Windows host build. Nothing is visible yet: the renderer is a placeholder.
+- In a 20 s run:
+  - About 1,000 frames: ~134 draws and ~17 KB of GX commands per frame, 0 FIFO parse errors.
+  - 6.7 MB loaded from the ISO through the game's own DVD code; the AX audio frame loop runs.
+  - 9 guest threads scheduled correctly. The main thread sits in the REL main loop (`819BC5B8`), presumably on the intro/title screens.
+- How it got there:
+  - Native context switch: `sched.c`.
+  - Interrupts: decrementer/alarms, VI retrace, DI, PE, DSP, ARAM, AI-DMA.
+  - Device models: VI, DI (drive), CP/PE/PI FIFO + command parser, DSP mailboxes + boot ROM + AX stand-in, ARAM DMA, AI.
+  - Native OSLink: `rel.c`.
+- Session 1 (for reference): repo + game-data guards, ISO moved to Desktop\Backups, dtk analysis, recompiler working end to end.
+- Nothing has run on Switch hardware yet; no hardware test is needed until something draws.
 
 **Next steps, in order:**
-1. **OS HLE** (`runtime/src/hle/os*.c`), via `config/GXEE8P/hle.txt` (address → `hle_NAME`). Cover:
-   - init: OSInit (replace whole), arena, time
-   - interrupts: OSDisable/Enable/RestoreInterrupts, __OSSetInterruptHandler / __OSMaskInterrupts
-   - threads, mutex, cond, message queues, alarms
-   - context: OSSetCurrentContext / OSLoadContext / OSSaveContext …
-   - cache ops, OSReport/OSPanic, reset, SRAM (language), OSGetConsoleType
-   - Name the still-unnamed OS functions first (see "SDK map").
-2. **Native `main`** (DOL `0x80007A48`): reimplement the 0x1F0-byte bootstrap natively. It runs the game's init calls, maps `_Main.rel` at the fixed base (already linked by `loader.c`), and calls the prolog `0x816BC3CC`.
-3. **DVD HLE** reading from the ISO (`disc.c` already has FST lookup), **VI HLE** (retrace timing at 59.94 Hz), **PAD HLE** (host keyboard/gamepad; libnx hid on Switch).
-4. **GX**: keep the GX library recompiled. Model CP/PE/PI-FIFO registers in `mmio.c` and parse the write-gather-pipe stream (`0xCC008000`) and display lists into a renderer. Desktop GL backend first (for testing without hardware), then deko3d (Switch). Both share GLSL from the TEV→GLSL generator (ubershader first).
-5. **Audio**: AX library recompiled; DSP mailbox + AX microcode HLE (process PB lists natively), AI HLE → host audio. AR/ARQ HLE (ARAM = 16 MiB host buffer).
-6. **CARD HLE** → save files. CRI ADX/Sofdec run recompiled (pure CPU code over DVD/AX), see "CRI".
-7. **Switch platform layer**: memory window via svcMapProcessCodeMemory as in SwitchWakerHD `core_switch.cpp`; audren/audout, hid, SD-card ISO path; NRO packaging.
+1. **Renderer (desktop GL first).**
+   - Window: SDL2 window + GL context on a **render thread**. The GX parser runs on whichever guest thread writes the FIFO, so it queues draw packets.
+   - Vertex decode: VCD/VAT/arrays to floats.
+   - XF: matrices from `g_gx.xf_mem`, texgen, lighting.
+   - TEV ubershader.
+   - Texture decode: I4/I8/IA4/IA8/RGB565/RGB5A3/RGBA8/CI4/CI8/CI14X2/CMPR + TLUT.
+   - EFB copies: to XFB = present; to texture = render-to-texture.
+   - Then deko3d on Switch with the same GLSL (uam).
+2. **PAD**: the SI register model or PAD HLE (PADRead) → keyboard/gamepad (SDL), libnx hid on Switch. The game is likely waiting on the title screen for Start.
+3. **AX mixing** in `ax.c`: parse the AX command list (Dolphin AX.cpp is the reference): PB list, ADPCM/PCM decode, SRC, volume envelopes, mixing into the output buffer; then `audio_submit` → SDL audio / audren.
+4. **CARD** (memory card saves): the EXI register model or CARD HLE → save file on disk/SD.
+5. **Switch platform layer**: memory window (svcMapProcessCodeMemory, as SwitchWakerHD `core_switch.cpp`), threads (C11 threads via libnx), audio, hid, ISO path on SD, NRO packaging. **First hardware test then.**
+6. Remove/replace the still-raw pieces: `[mmio]` logging of unmodelled devices (EXI/SI), the 4 KiB interrupt-stack margin (see sched.c `make_irq_cpu`).
+
+**HLE boundary as implemented (revised from the plan below):**
+- **Register-level device models**, which keep the game's own SDK code running: VI, DI (DVD), CP/PE/PI (GX FIFO), DSP/ARAM/AI.
+- **Native at function level**, only where the hardware semantics can't run natively:
+  - `OSSaveContext`/`OSLoadContext`, i.e. the thread switch;
+  - `OSLink`/`OSLinkFixed`;
+  - no-ops: `__OSInitAudioSystem`, `__OSStopAudioSystem`, `__OSInitMemoryProtection` (real-mode BAT setup via `rfi`).
+
+The whole OS scheduler, alarms, mutexes and message queues run recompiled, which proved simpler and more faithful than replacing the APIs. All replacements are listed in `config/GXEE8P/hle.txt`.
+
+**Debugging aids:**
+- `SR_WATCHDOG=<seconds>`: records function entries and, when time runs out, dumps them, the last device accesses and every guest thread with its state, priority, wait queue and guest backtrace.
+- `tools/showfn.py ADDR|NAME`: print a function's disassembly from dtk's output.
+- `build/run.ps1 <seconds>` (local helper, not committed): rebuild + run + summarize.
 
 **How to build/run (host, Windows):**
 ```
@@ -61,7 +75,7 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 | Recompiler | Fork ZeldaWWHDRecomp's translator (`ppc2c.py`, `crlive.py`, `leaflocal.py`, `ppc.h`, fres/frsqrte tables; MPL-2.0, upstream commit f10b566) + new GameCube front end `tools/recomp/gcrecomp.py` | Espresso and Gekko share the 750 user ISA, incl. paired singles, GQR quantization and `dcbz_l`. Its inline C with register-in-locals passes is proven at 30 fps on Switch hardware. **DolRecomp** (github.com/ExpansionPak/DolRecomp, GPL-3.0) was evaluated: it supports DOL+REL natively but is emulator-style (full MSR/exception model, callback memory access, a helper call per op), which is slower on ARM. Kept as a reference only. |
 | Function discovery | decomp-toolkit v1.8.4 analysis (`config/GXEE8P/config.yml`), with `detect_strings: false` (a dtk bug in REL sec 2) | Understands MWCC idioms and REL relocations. Not used for matching. |
 | Jump tables | Structural: a data object whose words all point mid-function into one function. The recompiler reports any `lwzx/mtctr/bctr` without a table. | dtk names only some tables `jumptable_*` (others like `@740`). |
-| REL placement | Linked statically at `REL_BASE = 0x81500000` (recompiler) and identically at runtime (`loader.c`). ArenaHi = REL_BASE, so the game's heaps never overlap it. | Fixed addresses for recompiled code. The game would otherwise allocate the module from its heap, so total free memory is the same. |
+| REL placement | Linked statically at `REL_BASE = 0x81800000`, just above the 24 MiB of MEM1 (the runtime backs 28 MiB), by the recompiler and identically at runtime (`loader.c`). The game still loads and "links" its own copy from its heap, and the native OSLink points that copy at the fixed image. | Fixed addresses for recompiled code, and the game keeps exactly its normal memory. (First tried 0x81500000 with ArenaHi lowered, which would have cost the game ~2.5 MB.) |
 | Guest memory | Window indexed by physical address, `ea & 0x3FFFFFFF` (folds the 0x8/0xC mirrors; locked cache → `0x20000000`). Loads/stores in `0xC8000000–0xCFFFFFFF` go to `mmio.c`. | One AND + one compare per access, and every hardware access, incl. inline GX FIFO writes in game code, is caught. |
 | HLE boundary | **Native:** OS, DVD, VI, PAD, SI/EXI (stubs), CARD, DB/TRK (stubs), AI, AR/ARQ, DSP (mailbox + AX ucode HLE). **Recompiled:** GX (+ native FIFO/CP/PE model), AX, MTX, MSL, CRI middleware, game. | OS must be native: context switches, rfi, interrupts. GX on GameCube is a stream of FIFO register writes, partly inlined into game code, plus display lists. A FIFO parser is needed anyway, so the FIFO is the natural boundary rather than ~200 GX functions. AX via its DSP protocol reuses the real AX library's exact semantics. |
 | Renderer | GX FIFO → state → shared GLSL (TEV ubershader first); backends: desktop OpenGL (dev/testing), deko3d (Switch, shaders via uam) | Lets me test without hardware; the user's requirement of deko3d on Switch holds. |

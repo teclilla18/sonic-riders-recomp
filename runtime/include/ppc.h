@@ -51,6 +51,7 @@ typedef struct Cpu {
     uint32_t mod_skip;         /* guest mods: the next entry of this function runs its original code
                                   (fills former padding: sizeof(Cpu) and save states are unchanged) */
     void* thread;              /* host-side: owning guest thread object */
+    uint32_t msr;              /* GameCube: this context's MSR (EE = interrupts enabled), cpu.c */
 } Cpu;
 
 typedef void (*PpcFunc)(Cpu*);
@@ -76,12 +77,13 @@ double ppc_frsqrte(double x);
 /* optional guest function-entry trace (runtime switch, see runtime/src/trace.cpp) */
 extern int g_ppc_trace;
 void ppc_trace_enter(uint32_t addr);
-/* per-core scheduling: a higher-priority thread on this core is ready, yield at the next function entry */
+/* GameCube: g_core_preempt[0] is set while an interrupt is pending (sched.c). Checked at every function
+   entry and loop back-edge; ppc_preempt delivers it if this context has MSR.EE set. */
 extern volatile int g_core_preempt[3];
 void ppc_preempt(Cpu* c);
 #define PPC_ENTER(a) do {                                                     \
         if (__builtin_expect(g_ppc_trace, 0)) ppc_trace_enter(a);             \
-        if (__builtin_expect(g_core_preempt[c->core], 0)) ppc_preempt(c);     \
+        if (__builtin_expect(g_core_preempt[0], 0)) ppc_preempt(c);           \
     } while (0)
 
 /* guest mods (docs/mod-sdk-v2.md; game code generated with recomp.py --mod-hooks): every function body
@@ -110,7 +112,12 @@ void ppc_mod_run(Cpu* c);
    core changes (issue #62: LLVM 16/17, e.g. Apple clang 16 of Xcode 16, turn such a wait into
    `b .`). The barrier only forces guest memory to be read again on the next iteration; the register
    file stays in host registers (it is __restrict and not an operand). */
-#define PPC_LOOP() __asm__ __volatile__("" ::: "memory")
+/* GameCube: spin loops waiting for a flag set by an interrupt callback (DVD completion, retrace) are
+   common and call nothing, so pending interrupts are also delivered at loop back-edges. */
+#define PPC_LOOP() do {                                                       \
+        __asm__ __volatile__("" ::: "memory");                                \
+        if (__builtin_expect(g_core_preempt[0], 0)) ppc_preempt(c);           \
+    } while (0)
 
 /* ---- memory ---- */
 /* device accesses (runtime/src/mmio.c): hardware registers, the GX FIFO pipe, the EFB */

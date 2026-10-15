@@ -13,7 +13,8 @@ void rt_log(const char* fmt, ...);
 _Noreturn void rt_fatal(const char* fmt, ...);
 
 /* memory.c: the guest physical window (see ppc.h) */
-#define MEM1_SIZE 0x01800000u
+#define MEM1_SIZE 0x01800000u        /* what the game sees */
+#define GUEST_RAM_SIZE 0x01C00000u   /* backed: MEM1 + room above it for the REL (see gcrecomp.py) */
 #define LOCKED_CACHE_PHYS 0x20000000u
 #define LOCKED_CACHE_SIZE 0x4000u
 void mem_init(void);
@@ -36,6 +37,46 @@ void load_game(void);   /* DOL sections, boot info, FST, the REL module linked a
 /* cpu.c */
 void cpu_init(Cpu* c);
 uint64_t rt_ticks(void);  /* guest timebase ticks since boot (40.5 MHz) */
+
+/* sched.c: guest threads and interrupts */
+#define RT_IRQ_DEC    1u   /* decrementer: OSAlarm */
+#define RT_IRQ_NATIVE 2u   /* native device callbacks queued with rt_irq_post */
+void sched_init(void);
+void rt_irq_raise(uint32_t bits);
+void rt_irq_post(void (*fn)(Cpu* c, void* arg), void* arg);  /* run fn in interrupt context */
+void guest_call(Cpu* c, uint32_t addr);                       /* call a guest function on c */
+void sched_interrupts_enabled(Cpu* c);
+void sched_set_decrementer(uint32_t v);
+uint32_t sched_get_decrementer(void);
+
+/* os_irq.c: raise __OS_INTERRUPT_<id> (runs the game's registered handler in interrupt context) */
+void os_raise_interrupt(int id);
+void os_irq_retry(void);
+
+/* vi.c: Video Interface register model and retrace timer */
+void vi_init(void);
+uint32_t vi_read(uint32_t ea, int size);
+void vi_write(uint32_t ea, uint32_t v, int size);
+uint32_t vi_xfb_address(void);
+uint32_t vi_field_count(void);
+
+/* di.c: DVD Interface (drive) model */
+uint32_t di_read(uint32_t ea, int size);
+void di_write(uint32_t ea, uint32_t v, int size);
+unsigned long long di_bytes_read(void);
+
+/* dsp.c: DSP mailboxes + boot ROM, ARAM and its DMA, AI DMA clock; ai_*: Audio Interface */
+void dsp_init(void);
+uint32_t dsp_read(uint32_t ea, int size);
+void dsp_write(uint32_t ea, uint32_t v, int size);
+uint32_t ai_read(uint32_t ea, int size);
+void ai_write(uint32_t ea, uint32_t v, int size);
+uint8_t* aram_ptr(uint32_t addr);
+
+/* ax.c: AX microcode stand-in and host audio output */
+void ax_process_command_list(uint32_t addr, uint32_t size);
+void audio_submit(uint32_t addr, uint32_t bytes);
+unsigned long long ax_list_count(void);
 
 #ifdef __cplusplus
 }

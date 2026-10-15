@@ -21,13 +21,13 @@ void mem_init(void) {
 #ifdef _WIN32
     uint8_t* w = VirtualAlloc(NULL, WINDOW_SIZE, MEM_RESERVE, PAGE_NOACCESS);
     if (!w) rt_fatal("cannot reserve the guest window");
-    if (!VirtualAlloc(w, MEM1_SIZE, MEM_COMMIT, PAGE_READWRITE) ||
+    if (!VirtualAlloc(w, GUEST_RAM_SIZE, MEM_COMMIT, PAGE_READWRITE) ||
         !VirtualAlloc(w + LOCKED_CACHE_PHYS, LOCKED_CACHE_SIZE, MEM_COMMIT, PAGE_READWRITE))
         rt_fatal("cannot back guest memory");
 #else
     uint8_t* w = mmap(NULL, WINDOW_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
     if (w == MAP_FAILED) rt_fatal("cannot reserve the guest window");
-    if (mprotect(w, MEM1_SIZE, PROT_READ | PROT_WRITE) ||
+    if (mprotect(w, GUEST_RAM_SIZE, PROT_READ | PROT_WRITE) ||
         mprotect(w + LOCKED_CACHE_PHYS, LOCKED_CACHE_SIZE, PROT_READ | PROT_WRITE))
         rt_fatal("cannot back guest memory");
 #endif

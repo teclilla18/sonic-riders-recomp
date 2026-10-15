@@ -22,8 +22,9 @@ static void load_dol(void) {
         disc_read((uint64_t)dol_off + off, mem_phys(addr), size);
     }
     uint32_t bss = be32(dh + 0xD8), bss_size = be32(dh + 0xDC);
-    /* __init_data clears bss itself; clearing here too keeps a later re-run deterministic */
-    memset(mem_phys(bss), 0, bss_size);
+    /* No clearing here: the header's bss range spans .sdata/.sdata2 too (they sit between .sbss
+     * pieces), so clearing it would wipe initialized small data. MEM1 was zeroed before loading,
+     * and __init_data clears the real bss sections from _bss_init_info. */
     rt_log("[load] main.dol: entry %08X, bss %08X+%X", be32(dh + 0xE0), bss, bss_size);
 }
 
@@ -75,7 +76,7 @@ static void link_rel(const uint8_t* rel, uint32_t rel_size) {
 
 void load_game(void) {
     const uint8_t* h = disc_header();
-    memset(mem_phys(0), 0, MEM1_SIZE);
+    memset(mem_phys(0), 0, GUEST_RAM_SIZE);
     load_dol();
 
     /* boot info, as the IPL/apploader leave it (YAGCD "Memory map: 0x80000000") */
@@ -89,8 +90,7 @@ void load_game(void) {
     mem_w32(0x800000FC, 486000000);                     /* CPU clock */
     mem_w32(0x800000CC, 0);                             /* VI mode: NTSC */
 
-    /* FST at the top of MEM1, as the apploader puts it; ArenaHi below the FST, then lowered to
-     * the REL's fixed base so the game's heaps never overlap the module */
+    /* FST at the top of MEM1, as the apploader puts it; ArenaHi just below it */
     uint32_t fst_size;
     const uint8_t* fst = disc_fst(&fst_size);
     uint32_t fst_addr = (0x80000000u + MEM1_SIZE - fst_size) & ~31u;
@@ -98,9 +98,10 @@ void load_game(void) {
     mem_w32(0x80000038, fst_addr);
     mem_w32(0x8000003C, be32(h + 0x42C));
     uint32_t rel_end = g_rel_bss + g_rel_bss_size;
-    if (rel_end > fst_addr) rt_fatal("REL (%08X-%08X) overlaps the FST at %08X", g_rel_base, rel_end, fst_addr);
+    if (g_rel_base < 0x80000000u + MEM1_SIZE || rel_end > 0x80000000u + GUEST_RAM_SIZE)
+        rt_fatal("REL (%08X-%08X) must lie in the backed area above MEM1", g_rel_base, rel_end);
     mem_w32(0x80000030, 0);                             /* ArenaLo: OSInit uses __ArenaLo */
-    mem_w32(0x80000034, g_rel_base);                    /* ArenaHi */
+    mem_w32(0x80000034, fst_addr);                      /* ArenaHi */
 
     uint32_t off, size;
     if (!disc_find("_Main.rel", &off, &size)) rt_fatal("_Main.rel not found on the disc");
