@@ -49,6 +49,11 @@ build/host/sonicriders.exe "baserom/Sonic Riders (USA) (En,Ja,Fr,De,Es,It).iso"
 ```
 After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-data guard).
 
+**GitHub:** https://github.com/teclilla18/sonic-riders-recomp (**private**). gh CLI: `gh`, logged in as teclilla18.
+- **Push at the end of every work session.**
+- Before pushing, check `git status --ignored`: no ISO, DOL, REL, assets, disassembly, recompiled output or dtk symbol files.
+- If anything questionable would be included, stop and ask the user.
+
 ## Architecture decisions (2026-10-15)
 
 | Decision | Choice | Why |
