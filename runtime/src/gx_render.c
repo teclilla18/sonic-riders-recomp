@@ -46,6 +46,7 @@ static GxFrame* frame(void) {
         g_frame = render_take_free_frame();
         { uint64_t d = rt_ticks() - t; g_wait_ticks += d; g_wait_total += d; }
         g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = g_frame->nxtabs = 0;
+        g_frame->nidx = 0;
         g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
@@ -221,12 +222,7 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     if (!count) return;
     if (g_state_dirty) push_state();
     GxFrame* f = frame();
-    /* decode into a scratch list, then expand to triangle/line/point lists */
-    static GxVertex* tmp;
-    static uint32_t tmp_cap;
-    tmp = grow(tmp, &tmp_cap, count, sizeof(GxVertex));
-    const uint8_t* p = vertices;
-    for (uint32_t i = 0; i < count; i++) decode_vertex(&p, vat, &tmp[i]);
+    /* decode each vertex once into the frame; quads, strips and fans become index lists */
     uint32_t out_n, kind;
     switch (prim) {
     case 0: case 1: out_n = count / 4 * 6; kind = GXP_TRIANGLES; break;  /* quads */
@@ -237,31 +233,34 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     default: out_n = count; kind = GXP_POINTS; break;
     }
     if (!out_n) return;
-    f->verts = grow(f->verts, &f->cap_verts, f->nverts + out_n, sizeof(GxVertex));
-    GxVertex* o = f->verts + f->nverts;
+    f->verts = grow(f->verts, &f->cap_verts, f->nverts + count, sizeof(GxVertex));
+    const uint8_t* p = vertices;
+    for (uint32_t i = 0; i < count; i++) decode_vertex(&p, vat, &f->verts[f->nverts + i]);
+    f->idx = grow(f->idx, &f->cap_idx, f->nidx + out_n, sizeof(uint32_t));
+    uint32_t* o = f->idx + f->nidx;
+    const uint32_t v0 = f->nverts;
     uint32_t k = 0;
     switch (prim) {
     case 0: case 1:
         for (uint32_t i = 0; i + 3 < count; i += 4) {
-            o[k++] = tmp[i]; o[k++] = tmp[i + 1]; o[k++] = tmp[i + 2];
-            o[k++] = tmp[i]; o[k++] = tmp[i + 2]; o[k++] = tmp[i + 3];
+            o[k++] = v0 + i; o[k++] = v0 + i + 1; o[k++] = v0 + i + 2;
+            o[k++] = v0 + i; o[k++] = v0 + i + 2; o[k++] = v0 + i + 3;
         }
         break;
     case 3:
         for (uint32_t i = 2; i < count; i++) {
-            if (i & 1) { o[k++] = tmp[i - 1]; o[k++] = tmp[i - 2]; o[k++] = tmp[i]; }
-            else { o[k++] = tmp[i - 2]; o[k++] = tmp[i - 1]; o[k++] = tmp[i]; }
+            if (i & 1) { o[k++] = v0 + i - 1; o[k++] = v0 + i - 2; o[k++] = v0 + i; }
+            else { o[k++] = v0 + i - 2; o[k++] = v0 + i - 1; o[k++] = v0 + i; }
         }
         break;
     case 4:
-        for (uint32_t i = 2; i < count; i++) { o[k++] = tmp[0]; o[k++] = tmp[i - 1]; o[k++] = tmp[i]; }
+        for (uint32_t i = 2; i < count; i++) { o[k++] = v0; o[k++] = v0 + i - 1; o[k++] = v0 + i; }
         break;
     case 6:
-        for (uint32_t i = 1; i < count; i++) { o[k++] = tmp[i - 1]; o[k++] = tmp[i]; }
+        for (uint32_t i = 1; i < count; i++) { o[k++] = v0 + i - 1; o[k++] = v0 + i; }
         break;
     default:
-        memcpy(o, tmp, out_n * sizeof(GxVertex));
-        k = out_n;
+        for (uint32_t i = 0; i < out_n; i++) o[k++] = v0 + i;
         break;
     }
     /* unimplemented features in use, for the [perf] line: indirect stages (genmode bits 16-18),
@@ -271,7 +270,7 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     if ((g_gx.bp[0xF4] >> 2) & 3) g_feat_ztex++;
     GxCmd* c = push_cmd(GXC_DRAW);
     c->prim = (uint8_t)kind;
-    c->a = f->nverts;
+    c->a = f->nidx;
     c->b = k;
     /* textures used by the enabled TEV stages */
     for (int i = 0; i < 8; i++) c->tex[i] = -1;
@@ -286,8 +285,9 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
         int map = (int)((g_gx.bp[0x27] >> (6 * k)) & 7);
         if (c->tex[map] < 0) lookup_map(c, map);
     }
-    f->nverts += k;
-    g_verts_total += k;
+    f->nverts += count;
+    f->nidx += k;
+    g_verts_total += count;
 }
 
 /* BP 0x52: copy the EFB (or a part) to an XFB or a texture, optionally clearing it */

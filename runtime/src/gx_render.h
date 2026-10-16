@@ -48,7 +48,7 @@ typedef struct GxCmd {
     uint8_t type;
     uint8_t prim;             /* GXC_DRAW: GXP_* */
     uint16_t pad;
-    uint32_t a, b;            /* DRAW: first vertex, vertex count. STATE: uniforms index, chunk table index */
+    uint32_t a, b;            /* DRAW: first index, index count. STATE: uniforms index, chunk table index */
     int32_t tex[8];           /* DRAW: texture ids per texmap (-1: none) */
     uint32_t copy[12];        /* COPY: see gx_render.c efb_copy */
 } GxCmd;
@@ -64,7 +64,8 @@ typedef struct GxTexture {
 
 typedef struct GxFrame {
     GxCmd* cmds; uint32_t ncmds, cap_cmds;
-    GxVertex* verts; uint32_t nverts, cap_verts;
+    GxVertex* verts; uint32_t nverts, cap_verts;     /* each decoded vertex once */
+    uint32_t* idx; uint32_t nidx, cap_idx;           /* triangle/line/point lists (quads, strips, fans expanded) */
     GxUniforms* unis; uint32_t nunis, cap_unis;
     uint32_t* xchunks; uint32_t nxchunks, cap_xchunks;  /* XF memory chunk copies (GX_XFM_CHUNK words) */
     GxXTab* xtabs; uint32_t nxtabs, cap_xtabs;

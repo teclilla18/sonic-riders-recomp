@@ -598,6 +598,11 @@ static void execute(GxFrame* f) {
         vbytes = SLOT_VTX / sizeof(GxVertex) * sizeof(GxVertex);
     }
     memcpy(cpu + SLOT_CMD, f->verts, vbytes);
+    /* the index lists, after the vertices (draws past what fits are dropped) */
+    uint32_t ioff = (SLOT_CMD + vbytes + 255) & ~255u;
+    uint32_t icap = (SLOT_CMD + SLOT_VTX - ioff) / 4, ncopy = f->nidx < icap ? f->nidx : icap;
+    if (ncopy < f->nidx) rt_log("[deko3d] frame has %u indices, more than the buffer holds; truncated", f->nidx);
+    memcpy(cpu + ioff, f->idx, (size_t)ncopy * 4);
 
     /* the XF memory chunk pool, read by the vertex shader through the states' chunk tables */
     uint32_t xoff = SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE;
@@ -638,6 +643,7 @@ static void execute(GxFrame* f) {
     DkVtxBufferState vb = {sizeof(GxVertex), 0};
     dkCmdBufBindVtxBufferState(g_cmd, &vb, 1);
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
+    dkCmdBufBindIdxBuffer(g_cmd, DkIdxFormat_Uint32, gpu + ioff);
     dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
 
     /* the register blocks and chunk tables, uploaded once each at the uniform buffer alignment;
@@ -680,11 +686,12 @@ static void execute(GxFrame* f) {
             break;
         }
         case GXC_DRAW:
-            if (!cur || (c->a + c->b) * sizeof(GxVertex) > vbytes) break;
+            if (!cur || c->a + c->b > ncopy || vbytes < f->nverts * (uint32_t)sizeof(GxVertex)) break;
             bind_textures(c, cur);
-            dkCmdBufDraw(g_cmd, c->prim == GXP_TRIANGLES ? DkPrimitive_Triangles : c->prim == GXP_LINES ? DkPrimitive_Lines
-                                                                                                         : DkPrimitive_Points,
-                         c->b, 1, c->a, 0);
+            dkCmdBufDrawIndexed(g_cmd, c->prim == GXP_TRIANGLES ? DkPrimitive_Triangles
+                                       : c->prim == GXP_LINES   ? DkPrimitive_Lines
+                                                                : DkPrimitive_Points,
+                                c->b, 1, c->a, 0, 0);
             break;
         case GXC_COPY:
             if (cur) {

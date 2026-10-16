@@ -52,6 +52,7 @@ static GLuint g_xfm_buf, g_xfm_tex;
 static uint8_t* g_ubo_staging;
 static size_t g_ubo_staging_cap;
 static GLuint g_ubo_xt;  /* the XF chunk tables (GxXTab), uniform block binding 1 */
+static GLuint g_ibo;     /* the frame's index lists */
 static GLuint g_prog, g_vao, g_vbo, g_ubo, g_fbo, g_efb_color, g_efb_depth, g_copy_fbo;
 static GLint g_ubo_align = 256;
 static GLuint* g_gltex;
@@ -131,6 +132,7 @@ static void gl_setup(void) {
     }
     p_glGenBuffers(1, &g_ubo);
     p_glGenBuffers(1, &g_ubo_xt);
+    p_glGenBuffers(1, &g_ibo);
     /* the EFB */
     glGenTextures(1, &g_efb_color);
     glBindTexture(GL_TEXTURE_2D, g_efb_color);
@@ -355,6 +357,8 @@ static void execute(GxFrame* f) {
     p_glBindVertexArray(g_vao);
     p_glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
     p_glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)f->nverts * sizeof(GxVertex), f->verts, GL_STREAM_DRAW);
+    p_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibo);  /* part of the VAO's state */
+    p_glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)f->nidx * 4, f->idx, GL_STREAM_DRAW);
     size_t stride = (sizeof(GxUniforms) + (size_t)g_ubo_align - 1) / (size_t)g_ubo_align * (size_t)g_ubo_align;
     /* the states, packed at the UBO offset alignment, in one upload */
     size_t ubo_bytes = stride * (f->nunis ? f->nunis : 1);
@@ -440,8 +444,8 @@ static void execute(GxFrame* f) {
                         rt_log("[gxdbg]   light %d: color %08X cosatt %g %g %g distatt %g %g %g pos %g %g %g dir %g %g %g", li,
                                lraw[3], lv[4], lv[5], lv[6], lv[7], lv[8], lv[9], lv[10], lv[11], lv[12], lv[13], lv[14], lv[15]);
                     }
-                    for (uint32_t vi = 0; vi < 3 && c->a + vi < f->nverts; vi++) {
-                        const GxVertex* vx = &f->verts[c->a + vi];
+                    for (uint32_t vi = 0; vi < 3 && vi < c->b; vi++) {
+                        const GxVertex* vx = &f->verts[f->idx[c->a + vi]];
                         int idx = (int)vx->pos[3];
                         float nm[9];
                         for (int w = 0; w < 9; w++) {
@@ -475,8 +479,8 @@ static void execute(GxFrame* f) {
                 }
             }
             bind_textures(c, cur);
-            glDrawArrays(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,
-                         (GLint)c->a, (GLsizei)c->b);
+            glDrawElements(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,
+                           (GLsizei)c->b, GL_UNSIGNED_INT, (const void*)((uintptr_t)c->a * 4));
             break;
         case GXC_COPY:
             if (cur) efb_copy(c, cur);
