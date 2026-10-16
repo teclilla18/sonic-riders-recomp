@@ -27,13 +27,19 @@ typedef struct GxVertex {
 #define GX_XFM_CHUNK 64
 #define GX_XFM_CHUNKS 26
 
-/* the register state the shaders read per state, std140-compatible (one uniform buffer) */
+/* the register state the shaders read, std140-compatible (uniform buffer binding 0); a new one only
+ * when a BP or XF register changed */
 typedef struct GxUniforms {
     uint32_t bp[256];         /* BP registers */
     uint32_t xfr[128];        /* XF registers 0x1000-0x107F */
     uint32_t konst[8];        /* TEV konstant colors (raw BP values) */
-    uint32_t xtab[28];        /* pool index of XF memory chunk i (GX_XFM_CHUNKS used) */
 } GxUniforms;
+
+/* the XF memory chunk table (uniform buffer binding 1, vertex stage): pool index of chunk i; a new one
+ * whenever the game loaded matrices or lights, typically once per object */
+typedef struct GxXTab {
+    uint32_t xtab[32];        /* GX_XFM_CHUNKS used */
+} GxXTab;
 
 enum { GXC_STATE, GXC_DRAW, GXC_COPY, GXC_PRESENT };
 enum { GXP_TRIANGLES, GXP_LINES, GXP_POINTS };
@@ -42,7 +48,7 @@ typedef struct GxCmd {
     uint8_t type;
     uint8_t prim;             /* GXC_DRAW: GXP_* */
     uint16_t pad;
-    uint32_t a, b;            /* DRAW: first vertex, vertex count. STATE: uniforms index */
+    uint32_t a, b;            /* DRAW: first vertex, vertex count. STATE: uniforms index, chunk table index */
     int32_t tex[8];           /* DRAW: texture ids per texmap (-1: none) */
     uint32_t copy[12];        /* COPY: see gx_render.c efb_copy */
 } GxCmd;
@@ -61,6 +67,7 @@ typedef struct GxFrame {
     GxVertex* verts; uint32_t nverts, cap_verts;
     GxUniforms* unis; uint32_t nunis, cap_unis;
     uint32_t* xchunks; uint32_t nxchunks, cap_xchunks;  /* XF memory chunk copies (GX_XFM_CHUNK words) */
+    GxXTab* xtabs; uint32_t nxtabs, cap_xtabs;
     int* retired; uint32_t nretired, cap_retired;  /* texture ids to free after this frame */
 } GxFrame;
 

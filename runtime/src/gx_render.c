@@ -45,7 +45,8 @@ static GxFrame* frame(void) {
         uint64_t t = rt_ticks();
         g_frame = render_take_free_frame();
         { uint64_t d = rt_ticks() - t; g_wait_ticks += d; g_wait_total += d; }
-        g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = 0;
+        g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = g_frame->nxtabs = 0;
+        g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
         gx_texture_new_frame();
@@ -68,12 +69,13 @@ static GxCmd* push_cmd(int type) {
     return c;
 }
 
-/* a state snapshot: the registers, plus copies of the XF memory chunks changed since the last one;
- * a snapshot equal to the previous one is not pushed */
+/* a state snapshot: copies of the XF memory chunks changed since the last one, a new chunk table
+ * when any did, and a new register block only when a BP or XF register was written and differs.
+ * A STATE command is pushed only when either changed. */
 static void push_state(void) {
     GxFrame* f = frame();
-    static uint32_t xtab[28];
-    uint32_t dirty = g_gx.xfm_dirty;
+    static uint32_t xtab[32];
+    uint32_t dirty = g_gx.xfm_dirty & ((1u << GX_XFM_CHUNKS) - 1);
     for (int i = 0; i < GX_XFM_CHUNKS; i++) {
         if (!(dirty & (1u << i))) continue;
         f->xchunks = grow(f->xchunks, &f->cap_xchunks, (f->nxchunks + 1) * GX_XFM_CHUNK, sizeof(uint32_t));
@@ -82,20 +84,29 @@ static void push_state(void) {
     }
     g_gx.xfm_dirty = 0;
     g_state_dirty = 0;
-    if (f->nunis) {
-        const GxUniforms* p = &f->unis[f->nunis - 1];
-        if (!(dirty & ((1u << GX_XFM_CHUNKS) - 1)) && !memcmp(p->bp, g_gx.bp, sizeof p->bp) &&
-            !memcmp(p->xfr, g_gx.xf_reg, sizeof p->xfr) && !memcmp(p->konst, g_gx.konst, sizeof p->konst))
-            return;
+    int new_tab = dirty || !f->nxtabs;
+    if (new_tab) {
+        f->xtabs = grow(f->xtabs, &f->cap_xtabs, f->nxtabs + 1, sizeof(GxXTab));
+        memcpy(f->xtabs[f->nxtabs++].xtab, xtab, sizeof xtab);
     }
-    f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof(GxUniforms));
-    GxUniforms* u = &f->unis[f->nunis];
-    memcpy(u->bp, g_gx.bp, sizeof u->bp);
-    memcpy(u->xfr, g_gx.xf_reg, sizeof u->xfr);
-    memcpy(u->konst, g_gx.konst, sizeof u->konst);
-    memcpy(u->xtab, xtab, sizeof u->xtab);
+    int new_regs = 0;
+    if (g_gx.regs_dirty) {
+        g_gx.regs_dirty = 0;
+        const GxUniforms* p = f->nunis ? &f->unis[f->nunis - 1] : NULL;
+        if (!p || memcmp(p->bp, g_gx.bp, sizeof p->bp) || memcmp(p->xfr, g_gx.xf_reg, sizeof p->xfr) ||
+            memcmp(p->konst, g_gx.konst, sizeof p->konst)) {
+            f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof(GxUniforms));
+            GxUniforms* u = &f->unis[f->nunis++];
+            memcpy(u->bp, g_gx.bp, sizeof u->bp);
+            memcpy(u->xfr, g_gx.xf_reg, sizeof u->xfr);
+            memcpy(u->konst, g_gx.konst, sizeof u->konst);
+            new_regs = 1;
+        }
+    }
+    if (!new_tab && !new_regs) return;
     GxCmd* c = push_cmd(GXC_STATE);
-    c->a = f->nunis++;
+    c->a = f->nunis - 1;
+    c->b = f->nxtabs - 1;
 }
 
 /* ---- vertex decoding ---- */

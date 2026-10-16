@@ -60,7 +60,7 @@ static DkFence g_slot_fence[2];      /* signalled when the GPU has finished a sl
 static int g_slot_fenced[2];
 static int* g_retired[2];            /* texture ids retired by a slot's frame: freed after its fence */
 static uint32_t g_nretired[2];
-static uint32_t g_vtx_off, g_ubo_off, g_stage_off;
+static uint32_t g_vtx_off, g_stage_off;
 static uint64_t g_busy_ticks, g_gpu_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
 static uint64_t g_last_gpu;      /* this frame's GPU wait ([hitch]) */
 static uint32_t g_last_upload;   /* this frame's texture upload bytes ([hitch]) */
@@ -589,7 +589,7 @@ static void execute(GxFrame* f) {
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
     dkCmdBufClear(g_cmd);
     dkCmdBufAddMemory(g_cmd, mem, 0, SLOT_CMD);
-    g_vtx_off = g_ubo_off = g_stage_off = 0;
+    g_vtx_off = g_stage_off = 0;
 
     /* vertices */
     uint32_t vbytes = f->nverts * (uint32_t)sizeof(GxVertex);
@@ -640,24 +640,35 @@ static void execute(GxFrame* f) {
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
     dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
 
+    /* the register blocks and chunk tables, uploaded once each at the uniform buffer alignment;
+     * STATE commands bind them by index */
+    const uint32_t ustride = ((uint32_t)sizeof(GxUniforms) + DK_UNIFORM_BUF_ALIGNMENT - 1) & ~(DK_UNIFORM_BUF_ALIGNMENT - 1);
+    const uint32_t xstride = ((uint32_t)sizeof(GxXTab) + DK_UNIFORM_BUF_ALIGNMENT - 1) & ~(DK_UNIFORM_BUF_ALIGNMENT - 1);
+    uint32_t uoff = SLOT_CMD + SLOT_VTX, xoff_ubo = uoff + f->nunis * ustride;
+    int ubo_ok = f->nunis * ustride + f->nxtabs * xstride <= SLOT_UBO;
+    if (ubo_ok) {
+        for (uint32_t i = 0; i < f->nunis; i++) memcpy(cpu + uoff + i * ustride, &f->unis[i], sizeof(GxUniforms));
+        for (uint32_t i = 0; i < f->nxtabs; i++) memcpy(cpu + xoff_ubo + i * xstride, &f->xtabs[i], sizeof(GxXTab));
+    } else {
+        static int warned;
+        if (!warned++) rt_log("[deko3d] a frame's states (%u register blocks, %u chunk tables) overflow the uniform area: dropped",
+                              f->nunis, f->nxtabs);
+    }
     const GxUniforms* cur = NULL;
-    uint32_t ubo_size = ((uint32_t)sizeof(GxUniforms) + 15) & ~15u;
+    uint32_t cur_regs = ~0u;
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE: {
+            if (!ubo_ok) { cur = NULL; break; }
+            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
+            if (c->a == cur_regs) break;
+            cur_regs = c->a;
             cur = &f->unis[c->a];
-            if (g_ubo_off + ubo_size > SLOT_UBO) {
-                static int warned;
-                if (!warned++) rt_log("[deko3d] more than %u states in a frame: the rest of its draws are dropped", SLOT_UBO / ubo_size);
-                cur = NULL;
-                break;
-            }
-            memcpy(cpu + SLOT_CMD + SLOT_VTX + g_ubo_off, cur, sizeof(GxUniforms));
-            DkGpuAddr a = gpu + SLOT_CMD + SLOT_VTX + g_ubo_off;
-            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 0, a, ubo_size);
-            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 0, a, ubo_size);
-            g_ubo_off = (g_ubo_off + ubo_size + DK_UNIFORM_BUF_ALIGNMENT - 1) & ~(DK_UNIFORM_BUF_ALIGNMENT - 1);
+            DkGpuAddr a = gpu + uoff + c->a * ustride;
+            uint32_t usize = ((uint32_t)sizeof(GxUniforms) + 15) & ~15u;
+            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 0, a, usize);
+            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 0, a, usize);
             apply_state(cur);
             /* the fragment ubershader with indirect texturing only for draws that use it */
             int ind = ((cur->bp[0x00] >> 16) & 7) != 0;

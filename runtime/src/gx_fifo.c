@@ -102,6 +102,7 @@ static void pe_token(uint16_t token, int irq) {
 
 static void load_bp(uint32_t v) {
     uint32_t reg = v >> 24, val = v & 0xFFFFFF;
+    g_gx.regs_dirty = 1;
     if (reg >= 0xE0 && reg <= 0xE7 && (val >> 23)) {  /* konstant color: same address, type bit set */
         g_gx.konst[reg - 0xE0] = val;
         gx_bp_written(reg, val);
@@ -131,7 +132,7 @@ static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
     for (uint32_t i = 0; i < n; i++, addr++) {
         uint32_t v = rd32(data + 4 * i);
         if (addr < 0x1000) { g_gx.xf_mem[addr] = v; g_gx.xfm_dirty |= 1u << ((addr >> 6) & 31); }
-        else if (addr < 0x1100) g_gx.xf_reg[addr - 0x1000] = v;
+        else if (addr < 0x1100) { g_gx.xf_reg[addr - 0x1000] = v; g_gx.regs_dirty = 1; }
     }
 }
 

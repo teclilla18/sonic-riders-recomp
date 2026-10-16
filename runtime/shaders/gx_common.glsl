@@ -1,5 +1,6 @@
 // GX ubershader (part of the shared GLSL; see runtime/shaders/README.md for the prelude macros)
-layout(std140 BIND_UBO) uniform GX { uvec4 bp[64]; uvec4 xfr[32]; uvec4 konst[2]; uvec4 xtab[7]; };
+layout(std140 BIND_UBO) uniform GX { uvec4 bp[64]; uvec4 xfr[32]; uvec4 konst[2]; };
+layout(std140 BIND_UBO1) uniform GXT { uvec4 xtab[8]; };  // the XF memory chunk table (GxXTab)
 // XF memory: chunks of 64 words in a per-frame pool (XFM_WORD(i) reads pool word i: a storage buffer on
 // deko3d, a texture buffer on GL), chunk c of this state at pool entry xtab[c] (gx_render.h)
 // Components are picked with explicit selects: uam (deko3d) miscompiles a runtime component index

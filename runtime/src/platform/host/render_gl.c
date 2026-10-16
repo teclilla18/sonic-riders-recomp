@@ -51,6 +51,7 @@ static SDL_Window* g_win;
 static GLuint g_xfm_buf, g_xfm_tex;
 static uint8_t* g_ubo_staging;
 static size_t g_ubo_staging_cap;
+static GLuint g_ubo_xt;  /* the XF chunk tables (GxXTab), uniform block binding 1 */
 static GLuint g_prog, g_vao, g_vbo, g_ubo, g_fbo, g_efb_color, g_efb_depth, g_copy_fbo;
 static GLint g_ubo_align = 256;
 static GLuint* g_gltex;
@@ -105,6 +106,7 @@ static void gl_setup(void) {
     }
     p_glUseProgram(g_prog);
     p_glUniformBlockBinding(g_prog, p_glGetUniformBlockIndex(g_prog, "GX"), 0);
+    p_glUniformBlockBinding(g_prog, p_glGetUniformBlockIndex(g_prog, "GXT"), 1);
     for (int i = 0; i < 8; i++) {
         char n[16];
         snprintf(n, sizeof n, "u_tex%d", i);
@@ -128,6 +130,7 @@ static void gl_setup(void) {
         p_glVertexAttribPointer((GLuint)i, layout[i].n, GL_FLOAT, GL_FALSE, sizeof(GxVertex), (void*)layout[i].off);
     }
     p_glGenBuffers(1, &g_ubo);
+    p_glGenBuffers(1, &g_ubo_xt);
     /* the EFB */
     glGenTextures(1, &g_efb_color);
     glBindTexture(GL_TEXTURE_2D, g_efb_color);
@@ -362,6 +365,18 @@ static void execute(GxFrame* f) {
     for (uint32_t i = 0; i < f->nunis; i++) memcpy(g_ubo_staging + stride * i, &f->unis[i], sizeof(GxUniforms));
     p_glBindBuffer(GL_UNIFORM_BUFFER, g_ubo);
     p_glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)ubo_bytes, g_ubo_staging, GL_STREAM_DRAW);
+    /* the chunk tables, likewise */
+    size_t xstride = (sizeof(GxXTab) + (size_t)g_ubo_align - 1) / (size_t)g_ubo_align * (size_t)g_ubo_align;
+    size_t xt_bytes = xstride * (f->nxtabs ? f->nxtabs : 1);
+    if (xt_bytes > g_ubo_staging_cap) {
+        g_ubo_staging = realloc(g_ubo_staging, xt_bytes);
+        g_ubo_staging_cap = xt_bytes;
+    }
+    for (uint32_t i = 0; i < f->nxtabs; i++) memcpy(g_ubo_staging + xstride * i, &f->xtabs[i], sizeof(GxXTab));
+    p_glBindBuffer(GL_UNIFORM_BUFFER, g_ubo_xt);
+    p_glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)xt_bytes, g_ubo_staging, GL_STREAM_DRAW);
+    const GxXTab* curx = NULL;
+    uint32_t cur_regs = ~0u;
     /* the XF memory chunk pool */
     p_glBindBuffer(0x8C2A /* GL_TEXTURE_BUFFER */, g_xfm_buf);
     p_glBufferData(0x8C2A, (GLsizeiptr)(f->nxchunks ? f->nxchunks : 1) * GX_XFM_CHUNK * 4, f->xchunks, GL_STREAM_DRAW);
@@ -374,9 +389,14 @@ static void execute(GxFrame* f) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE:
-            cur = &f->unis[c->a];
-            p_glBindBufferRange(GL_UNIFORM_BUFFER, 0, g_ubo, (GLintptr)(stride * c->a), sizeof(GxUniforms));
-            apply_state(cur);
+            curx = &f->xtabs[c->b];
+            p_glBindBufferRange(GL_UNIFORM_BUFFER, 1, g_ubo_xt, (GLintptr)(xstride * c->b), sizeof(GxXTab));
+            if (c->a != cur_regs) {
+                cur = &f->unis[c->a];
+                cur_regs = c->a;
+                p_glBindBufferRange(GL_UNIFORM_BUFFER, 0, g_ubo, (GLintptr)(stride * c->a), sizeof(GxUniforms));
+                apply_state(cur);
+            }
             break;
         case GXC_DRAW:
             if (!cur) break;
@@ -414,7 +434,7 @@ static void execute(GxFrame* f) {
                         uint32_t lraw[16];
                         for (int w = 0; w < 16; w++) {
                             uint32_t idx = 0x600 + (uint32_t)li * 16 + (uint32_t)w;
-                            lraw[w] = f->xchunks[(size_t)cur->xtab[idx >> 6] * GX_XFM_CHUNK + (idx & 63)];
+                            lraw[w] = f->xchunks[(size_t)curx->xtab[idx >> 6] * GX_XFM_CHUNK + (idx & 63)];
                             memcpy(&lv[w], &lraw[w], 4);
                         }
                         rt_log("[gxdbg]   light %d: color %08X cosatt %g %g %g distatt %g %g %g pos %g %g %g dir %g %g %g", li,
@@ -426,13 +446,13 @@ static void execute(GxFrame* f) {
                         float nm[9];
                         for (int w = 0; w < 9; w++) {
                             uint32_t xi = 0x400 + (uint32_t)(idx & 31) * 3 + (uint32_t)w;
-                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            uint32_t raw = f->xchunks[(size_t)curx->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
                             memcpy(&nm[w], &raw, 4);
                         }
                         float pm[12];
                         for (int w = 0; w < 12; w++) {
                             uint32_t xi = (uint32_t)idx * 4 + (uint32_t)w;
-                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            uint32_t raw = f->xchunks[(size_t)curx->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
                             memcpy(&pm[w], &raw, 4);
                         }
                         float pv[3], nv[3], l[3], lp[3];
@@ -440,7 +460,7 @@ static void execute(GxFrame* f) {
                             pv[r] = pm[r * 4] * vx->pos[0] + pm[r * 4 + 1] * vx->pos[1] + pm[r * 4 + 2] * vx->pos[2] + pm[r * 4 + 3];
                             nv[r] = nm[r * 3] * vx->nrm[0] + nm[r * 3 + 1] * vx->nrm[1] + nm[r * 3 + 2] * vx->nrm[2];
                             uint32_t xi = 0x600 + 10 + (uint32_t)r;
-                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            uint32_t raw = f->xchunks[(size_t)curx->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
                             memcpy(&lp[r], &raw, 4);
                             l[r] = lp[r] - pv[r];
                         }

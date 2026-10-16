@@ -73,7 +73,7 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
   - `[perf]` shows draw processing ms and vertices per frame.
   - An event ring (thread suspend/resume via `patches.txt` hooks, DVD start/done/irq) in watchdog dumps.
 - **Next for CPU:**
-  1. Split GxUniforms into regs (bp/xfr/konst, pushed only when BP or XF registers change: add a regs-dirty flag in `load_bp`/`load_xf`) and xtab (112 B, a second UBO binding 1 for the vertex stage). This avoids the 1.7 KB copy+compare per draw.
+  1. ~~Split GxUniforms~~ **done:** GxUniforms is bp/xfr/konst only, pushed when `g_gx.regs_dirty` (set in `load_bp` and XF-register loads) and different. GxXTab (128 B) is a uniform block at binding 1 (vertex stage). A STATE command carries (regs index, xtab index) and is pushed only if either changed. deko3d uploads both arrays once per frame; GL uploads them packed. Eden demo race: draw processing still ~6 ms/frame for ~87K vertices, so **vertex decode** (`decode_vertex`: 160-byte GxVertex, memset, per-attribute branches) is the next CPU target.
   2. psq fast paths.
   3. Cheaper vertex decode.
 - **Loading hang:** still ~1 in 4 race loads on PC; the stuck read is always the last chunk of a file into the buffer ending ≈0x817F2xxx. Lead: the game's loader thread `81A93B68` (REL `fn_1_14DE38`) suspends itself and is resumed by `fn_1_14B8A0` (file state machine). A resume arriving before the suspend is lost (count clamped at 0). Capture a hang with the new filtered event dump: `pcloop3.sh` in the scratchpad, PC route into a race with the user's save copied to `build/user_card.raw`.
