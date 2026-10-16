@@ -13,3 +13,8 @@
 # --- OS: module linking. _Main.rel is linked natively at the recompiler's fixed base (loader.c) ---
 8000E264 OSLink     # OSLink(module, bss)
 8000E288 OSLink     # OSLinkFixed(module, bss)
+
+# --- C library: block copies and fills (runtime/src/hle_misc.c), byte loops in the original ---
+80003540 memcpy
+80003458 memset
+8003A354 memmove
