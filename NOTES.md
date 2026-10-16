@@ -466,3 +466,11 @@ Each library gets its own `mw_version`. Steps:
 
 ## Naming decisions
 (none yet)
+
+### Session 2026-10-16 (b): game-thread CPU cost
+- Split GX state (regs vs XF chunk table), indexed draws, per-draw vertex decode plan: PC race profile `gx_draw` 3.5% -> 0.05%, state memcpy gone.
+- Native `memcpy` (80003540), `memset` (80003458), `memmove` (8003A354) in `hle_misc.c`; fall back to the game's code for anything outside MEM1 / locked cache.
+- Eden demo race (JIT, indicative only): 33-51 fps before, 57-59 fps after.
+- PC: two full-route race loads, no loading hang this time.
+- **Open: EFB Z peeks.** The game reads `C85xxxxx` (EFB Z, bit 22) during races, probably lens-flare occlusion; mmio returns 0 (= nearest, so always occluded). Fix: queue peek coordinates, read depth back on the render thread, answer with last frame's value.
+- Next hardware test: race fps with the FPS counter, screenshots ("Save screenshot") of missing water / Metal City floor / racer faces.
