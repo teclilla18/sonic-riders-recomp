@@ -33,6 +33,7 @@ static int watchdog(void* arg) {
 static int game_thread(void* arg) {
     (void)arg;
     rt_thread_pin(0);
+    profile_register_thread();
     sched_enter_boot_thread();
     g_main_cpu.pc = g_recomp_entry_point;
     ppc_dispatch(&g_main_cpu);
@@ -66,6 +67,7 @@ int main(int argc, char** argv) {
            g_recomp_func_count, g_recomp_hle_count, g_recomp_entry_point);
     /* the game's boot code runs on a thread of our own (a large stack: guest calls are host calls);
      * this thread only waits */
+    profile_start();
     rt_thread_start(game_thread, NULL);
     for (;;) {
         struct timespec ts = {3600, 0};

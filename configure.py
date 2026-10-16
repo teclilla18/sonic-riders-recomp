@@ -60,7 +60,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("cxx", "clang++")
         n.variable("cflags", "-std=gnu11 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
         n.variable("cxxflags", "-std=c++20 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
-        n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32" % sdl)
+        n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32 -lwinmm -Wl,/MAP:%s/sonicriders.map" % (sdl, OUT))
         exe = OUT + "/sonicriders.exe"
     else:
         dkp = os.environ.get("DEVKITPRO", "").replace("\\", "/")

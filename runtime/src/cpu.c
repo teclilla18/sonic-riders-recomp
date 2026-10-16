@@ -48,11 +48,9 @@ void ppc_cr_poisoned(Cpu* c, int bit, uint32_t addr) { rt_fatal("CR bit %d read 
 
 /* ---- timebase: 40.5 MHz (bus clock / 4) ---- */
 static uint64_t g_t0;
-static uint64_t host_ns(void) {
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-}
+/* a cheap monotonic clock (platform_now_ns): the game reads the time base constantly (mftb, OSGetTime)
+ * and the renderer times its work; on the Switch, CLOCK_REALTIME went through the time service */
+static uint64_t host_ns(void) { return platform_now_ns(); }
 uint64_t rt_ticks(void) { return (host_ns() - g_t0) * 81 / 2000; }  /* ns * 40.5e6 / 1e9 */
 uint64_t ppc_timebase(void) { return rt_ticks(); }
 

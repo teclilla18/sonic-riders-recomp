@@ -65,6 +65,7 @@ static void load_cpu_from_context(Cpu* c, uint32_t ctx) {
 static int thread_main(void* arg) {
     GThread* g = arg;
     rt_thread_pin(0);
+    profile_register_thread();
     mtx_lock(&g_lock);
     while (g_running != g) cnd_wait(&g->cv, &g_lock);
     mtx_unlock(&g_lock);
@@ -337,9 +338,68 @@ void os_irq_dump(void);
 
 void render_dump(void);
 
+/* a ring of recent events for hang dumps: 1 OSResumeThread(a = thread, b = caller), 2 OSSuspendThread,
+ * 3 DVD command started (a = disc offset, b = length), 4 DVD command completed, 5 DVD interrupt
+ * delivered; the suspend count of a thread is recorded at the call */
+#define DBG_EVENTS 65536
+static struct { uint64_t t; int kind; uint32_t a, b, susp; } g_dbg_ev[DBG_EVENTS];
+static _Atomic unsigned g_dbg_pos;
+
+void dbg_event(int kind, uint32_t a, uint32_t b) {
+    unsigned i = atomic_fetch_add(&g_dbg_pos, 1) % DBG_EVENTS;
+    g_dbg_ev[i].t = rt_ticks();
+    g_dbg_ev[i].kind = kind;
+    g_dbg_ev[i].a = a;
+    g_dbg_ev[i].b = b;
+    g_dbg_ev[i].susp = (kind == 1 || kind == 2) && a >= 0x80000000u && a < 0x80000000u + GUEST_RAM_SIZE - 0x300
+                           ? ld32(a + 0x2CC) : 0;
+}
+
+/* the last 100 DVD events and suspends/resumes of threads other than the two busiest (CRI's audio
+ * threads cycle thousands of times a second) */
+static void dbg_events_dump(void) {
+    static const char* const names[] = {"?", "resume", "suspend", "dvd start", "dvd done", "dvd irq"};
+    unsigned end = atomic_load(&g_dbg_pos), begin = end > DBG_EVENTS ? end - DBG_EVENTS : 0;
+    uint32_t busy[2] = {0, 0};
+    {
+        uint32_t ids[16] = {0};
+        unsigned cnt[16] = {0};
+        for (unsigned k = begin; k < end; k++) {
+            unsigned i = k % DBG_EVENTS;
+            if (g_dbg_ev[i].kind > 2) continue;
+            int j = 0;
+            while (j < 16 && ids[j] && ids[j] != g_dbg_ev[i].a) j++;
+            if (j < 16) { ids[j] = g_dbg_ev[i].a; cnt[j]++; }
+        }
+        for (int r = 0; r < 2; r++) {
+            int best = -1;
+            for (int j = 0; j < 16; j++)
+                if (ids[j] && ids[j] != busy[0] && (best < 0 || cnt[j] > cnt[best])) best = j;
+            if (best >= 0) busy[r] = ids[best];
+        }
+    }
+    unsigned shown = 0, from = end;
+    while (from > begin && shown < 100) {
+        unsigned i = (from - 1) % DBG_EVENTS;
+        if (g_dbg_ev[i].kind > 2 || (g_dbg_ev[i].a != busy[0] && g_dbg_ev[i].a != busy[1])) shown++;
+        from--;
+    }
+    int64_t now = (int64_t)rt_ticks();
+    rt_log("[events] DVD and thread suspend/resume (not %08X %08X), oldest first; ms before the dump:", busy[0], busy[1]);
+    for (unsigned k = from; k < end; k++) {
+        unsigned i = k % DBG_EVENTS;
+        if (g_dbg_ev[i].kind <= 2 && (g_dbg_ev[i].a == busy[0] || g_dbg_ev[i].a == busy[1])) continue;
+        rt_log("[events]   -%10.3f %-9s %08X %08X%s", (double)(now - (int64_t)g_dbg_ev[i].t) * 1000.0 / 40500000.0,
+               names[g_dbg_ev[i].kind < 6 ? g_dbg_ev[i].kind : 0], g_dbg_ev[i].a, g_dbg_ev[i].b,
+               g_dbg_ev[i].kind <= 2 ? (g_dbg_ev[i].susp ? " (was suspended)" : "") : "");
+    }
+}
+
 void dsp_dump(void);
 
 void sched_dump(void) {
+    dbg_events_dump();
+    profile_dump();
     render_dump();
     di_dump();
     dsp_dump();

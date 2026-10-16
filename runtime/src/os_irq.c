@@ -29,6 +29,7 @@ static void dispatch_all(Cpu* ic, void* arg) {
             continue;
         }
         uint32_t handler = ld32(OS_INTERRUPT_TABLE + 4 * (uint32_t)id);
+        if (id == 21) dbg_event(5, 0, 0);  /* DVD */
         if (!handler) continue;
         *ic = base;
         ic->r[3] = (uint32_t)id;

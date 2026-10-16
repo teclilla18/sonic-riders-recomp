@@ -407,9 +407,10 @@ static void shot_request(DkImageView const* fv) {
     unsigned n = ++g_presented;
     static int on = -1;
     if (on < 0) on = getenv("SR_SHOTS") != NULL;
-    if (!on) return;
-    int want = 0;
-    for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
+    int want = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
+    if (!on && !want) return;
+    if (on)
+        for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
     if (!want) return;
     if (!g_shot_mem) g_shot_mem = block(FB_W * FB_H * 4, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
     dkCmdBufBarrier(g_cmd, DkBarrier_Full, 0);

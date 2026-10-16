@@ -76,6 +76,8 @@ const char* platform_disc_path(void) {
 const char* platform_save_path(void) { return BASE_DIR "/saves/card_a.raw"; }
 const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
 
+uint64_t platform_now_ns(void) { return armTicksToNs(armGetSystemTick()); }  /* the CPU's tick counter */
+
 /* the console's local clock (time service), for the GameCube RTC */
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second) {
     u64 now = 0;
@@ -176,3 +178,8 @@ void mem_init(void) {
     int code = envIsSyscallHinted(0x77) && envIsSyscallHinted(0x73) && envGetOwnProcessHandle() != INVALID_HANDLE;
     if (!(code && try_window(1)) && !try_window(0)) rt_fatal("cannot map guest memory");
 }
+
+/* the sampling profiler is desktop-only (platform/host/profile_win.c) */
+void profile_register_thread(void) {}
+void profile_start(void) {}
+void profile_dump(void) {}

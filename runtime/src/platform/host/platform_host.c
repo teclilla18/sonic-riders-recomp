@@ -44,6 +44,20 @@ const char* platform_disc_path(void) {
 const char* platform_save_path(void) { return "saves/card_a.raw"; }
 const char* platform_settings_path(void) { return "saves/settings.ini"; }
 
+uint64_t platform_now_ns(void) {
+#ifdef _WIN32
+    static LARGE_INTEGER freq;
+    if (!freq.QuadPart) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER c;
+    QueryPerformanceCounter(&c);
+    return (uint64_t)((double)c.QuadPart * 1e9 / (double)freq.QuadPart);
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+#endif
+}
+
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second) {
     time_t t = time(NULL);
     struct tm lt = *localtime(&t);

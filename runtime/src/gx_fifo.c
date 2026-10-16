@@ -156,8 +156,13 @@ static void call_display_list(uint32_t addr, uint32_t size, int depth) {
 }
 
 /* Parse complete commands from p[0..len); returns the bytes consumed (a partial command stays). */
+/* at depth 0: the bytes the incomplete command at the end of the buffer needs in total (0: unknown),
+ * so the write-gather pipe does not re-parse it on every store until it is complete */
+static size_t g_parse_need;
+
 static size_t parse(const uint8_t* p, size_t len, int depth) {
     size_t i = 0;
+    if (depth == 0) g_parse_need = 0;
     while (i < len) {
         uint8_t cmd = p[i];
         size_t left = len - i;
@@ -171,7 +176,10 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
         if (cmd == 0x10) {                                              /* LOAD_XF_REG */
             if (left < 5) break;
             uint32_t h = rd32(p + i + 1), n = (h >> 16) + 1;
-            if (left < 5 + 4 * n) break;
+            if (left < 5 + 4 * n) {
+                if (depth == 0) g_parse_need = 5 + 4 * n;
+                break;
+            }
             load_xf(h & 0xFFFF, p + i + 5, n);
             i += 5 + 4 * n;
             continue;
@@ -200,7 +208,10 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
             int vat = cmd & 7, prim = (cmd >> 3) & 7;
             uint32_t count = rd16(p + i + 1);
             size_t vsize = (size_t)gx_vertex_size(vat), total = 3 + vsize * count;
-            if (left < total) break;
+            if (left < total) {
+                if (depth == 0) g_parse_need = total;
+                break;
+            }
             gx_draw(prim, vat, count, p + i + 3, (uint32_t)vsize);
             g_gx.draws++;
             i += total;
@@ -213,29 +224,43 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
     return i;
 }
 
+static size_t g_need;  /* pending bytes needed before parsing again (the incomplete command's size) */
+unsigned long long g_pipe_stores, g_pipe_bytes;  /* for the [perf] line */
+
 static void gp_feed(const uint8_t* p, size_t n) {
     pend_push(p, n);
+    if (g_pend_len < g_need) return;  /* the command being written is not complete yet */
     size_t used = parse(g_pend, g_pend_len, 0);
     if (used) {
         memmove(g_pend, g_pend + used, g_pend_len - used);
         g_pend_len -= used;
     }
+    g_need = g_parse_need;
 }
 
 /* ---- write-gather pipe ---- */
 void gx_pipe_write(uint32_t v, int size) {
     uint8_t b[4];
     for (int k = 0; k < size; k++) b[k] = (uint8_t)(v >> (8 * (size - 1 - k)));
-    /* into RAM at the PI write pointer */
-    for (int k = 0; k < size; k++) {
-        uint32_t w = g_pi_wptr & 0x03FFFFFF;
-        if (g_pi_end && w < GUEST_RAM_SIZE) *mem_phys(w) = b[k];
-        w++;
-        if (g_pi_end && w >= (g_pi_end & 0x03FFFFFF) + 32) {  /* end is inclusive of the last 32 bytes */
-            w = g_pi_base & 0x03FFFFFF;
-            g_pi_wptr = w | 0x04000000;
-        } else {
-            g_pi_wptr = (g_pi_wptr & 0x04000000) | w;
+    g_pipe_stores++;
+    g_pipe_bytes += (unsigned)size;
+    /* into RAM at the PI write pointer: in one piece unless the FIFO wraps inside this store */
+    uint32_t w = g_pi_wptr & 0x03FFFFFF;
+    uint32_t end = g_pi_end ? (g_pi_end & 0x03FFFFFF) + 32 : 0;  /* end is inclusive of the last 32 bytes */
+    if (g_pi_end && w + (uint32_t)size < end && w + (uint32_t)size <= GUEST_RAM_SIZE) {
+        memcpy(mem_phys(w), b, (size_t)size);
+        g_pi_wptr = (g_pi_wptr & 0x04000000) | (w + (uint32_t)size);
+    } else {
+        for (int k = 0; k < size; k++) {
+            w = g_pi_wptr & 0x03FFFFFF;
+            if (g_pi_end && w < GUEST_RAM_SIZE) *mem_phys(w) = b[k];
+            w++;
+            if (g_pi_end && w >= end) {
+                w = g_pi_base & 0x03FFFFFF;
+                g_pi_wptr = w | 0x04000000;
+            } else {
+                g_pi_wptr = (g_pi_wptr & 0x04000000) | w;
+            }
         }
     }
     g_gx.fifo_bytes += (unsigned)size;

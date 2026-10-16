@@ -21,6 +21,8 @@ int overlay_input(unsigned held);
  * show; *version changes whenever the pixels do */
 const uint8_t* overlay_image(unsigned* version);
 void overlay_set_fps(float fps);  /* any thread */
+/* the menu's "Save screenshot": 1 once after it was chosen (the backend saves the next picture) */
+int overlay_take_screenshot_request(void);
 
 #ifdef __cplusplus
 }

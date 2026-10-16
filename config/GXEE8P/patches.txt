@@ -16,3 +16,7 @@ decl void rt_log(const char* fmt, ...);
 # the DVD library's command timeout fired (AlarmHandlerForTimeout): the drive model completed a
 # command too late, or before the SDK armed this alarm (see runtime/src/di.c)
 80012398 before { rt_log("[dvd] the SDK's drive timeout alarm fired"); }
+# thread suspend/resume and DVD event ring for hang dumps (runtime/src/sched.c dbg_event)
+decl void dbg_event(int kind, uint32_t a, uint32_t b);
+80010B08 before { dbg_event(1, c->r[3], c->lr); }
+80010D90 before { dbg_event(2, c->r[3], c->lr); }

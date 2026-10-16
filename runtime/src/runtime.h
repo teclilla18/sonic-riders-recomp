@@ -14,6 +14,7 @@ const char* platform_disc_path(void);       /* default location of the game's di
 const char* platform_save_path(void);       /* memory card image for slot A */
 const char* platform_settings_path(void);   /* settings.ini (settings.c) */
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
+uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 
@@ -81,6 +82,11 @@ uint64_t sched_idle_total(void);  /* ticks the guest spent idle, since start */ 
 /* dsp.c: DSP mailboxes + boot ROM, ARAM and its DMA, AI DMA clock; ai_*: Audio Interface */
 void dsp_init(void);
 void di_init(void);
+/* sampling profiler (desktop only, SR_PROFILE=1: platform/host/profile_win.c) */
+void profile_register_thread(void);  /* a thread that runs guest code */
+void profile_start(void);
+void profile_dump(void);
+void dbg_event(int kind, uint32_t a, uint32_t b);  /* hang-dump event ring (sched.c) */
 unsigned exi_card_file_writes(void);   /* memory card file writes so far (exi.c) */   /* the DVD drive's completion timer */
 uint32_t dsp_read(uint32_t ea, int size);
 void dsp_write(uint32_t ea, uint32_t v, int size);

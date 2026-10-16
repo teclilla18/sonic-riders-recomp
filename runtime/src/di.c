@@ -74,6 +74,7 @@ static void execute(void) {
      * arms its timeout alarm after starting a command (DVDLowRead: DICR, then OSSetAlarm); a
      * completion before that leaves the alarm to fire later as a drive timeout, and loading stops. */
     uint64_t bytes = cmd == 0xA8 ? len : 0;
+    dbg_event(3, cmd == 0xA8 ? g_di[DICMD1] << 2 : g_di[DICMD0], len);
     g_di_done_at = (int64_t)rt_ticks() + 81000 + (int64_t)(bytes * 40500000ull / (32ull << 20));
     cnd_signal(&g_di_cv);
 }
@@ -90,6 +91,7 @@ static int di_timer(void* arg) {
         int64_t left = g_di_done_at - (int64_t)rt_ticks();
         if (left <= 0) {
             g_di_done_at = -1;
+            dbg_event(4, 0, 0);
             g_di[DICR] &= ~1u;
             g_di[DISR] |= TCINT;
             int raise = (g_di[DISR] & TCINT_MASK) != 0;

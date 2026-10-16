@@ -60,6 +60,25 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - **RTC:** saves made on the Switch showed "01/01/00" because `mktime` failed there. `exi.c` now builds seconds-since-2000 from `platform_local_time()` (Switch: the time service's calendar time) with days_from_civil.
 - Testing on PC with the user's save: `nav.ps1` in the scratchpad (a fresh copy of `build/user_card.raw` per run, `SR_INPUT` steps, screenshot). File select → Game Data 1 → "start with Game Data 01?" Yes (A at 2450, 2700, 3050 after the title STARTs).
 
+**Hardware test 7 (2026-10-16, logs in `build/switch/hw7/`):** races at 30 fps at *any* resolution, 60 fps when the camera faces a wall; water, the Metal City floor and racer faces missing; startup a few seconds slower.
+- Render thread 3–5 ms, GPU wait ≈ 0 (pipelining works): **the bottleneck is the game thread.** About 30 fps whenever there are more than ~2500 draws/frame.
+- **PC CPU profile of a race** (`SR_PROFILE=1`, `tools/profile_report.py`; lld map `build/host/sonicriders.map`):
+  - 75% is `SelectThread` (the guest's idle spin: the PC is fast);
+  - of the busy rest, ~60% is the runtime: gx_draw, memcpy of state snapshots, timing calls, psq slow paths, FIFO parsing;
+  - the game's own functions are each <0.5%.
+- **Done after test 7:**
+  - `rt_ticks` uses `platform_now_ns()` (Switch: `armGetSystemTick`; Windows: QPC). On the Switch it used `CLOCK_REALTIME` via `timespec_get`, possibly the time service, on every mftb/OSGetTime and twice per draw. This may be the main Switch CPU cost; **verify on hardware.**
+  - A "Save screenshot" menu item.
+  - The FIFO parser skips re-parsing incomplete commands.
+  - `[perf]` shows draw processing ms and vertices per frame.
+  - An event ring (thread suspend/resume via `patches.txt` hooks, DVD start/done/irq) in watchdog dumps.
+- **Next for CPU:**
+  1. Split GxUniforms into regs (bp/xfr/konst, pushed only when BP or XF registers change: add a regs-dirty flag in `load_bp`/`load_xf`) and xtab (112 B, a second UBO binding 1 for the vertex stage). This avoids the 1.7 KB copy+compare per draw.
+  2. psq fast paths.
+  3. Cheaper vertex decode.
+- **Loading hang:** still ~1 in 4 race loads on PC; the stuck read is always the last chunk of a file into the buffer ending ≈0x817F2xxx. Lead: the game's loader thread `81A93B68` (REL `fn_1_14DE38`) suspends itself and is resumed by `fn_1_14B8A0` (file state machine). A resume arriving before the suspend is lost (count clamped at 0). Capture a hang with the new filtered event dump: `pcloop3.sh` in the scratchpad, PC route into a race with the user's save copied to `build/user_card.raw`.
+- **Lighting:** CPU replication of the model lighting matches GX formulas and gives plausible values, so the dark Player Entry Sonic is unproven as a bug. Racer faces and floors need the user's screenshots (menu "Save screenshot").
+
 **Plan: ahead-of-time specialized shader cache (the GPU fix; user's preferred "built in advance" approach)**
 - Why: the fragment ubershader costs ~33 ms for ~120 draws at 2x. deko3d has no runtime GLSL compiler, so specialized shaders must be compiled with uam at build time.
 - **Key:** the fragment state that drives control flow:

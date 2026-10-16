@@ -6,6 +6,7 @@
  * frame as build/shot_N.png. */
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -307,12 +308,13 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
             draw_overlay(ww, wh);
             g_presented++;
-            if (g_shot_at && g_presented == (unsigned)g_shot_at) {
+            int menu_shot = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
+            if (menu_shot || (g_shot_at && g_presented == (unsigned)g_shot_at)) {
                 uint8_t* px = malloc((size_t)ww * wh * 4);
                 p_glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
                 glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
                 char path[64];
-                snprintf(path, sizeof path, "build/shot_%d.png", g_shot_at);
+                snprintf(path, sizeof path, "build/shot_%u.png", menu_shot ? g_presented : (unsigned)g_shot_at);
                 save_png(path, ww, wh, px);
                 free(px);
                 rt_log("[gl] screenshot %s", path);
@@ -389,6 +391,68 @@ static void execute(GxFrame* f) {
                     }
                 rt_log("[gxdbg] draw prim %u verts %u stages %u genmode %06X ind %u%s | z %06X blend %06X", c->prim, c->b,
                        ((cur->bp[0] >> 10) & 15) + 1, cur->bp[0], (cur->bp[0] >> 16) & 7, t, cur->bp[0x40], cur->bp[0x41]);
+                /* the first draw of each genmode in full: TEV stages, channel controls, ambient/material */
+                static uint32_t seen[64];
+                static int nseen;
+                int known = 0;
+                for (int k = 0; k < nseen; k++) known |= seen[k] == cur->bp[0];
+                if (!known && nseen < 64) {
+                    seen[nseen++] = cur->bp[0];
+                    for (int st = 0; st <= (int)((cur->bp[0] >> 10) & 15); st++)
+                        rt_log("[gxdbg]   stage %d: order %03X cenv %06X aenv %06X ksel %06X", st,
+                               (cur->bp[0x28 + st / 2] >> ((st & 1) * 12)) & 0xFFF, cur->bp[0xC0 + 2 * st], cur->bp[0xC1 + 2 * st],
+                               cur->bp[0xF6 + st / 2]);
+                    rt_log("[gxdbg]   xf: numchan %u numtex %u | amb %08X %08X mat %08X %08X | ctrl c0 %08X c1 %08X a0 %08X a1 %08X",
+                           cur->xfr[0x09], cur->xfr[0x3F], cur->xfr[0x0A], cur->xfr[0x0B], cur->xfr[0x0C], cur->xfr[0x0D],
+                           cur->xfr[0x0E], cur->xfr[0x0F], cur->xfr[0x10], cur->xfr[0x11]);
+                    for (int m = 0; m < 2; m++)
+                        rt_log("[gxdbg]   map %d: image0 %06X image1 %06X (preloaded %u) image2 %06X image3 %06X tlut %06X", m,
+                               cur->bp[0x88 + m], cur->bp[0x8C + m], (cur->bp[0x8C + m] >> 21) & 1, cur->bp[0x90 + m],
+                               cur->bp[0x94 + m], cur->bp[0x98 + m]);
+                    for (int li = 0; li < 2; li++) {
+                        float lv[16];
+                        uint32_t lraw[16];
+                        for (int w = 0; w < 16; w++) {
+                            uint32_t idx = 0x600 + (uint32_t)li * 16 + (uint32_t)w;
+                            lraw[w] = f->xchunks[(size_t)cur->xtab[idx >> 6] * GX_XFM_CHUNK + (idx & 63)];
+                            memcpy(&lv[w], &lraw[w], 4);
+                        }
+                        rt_log("[gxdbg]   light %d: color %08X cosatt %g %g %g distatt %g %g %g pos %g %g %g dir %g %g %g", li,
+                               lraw[3], lv[4], lv[5], lv[6], lv[7], lv[8], lv[9], lv[10], lv[11], lv[12], lv[13], lv[14], lv[15]);
+                    }
+                    for (uint32_t vi = 0; vi < 3 && c->a + vi < f->nverts; vi++) {
+                        const GxVertex* vx = &f->verts[c->a + vi];
+                        int idx = (int)vx->pos[3];
+                        float nm[9];
+                        for (int w = 0; w < 9; w++) {
+                            uint32_t xi = 0x400 + (uint32_t)(idx & 31) * 3 + (uint32_t)w;
+                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            memcpy(&nm[w], &raw, 4);
+                        }
+                        float pm[12];
+                        for (int w = 0; w < 12; w++) {
+                            uint32_t xi = (uint32_t)idx * 4 + (uint32_t)w;
+                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            memcpy(&pm[w], &raw, 4);
+                        }
+                        float pv[3], nv[3], l[3], lp[3];
+                        for (int r = 0; r < 3; r++) {
+                            pv[r] = pm[r * 4] * vx->pos[0] + pm[r * 4 + 1] * vx->pos[1] + pm[r * 4 + 2] * vx->pos[2] + pm[r * 4 + 3];
+                            nv[r] = nm[r * 3] * vx->nrm[0] + nm[r * 3 + 1] * vx->nrm[1] + nm[r * 3 + 2] * vx->nrm[2];
+                            uint32_t xi = 0x600 + 10 + (uint32_t)r;
+                            uint32_t raw = f->xchunks[(size_t)cur->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                            memcpy(&lp[r], &raw, 4);
+                            l[r] = lp[r] - pv[r];
+                        }
+                        float ll = sqrtf(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]), nl = sqrtf(nv[0] * nv[0] + nv[1] * nv[1] + nv[2] * nv[2]);
+                        rt_log("[gxdbg]   v%u: idx %d view pos %g %g %g | view normal %g %g %g | light vec %g %g %g | diffuse %g", vi,
+                               idx, pv[0], pv[1], pv[2], nv[0], nv[1], nv[2], l[0], l[1], l[2],
+                               (l[0] * nv[0] + l[1] * nv[1] + l[2] * nv[2]) / (ll * nl + 1e-9f));
+                    }
+                    rt_log("[gxdbg]   tev regs E0-E7 %06X %06X %06X %06X %06X %06X %06X %06X | konst %06X %06X | alpha test %06X",
+                           cur->bp[0xE0], cur->bp[0xE1], cur->bp[0xE2], cur->bp[0xE3], cur->bp[0xE4], cur->bp[0xE5],
+                           cur->bp[0xE6], cur->bp[0xE7], cur->konst[0], cur->konst[1], cur->bp[0xF3]);
+                }
             }
             bind_textures(c, cur);
             glDrawArrays(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,

@@ -34,6 +34,8 @@ static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
 /* host time (timebase ticks) for the [perf] breakdown */
 static uint64_t g_wait_ticks, g_tex_ticks;
 static uint64_t g_wait_total, g_tex_total;  /* never reset ([hitch] deltas) */
+static unsigned long long g_verts_total;  /* vertices emitted (after primitive expansion) */
+static uint64_t g_draw_total;              /* time in gx_draw (decode, state, lookups) */
 static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using unimplemented features */
 static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
 static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
@@ -274,11 +276,11 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
         if (c->tex[map] < 0) lookup_map(c, map);
     }
     f->nverts += k;
+    g_verts_total += k;
 }
 
 /* BP 0x52: copy the EFB (or a part) to an XFB or a texture, optionally clearing it */
-/* draws: decoded on the thread writing the GX FIFO (the game's), timed for the [hitch] lines */
-static uint64_t g_draw_total;
+/* draws: decoded on the thread writing the GX FIFO (the game's), timed for [hitch] and [perf] */
 void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     uint64_t t = rt_ticks();
     draw(prim, vat, count, vertices, vertex_size);
@@ -369,6 +371,17 @@ static void efb_copy(uint32_t v) {
                 sched_stats(&idle, &late_avg, &late_max);
                 rt_log("[perf]   draws/frame using indirect textures %llu (dynamic matrices not implemented), fog %llu (not implemented), Z textures %llu (not implemented)",
                        g_feat_ind / 120, g_feat_fog / 120, g_feat_ztex / 120);
+                extern unsigned long long g_pipe_stores, g_pipe_bytes;
+                static unsigned long long st0, by0;
+                static uint64_t draw_t0;
+                static unsigned long long verts0;
+                rt_log("[perf]   GX pipe: %llu stores/frame (%llu KB); draw processing %.2f ms/frame (lookups included), "
+                       "%llu vertices/frame", (g_pipe_stores - st0) / 120, (g_pipe_bytes - by0) / 120 >> 10,
+                       (g_draw_total - draw_t0) * 1000.0 / 40500000.0 / 120, (g_verts_total - verts0) / 120);
+                draw_t0 = g_draw_total;
+                verts0 = g_verts_total;
+                st0 = g_pipe_stores;
+                by0 = g_pipe_bytes;
                 rt_log("[perf]   EFB copies to textures/frame %.1f, from depth %.1f, target format codes seen %04X",
                        g_feat_copies / 120.0, g_feat_copy_z / 120.0, g_feat_copy_fmts);
                 g_feat_ind = g_feat_fog = g_feat_ztex = g_feat_copies = g_feat_copy_z = 0;
