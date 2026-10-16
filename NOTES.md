@@ -34,6 +34,17 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - The user prefers a prepared/cached approach for freezes if that's the cause, like SwitchWakerHD's one-time cache.
 - **The files in `build/switch/` were still test 3's** (00:44–00:52, no `[settings]` line), so test 4's log has not been analysed yet.
 
+**Hardware test 4/5 analysis** (logs copied to `build/switch/hw5/`):
+- **~20 fps is GPU-bound.** Render-thread frames take ~50 ms, of which ~46 ms is waiting for the GPU, with 0 KB of uploads. That's at 2x internal resolution (1280x1056) with the big ubershader on every pixel.
+  - Answer so far: a Resolution menu option (1x default, 1.5x, 2x; `settings.resolution`). It renders into the top-left of the 2x-sized EFB, so it needs no reallocation.
+  - If 1x is still slow, the next step is ahead-of-time specialized shaders: collect TEV configs, generate GLSL, compile with uam into a shipped cache, and keep the ubershader as the fallback. The user asked for this approach ("one-time cache built in advance", as in SwitchWakerHD).
+- **Freezes:**
+  - 1.5 s + 0.7 s during an autosave were the per-card-command `rt_log` lines, each flushed to the SD card. Now one summary line per card file write, and a fully buffered log flushed ≤1/s.
+  - ~10 freezes of 100–260 ms are "game code" with no disc, texture or card activity. The hitch line now also separates guest idle and GX draw processing.
+  - Frame 11 = 29.8 s at boot is probably the console being suspended, since the AX frame count matches Eden's.
+  - Test 4's screenshot freezes: 7 per launch, at frames 300 … 7200.
+- **Missing race textures** (Splash Canyon / another stage; grey translucent slabs, missing HUD block, a black box behind the item icon): there were no undecodable textures and no dropped draws. The Metal City demo uses no indirect textures, fog or Z textures, and one colour EFB copy per frame (format code 4). New `[perf]` counters (unimplemented features, EFB copies by source and format) will show what the user's stages use.
+
 **Logging since test 4:**
 - Screenshots are off unless `SR_SHOTS=1` (`env.txt`); the user asked for that default.
 - The previous launch's log is kept as `sonicriders.prev.log`.

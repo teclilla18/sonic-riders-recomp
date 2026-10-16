@@ -60,6 +60,7 @@ static struct Ipl g_ipl;
  * (and at exit): a save is ~1250 erase/program commands, and rewriting the whole image after each
  * one took long enough on the Switch's SD card for the CARD library's timeout alarms to fire. */
 static _Atomic unsigned g_card_file_writes;
+static _Atomic unsigned g_card_erases, g_card_programs;
 unsigned exi_card_file_writes(void) { return atomic_load(&g_card_file_writes); }
 
 static void card_write_file(Card* c) {
@@ -73,6 +74,8 @@ static void card_write_file(Card* c) {
     if (!f) { rt_log("[card] cannot write %s", c->path); return; }
     size_t n = fwrite(snap, 1, CARD_SIZE, f);
     if (fclose(f) || n != CARD_SIZE) rt_log("[card] write error on %s", c->path);
+    else rt_log("[card] saved the card file (%u sector erases, %u page writes since the last save)",
+                atomic_exchange(&g_card_erases, 0), atomic_exchange(&g_card_programs, 0));
 }
 
 static void card_save(Card* c) {  /* called with mem changed */
@@ -107,13 +110,10 @@ static uint32_t card_addr(const uint8_t* b) {  /* the 4 address bytes of read/pr
     return ((uint32_t)(b[0] & 0x7F) << 17) | ((uint32_t)b[1] << 9) | ((uint32_t)(b[2] & 3) << 7) | (b[3] & 0x7F);
 }
 
-static int g_card_log = 60;
 static void card_select(Device* d) {
     Card* c = (Card*)d;
-    if (c->cmd && (c->cmd != 0x52 || g_card_log > 0)) {  /* reads: only the first ones (the mount) */
-        if (c->cmd == 0x52) g_card_log--;
-        rt_log("[card] cmd %02X addr %06X wrote %u read %u", c->cmd, c->addr, c->pos, c->rd);
-    }
+    if (c->cmd == 0xF1) g_card_erases++;  /* counted for the log line of the next card file write */
+    else if (c->cmd == 0xF2) g_card_programs++;
     /* the end of a page program happens when the CPU deselects: commit it */
     if (c->cmd == 0xF2 && c->pos > 5) {
         uint32_t n = c->pos - 5 > 128 ? 128 : c->pos - 5;

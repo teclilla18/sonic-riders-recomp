@@ -1,6 +1,7 @@
 /* Switch backend: deko3d, executing the frames built by gx_render.c on a render thread. Mirrors the
  * GL backend (platform/host/render_gl.c); the shaders are the same GLSL, compiled ahead of time with
- * uam (tools/embed_shaders.py). The EFB is an image at EFB_SCALE x 640x528, stored top row first
+ * uam (tools/embed_shaders.py). The EFB is an image of up to EFB_SCALE x 640x528 (the internal
+ * resolution, settings.h, renders into its top-left 640x528 x g_s), stored top row first
  * like GX memory: with deko3d 0.5's upper-left origin, clip-space +y is the top row, so the shader
  * does not flip y (CLIP_Y) as it does for GL, and front faces keep the GX winding (CCW).
  *
@@ -24,7 +25,9 @@
 void input_init(void);
 void input_pump(void);
 
-#define EFB_SCALE 2
+#define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (1, 1.5 or 2) */
+static float g_s = EFB_SCALE;
+#define SC(v) ((uint32_t)((float)(v) * g_s + 0.5f))
 #define EFB_W (EFB_WIDTH * EFB_SCALE)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
 #define FB_W 1280
@@ -171,7 +174,7 @@ static int tex_prepare(int id) {
     GxTexture* gt = gx_texture_get(id);
     if (!gt) return -1;
     DkTex* t = tex_slot(id);
-    uint32_t w = gt->is_copy ? gt->width * EFB_SCALE : gt->width, h = gt->is_copy ? gt->height * EFB_SCALE : gt->height;
+    uint32_t w = gt->is_copy ? SC(gt->width) : gt->width, h = gt->is_copy ? SC(gt->height) : gt->height;
     if (!t->live) tex_create(t, w, h, gt->is_copy);
     if (!gt->is_copy && t->gen != gt->gen) {
         uint32_t bytes = gt->width * gt->height * 4;
@@ -317,15 +320,13 @@ static void apply_state(const GxUniforms* u) {
     float xs = f32(u->xfr[0x1A]), ys = f32(u->xfr[0x1B]), xo = f32(u->xfr[0x1D]), yo = f32(u->xfr[0x1E]);
     int sox = (int)(u->bp[0x59] & 0x3FF) * 2, soy = (int)((u->bp[0x59] >> 10) & 0x3FF) * 2;
     float ax = xs < 0 ? -xs : xs, ay = ys < 0 ? -ys : ys;
-    DkViewport vp = {(xo - ax - (float)sox) * EFB_SCALE, (yo - ay - (float)soy) * EFB_SCALE, 2 * ax * EFB_SCALE,
-                     2 * ay * EFB_SCALE, 0.0f, 1.0f};
+    DkViewport vp = {(xo - ax - (float)sox) * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_s, 2 * ay * g_s, 0.0f, 1.0f};
     dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
     int x0 = (int)((u->bp[0x20] >> 12) & 0x7FF) - sox, y0 = (int)(u->bp[0x20] & 0x7FF) - soy;
     int x1 = (int)((u->bp[0x21] >> 12) & 0x7FF) - sox + 1, y1 = (int)(u->bp[0x21] & 0x7FF) - soy + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
-    DkScissor sc = {(uint32_t)x0 * EFB_SCALE, (uint32_t)y0 * EFB_SCALE, (uint32_t)(x1 > x0 ? x1 - x0 : 0) * EFB_SCALE,
-                    (uint32_t)(y1 > y0 ? y1 - y0 : 0) * EFB_SCALE};
+    DkScissor sc = {SC(x0), SC(y0), SC(x1 > x0 ? x1 - x0 : 0), SC(y1 > y0 ? y1 - y0 : 0)};
     dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
 
     static const DkCompareOp zf[8] = {DkCompareOp_Never, DkCompareOp_Less, DkCompareOp_Equal, DkCompareOp_Lequal,
@@ -443,7 +444,7 @@ static void shot_write(void) {
 
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
-    DkImageRect src = {x * EFB_SCALE, y * EFB_SCALE, 0, w * EFB_SCALE, h * EFB_SCALE, 1};
+    DkImageRect src = {SC(x), SC(y), 0, SC(w), SC(h), 1};
     dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
     if (c->copy[4]) {  /* to the XFB: into the swapchain image, letterboxed to 4:3 */
         if (g_fb_slot < 0) g_fb_slot = dkQueueAcquireImage(g_queue, g_swap);
@@ -484,7 +485,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     }
     if (c->copy[5]) {  /* clear the copied rectangle */
         uint32_t argb = c->copy[6], cm = u->bp[0x41];
-        DkScissor sc = {x * EFB_SCALE, y * EFB_SCALE, w * EFB_SCALE, h * EFB_SCALE};
+        DkScissor sc = {SC(x), SC(y), SC(w), SC(h)};
         dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
         float col[4] = {((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, (argb >> 24) / 255.0f};
         uint32_t mask = ((cm >> 3) & 1 ? DkColorMask_RGB : 0) | ((cm >> 4) & 1 ? DkColorMask_A : 0);
@@ -555,6 +556,7 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
 
 static void execute(GxFrame* f) {
     uint64_t t_start = armGetSystemTick();
+    g_s = settings_internal_scale();
     g_last_upload = 0;
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);

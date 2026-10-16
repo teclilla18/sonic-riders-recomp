@@ -6,13 +6,20 @@
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X};
 volatile double g_aspect_scale = 1.0;
 
 const char* settings_screen_name(int mode) {
     static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched"};
     return mode >= 0 && mode < SCREEN_MODES ? names[mode] : "?";
 }
+
+const char* settings_resolution_name(int res) {
+    static const char* const names[RES_MODES] = {"1x (640x528, fastest)", "1.5x (960x792)", "2x (1280x1056)"};
+    return res >= 0 && res < RES_MODES ? names[res] : "?";
+}
+
+float settings_internal_scale(void) { return g_settings.resolution == RES_2X ? 2.0f : g_settings.resolution == RES_1_5X ? 1.5f : 1.0f; }
 
 float settings_display_aspect(void) { return g_settings.screen == SCREEN_4_3 ? 4.0f / 3.0f : 16.0f / 9.0f; }
 
@@ -32,12 +39,13 @@ void settings_load(void) {
             int v = atoi(eq + 1);
             if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
+            else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
         }
         fclose(f);
     }
     apply();
-    rt_log("[settings] screen: %s, fps counter %s", settings_screen_name(g_settings.screen),
-           g_settings.show_fps ? "on" : "off");
+    rt_log("[settings] screen: %s, fps counter %s, resolution %s", settings_screen_name(g_settings.screen),
+           g_settings.show_fps ? "on" : "off", settings_resolution_name(g_settings.resolution));
 }
 
 void settings_apply(void) {
@@ -47,6 +55,6 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\n", g_settings.screen, g_settings.show_fps);
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\n", g_settings.screen, g_settings.show_fps, g_settings.resolution);
     fclose(f);
 }

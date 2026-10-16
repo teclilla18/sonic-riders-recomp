@@ -34,6 +34,9 @@ static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
 /* host time (timebase ticks) for the [perf] breakdown */
 static uint64_t g_wait_ticks, g_tex_ticks;
 static uint64_t g_wait_total, g_tex_total;  /* never reset ([hitch] deltas) */
+static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using unimplemented features */
+static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
+static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
 
 static GxFrame* frame(void) {
     if (!g_frame) {
@@ -191,7 +194,7 @@ static void decode_vertex(const uint8_t** pp, int vat, GxVertex* v) {
     *pp = p;
 }
 
-void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
+static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     (void)vertex_size;
     if (!count) return;
     if (g_state_dirty) push_state();
@@ -239,6 +242,11 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
         k = out_n;
         break;
     }
+    /* unimplemented features in use, for the [perf] line: indirect stages (genmode bits 16-18),
+     * fog (BP 0xEE bits 21-23), Z textures (BP 0xF4 bits 2-3) */
+    if ((g_gx.bp[0x00] >> 16) & 7) g_feat_ind++;
+    if ((g_gx.bp[0xEE] >> 21) & 7) g_feat_fog++;
+    if ((g_gx.bp[0xF4] >> 2) & 3) g_feat_ztex++;
     GxCmd* c = push_cmd(GXC_DRAW);
     c->prim = (uint8_t)kind;
     c->a = f->nverts;
@@ -259,11 +267,24 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
 }
 
 /* BP 0x52: copy the EFB (or a part) to an XFB or a texture, optionally clearing it */
+/* draws: decoded on the thread writing the GX FIFO (the game's), timed for the [hitch] lines */
+static uint64_t g_draw_total;
+void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
+    uint64_t t = rt_ticks();
+    draw(prim, vat, count, vertices, vertex_size);
+    g_draw_total += rt_ticks() - t;
+}
+
 static void efb_copy(uint32_t v) {
     uint32_t tl = g_gx.bp[0x49], wh = g_gx.bp[0x4A];
     uint32_t x = tl & 0x3FF, y = (tl >> 10) & 0x3FF, w = (wh & 0x3FF) + 1, h = ((wh >> 10) & 0x3FF) + 1;
     uint32_t dest = (g_gx.bp[0x4B] & 0xFFFFFF) << 5;
     int to_xfb = (v >> 14) & 1, clear = (v >> 11) & 1, half = (v >> 9) & 1;
+    if (!to_xfb) {  /* render-to-texture copies, for the [perf] line: from depth, and target formats */
+        g_feat_copies++;
+        if ((g_gx.bp[0x43] & 7) == 3) g_feat_copy_z++;
+        g_feat_copy_fmts |= 1u << (((v >> 4) & 7) | ((v >> 3) & 1) << 3);
+    }
     if (g_state_dirty) push_state();
     GxCmd* c = push_cmd(GXC_COPY);
     c->copy[0] = x; c->copy[1] = y; c->copy[2] = w; c->copy[3] = h;
@@ -285,7 +306,7 @@ static void efb_copy(uint32_t v) {
         g_frames++;
         /* [hitch]: a presented frame that took over 50 ms, and what the game thread spent it on */
         {
-            static uint64_t last, tex0, wait0, disc_t0;
+            static uint64_t last, tex0, wait0, disc_t0, draw0, idle0;
             static unsigned long long disc_b0, dec0, decb0;
             static unsigned card0;
             uint64_t now = rt_ticks();
@@ -295,14 +316,18 @@ static void efb_copy(uint32_t v) {
                 double ms = 1000.0 / 40500000.0;
                 double total = (now - last) * ms, disc = (di_read_ticks() - disc_t0) * ms, tex = (g_tex_total - tex0) * ms;
                 double wait = (g_wait_total - wait0) * ms;
-                rt_log("[hitch] frame %u took %.0f ms: game code %.0f ms, disc %.1f ms (%llu KB), %llu new textures (%llu KB "
-                       "RGBA, lookups %.1f ms), waiting for the render thread %.1f ms, card file writes %u", g_frames, total,
-                       total - disc - tex - wait, disc, (di_bytes_read() - disc_b0) >> 10, dec - dec0, (decb - decb0) >> 10, tex,
-                       wait, exi_card_file_writes() - card0);
+                double drw = (g_draw_total - draw0) * ms - tex, idle = (sched_idle_total() - idle0) * ms;
+                rt_log("[hitch] frame %u took %.0f ms: game code %.0f ms, guest idle %.0f ms, GX draws %.1f ms, disc %.1f ms "
+                       "(%llu KB), %llu new textures (%llu KB RGBA, lookups %.1f ms), waiting for the render thread %.1f ms, "
+                       "card file writes %u", g_frames, total, total - disc - tex - wait - drw - idle, idle, drw, disc,
+                       (di_bytes_read() - disc_b0) >> 10, dec - dec0, (decb - decb0) >> 10, tex, wait,
+                       exi_card_file_writes() - card0);
             }
             last = now;
             tex0 = g_tex_total;
             wait0 = g_wait_total;
+            draw0 = g_draw_total;
+            idle0 = sched_idle_total();
             disc_t0 = di_read_ticks();
             disc_b0 = di_bytes_read();
             dec0 = dec;
@@ -332,6 +357,12 @@ static void efb_copy(uint32_t v) {
                 double ms = 1000.0 / 40500000.0 / 120;
                 uint64_t idle, late_avg, late_max;
                 sched_stats(&idle, &late_avg, &late_max);
+                rt_log("[perf]   draws/frame using unimplemented features: indirect textures %llu, fog %llu, Z textures %llu",
+                       g_feat_ind / 120, g_feat_fog / 120, g_feat_ztex / 120);
+                rt_log("[perf]   EFB copies to textures/frame %.1f, from depth %.1f, target format codes seen %04X",
+                       g_feat_copies / 120.0, g_feat_copy_z / 120.0, g_feat_copy_fmts);
+                g_feat_ind = g_feat_fog = g_feat_ztex = g_feat_copies = g_feat_copy_z = 0;
+                g_feat_copy_fmts = 0;
                 rt_log("[perf]   ms/frame: textures %.2f, render wait %.2f, disc %.2f, guest idle %.2f; timer late avg %.3f max %.3f ms",
                        g_tex_ticks * ms, g_wait_ticks * ms, (di_read_ticks() - disc0) * ms, idle * ms, late_avg * ms * 120,
                        late_max * ms * 120);

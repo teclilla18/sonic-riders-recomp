@@ -16,7 +16,7 @@
 #define HOLD_TICKS (40500000ull / 2)  /* Minus held this long opens the menu (0.5 s) */
 #define TEXT_SCALE 2
 
-enum { ITEM_SCREEN, ITEM_FPS, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_CLOSE, ITEMS };
 
 static uint8_t g_img[OVERLAY_W * OVERLAY_H * 4];
 static unsigned g_version;
@@ -74,6 +74,7 @@ int overlay_input(unsigned held) {
     if (step) {
         switch (g_sel) {
         case ITEM_SCREEN: g_settings.screen = (g_settings.screen + SCREEN_MODES + step) % SCREEN_MODES; settings_apply(); break;
+        case ITEM_RES: g_settings.resolution = (g_settings.resolution + RES_MODES + step) % RES_MODES; settings_apply(); break;
         case ITEM_FPS: g_settings.show_fps = !g_settings.show_fps; settings_apply(); break;
         case ITEM_CLOSE: if (pressed & OV_ACCEPT) close_menu(); break;
         default: break;
@@ -124,12 +125,13 @@ static void redraw(void) {
         text(8, 8, t, rgba(255, 255, 255, 255));
     }
     if (!g_open) return;
-    const int w = 420, h = 200, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
+    const int w = 520, h = 234, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
     fill(x0, y0, x0 + w, y0 + h, rgba(10, 16, 40, 225));
     fill(x0, y0, x0 + w, y0 + 3, rgba(80, 160, 255, 255));
     text(x0 + 16, y0 + 14, "SONIC RIDERS - SETTINGS", rgba(80, 160, 255, 255));
     char lines[ITEMS][64];
     snprintf(lines[ITEM_SCREEN], 64, "Screen:  < %s >", settings_screen_name(g_settings.screen));
+    snprintf(lines[ITEM_RES], 64, "Resolution:  < %s >", settings_resolution_name(g_settings.resolution));
     snprintf(lines[ITEM_FPS], 64, "FPS counter:  < %s >", g_settings.show_fps ? "On" : "Off");
     snprintf(lines[ITEM_CLOSE], 64, "Close");
     for (int i = 0; i < ITEMS; i++) {

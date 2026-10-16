@@ -37,7 +37,8 @@ void platform_init(void) {
     remove(BASE_DIR "/sonicriders.prev.log");
     rename(BASE_DIR "/sonicriders.log", BASE_DIR "/sonicriders.prev.log");
     if (!freopen(BASE_DIR "/sonicriders.log", "w", stderr)) return;
-    setvbuf(stderr, NULL, _IOLBF, 0);
+    static char logbuf[64 * 1024];
+    setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);  /* flushed by rt_log at most once a second */
     rt_log("[switch] Sonic Riders native port; log started");
     /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
     FILE* f = fopen(BASE_DIR "/env.txt", "r");

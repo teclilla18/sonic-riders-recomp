@@ -238,6 +238,9 @@ void ppc_preempt(Cpu* c) {
 /* for the [perf] breakdown: time idle (no ready guest thread), decrementer lateness */
 static _Atomic uint64_t g_idle_ticks, g_dec_late_sum, g_dec_late_max, g_dec_fired;
 
+static _Atomic uint64_t g_idle_total;  /* never reset ([hitch] lines) */
+uint64_t sched_idle_total(void) { return atomic_load(&g_idle_total); }
+
 void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max) {
     uint64_t n = atomic_exchange(&g_dec_fired, 0);
     *idle = atomic_exchange(&g_idle_ticks, 0);
@@ -260,7 +263,9 @@ void sched_interrupts_enabled(Cpu* c) {
             cnd_timedwait(&g_irq_cv, &g_irq_lock, &ts);
         }
         mtx_unlock(&g_irq_lock);
-        g_idle_ticks += rt_ticks() - t_idle;
+        uint64_t d = rt_ticks() - t_idle;
+        g_idle_ticks += d;
+        g_idle_total += d;
         if (g_core_preempt[0]) deliver(c);
     }
 }
