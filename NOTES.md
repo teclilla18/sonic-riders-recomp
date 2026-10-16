@@ -35,8 +35,7 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
   The vertex shader reads XF registers and memory; the fragment shader reads BP and konst only.
 - **DVD completion is asynchronous:** data is copied at command start, and completion (TSTART clear plus the interrupt) comes **2 ms + len/32 MB/s** later, from a timer thread in `di.c`.
   - Why: the SDK's `DVDLowRead` (`fn_80012408`) writes DICR and *then* arms its timeout alarm (`OSSetAlarm(AlarmHandlerForTimeout)`).
-  - A completion before that (instant, or 200 µs plus a host stall) let the alarm fire later as a drive timeout, and loading stopped at "Now Loading" (≈1 in 20 runs).
-  - A `patches.txt` diagnostic logs `[dvd] the SDK's drive timeout alarm fired` if that ever happens again.
+  - The theory was that a completion before that (instant, or 200 µs plus a host stall) let the alarm fire later as a drive timeout. **Disproved:** with 2 ms, 1 of 25 Eden runs still hung, and the `[dvd] the SDK's drive timeout alarm fired` diagnostic (`patches.txt`) never logged. The realistic latency is kept anyway.
 - **Widescreen:** recompiler code patches (`config/GXEE8P/patches.txt`, documented in `gcrecomp.py`) are the native form of gamemasterplc's 16:9 Gecko code. Both projection sites multiply the aspect by `g_aspect_scale` (`settings.c`): `fn_800645DC` at entry, and REL text `0x14115C` after the `fmadds`. HUD/2D elements are stretched, as with that code. Muzzarino's code moves the HUD but is known to break on Egg Factory and Sand Ruins.
 - **Settings menu** (`overlay.c`, `settings.c`):
   - open: hold Minus 0.5 s (Switch), F1 or the controller's Back (PC);
@@ -48,7 +47,8 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
   - `SR_WATCHDOG_NOTRACE=1` keeps the dump without the function trace, which hides timing races;
   - the dump shows render-thread handoff state, DI registers, pending OS interrupts and thread suspend counts.
 - **Hang hunting:** run Eden 20–30 times (`hangloop.sh`) with an `env.txt` watchdog dump.
-  - The "Now Loading" hang is explained by the DVD timeout race above.
+  - **Still open: the "Now Loading" hang, about 1 in 25 Eden runs.** Both captured dumps stop right after the *same* disc read: DI CMD A8, offset `0x3B83AFDC`, length 0x494C0, into 0x817A8B60–0x817F2020. After it the drive is idle, no interrupts are pending, and the CRI threads keep cycling while loading never continues.
+  - Next ideas: log the DVD command blocks and callbacks around that read; check what the game does with that buffer (the top of MEM1, just below the REL at 0x81800000; is our RAM backing large enough?); look for a cache-coherency assumption (DCInvalidate) in our model.
   - One other early freeze was seen once: interrupts pending with a delivery queued (`posted 1`) while no guest code ran. Watch for it; suspects are the native thread handoff in `sched.c`, or a host wait while a guest context is current.
 - **PC (GL) only: the race HUD's digits and labels are garbled** (rainbow noise). The Switch build draws them correctly, so it's a GL backend difference (sampler or texture setup) to investigate; the PC build is a development host only.
 - **Eden after these fixes:** the demo race runs at 50–59 fps (was 23–38), and texture uploads are 40–70 KB/frame (were 3.6–4.5 MB).
