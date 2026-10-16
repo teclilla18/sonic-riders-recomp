@@ -143,67 +143,97 @@ static void color(const uint8_t* p, int fmt, float* o) {
 static const int k_csize[8] = {1, 1, 2, 2, 4, 0, 0, 0};
 static const int k_colsize[8] = {2, 3, 4, 2, 3, 4, 0, 0};
 
-/* pointer to attribute data: direct (in the stream) or indexed into the array `arr` */
-static const uint8_t* attr(const uint8_t** pp, int type, int arr) {
-    if (type == 1) return *pp;
-    uint32_t idx = type == 2 ? (*pp)[0] : rd16(*pp);
-    *pp += type == 2 ? 1 : 2;
-    uint32_t base = g_gx.cp[0xA0 + arr] & 0x03FFFFFF, stride = g_gx.cp[0xB0 + arr] & 0xFF;
-    return mem_phys(base + idx * stride);
+/* Vertex decoding: everything derived from the CP registers (VCD, VAT, array bases, matrix indices)
+ * is worked out once per draw, as it cannot change inside one; every output field is written
+ * explicitly. Attribute data is direct (in the stream) or indexed into an array. */
+typedef struct DAttr { int type, fmt, n; float scale; uint32_t base, stride; } DAttr;
+typedef struct DecodePlan {
+    float pnmtx, tmtx[8];       /* defaults from MATINDEX A/B */
+    int pnmtx_direct, tmtx_direct[8];
+    DAttr pos, nrm, col[2], tex[8];
+    int nrm_direct_size, nrm_idx_extra;  /* NBT: the binormal/tangent bytes to skip */
+} DecodePlan;
+
+static void dattr(DAttr* d, int type, int arr) {
+    d->type = type;
+    d->base = g_gx.cp[0xA0 + arr] & 0x03FFFFFF;
+    d->stride = g_gx.cp[0xB0 + arr] & 0xFF;
 }
 
-static void decode_vertex(const uint8_t** pp, int vat, GxVertex* v) {
+static void plan_init(DecodePlan* pl, int vat) {
     uint32_t lo = g_gx.cp[0x50], hi = g_gx.cp[0x60];
     uint32_t a = g_gx.cp[0x70 + vat], b = g_gx.cp[0x80 + vat], cc = g_gx.cp[0x90 + vat];
     uint32_t mia = g_gx.cp[0x30], mib = g_gx.cp[0x40];
-    const uint8_t* p = *pp;
-    memset(v, 0, sizeof *v);
-    v->pos[3] = (float)(mia & 63);
-    for (int i = 0; i < 8; i++) v->tmtx[i] = (float)(i < 4 ? (mia >> (6 + 6 * i)) & 63 : (mib >> (6 * (i - 4))) & 63);
-    if (lo & 1) v->pos[3] = (float)*p++;
-    for (int i = 0; i < 8; i++)
-        if ((lo >> (1 + i)) & 1) v->tmtx[i] = (float)*p++;
-    /* position */
-    int t = (lo >> 9) & 3;
-    if (t) {
-        const uint8_t* q = attr(&p, t, 0);
-        int fmt = (a >> 1) & 7, n = (a & 1) ? 3 : 2;
-        float s = 1.0f / (float)(1u << ((a >> 4) & 31));
-        for (int k = 0; k < n; k++) v->pos[k] = comp(&q, fmt, s);
-        if (t == 1) p += n * k_csize[fmt];
+    pl->pnmtx = (float)(mia & 63);
+    pl->pnmtx_direct = lo & 1;
+    for (int i = 0; i < 8; i++) {
+        pl->tmtx[i] = (float)(i < 4 ? (mia >> (6 + 6 * i)) & 63 : (mib >> (6 * (i - 4))) & 63);
+        pl->tmtx_direct[i] = (lo >> (1 + i)) & 1;
     }
-    /* normal (the first of NBT only) */
-    t = (lo >> 11) & 3;
-    if (t) {
-        int fmt = (a >> 10) & 7, nbt = (a >> 9) & 1, three_idx = nbt && ((a >> 31) & 1);
-        float s = fmt == 1 ? 1.0f / 64 : fmt == 3 ? 1.0f / 16384 : 1.0f;
-        const uint8_t* q = attr(&p, t, 1);
-        for (int k = 0; k < 3; k++) v->nrm[k] = comp(&q, fmt, s);
-        if (t == 1) p += (nbt ? 9 : 3) * k_csize[fmt];
-        else if (three_idx) p += 2 * (t == 2 ? 1 : 2);
-    }
-    /* colors */
+    dattr(&pl->pos, (lo >> 9) & 3, 0);
+    pl->pos.fmt = (a >> 1) & 7;
+    pl->pos.n = (a & 1) ? 3 : 2;
+    pl->pos.scale = 1.0f / (float)(1u << ((a >> 4) & 31));
+    dattr(&pl->nrm, (lo >> 11) & 3, 1);
+    pl->nrm.fmt = (a >> 10) & 7;
+    pl->nrm.n = 3;
+    pl->nrm.scale = pl->nrm.fmt == 1 ? 1.0f / 64 : pl->nrm.fmt == 3 ? 1.0f / 16384 : 1.0f;
+    int nbt = (a >> 9) & 1, three_idx = nbt && ((a >> 31) & 1);
+    pl->nrm_direct_size = (nbt ? 9 : 3) * k_csize[pl->nrm.fmt];
+    pl->nrm_idx_extra = three_idx ? 2 * (pl->nrm.type == 2 ? 1 : 2) : 0;
     for (int c = 0; c < 2; c++) {
-        t = (lo >> (13 + 2 * c)) & 3;
-        int fmt = c == 0 ? (a >> 14) & 7 : (a >> 18) & 7;
-        if (!t) { v->col[c][0] = v->col[c][1] = v->col[c][2] = v->col[c][3] = 1.0f; continue; }
-        const uint8_t* q = attr(&p, t, 2 + c);
-        color(q, fmt, v->col[c]);
-        if (t == 1) p += k_colsize[fmt];
+        dattr(&pl->col[c], (lo >> (13 + 2 * c)) & 3, 2 + c);
+        pl->col[c].fmt = c == 0 ? (a >> 14) & 7 : (a >> 18) & 7;
     }
-    /* texture coordinates */
     static const struct { int word, cnt, fmt, shft; } tex[8] = {
         {0, 21, 22, 25}, {1, 0, 1, 4}, {1, 9, 10, 13}, {1, 18, 19, 22}, {1, 27, 28, -1}, {2, 5, 6, 9}, {2, 14, 15, 18}, {2, 23, 24, 27}};
     for (int i = 0; i < 8; i++) {
-        t = (hi >> (2 * i)) & 3;
-        if (!t) continue;
+        dattr(&pl->tex[i], (hi >> (2 * i)) & 3, 4 + i);
         uint32_t w = tex[i].word == 0 ? a : tex[i].word == 1 ? b : cc;
-        int fmt = (w >> tex[i].fmt) & 7, n = ((w >> tex[i].cnt) & 1) ? 2 : 1;
+        pl->tex[i].fmt = (w >> tex[i].fmt) & 7;
+        pl->tex[i].n = ((w >> tex[i].cnt) & 1) ? 2 : 1;
         int shft = tex[i].shft >= 0 ? (int)((w >> tex[i].shft) & 31) : (int)(cc & 31);  /* TEX4SHFT is in VAT C */
-        float s = 1.0f / (float)(1u << shft);
-        const uint8_t* q = attr(&p, t, 4 + i);
-        for (int k = 0; k < n; k++) v->tex[i][k] = comp(&q, fmt, s);
-        if (t == 1) p += n * k_csize[fmt];
+        pl->tex[i].scale = 1.0f / (float)(1u << shft);
+    }
+}
+
+static inline const uint8_t* pattr(const uint8_t** pp, const DAttr* d) {
+    if (d->type == 1) return *pp;
+    uint32_t idx = d->type == 2 ? (*pp)[0] : rd16(*pp);
+    *pp += d->type == 2 ? 1 : 2;
+    return mem_phys(d->base + idx * d->stride);
+}
+
+static void decode_planned(const uint8_t** pp, const DecodePlan* pl, GxVertex* v) {
+    const uint8_t* p = *pp;
+    v->pos[3] = pl->pnmtx_direct ? (float)*p++ : pl->pnmtx;
+    for (int i = 0; i < 8; i++) v->tmtx[i] = pl->tmtx_direct[i] ? (float)*p++ : pl->tmtx[i];
+    v->pos[0] = v->pos[1] = v->pos[2] = 0.0f;
+    if (pl->pos.type) {
+        const uint8_t* q = pattr(&p, &pl->pos);
+        for (int k = 0; k < pl->pos.n; k++) v->pos[k] = comp(&q, pl->pos.fmt, pl->pos.scale);
+        if (pl->pos.type == 1) p += pl->pos.n * k_csize[pl->pos.fmt];
+    }
+    v->nrm[0] = v->nrm[1] = v->nrm[2] = v->nrm[3] = 0.0f;
+    if (pl->nrm.type) {
+        const uint8_t* q = pattr(&p, &pl->nrm);
+        for (int k = 0; k < 3; k++) v->nrm[k] = comp(&q, pl->nrm.fmt, pl->nrm.scale);
+        if (pl->nrm.type == 1) p += pl->nrm_direct_size;
+        else p += pl->nrm_idx_extra;
+    }
+    for (int c = 0; c < 2; c++) {
+        if (!pl->col[c].type) { v->col[c][0] = v->col[c][1] = v->col[c][2] = v->col[c][3] = 1.0f; continue; }
+        const uint8_t* q = pattr(&p, &pl->col[c]);
+        color(q, pl->col[c].fmt, v->col[c]);
+        if (pl->col[c].type == 1) p += k_colsize[pl->col[c].fmt];
+    }
+    for (int i = 0; i < 8; i++) {
+        v->tex[i][0] = v->tex[i][1] = 0.0f;
+        const DAttr* d = &pl->tex[i];
+        if (!d->type) continue;
+        const uint8_t* q = pattr(&p, d);
+        for (int k = 0; k < d->n; k++) v->tex[i][k] = comp(&q, d->fmt, d->scale);
+        if (d->type == 1) p += d->n * k_csize[d->fmt];
     }
     *pp = p;
 }
@@ -235,7 +265,9 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     if (!out_n) return;
     f->verts = grow(f->verts, &f->cap_verts, f->nverts + count, sizeof(GxVertex));
     const uint8_t* p = vertices;
-    for (uint32_t i = 0; i < count; i++) decode_vertex(&p, vat, &f->verts[f->nverts + i]);
+    DecodePlan plan;
+    plan_init(&plan, vat);
+    for (uint32_t i = 0; i < count; i++) decode_planned(&p, &plan, &f->verts[f->nverts + i]);
     f->idx = grow(f->idx, &f->cap_idx, f->nidx + out_n, sizeof(uint32_t));
     uint32_t* o = f->idx + f->nidx;
     const uint32_t v0 = f->nverts;
