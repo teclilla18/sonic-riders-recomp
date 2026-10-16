@@ -345,14 +345,63 @@ void render_dump(void);
 static struct { uint64_t t; int kind; uint32_t a, b, susp; } g_dbg_ev[DBG_EVENTS];
 static _Atomic unsigned g_dbg_pos;
 
+/* the same events without those of threads that produced more than 30 a second for 10 seconds in a
+ * row (periodic threads; a long hang otherwise leaves only theirs in the ring) */
+#define DBG_QUIET 4096
+static struct { uint64_t t; int kind; uint32_t a, b, susp; } g_dbg_q[DBG_QUIET];
+static unsigned g_dbg_qpos;
+static struct { uint32_t id, n, busy, streak; uint64_t t0; } g_dbg_rate[32];
+static mtx_t g_dbg_qlock;
+static once_flag g_dbg_qonce = ONCE_FLAG_INIT;
+static void dbg_qinit(void) { mtx_init(&g_dbg_qlock, mtx_plain); }
+
 void dbg_event(int kind, uint32_t a, uint32_t b) {
     unsigned i = atomic_fetch_add(&g_dbg_pos, 1) % DBG_EVENTS;
-    g_dbg_ev[i].t = rt_ticks();
+    uint64_t t = rt_ticks();
+    uint32_t susp = (kind == 1 || kind == 2) && a >= 0x80000000u && a < 0x80000000u + GUEST_RAM_SIZE - 0x300 ? ld32(a + 0x2CC) : 0;
+    g_dbg_ev[i].t = t;
     g_dbg_ev[i].kind = kind;
     g_dbg_ev[i].a = a;
     g_dbg_ev[i].b = b;
-    g_dbg_ev[i].susp = (kind == 1 || kind == 2) && a >= 0x80000000u && a < 0x80000000u + GUEST_RAM_SIZE - 0x300
-                           ? ld32(a + 0x2CC) : 0;
+    g_dbg_ev[i].susp = susp;
+    call_once(&g_dbg_qonce, dbg_qinit);
+    mtx_lock(&g_dbg_qlock);
+    int keep = 1;
+    if (kind <= 2) {
+        int j = 0;
+        while (j < 32 && g_dbg_rate[j].id && g_dbg_rate[j].id != a) j++;
+        if (j < 32) {
+            if (!g_dbg_rate[j].id) { g_dbg_rate[j].id = a; g_dbg_rate[j].t0 = t; }
+            if (t - g_dbg_rate[j].t0 > 40500000u) {
+                g_dbg_rate[j].streak = g_dbg_rate[j].n > 30 ? g_dbg_rate[j].streak + 1 : 0;
+                if (g_dbg_rate[j].streak >= 10) g_dbg_rate[j].busy = 1;
+                g_dbg_rate[j].t0 = t;
+                g_dbg_rate[j].n = 0;
+            }
+            g_dbg_rate[j].n++;
+            keep = !g_dbg_rate[j].busy;
+        }
+    }
+    if (keep) {
+        unsigned q = g_dbg_qpos++ % DBG_QUIET;
+        g_dbg_q[q].t = t; g_dbg_q[q].kind = kind; g_dbg_q[q].a = a; g_dbg_q[q].b = b; g_dbg_q[q].susp = susp;
+    }
+    mtx_unlock(&g_dbg_qlock);
+}
+
+static void dbg_quiet_dump(void) {
+    static const char* const names[] = {"?", "resume", "suspend", "dvd start", "dvd done", "dvd irq"};
+    unsigned end = g_dbg_qpos, from = end > 150 ? end - 150 : 0;
+    int64_t now = (int64_t)rt_ticks();
+    rt_log("[events] quiet ring (periodic threads left out):");
+    for (int j = 0; j < 32 && g_dbg_rate[j].id; j++)
+        if (g_dbg_rate[j].busy) rt_log("[events]   busy thread %08X", g_dbg_rate[j].id);
+    for (unsigned k = from; k < end; k++) {
+        unsigned i = k % DBG_QUIET;
+        rt_log("[events]   -%10.3f %-9s %08X %08X%s", (double)(now - (int64_t)g_dbg_q[i].t) * 1000.0 / 40500000.0,
+               names[g_dbg_q[i].kind < 6 ? g_dbg_q[i].kind : 0], g_dbg_q[i].a, g_dbg_q[i].b,
+               g_dbg_q[i].kind <= 2 ? (g_dbg_q[i].susp ? " (was suspended)" : "") : "");
+    }
 }
 
 /* the last 100 DVD events and suspends/resumes of threads other than the two busiest (CRI's audio
@@ -399,6 +448,7 @@ void dsp_dump(void);
 
 void sched_dump(void) {
     dbg_events_dump();
+    dbg_quiet_dump();
     profile_dump();
     render_dump();
     di_dump();

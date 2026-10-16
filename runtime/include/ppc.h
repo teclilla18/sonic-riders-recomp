@@ -125,37 +125,40 @@ uint32_t mmio_read(uint32_t ea, int size);
 void mmio_write(uint32_t ea, uint32_t v, int size);
 void mmio_write64(uint32_t ea, uint64_t v);
 
+/* the guest memory accesses: GCC's size heuristics otherwise leave many of them as calls in the
+ * large generated functions (on the Switch nearly all of them were) */
+#define PPC_ALWAYS_INLINE __attribute__((always_inline))
 static inline uint8_t* ppc_ptr(uint32_t ea) { return PPC_MEM_BASE + (ea & PPC_PHYS_MASK); }
 #define PPC_MMIO_UNLIKELY(ea) __builtin_expect(PPC_IS_MMIO(ea), 0)
-static inline uint8_t ld8(uint32_t ea) {
+static inline PPC_ALWAYS_INLINE uint8_t ld8(uint32_t ea) {
     if (PPC_MMIO_UNLIKELY(ea)) return (uint8_t)mmio_read(ea, 1);
     return *ppc_ptr(ea);
 }
-static inline uint16_t ld16(uint32_t ea) {
+static inline PPC_ALWAYS_INLINE uint16_t ld16(uint32_t ea) {
     if (PPC_MMIO_UNLIKELY(ea)) return (uint16_t)mmio_read(ea, 2);
     uint16_t v; memcpy(&v, ppc_ptr(ea), 2); return __builtin_bswap16(v);
 }
-static inline uint32_t ld32(uint32_t ea) {
+static inline PPC_ALWAYS_INLINE uint32_t ld32(uint32_t ea) {
     if (PPC_MMIO_UNLIKELY(ea)) return mmio_read(ea, 4);
     uint32_t v; memcpy(&v, ppc_ptr(ea), 4); return __builtin_bswap32(v);
 }
-static inline uint64_t ld64(uint32_t ea) {
+static inline PPC_ALWAYS_INLINE uint64_t ld64(uint32_t ea) {
     if (PPC_MMIO_UNLIKELY(ea)) return ((uint64_t)mmio_read(ea, 4) << 32) | mmio_read(ea + 4, 4);
     uint64_t v; memcpy(&v, ppc_ptr(ea), 8); return __builtin_bswap64(v);
 }
-static inline void st8(uint32_t ea, uint8_t v) {
+static inline PPC_ALWAYS_INLINE void st8(uint32_t ea, uint8_t v) {
     if (PPC_MMIO_UNLIKELY(ea)) { mmio_write(ea, v, 1); return; }
     *ppc_ptr(ea) = v;
 }
-static inline void st16(uint32_t ea, uint16_t v) {
+static inline PPC_ALWAYS_INLINE void st16(uint32_t ea, uint16_t v) {
     if (PPC_MMIO_UNLIKELY(ea)) { mmio_write(ea, v, 2); return; }
     v = __builtin_bswap16(v); memcpy(ppc_ptr(ea), &v, 2);
 }
-static inline void st32(uint32_t ea, uint32_t v) {
+static inline PPC_ALWAYS_INLINE void st32(uint32_t ea, uint32_t v) {
     if (PPC_MMIO_UNLIKELY(ea)) { mmio_write(ea, v, 4); return; }
     v = __builtin_bswap32(v); memcpy(ppc_ptr(ea), &v, 4);
 }
-static inline void st64(uint32_t ea, uint64_t v) {
+static inline PPC_ALWAYS_INLINE void st64(uint32_t ea, uint64_t v) {
     if (PPC_MMIO_UNLIKELY(ea)) { mmio_write64(ea, v); return; }
     v = __builtin_bswap64(v); memcpy(ppc_ptr(ea), &v, 8);
 }
@@ -198,10 +201,10 @@ static inline __attribute__((always_inline)) double snan_chk64(double d, uint32_
 #define snan_chk64(d, ea, kind) (d)
 #endif
 
-static inline double ldf32(uint32_t ea) { return (double)u32_as_f32(snan_chk32(ld32(ea), ea, 0)); }
-static inline double ldf64(uint32_t ea) { return u64_as_f64(ld64(ea)); }
-static inline void stf32(uint32_t ea, double d) { st32(ea, f32_as_u32((float)snan_chk64(d, ea, 1))); }
-static inline void stf64(uint32_t ea, double d) { st64(ea, f64_as_u64(d)); }
+static inline PPC_ALWAYS_INLINE double ldf32(uint32_t ea) { return (double)u32_as_f32(snan_chk32(ld32(ea), ea, 0)); }
+static inline PPC_ALWAYS_INLINE double ldf64(uint32_t ea) { return u64_as_f64(ld64(ea)); }
+static inline PPC_ALWAYS_INLINE void stf32(uint32_t ea, double d) { st32(ea, f32_as_u32((float)snan_chk64(d, ea, 1))); }
+static inline PPC_ALWAYS_INLINE void stf64(uint32_t ea, double d) { st64(ea, f64_as_u64(d)); }
 
 /* ---- integer helpers ---- */
 static inline uint32_t rotl32(uint32_t v, uint32_t sh) { sh &= 31; return sh ? (v << sh) | (v >> (32 - sh)) : v; }
