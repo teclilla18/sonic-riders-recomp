@@ -34,6 +34,42 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - The user prefers a prepared/cached approach for freezes if that's the cause, like SwitchWakerHD's one-time cache.
 - **The files in `build/switch/` were still test 3's** (00:44–00:52, no `[settings]` line), so test 4's log has not been analysed yet.
 
+**Hardware test 6 (2026-10-16; OLED, overclocked CPU 1785 / GPU 1152 / MEM 2133; logs in `build/switch/hw6/`):**
+- User report:
+  - 1x: Splash Canyon water areas ~30 fps (slow motion), light areas 45–60;
+  - 1.5x: ~30–35;
+  - 2x: 20;
+  - menus 58–60 at 1x/1.5x, 30 at 2x.
+- **30 fps is a cliff, not a slope.** At 1x in dense race sections the render thread took ~16.5 ms per frame: ~12 ms GPU plus ~4.5 ms CPU recording ~3500 draws, serialized by `dkQueueWaitIdle`. That's just over the 16.7 ms vsync budget, so the frame waits for the next retrace and the game runs at exactly 30.0. The game advances one step per frame, so 30 fps means half speed.
+  - Fix: **CPU/GPU overlap**. Per-slot `DkFence`; the slot's memory and retired textures are reclaimed when its fence passes (`slot_reclaim`), and the per-frame WaitIdle is gone. In Eden the render thread went from ~15–20 to ~4–5 ms per frame.
+- **The GPU cost is per-pixel ubershader cost:** a ~120-draw menu at 2x took 33 ms of GPU. That points to ahead-of-time specialized shaders (still to do).
+- **Boot stall of 10–30 s (frame 11, busy "game code"), and probably the race freezes and the rare Eden "Now Loading" hang:**
+  - `di_timer` (DVD completion, since session 5) and `card_writer` were unpinned, so they landed on core 0 with the game thread.
+  - Horizon does not time-slice equal priorities, and the guest's CRI idle threads spin, so DVD completions waited seconds.
+  - Both are now pinned to core 2 with the other device threads. **Rule: every host helper thread must be pinned off core 0.**
+- **Splash Canyon's missing water:** 1 draw/frame uses **indirect texturing**, now implemented in `gx.frag`:
+  - indirect lookups `.abg`, format mask, bias, static matrices 1–3 (scale 2^(s−17), offsets in texels), wrap, add-prev;
+  - dynamic S/T matrices and bump alpha are not implemented;
+  - the indirect stages' maps are bound via RAS1_IREF in `gx_render.c`.
+  It costs 56→76 GPRs, so deko3d has two fragment variants (`gx_frag`, `gx_frag_ind`; `embed_shaders.py` `PROGRAMS_DK`), bound per state by genmode's indirect stage count. Not yet verified visually.
+- Race start: ~280 ms hitch decoding ~100 new textures (3 MB) in Eden. On hardware the biggest burst was 36 textures (2.7 MB) in 7 ms, so a texture cache isn't urgent.
+- **"Now Loading" hang reproduced on PC** (1 of ~4 scripted runs, with the watchdog trace on). Same signature as in Eden: the last DI read is the tail of `/TSTS` (offset 0x80800, 0x494C0 bytes), then nothing; the drive is idle and no interrupt is pending.
+  - Fixed regardless: device interrupts now re-raise when their mask is enabled while the status bit is still set (DSP CSR: ARAM and AI DMA; DI DISR), since the hardware line is status & mask.
+  - A `[dsp] ARAM DMA ... completed with its interrupt masked` log line was added; it never fired in 6 clean PC runs, so the root cause is still unproven.
+  - The `env.txt` / `SR_WATCHDOG` dump now includes the DSP CSR and the last ARAM DMA.
+- **RTC:** saves made on the Switch showed "01/01/00" because `mktime` failed there. `exi.c` now builds seconds-since-2000 from `platform_local_time()` (Switch: the time service's calendar time) with days_from_civil.
+- Testing on PC with the user's save: `nav.ps1` in the scratchpad (a fresh copy of `build/user_card.raw` per run, `SR_INPUT` steps, screenshot). File select → Game Data 1 → "start with Game Data 01?" Yes (A at 2450, 2700, 3050 after the title STARTs).
+
+**Plan: ahead-of-time specialized shader cache (the GPU fix; user's preferred "built in advance" approach)**
+- Why: the fragment ubershader costs ~33 ms for ~120 draws at 2x. deko3d has no runtime GLSL compiler, so specialized shaders must be compiled with uam at build time.
+- **Key:** the fragment state that drives control flow:
+  - TEV stage count; per stage: order (map, coord, enable, channel), color/alpha env, ksel, swap selects, IND_CMD;
+  - the indirect stage count and IREF; alpha test compare/logic; the EFB alpha-update rules.
+  Register *values* (TEV colors, konst, matrices, alpha refs) stay uniforms, so one shader covers many materials.
+- **Collect:** the PC build logs every new key (`SR_SHADER_KEYS=<file>`). Play through the game, or merge key files from the user's Switch (`sdmc:/switch/sonicriders/shader_keys.txt`, written when a key misses the cache).
+- **Build:** `tools/gen_shaders.py` emits straight-line GLSL per key (the gx.frag logic with every select resolved at generation time), compiles each with uam, and embeds a sorted key → dksh table. The GL backend can use the same generated GLSL to check equivalence against the ubershader on PC.
+- **Runtime:** look up the key per state; on a miss use the ubershader and record the key for the next build.
+
 **Hardware test 4/5 analysis** (logs copied to `build/switch/hw5/`):
 - **~20 fps is GPU-bound.** Render-thread frames take ~50 ms, of which ~46 ms is waiting for the GPU, with 0 KB of uploads. That's at 2x internal resolution (1280x1056) with the big ubershader on every pixel.
   - Answer so far: a Resolution menu option (1x default, 1.5x, 2x; `settings.resolution`). It renders into the top-left of the 2x-sized EFB, so it needs no reallocation.

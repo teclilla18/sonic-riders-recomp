@@ -13,6 +13,7 @@ void platform_init(void);                   /* logging, file system, clocks */
 const char* platform_disc_path(void);       /* default location of the game's disc image */
 const char* platform_save_path(void);       /* memory card image for slot A */
 const char* platform_settings_path(void);   /* settings.ini (settings.c) */
+void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 

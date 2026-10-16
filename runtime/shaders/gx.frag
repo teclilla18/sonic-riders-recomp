@@ -24,6 +24,14 @@ vec3 coord(uint i) {
   return i == 0u ? v_tex0 : i == 1u ? v_tex1 : i == 2u ? v_tex2 : i == 3u ? v_tex3 :
          i == 4u ? v_tex4 : i == 5u ? v_tex5 : i == 6u ? v_tex6 : v_tex7;
 }
+#if GX_INDIRECT
+vec2 map_size(uint m) {
+  ivec2 s = m == 0u ? textureSize(u_tex0, 0) : m == 1u ? textureSize(u_tex1, 0) : m == 2u ? textureSize(u_tex2, 0) :
+            m == 3u ? textureSize(u_tex3, 0) : m == 4u ? textureSize(u_tex4, 0) : m == 5u ? textureSize(u_tex5, 0) :
+            m == 6u ? textureSize(u_tex6, 0) : textureSize(u_tex7, 0);
+  return vec2(s);
+}
+#endif
 vec4 sample_map(uint m, vec2 uv) {
   if (m == 0u) return texture(u_tex0, uv); if (m == 1u) return texture(u_tex1, uv);
   if (m == 2u) return texture(u_tex2, uv); if (m == 3u) return texture(u_tex3, uv);
@@ -61,6 +69,38 @@ bool acmp(float a, uint f, float ref) {
   if (f == 0u) return false; if (f == 1u) return a < ref; if (f == 2u) return a == ref; if (f == 3u) return a <= ref;
   if (f == 4u) return a > ref; if (f == 5u) return a != ref; if (f == 6u) return a >= ref; return true;
 }
+#if GX_INDIRECT
+float si11(uint v) { return float(int(v << 21u) >> 21); }
+// indirect stage k (0-3): its texture (RAS1_IREF) at its texture coordinate scaled down by RAS1_SS,
+// as the 0-255 values of .abg (s, t, u)
+vec3 ind_lookup(int k) {
+  uint iref = BP(0x27), ss = BP(0x25 + k / 2);
+  uint m = bits(iref, 6 * k, 3), c = bits(iref, 6 * k + 3, 3);
+  uint s = bits(ss, (k & 1) * 8, 4), t = bits(ss, (k & 1) * 8 + 4, 4);
+  vec3 tc = coord(c);
+  vec2 uv = tc.xy / (tc.z == 0.0 ? 1.0 : tc.z) / vec2(float(1u << s), float(1u << t));
+  return floor(sample_map(m, uv).abg * 255.0 + 0.5);
+}
+// a TEV stage's indirect offset in texels (IND_CMD `cmd`): format mask, bias, static matrix (1-3);
+// the dynamic S/T matrices are not implemented
+vec2 ind_offset(uint cmd, vec3 i0, vec3 i1, vec3 i2, vec3 i3) {
+  uint bt = bits(cmd, 0, 2), fmt = bits(cmd, 2, 2), bias = bits(cmd, 4, 3), mid = bits(cmd, 9, 4);
+  vec3 it = bt == 0u ? i0 : bt == 1u ? i1 : bt == 2u ? i2 : i3;
+  it = fmt == 0u ? it : fmt == 1u ? mod(it, 32.0) : fmt == 2u ? mod(it, 16.0) : mod(it, 8.0);
+  float bv = fmt == 0u ? -128.0 : 1.0;
+  if (bits(bias, 0, 1) != 0u) it.x += bv;
+  if (bits(bias, 1, 1) != 0u) it.y += bv;
+  if (bits(bias, 2, 1) != 0u) it.z += bv;
+  if (mid < 1u || mid > 3u) return vec2(0.0);
+  int r = 0x06 + 3 * int(mid - 1u);
+  uint ra = BP(r), rb = BP(r + 1), rc = BP(r + 2);
+  int sc = int(bits(ra, 22, 2) | (bits(rb, 22, 2) << 2) | (bits(rc, 22, 2) << 4));
+  vec2 o = vec2(si11(bits(ra, 0, 11)) * it.x + si11(bits(rb, 0, 11)) * it.y + si11(bits(rc, 0, 11)) * it.z,
+                si11(bits(ra, 11, 11)) * it.x + si11(bits(rb, 11, 11)) * it.y + si11(bits(rc, 11, 11)) * it.z);
+  return o / 1024.0 * exp2(float(sc - 17));
+}
+float wrap_ind(float t, uint w) { return w == 0u ? t : w >= 6u ? 0.0 : mod(t, float(512u >> w)); }
+#endif
 float q8(float v) { return floor(clamp(v, 0.0, 1.0) * 255.0 + 0.5); }
 vec4 reg(vec4 r0, vec4 r1, vec4 r2, vec4 r3, uint i) { return i == 0u ? r0 : i == 1u ? r1 : i == 2u ? r2 : r3; }
 /* TEV color input (0-15): PREV, APREV, C0, A0, C1, A1, C2, A2, TEXC, TEXA, RASC, RASA, ONE, HALF, KONST, ZERO */
@@ -78,6 +118,13 @@ float ainput(uint i, vec4 r0, vec4 r1, vec4 r2, vec4 r3, vec4 tex, vec4 ras, flo
 }
 void main() {
   vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
+#if GX_INDIRECT
+  /* indirect texturing: the indirect stages' lookups, and the running coordinate for "add prev" */
+  int nind = int(bits(BP(0x00), 16, 3));
+  vec3 i0 = nind > 0 ? ind_lookup(0) : vec3(0.0), i1 = nind > 1 ? ind_lookup(1) : vec3(0.0);
+  vec3 i2 = nind > 2 ? ind_lookup(2) : vec3(0.0), i3 = nind > 3 ? ind_lookup(3) : vec3(0.0);
+  vec2 ind_prev = vec2(0.0);
+#endif
   int stages = int(bits(BP(0x00), 10, 4)) + 1;
   for (int s = 0; s < 16; s++) {
     if (s >= stages) break;
@@ -86,7 +133,20 @@ void main() {
     vec4 tex = vec4(0.0);
     if (bits(order, 6, 1) != 0u) {
       vec3 tc = coord(bits(order, 3, 3));
-      tex = swizzle(sample_map(bits(order, 0, 3), tc.xy / (tc.z == 0.0 ? 1.0 : tc.z)), bits(aenv, 2, 2));
+      uint map = bits(order, 0, 3);
+      vec2 uv = tc.xy / (tc.z == 0.0 ? 1.0 : tc.z);
+#if GX_INDIRECT
+      uint icmd = BP(0x10 + s);
+      if (nind > 0 && (bits(icmd, 9, 4) != 0u || bits(icmd, 13, 6) != 0u || bits(icmd, 20, 1) != 0u)) {
+        vec2 size = map_size(map), t = uv * size;
+        t = vec2(wrap_ind(t.x, bits(icmd, 13, 3)), wrap_ind(t.y, bits(icmd, 16, 3)));
+        t += ind_offset(icmd, i0, i1, i2, i3);
+        if (bits(icmd, 20, 1) != 0u) t += ind_prev;
+        ind_prev = t;
+        uv = t / size;
+      }
+#endif
+      tex = swizzle(sample_map(map, uv), bits(aenv, 2, 2));
     }
     uint ch = bits(order, 7, 3);
     vec4 ras = ch == 0u ? v_col0 : ch == 1u ? v_col1 : vec4(0.0);

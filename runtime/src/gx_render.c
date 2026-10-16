@@ -194,6 +194,15 @@ static void decode_vertex(const uint8_t** pp, int vat, GxVertex* v) {
     *pp = p;
 }
 
+/* the texture bound to `map` for this draw (timed for [perf] and [hitch]) */
+static void lookup_map(GxCmd* c, int map) {
+    uint64_t t = rt_ticks();
+    c->tex[map] = gx_texture_lookup(map);
+    uint64_t d = rt_ticks() - t;
+    g_tex_ticks += d;
+    g_tex_total += d;
+}
+
 static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     (void)vertex_size;
     if (!count) return;
@@ -257,11 +266,12 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     for (int s = 0; s < stages; s++) {
         uint32_t order = g_gx.bp[0x28 + s / 2] >> ((s & 1) ? 12 : 0);
         int map = (int)(order & 7);
-        if ((order >> 6) & 1 && c->tex[map] < 0) {
-            uint64_t t = rt_ticks();
-            c->tex[map] = gx_texture_lookup(map);
-            { uint64_t d = rt_ticks() - t; g_tex_ticks += d; g_tex_total += d; }
-        }
+        if ((order >> 6) & 1 && c->tex[map] < 0) lookup_map(c, map);
+    }
+    /* the indirect stages' textures (RAS1_IREF) */
+    for (int k = 0; k < (int)((g_gx.bp[0x00] >> 16) & 7) && k < 4; k++) {
+        int map = (int)((g_gx.bp[0x27] >> (6 * k)) & 7);
+        if (c->tex[map] < 0) lookup_map(c, map);
     }
     f->nverts += k;
 }
@@ -357,7 +367,7 @@ static void efb_copy(uint32_t v) {
                 double ms = 1000.0 / 40500000.0 / 120;
                 uint64_t idle, late_avg, late_max;
                 sched_stats(&idle, &late_avg, &late_max);
-                rt_log("[perf]   draws/frame using unimplemented features: indirect textures %llu, fog %llu, Z textures %llu",
+                rt_log("[perf]   draws/frame using indirect textures %llu (dynamic matrices not implemented), fog %llu (not implemented), Z textures %llu (not implemented)",
                        g_feat_ind / 120, g_feat_fog / 120, g_feat_ztex / 120);
                 rt_log("[perf]   EFB copies to textures/frame %.1f, from depth %.1f, target format codes seen %04X",
                        g_feat_copies / 120.0, g_feat_copy_z / 120.0, g_feat_copy_fmts);

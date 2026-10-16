@@ -337,9 +337,12 @@ void os_irq_dump(void);
 
 void render_dump(void);
 
+void dsp_dump(void);
+
 void sched_dump(void) {
     render_dump();
     di_dump();
+    dsp_dump();
     os_irq_dump();
     rt_log("[threads] current %08X, run-queue bits %08X, running ctx %08X", ld32(OS_CURRENT_THREAD),
            ld32(OS_RUNQUEUE_BITS), g_running ? g_running->ctx : 0);

@@ -161,6 +161,17 @@ static void aram_dma(void) {
     g_regs[0x2A >> 1] = 0;
     g_csr |= CSR_ARINT;
     if (g_csr & CSR_ARMSK) os_raise_interrupt(OS_INTERRUPT_DSP_ARAM);
+    else {
+        static int logged;
+        if (logged++ < 10)
+            rt_log("[dsp] ARAM DMA (%s %X bytes) completed with its interrupt masked: raised when unmasked",
+                   to_mm ? "to RAM" : "to ARAM", len);
+    }
+}
+
+void dsp_dump(void) {
+    rt_log("[dsp] CSR %04X, ARAM DMA mm %04X%04X ar %04X%04X cnt %04X%04X", g_csr, g_regs[0x20 >> 1], g_regs[0x22 >> 1],
+           g_regs[0x24 >> 1], g_regs[0x26 >> 1], g_regs[0x28 >> 1], g_regs[0x2A >> 1]);
 }
 
 uint8_t* aram_ptr(uint32_t addr) { return g_aram + (addr % ARAM_SIZE); }
@@ -199,8 +210,12 @@ static void write16(uint32_t off, uint32_t v) {
             g_boot_step = 0;
             push_mail(0x8071FEEDu, 0);
         }
-        /* interrupt status bits that are still set and enabled re-raise */
+        /* interrupt status bits that are still set and enabled re-raise, as the hardware's interrupt
+         * line is status & mask: an ARAM DMA that completed while its interrupt was masked must
+         * still interrupt when it is unmasked (lost, the game's sound loading waited forever) */
         if ((g_csr & CSR_DSPINT) && (g_csr & CSR_DSPMSK)) os_raise_interrupt(OS_INTERRUPT_DSP_DSP);
+        if ((g_csr & CSR_ARINT) && (g_csr & CSR_ARMSK)) os_raise_interrupt(OS_INTERRUPT_DSP_ARAM);
+        if ((g_csr & CSR_AIDINT) && (g_csr & CSR_AIDMSK)) os_raise_interrupt(OS_INTERRUPT_DSP_AI);
         return;
     }
     case 0x2A:

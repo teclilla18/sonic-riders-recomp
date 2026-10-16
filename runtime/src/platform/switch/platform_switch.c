@@ -76,6 +76,20 @@ const char* platform_disc_path(void) {
 const char* platform_save_path(void) { return BASE_DIR "/saves/card_a.raw"; }
 const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
 
+/* the console's local clock (time service), for the GameCube RTC */
+void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second) {
+    u64 now = 0;
+    TimeCalendarTime ct = {0};
+    TimeCalendarAdditionalInfo info;
+    if (R_FAILED(timeGetCurrentTime(TimeType_Default, &now)) || R_FAILED(timeToCalendarTimeWithMyRule(now, &ct, &info))) {
+        static int warned;
+        if (!warned++) rt_log("[switch] the time service failed: the game's clock starts at 2000-01-01");
+        ct.year = 2000; ct.month = 1; ct.day = 1;
+    }
+    *year = ct.year; *month = ct.month; *day = ct.day;
+    *hour = ct.hour; *minute = ct.minute; *second = ct.second;
+}
+
 /* ---- threads: libnx gives threads created without attributes a 128 KiB stack ---- */
 typedef struct { int (*fn)(void*); void* arg; } Start;
 static void* trampoline(void* p) {

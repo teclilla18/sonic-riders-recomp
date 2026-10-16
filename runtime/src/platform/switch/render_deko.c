@@ -47,7 +47,8 @@ static DkDevice g_dev;
 static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
-static DkShader g_vsh, g_fsh, g_ovs, g_ofs;  /* the GX ubershader; the overlay */
+static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
+static int g_fsh_bound_ind;  /* the variant bound in this frame's command list (-1: none yet) */
 #define OVERLAY_SLOT 1                         /* image descriptor of the overlay image */
 static DkImage g_ov_image;
 static unsigned g_ov_version = ~0u;
@@ -55,6 +56,10 @@ static DkSwapchain g_swap;
 static DkImage g_fb[2], g_efb, g_efb_depth;
 static DkImageView g_efb_view, g_efb_depth_view;
 static unsigned g_slot;
+static DkFence g_slot_fence[2];      /* signalled when the GPU has finished a slot's frame */
+static int g_slot_fenced[2];
+static int* g_retired[2];            /* texture ids retired by a slot's frame: freed after its fence */
+static uint32_t g_nretired[2];
 static uint32_t g_vtx_off, g_ubo_off, g_stage_off;
 static uint64_t g_busy_ticks, g_gpu_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
 static uint64_t g_last_gpu;      /* this frame's GPU wait ([hitch]) */
@@ -227,12 +232,13 @@ static void dk_setup(void) {
     dkCmdBufMakerDefaults(&cm, g_dev);
     g_cmd = dkCmdBufCreate(&cm);
 
-    g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_overlay_vert_dksh + sizeof k_overlay_frag_dksh +
-                       4 * DK_SHADER_CODE_ALIGNMENT,
+    g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
+                       sizeof k_overlay_frag_dksh + 5 * DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
     shader_load(&g_fsh, k_gx_frag_dksh, sizeof k_gx_frag_dksh, &off);
+    shader_load(&g_fsh_ind, k_gx_frag_ind_dksh, sizeof k_gx_frag_ind_dksh, &off);
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
 
@@ -554,10 +560,29 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
     dkCmdBufDraw(g_cmd, DkPrimitive_TriangleStrip, 4, 1, 0, 0);
 }
 
+/* wait until the GPU is done with slot `slot` (its frame from two frames ago), then free what that
+ * frame retired */
+static void slot_reclaim(unsigned slot) {
+    if (g_slot_fenced[slot]) {
+        uint64_t t = armGetSystemTick();
+        dkFenceWait(&g_slot_fence[slot], -1);
+        g_last_gpu = armGetSystemTick() - t;
+        g_gpu_ticks += g_last_gpu;
+        g_slot_fenced[slot] = 0;
+    }
+    for (uint32_t i = 0; i < g_nretired[slot]; i++) {
+        tex_destroy(g_retired[slot][i]);
+        gx_texture_free(g_retired[slot][i]);
+    }
+    g_nretired[slot] = 0;
+}
+
 static void execute(GxFrame* f) {
     uint64_t t_start = armGetSystemTick();
     g_s = settings_internal_scale();
     g_last_upload = 0;
+    g_last_gpu = 0;
+    slot_reclaim(g_slot);
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
@@ -593,6 +618,7 @@ static void execute(GxFrame* f) {
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
     DkShader const* shaders[2] = {&g_vsh, &g_fsh};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
+    g_fsh_bound_ind = 0;
     dkCmdBufBindImageDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc), MAX_IMAGES);
     dkCmdBufBindSamplerDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc) + MAX_IMAGES * sizeof(DkImageDescriptor), NUM_SAMPLERS);
     static const uint32_t offs[10] = {
@@ -632,6 +658,13 @@ static void execute(GxFrame* f) {
             dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 0, a, ubo_size);
             g_ubo_off = (g_ubo_off + ubo_size + DK_UNIFORM_BUF_ALIGNMENT - 1) & ~(DK_UNIFORM_BUF_ALIGNMENT - 1);
             apply_state(cur);
+            /* the fragment ubershader with indirect texturing only for draws that use it */
+            int ind = ((cur->bp[0x00] >> 16) & 7) != 0;
+            if (ind != g_fsh_bound_ind) {
+                DkShader const* fs[1] = {ind ? &g_fsh_ind : &g_fsh};
+                dkCmdBufBindShaders(g_cmd, DkStageFlag_Fragment, fs, 1);
+                g_fsh_bound_ind = ind;
+            }
             break;
         }
         case GXC_DRAW:
@@ -656,18 +689,20 @@ static void execute(GxFrame* f) {
         dkQueuePresentImage(g_queue, g_swap, g_fb_slot);
         g_fb_slot = -1;
     }
+    /* the GPU runs this frame while the next one is recorded into the other slot: the slot's fence
+     * says when its memory and the textures retired with it are free again */
+    dkQueueSignalFence(g_queue, &g_slot_fence[g_slot], true);
+    g_slot_fenced[g_slot] = 1;
     dkQueueFlush(g_queue);
-    uint64_t t_wait = armGetSystemTick();
-    dkQueueWaitIdle(g_queue);
-    g_last_gpu = armGetSystemTick() - t_wait;
-    g_gpu_ticks += g_last_gpu;
-    shot_write();
-    for (uint32_t i = 0; i < f->nretired; i++) {
-        tex_destroy(f->retired[i]);
-        gx_texture_free(f->retired[i]);
+    if (g_shot_pending) {  /* debugging screenshots read the picture back now */
+        dkQueueWaitIdle(g_queue);
+        shot_write();
     }
+    g_retired[g_slot] = realloc(g_retired[g_slot], (f->nretired ? f->nretired : 1) * sizeof(int));
+    memcpy(g_retired[g_slot], f->retired, f->nretired * sizeof(int));
+    g_nretired[g_slot] = f->nretired;
     g_slot ^= 1;
-    /* render-thread cost per frame (build + GPU, as execute waits for the GPU) */
+    /* render-thread cost per frame (recording, plus waiting for the GPU to free a slot) */
     uint64_t busy = armGetSystemTick() - t_start;
     g_busy_ticks += busy;
     if (armTicksToNs(busy) > 50000000ull)

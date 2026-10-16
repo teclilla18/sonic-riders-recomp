@@ -80,6 +80,10 @@ static void execute(void) {
 
 static int di_timer(void* arg) {
     (void)arg;
+    /* core 2, with the other device threads: on core 0 the game thread, often spinning in guest
+     * code, kept this thread from running (Horizon does not time-slice equal priorities), so disc
+     * reads completed seconds late (10-30 s stalls at boot, freezes in races) */
+    rt_thread_pin(2);
     mtx_lock(&g_di_lock);
     for (;;) {
         if (g_di_done_at < 0) { cnd_wait(&g_di_cv, &g_di_lock); continue; }
@@ -131,6 +135,7 @@ void di_write(uint32_t ea, uint32_t v, int size) {
     switch (r) {
     case DISR:  /* interrupt status: write 1 to clear; masks and break are stored */
         g_di[DISR] = (g_di[DISR] & (DEINT | TCINT | BRKINT) & ~v) | (v & (DEINT_MASK | TCINT_MASK | BRKINT_MASK | 1u));
+        if ((g_di[DISR] & TCINT) && (g_di[DISR] & TCINT_MASK)) os_raise_interrupt(OS_INTERRUPT_PI_DI);  /* status & mask */
         break;
     case DICVR:
         g_di[DICVR] = (g_di[DICVR] & 4u & ~v) | (v & 2u);

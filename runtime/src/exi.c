@@ -87,6 +87,7 @@ static Card g_card_a;
 
 static int card_writer(void* arg) {
     Card* c = arg;
+    rt_thread_pin(2);  /* off the game thread's core 0 (see di.c's di_timer) */
     for (;;) {
         struct timespec ts = {0, 100000000};
         thrd_sleep(&ts, NULL);
@@ -272,13 +273,21 @@ static void sram_checksum(uint8_t* s) {
     s[0] = c1 >> 8; s[1] = (uint8_t)c1; s[2] = c2 >> 8; s[3] = (uint8_t)c2;
 }
 
-static uint32_t rtc_now(void) {  /* seconds since 2000-01-01 00:00 local time */
-    time_t t = time(NULL);
-    struct tm lt = *localtime(&t);
-    struct tm epoch = {0};
-    epoch.tm_year = 100; epoch.tm_mday = 1; epoch.tm_isdst = -1;
-    lt.tm_isdst = -1;
-    return (uint32_t)difftime(mktime(&lt), mktime(&epoch));
+/* days since 1970-01-01 of a civil date (proleptic Gregorian; H. Hinnant's days_from_civil) */
+static int64_t days_from_civil(int y, int m, int d) {
+    y -= m <= 2;
+    int64_t era = (y >= 0 ? y : y - 399) / 400;
+    int64_t yoe = y - era * 400;
+    int64_t doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    int64_t doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + doe - 719468;
+}
+
+static uint32_t rtc_now(void) {  /* seconds since 2000-01-01 00:00 local time (no mktime: it failed on the Switch) */
+    int y, mo, d, h, mi, s;
+    platform_local_time(&y, &mo, &d, &h, &mi, &s);
+    int64_t secs = (days_from_civil(y, mo, d) - days_from_civil(2000, 1, 1)) * 86400 + h * 3600 + mi * 60 + s;
+    return secs > 0 ? (uint32_t)secs : 0;
 }
 
 static uint32_t rtc_now_for_card(void) { return rtc_now(); }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "runtime.h"
 
@@ -42,6 +43,13 @@ const char* platform_disc_path(void) {
 
 const char* platform_save_path(void) { return "saves/card_a.raw"; }
 const char* platform_settings_path(void) { return "saves/settings.ini"; }
+
+void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second) {
+    time_t t = time(NULL);
+    struct tm lt = *localtime(&t);
+    *year = lt.tm_year + 1900; *month = lt.tm_mon + 1; *day = lt.tm_mday;
+    *hour = lt.tm_hour; *minute = lt.tm_min; *second = lt.tm_sec;
+}
 
 typedef struct { int (*fn)(void*); void* arg; } Start;
 
