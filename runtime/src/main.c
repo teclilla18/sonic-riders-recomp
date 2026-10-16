@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "gx.h"
+#include "gx_render.h"
 #include "recomp_table.h"
 #include "runtime.h"
 
@@ -35,7 +36,12 @@ int main(int argc, char** argv) {
     cpu_init(&g_main_cpu);
     sched_init();
     gx_init();
+    render_start();
     dsp_init();
+    {
+        const char* card = getenv("SR_CARD");
+        exi_init(card ? card : "saves/card_a.raw");
+    }
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
     if (wd && atoi(wd) > 0) {

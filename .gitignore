@@ -76,3 +76,8 @@ objdiff.json
 config/*/symbols.txt
 config/*/splits.txt
 config/*/_Main/
+
+# Save data (memory card images): personal, derived from playing the game
+saves/
+*.raw
+*.gci

@@ -73,6 +73,11 @@ uint32_t ai_read(uint32_t ea, int size);
 void ai_write(uint32_t ea, uint32_t v, int size);
 uint8_t* aram_ptr(uint32_t addr);
 
+/* exi.c: EXI bus: memory card (slot A), IPL SRAM/RTC */
+void exi_init(const char* card_path);
+uint32_t exi_read(uint32_t ea, int size);
+void exi_write(uint32_t ea, uint32_t v, int size);
+
 /* ax.c: AX microcode stand-in and host audio output */
 void ax_process_command_list(uint32_t addr, uint32_t size);
 void audio_submit(uint32_t addr, uint32_t bytes);

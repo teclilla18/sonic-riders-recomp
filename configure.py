@@ -51,11 +51,16 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     n = Writer(f)
     n.variable("ninja_required_version", "1.10")
     if args.target == "host":
+        # SDL2 (window, GL context, input, audio) from build/ext (downloaded, not committed)
+        sdl = glob.glob(os.path.join(ROOT, "build/ext/SDL2-*"))
+        if not sdl:
+            sys.exit("SDL2 not found: extract SDL2-devel-2.32.10-VC.zip into build/ext (see NOTES.md)")
+        sdl = os.path.relpath(sorted(sdl)[-1], ROOT).replace("\\", "/")
         n.variable("cc", "clang")
         n.variable("cxx", "clang++")
-        n.variable("cflags", "-std=gnu11 -g %s -D_CRT_SECURE_NO_WARNINGS" % inc)
-        n.variable("cxxflags", "-std=c++20 -g %s -D_CRT_SECURE_NO_WARNINGS" % inc)
-        n.variable("ldflags", "-g -fuse-ld=lld")
+        n.variable("cflags", "-std=gnu11 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
+        n.variable("cxxflags", "-std=c++20 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
+        n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32" % sdl)
         exe = OUT + "/sonicriders.exe"
     else:
         dkp = os.environ.get("DEVKITPRO", "C:/devkitPro").replace("\\", "/")
@@ -95,6 +100,10 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"], variables={"extra": "-O2 -Wall"})
         objs.append(o)
     n.build(exe, "link", objs)
+    if args.target == "host":
+        n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
+        n.build(OUT + "/SDL2.dll", "copy", sdl + "/lib/x64/SDL2.dll")
+        n.default(OUT + "/SDL2.dll")
     n.build("gen_objs", "phony", objs[:len(gen_c)])
     n.default(exe)
 print("wrote build.ninja (%s): %d generated + %d runtime sources" % (args.target, len(gen_c), len(rt_c) + len(rt_cpp)))

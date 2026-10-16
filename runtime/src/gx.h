@@ -11,6 +11,7 @@ typedef struct GxState {
     uint32_t cp[256];         /* CP registers (VCD, VAT, array bases/strides, matrix indices) */
     uint32_t bp[256];         /* BP registers (24-bit values) */
     uint32_t bp_mask;
+    uint32_t konst[8];        /* TEV konstant colors: BP 0xE0-0xE7 written with bit 23 set */
     uint32_t xf_mem[0x1000];  /* XF memory: position/normal/texture/post matrices, lights */
     uint32_t xf_reg[0x100];   /* XF registers 0x1000-0x10FF */
     unsigned long long fifo_bytes, draws;

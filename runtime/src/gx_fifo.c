@@ -102,6 +102,11 @@ static void pe_token(uint16_t token, int irq) {
 
 static void load_bp(uint32_t v) {
     uint32_t reg = v >> 24, val = v & 0xFFFFFF;
+    if (reg >= 0xE0 && reg <= 0xE7 && (val >> 23)) {  /* konstant color: same address, type bit set */
+        g_gx.konst[reg - 0xE0] = val;
+        gx_bp_written(reg, val);
+        return;
+    }
     if (reg != 0xFE) {  /* BP mask register: the next write only changes the masked bits */
         uint32_t m = g_gx.bp_mask;
         g_gx.bp[reg] = (g_gx.bp[reg] & ~m) | (val & m);
@@ -119,7 +124,10 @@ static void load_bp(uint32_t v) {
     gx_bp_written(reg, g_gx.bp[reg]);
 }
 
+void gx_state_dirty(void);
+
 static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
+    gx_state_dirty();
     for (uint32_t i = 0; i < n; i++, addr++) {
         uint32_t v = rd32(data + 4 * i);
         if (addr < 0x1000) g_gx.xf_mem[addr] = v;
@@ -132,6 +140,7 @@ static void load_indexed(int array, uint32_t v) {
     uint32_t index = v >> 16, n = ((v >> 12) & 0xF) + 1, addr = v & 0xFFF;
     uint32_t base = g_gx.cp[0xA0 + 12 + array] & 0x3FFFFFFF, stride = g_gx.cp[0xB0 + 12 + array] & 0xFF;
     uint32_t src = 0x80000000u | (base + index * stride);
+    gx_state_dirty();
     for (uint32_t i = 0; i < n && addr + i < 0x1000; i++) g_gx.xf_mem[addr + i] = ld32(src + 4 * i);
 }
 
