@@ -10,7 +10,7 @@
 
 enum { DISR, DICVR, DICMD0, DICMD1, DICMD2, DIMAR, DILEN, DICR, DIIMM, DICFG, DI_NREGS };
 static uint32_t g_di[DI_NREGS];
-static unsigned long long g_read_bytes;
+static unsigned long long g_read_bytes, g_read_ticks;
 
 /* DISR bits */
 #define DEINT_MASK  0x02u
@@ -23,7 +23,9 @@ static unsigned long long g_read_bytes;
 static void dma_from_disc(uint64_t offset, uint32_t addr, uint32_t len) {
     uint32_t pa = addr & 0x03FFFFFF;
     if (pa + len > GUEST_RAM_SIZE) rt_fatal("DVD read of %u bytes to %08X goes past MEM1", len, addr);
+    uint64_t t = rt_ticks();
     size_t got = disc_read(offset, mem_phys(pa), len);
+    g_read_ticks += rt_ticks() - t;
     if (got != len) memset(mem_phys(pa) + got, 0, len - got);
     g_read_bytes += len;
 }
@@ -97,3 +99,4 @@ void di_write(uint32_t ea, uint32_t v, int size) {
 }
 
 unsigned long long di_bytes_read(void) { return g_read_bytes; }
+unsigned long long di_read_ticks(void) { return g_read_ticks; }

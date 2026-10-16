@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdatomic.h>
 #include <threads.h>
 #include <time.h>
 
@@ -234,11 +235,22 @@ void ppc_preempt(Cpu* c) {
 
 /* MSR.EE turned on (OSEnableInterrupts / OSRestoreInterrupts): deliver what is pending. In the
  * scheduler's idle loop (no ready thread), wait for an interrupt instead of spinning. */
+/* for the [perf] breakdown: time idle (no ready guest thread), decrementer lateness */
+static _Atomic uint64_t g_idle_ticks, g_dec_late_sum, g_dec_late_max, g_dec_fired;
+
+void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max) {
+    uint64_t n = atomic_exchange(&g_dec_fired, 0);
+    *idle = atomic_exchange(&g_idle_ticks, 0);
+    *late_avg = n ? atomic_exchange(&g_dec_late_sum, 0) / n : 0;
+    *late_max = atomic_exchange(&g_dec_late_max, 0);
+}
+
 void sched_interrupts_enabled(Cpu* c) {
     os_irq_retry();
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
         record_backtrace(c);
+        uint64_t t_idle = rt_ticks();
         mtx_lock(&g_irq_lock);
         if (!g_core_preempt[0]) {
             struct timespec ts;
@@ -248,6 +260,7 @@ void sched_interrupts_enabled(Cpu* c) {
             cnd_timedwait(&g_irq_cv, &g_irq_lock, &ts);
         }
         mtx_unlock(&g_irq_lock);
+        g_idle_ticks += rt_ticks() - t_idle;
         if (g_core_preempt[0]) deliver(c);
     }
 }
@@ -279,6 +292,10 @@ static int dec_main(void* arg) {
         if (g_dec_deadline == INT64_MAX) { cnd_wait(&g_dec_cv, &g_dec_lock); continue; }
         int64_t left = g_dec_deadline - (int64_t)rt_ticks();
         if (left <= 0) {
+            uint64_t late = (uint64_t)-left;
+            g_dec_late_sum += late;
+            if (late > g_dec_late_max) g_dec_late_max = late;
+            g_dec_fired++;
             g_dec_deadline = INT64_MAX;
             mtx_unlock(&g_dec_lock);
             rt_irq_raise(RT_IRQ_DEC);

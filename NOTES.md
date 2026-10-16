@@ -11,42 +11,50 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching plan below is superseded.
 
-**Status after session 3 (2026-10-15):**
-- **Windows host build:** the game plays its intro (SEGA/Sonic Team logos), the opening FMV (Sofdec, decoded by CRI's own recompiled MPEG code), the title screen, and reaches the save-file menu with controller input, at a steady 60 fps.
-- **Switch build:** `build/switch/sonicriders.nro`. **First hardware test (session 3):**
-  - The game logic runs on the console: 60 fps for logos/menus, ~42 fps during the FMV, reaching the menus.
-  - The screen stayed **black**, then the game died with `FATAL: image pool exhausted (524288 bytes)`.
-  - Both are fixed in the build after commit f983dda (see below), but the fixes are **not yet verified on hardware**.
+**Status after session 4 (2026-10-16):**
+- **Windows host build:** the intro (SEGA/Sonic Team logos), the opening FMV, the title screen and the save-file menu, with controller input, at a steady 60 fps.
+- **Switch build** (verified in the Eden emulator, **not yet on hardware**): logos, FMV, title screen and the **attract-mode demo race in 3D** with HUD. The demo race was never shown on PC before; it looks blue-tinted, probably from missing fog and other renderer features.
+- **Hardware tests so far:**
+  1. Black screen, then `image pool exhausted`. Fixed in session 3: texture-cache leak and deko3d clip orientation.
+  2. Black screen, no crash. Fixed in session 4: the uam miscompile below.
+  Test 3 is pending.
 - **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet.
 
-**Session 3 fixes from the hardware log:**
-- **Black screen** [likely cause]: with deko3d **0.5.0** (the installed version), an upper-left origin maps clip-space +y to the *top* row (D3D-style; see `gpu_3d_base.cpp` @v0.5.0, `scaleY = -halfHeight`). The shared vertex shader flipped y as GL needs, which made the EFB upside down *and* reversed every triangle's winding against `DkFrontFace_CCW`. GX leaves back-face culling on, so everything visible was culled. The fix is a `CLIP_Y` prelude macro (`tools/embed_shaders.py`): GL is 1, deko3d is -1. Newer deko3d (after v0.5.0) adds `DkDeviceFlags_YAxisPoints*`, so recheck this if deko3d is updated.
-- **Image pool exhausted**: the texture cache (`gx_texture.c`) overwrote colliding cache slots without retiring the old texture, and never reused texture ids. Now:
-  - colliding or replaced entries are retired;
-  - entries unused for 600 frames are evicted;
-  - ids are recycled through a locked free list;
-  - EFB-copy targets replaced by a different size are retired.
-  `[perf]` lines now end with the live texture count (1–6 on PC through the intro).
-- **EFB cleared at setup** (black, depth = far): pool memory is not zeroed.
-- **Guest memory without title mode:** if `svcMapProcessCodeMemory` is unavailable or fails, `svcMapMemory` into the stack region is used. This was verified in the Eden emulator. Title mode may therefore no longer be needed; untested on hardware.
-- **Hardware diagnostics:**
-  - `shot_<frame>.bmp` self-captures at presented frames 300/900/1800/3000/4500, written to the SD folder;
-  - a `[deko3d] X ms/frame on the render thread, Y KB/frame texture uploads` line every 120 frames, which separates GPU/render cost from guest CPU cost (the FMV ran at 42 fps).
+**Session 4: why the Switch screen was black (fixed)**
+- **uam (deko3d's shader compiler) miscompiles a runtime component index into a uniform-buffer vector.** `xfm[i >> 2][i & 3]` in the vertex stage returned wrong values for components 1–3. Every vertex was therefore transformed by a garbage matrix, and nothing rasterized.
+- The fragment shader's runtime-indexed local arrays (`r[4]`, `cin[16]`, `ain[8]`) also needed **194 KB per-warp scratch memory**, far beyond the queue default.
+- **Rule for the shared GLSL:** never index a vector or a local array with a runtime value. Use explicit selects instead: `pick()` in `gx_common.glsl`, and `comp()`/`cinput()`/`ainput()`/`reg()` in `gx.frag`.
+- Check after shader changes: both dksh files in `build/switch/shaders/` must report `per_warp_scratch 0`. Read it from the DkshProgramHeader at `programs_off`, offset 20.
+- How it was found: a self-test (EFB clear → blit → capture) plus re-rendering one frame with state overrides and tiny debug shaders, bisected inside Eden. That scaffolding was removed after the fix; the method is recorded here.
 
-**Emulator testing: not available.** Eden v0.2.1 (official build in `build/ext/eden/`, gitignored) runs the NRO up to `dkDeviceCreate` and then aborts. devkitPro's stock `deko_basic` example aborts the same way, so the cause is the emulator setup (probably the missing firmware/keys), not this code. Ryujinx's servers (`git.`/`update.ryujinx.app`) time out from this network. Hardware is the only GPU test.
+**Testing without hardware: Eden v0.1.1** (`build/ext/eden-v0.1.1/app`, gitignored; portable `user/` folder)
+- **Use v0.1.1.** v0.2.1 aborts in `dkDeviceCreate`, even with devkitPro's stock `deko_basic` sample.
+- Keys: Eden needs the user's own console keys in its `user/keys/` folder. Never commit them; `*.keys` is gitignored and blocked by the pre-commit hook.
+- SD card: `user/sdmc/switch/sonicriders/` holds the NRO, an ISO copy, saves and the log.
+- Run: `eden-cli.exe "user\sdmc\switch\sonicriders\sonicriders.nro"`. Don't start it minimized: rendering stalls. The user is fine with the window being visible.
+- Eden has no process handle for homebrew, so guest memory uses the `svcMapMemory` fallback there.
+- The port's own `shot_<frame>.bmp` self-captures are how to look at frames. Don't screen-capture the desktop: other windows end up in the image.
+
+**Performance (Eden numbers, not hardware; the `[perf]` line has the breakdown):**
+- **FMV ~42 fps on console and in Eden:** the guest is CPU-bound (guest idle 0 ms). The recompiled Sofdec MPEG decoder is too slow on ARM. Late frames show half-decoded images. Textures, render wait, disc reads and timer lateness are all negligible.
+- **Menus:** 60 fps, but texture lookup costs ~4 ms/frame (the hash of every bound texture every frame).
+- **Demo race:** 28–38 fps, ~4000 draws/frame, 3–4 MB/frame texture re-uploads, texture lookup 5–16 ms/frame, render thread 21–26 ms/frame.
 
 **Next steps, in order:**
-1. **Second hardware test** (user): same steps as below. Send `sonicriders.log` and the `shot_*.bmp` files. Check:
-   - whether the picture appears and is upright;
-   - the front-face choice (if the logos are missing but the FMV shows, flip `rs.frontFace`);
-   - FMV speed versus the `[deko3d]` ms/frame line.
-2. **AX mixing** in `ax.c` (Dolphin AX.cpp is the reference):
+1. **Hardware test 3** (user). Expected result: picture, logos, FMV (slow), title, demo race. Send `sonicriders.log` and the `shot_*.bmp` files (frames 300 … 7200).
+2. **Switch performance:**
+   - texture hashing: track guest writes, or rehash only after a texture's memory changed (e.g. a per-frame budget, or dirty pages via DMA/store hooks);
+   - avoid re-uploading unchanged textures;
+   - batch the ~4000 draws (state/UBO churn);
+   - overlap CPU and GPU (`dkQueueWaitIdle` per frame);
+   - profile the FMV decoder's hot recompiled functions (paired-single helpers, `crl_set`, memory helpers).
+3. **AX mixing** in `ax.c` (Dolphin AX.cpp is the reference):
    - Parse the AX command list: PB list, ADPCM/PCM decode, sample-rate conversion, volume envelopes, mix into the output buffer.
    - Then `audio_submit` → SDL audio (host) / audren or audout (Switch).
-3. **Renderer accuracy:**
-   - The file-select background is black (cause unknown; no texture lookups fail). Compare with the real game.
-   - Missing features: fog, indirect texturing, Z textures, mipmaps, EFB copy formats (intensity/Z/RGB565), EFB→RAM write-back for CPU readers, emboss texgen.
-4. **Switch performance:** waitIdle per frame (overlap CPU/GPU later), an EFB scale option, GPU-side caching of state uploads.
+4. **Renderer accuracy:**
+   - Fog (likely the blue tint in the demo race).
+   - The file-select background is black (cause unknown).
+   - Indirect texturing, Z textures, mipmaps, EFB copy formats, EFB→RAM write-back, emboss texgen.
 5. Clean-ups: `[mmio]` logging of the remaining unmodelled registers, the 4 KiB interrupt-stack margin (sched.c `make_irq_cpu`).
 
 **Device and replacement boundary as implemented (revised from the plan below):**

@@ -369,7 +369,7 @@ static int g_fb_slot = -1;
 
 /* Self-captures for hardware testing: presented frames k_shots[] are saved to the SD card as
  * shot_<frame>.bmp, so a test run shows what was drawn without a capture card. */
-static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500};
+static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500, 6000, 7200};
 static unsigned g_presented;
 static DkMemBlock g_shot_mem;
 static unsigned g_shot_pending;  /* frame number captured into g_shot_mem by this command list */

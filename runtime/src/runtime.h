@@ -72,6 +72,8 @@ uint32_t vi_field_count(void);
 uint32_t di_read(uint32_t ea, int size);
 void di_write(uint32_t ea, uint32_t v, int size);
 unsigned long long di_bytes_read(void);
+unsigned long long di_read_ticks(void);
+void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max);  /* ticks; resets */  /* host time spent reading the disc image (timebase ticks) */
 
 /* dsp.c: DSP mailboxes + boot ROM, ARAM and its DMA, AI DMA clock; ai_*: Audio Interface */
 void dsp_init(void);

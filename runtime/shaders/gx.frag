@@ -30,9 +30,12 @@ vec4 sample_map(uint m, vec2 uv) {
   if (m == 4u) return texture(u_tex4, uv); if (m == 5u) return texture(u_tex5, uv);
   if (m == 6u) return texture(u_tex6, uv); return texture(u_tex7, uv);
 }
+// No runtime indexing of vectors or local arrays below: uam (deko3d) miscompiles it or spills it
+// to scratch memory (see gx_common.glsl), so components and TEV inputs are picked with selects.
+float comp(vec4 v, uint c) { return c == 0u ? v.x : c == 1u ? v.y : c == 2u ? v.z : v.w; }
 vec4 swizzle(vec4 c, uint table) {
   uint lo = BP(0xF6 + int(table) * 2), hi = BP(0xF7 + int(table) * 2);
-  return vec4(c[bits(lo, 0, 2)], c[bits(lo, 2, 2)], c[bits(hi, 0, 2)], c[bits(hi, 2, 2)]);
+  return vec4(comp(c, bits(lo, 0, 2)), comp(c, bits(lo, 2, 2)), comp(c, bits(hi, 0, 2)), comp(c, bits(hi, 2, 2)));
 }
 float s11(uint v) { return float(int(v << 21u) >> 21) / 255.0; }
 vec4 tev_reg(int r) {  /* r: 0 PREV, 1-3 C0-C2 (initial values) */
@@ -46,12 +49,12 @@ vec4 konst_reg(int k) {
 vec3 kcolor(uint sel) {
   if (sel < 8u) return vec3(1.0 - float(sel) / 8.0);
   if (sel >= 12u && sel < 16u) return konst_reg(int(sel) - 12).rgb;
-  if (sel >= 16u) { vec4 k = konst_reg(int(sel & 3u)); return vec3(k[int((sel - 16u) >> 2)]); }
+  if (sel >= 16u) { vec4 k = konst_reg(int(sel & 3u)); return vec3(comp(k, (sel - 16u) >> 2)); }
   return vec3(0.0);
 }
 float kalpha(uint sel) {
   if (sel < 8u) return 1.0 - float(sel) / 8.0;
-  if (sel >= 16u) { vec4 k = konst_reg(int(sel & 3u)); return k[int((sel - 16u) >> 2)]; }
+  if (sel >= 16u) { vec4 k = konst_reg(int(sel & 3u)); return comp(k, (sel - 16u) >> 2); }
   return 0.0;
 }
 bool acmp(float a, uint f, float ref) {
@@ -59,9 +62,22 @@ bool acmp(float a, uint f, float ref) {
   if (f == 4u) return a > ref; if (f == 5u) return a != ref; if (f == 6u) return a >= ref; return true;
 }
 float q8(float v) { return floor(clamp(v, 0.0, 1.0) * 255.0 + 0.5); }
+vec4 reg(vec4 r0, vec4 r1, vec4 r2, vec4 r3, uint i) { return i == 0u ? r0 : i == 1u ? r1 : i == 2u ? r2 : r3; }
+/* TEV color input (0-15): PREV, APREV, C0, A0, C1, A1, C2, A2, TEXC, TEXA, RASC, RASA, ONE, HALF, KONST, ZERO */
+vec3 cinput(uint i, vec4 r0, vec4 r1, vec4 r2, vec4 r3, vec4 tex, vec4 ras, vec3 kc) {
+  if (i < 8u) { vec4 r = reg(r0, r1, r2, r3, i >> 1); return (i & 1u) != 0u ? vec3(r.a) : r.rgb; }
+  if (i == 8u) return tex.rgb; if (i == 9u) return vec3(tex.a);
+  if (i == 10u) return ras.rgb; if (i == 11u) return vec3(ras.a);
+  if (i == 12u) return vec3(1.0); if (i == 13u) return vec3(0.5);
+  if (i == 14u) return kc; return vec3(0.0);
+}
+/* TEV alpha input (0-7): APREV, A0, A1, A2, TEXA, RASA, KONST, ZERO */
+float ainput(uint i, vec4 r0, vec4 r1, vec4 r2, vec4 r3, vec4 tex, vec4 ras, float ka) {
+  if (i < 4u) return reg(r0, r1, r2, r3, i).a;
+  if (i == 4u) return tex.a; if (i == 5u) return ras.a; if (i == 6u) return ka; return 0.0;
+}
 void main() {
-  vec4 r[4];
-  for (int i = 0; i < 4; i++) r[i] = tev_reg(i);
+  vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
   int stages = int(bits(BP(0x00), 10, 4)) + 1;
   for (int s = 0; s < 16; s++) {
     if (s >= stages) break;
@@ -78,12 +94,11 @@ void main() {
     uint ksel = BP(0xF6 + s / 2);
     vec3 kc = kcolor(bits(ksel, (s & 1) != 0 ? 14 : 4, 5));
     float ka = kalpha(bits(ksel, (s & 1) != 0 ? 19 : 9, 5));
-    vec3 cin[16] = vec3[16](r[0].rgb, vec3(r[0].a), r[1].rgb, vec3(r[1].a), r[2].rgb, vec3(r[2].a), r[3].rgb, vec3(r[3].a),
-                            tex.rgb, vec3(tex.a), ras.rgb, vec3(ras.a), vec3(1.0), vec3(0.5), kc, vec3(0.0));
-    float ain[8] = float[8](r[0].a, r[1].a, r[2].a, r[3].a, tex.a, ras.a, ka, 0.0);
     /* color */
-    vec3 ca = clamp(cin[bits(cenv, 12, 4)], 0.0, 1.0), cb = clamp(cin[bits(cenv, 8, 4)], 0.0, 1.0);
-    vec3 cc = clamp(cin[bits(cenv, 4, 4)], 0.0, 1.0), cd = cin[bits(cenv, 0, 4)];
+    vec3 ca = clamp(cinput(bits(cenv, 12, 4), r0, r1, r2, r3, tex, ras, kc), 0.0, 1.0);
+    vec3 cb = clamp(cinput(bits(cenv, 8, 4), r0, r1, r2, r3, tex, ras, kc), 0.0, 1.0);
+    vec3 cc = clamp(cinput(bits(cenv, 4, 4), r0, r1, r2, r3, tex, ras, kc), 0.0, 1.0);
+    vec3 cd = cinput(bits(cenv, 0, 4), r0, r1, r2, r3, tex, ras, kc);
     uint cbias = bits(cenv, 16, 2), cop = bits(cenv, 18, 1), cscale = bits(cenv, 20, 2);
     vec3 cres;
     if (cbias != 3u) {
@@ -105,8 +120,10 @@ void main() {
     }
     cres = bits(cenv, 19, 1) != 0u ? clamp(cres, 0.0, 1.0) : clamp(cres, -1024.0 / 255.0, 1023.0 / 255.0);
     /* alpha */
-    float aa = clamp(ain[bits(aenv, 13, 3)], 0.0, 1.0), ab = clamp(ain[bits(aenv, 10, 3)], 0.0, 1.0);
-    float ac = clamp(ain[bits(aenv, 7, 3)], 0.0, 1.0), ad = ain[bits(aenv, 4, 3)];
+    float aa = clamp(ainput(bits(aenv, 13, 3), r0, r1, r2, r3, tex, ras, ka), 0.0, 1.0);
+    float ab = clamp(ainput(bits(aenv, 10, 3), r0, r1, r2, r3, tex, ras, ka), 0.0, 1.0);
+    float ac = clamp(ainput(bits(aenv, 7, 3), r0, r1, r2, r3, tex, ras, ka), 0.0, 1.0);
+    float ad = ainput(bits(aenv, 4, 3), r0, r1, r2, r3, tex, ras, ka);
     uint abias = bits(aenv, 16, 2), aop = bits(aenv, 18, 1), ascale = bits(aenv, 20, 2);
     float ares;
     if (abias != 3u) {
@@ -115,16 +132,16 @@ void main() {
       ares *= ascale == 0u ? 1.0 : ascale == 1u ? 2.0 : ascale == 2u ? 4.0 : 0.5;
     } else {
       uint mode = (ascale << 1) | aop; bool t;
-      vec3 qa = vec3(q8(cin[bits(cenv, 12, 4)].r), q8(cin[bits(cenv, 12, 4)].g), q8(cin[bits(cenv, 12, 4)].b));
       if (mode >= 6u) t = (mode & 1u) != 0u ? q8(aa) == q8(ab) : q8(aa) > q8(ab);
       else t = (mode & 1u) != 0u ? q8(ca.r) == q8(cb.r) : q8(ca.r) > q8(cb.r);
       ares = ad + (t ? ac : 0.0);
     }
     ares = bits(aenv, 19, 1) != 0u ? clamp(ares, 0.0, 1.0) : clamp(ares, -1024.0 / 255.0, 1023.0 / 255.0);
-    int cdst = int(bits(cenv, 22, 2)), adst = int(bits(aenv, 22, 2));
-    r[cdst].rgb = cres; r[adst].a = ares;
+    uint cdst = bits(cenv, 22, 2), adst = bits(aenv, 22, 2);
+    if (cdst == 0u) r0.rgb = cres; else if (cdst == 1u) r1.rgb = cres; else if (cdst == 2u) r2.rgb = cres; else r3.rgb = cres;
+    if (adst == 0u) r0.a = ares; else if (adst == 1u) r1.a = ares; else if (adst == 2u) r2.a = ares; else r3.a = ares;
   }
-  vec4 o = clamp(r[0], 0.0, 1.0);
+  vec4 o = clamp(r0, 0.0, 1.0);
   /* alpha test */
   uint ac = BP(0xF3);
   float a8 = q8(o.a);

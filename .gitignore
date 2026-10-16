@@ -81,3 +81,9 @@ config/*/_Main/
 saves/
 *.raw
 *.gci
+
+# Switch console keys / dumps (user-provided, never commit)
+*.keys
+*.nca
+*.nsp
+*.xci

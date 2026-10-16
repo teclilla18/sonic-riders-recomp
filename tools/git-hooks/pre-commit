@@ -10,7 +10,7 @@ for f in $(git diff --cached --name-only --diff-filter=ACMR); do
             echo "pre-commit: refusing $f (game-data directory)"; status=1; continue ;;
     esac
     case "$(echo "$f" | tr 'A-Z' 'a-z')" in
-        *.iso|*.gcm|*.rvz|*.ciso|*.gcz|*.wbfs|*.tgc|*.dol|*.rel|*.str|*.plf|*.elf|*.map|\
+        *.iso|*.keys|*.nca|*.nsp|*.xci|*.gcm|*.rvz|*.ciso|*.gcz|*.wbfs|*.tgc|*.dol|*.rel|*.str|*.plf|*.elf|*.map|\
         *.adx|*.sfd|*.afs|*.bnr|*.thp|*.s|*.o|*.obj|*.a|*.nro|*.nso|*.dksh|*.bin)
             echo "pre-commit: refusing $f (game-data/binary extension)"; status=1; continue ;;
     esac

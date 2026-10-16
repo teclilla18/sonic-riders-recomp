@@ -29,9 +29,14 @@ static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
     return p;
 }
 
+/* host time (timebase ticks) for the [perf] breakdown */
+static uint64_t g_wait_ticks, g_tex_ticks;
+
 static GxFrame* frame(void) {
     if (!g_frame) {
+        uint64_t t = rt_ticks();
         g_frame = render_take_free_frame();
+        g_wait_ticks += rt_ticks() - t;
         g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = 0;
         g_state_dirty = 1;
         gx_texture_new_frame();
@@ -223,7 +228,11 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
     for (int s = 0; s < stages; s++) {
         uint32_t order = g_gx.bp[0x28 + s / 2] >> ((s & 1) ? 12 : 0);
         int map = (int)(order & 7);
-        if ((order >> 6) & 1 && c->tex[map] < 0) c->tex[map] = gx_texture_lookup(map);
+        if ((order >> 6) & 1 && c->tex[map] < 0) {
+            uint64_t t = rt_ticks();
+            c->tex[map] = gx_texture_lookup(map);
+            g_tex_ticks += rt_ticks() - t;
+        }
     }
     f->nverts += k;
 }
@@ -248,13 +257,15 @@ static void efb_copy(uint32_t v) {
         push_cmd(GXC_PRESENT);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
+        uint64_t ts = rt_ticks();
         render_submit(g_frame);
+        g_wait_ticks += rt_ticks() - ts;
         g_frame = NULL;
         g_frames++;
         /* performance line every 120 frames: presented frames and VI fields per second */
         static uint64_t t0;
         static uint32_t f0;
-        static unsigned long long draws_acc;
+        static unsigned long long draws_acc, disc0;
         draws_acc += ndraws;
         if (g_frames % 120 == 0) {
             uint64_t t = rt_ticks();
@@ -263,10 +274,20 @@ static void efb_copy(uint32_t v) {
                 double secs = (double)(t - t0) / 40500000.0;
                 rt_log("[perf] %.1f fps, %.1f retraces/s, %llu draws/frame, %llu MB disc, %llu AX frames, %d textures", 120 / secs,
                        (f - f0) / secs, draws_acc / 120, di_bytes_read() >> 20, ax_list_count(), gx_texture_live());
+                /* where the guest thread's time went (ms per frame): textures decoded/hashed,
+                 * blocked on the render thread, reading the disc image */
+                double ms = 1000.0 / 40500000.0 / 120;
+                uint64_t idle, late_avg, late_max;
+                sched_stats(&idle, &late_avg, &late_max);
+                rt_log("[perf]   ms/frame: textures %.2f, render wait %.2f, disc %.2f, guest idle %.2f; timer late avg %.3f max %.3f ms",
+                       g_tex_ticks * ms, g_wait_ticks * ms, (di_read_ticks() - disc0) * ms, idle * ms, late_avg * ms * 120,
+                       late_max * ms * 120);
             }
             t0 = t;
             f0 = f;
             draws_acc = 0;
+            g_tex_ticks = g_wait_ticks = 0;
+            disc0 = di_read_ticks();
         }
     }
 }
