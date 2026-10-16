@@ -53,6 +53,25 @@ static uint8_t* g_ubo_staging;
 static size_t g_ubo_staging_cap;
 static GLuint g_ubo_xt;  /* the XF chunk tables (GxXTab), uniform block binding 1 */
 static GLuint g_ibo;     /* the frame's index lists */
+/* the presented picture at window size: screenshots read it, then it is copied to the window (whose
+ * own framebuffer has no contents while minimized) */
+static GLuint g_pres_fbo, g_pres_tex;
+static int g_pres_w, g_pres_h;
+
+static void pres_target(int w, int h) {
+    if (!g_pres_fbo) {
+        p_glGenFramebuffers(1, &g_pres_fbo);
+        glGenTextures(1, &g_pres_tex);
+    }
+    if (w != g_pres_w || h != g_pres_h) {
+        glBindTexture(GL_TEXTURE_2D, g_pres_tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_pres_fbo);
+        p_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_pres_tex, 0);
+        g_pres_w = w; g_pres_h = h;
+    }
+    p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_pres_fbo);
+}
 static GLuint g_prog, g_vao, g_vbo, g_ubo, g_fbo, g_efb_color, g_efb_depth, g_copy_fbo;
 static GLint g_ubo_align = 256;
 static GLuint* g_gltex;
@@ -298,7 +317,8 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         if (!g_headless) {
             int ww, wh;
             SDL_GetWindowSize(g_win, &ww, &wh);
-            p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            if (ww <= 0 || wh <= 0) { ww = 1280; wh = 960; }
+            pres_target(ww, wh);
             glColorMask(1, 1, 1, 1);
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -316,13 +336,18 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             int menu_shot = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
             if (menu_shot || (g_shot_at && g_presented == (unsigned)g_shot_at)) {
                 uint8_t* px = malloc((size_t)ww * wh * 4);
-                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
                 glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
                 char path[64];
                 snprintf(path, sizeof path, "build/shot_%u.png", menu_shot ? g_presented : (unsigned)g_shot_at);
                 save_png(path, ww, wh, px);
                 free(px);
                 rt_log("[gl] screenshot %s", path);
+            }
+            if (!(SDL_GetWindowFlags(g_win) & SDL_WINDOW_MINIMIZED)) {
+                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
+                p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                p_glBlitFramebuffer(0, 0, ww, wh, 0, 0, ww, wh, GL_COLOR_BUFFER_BIT, GL_NEAREST);
             }
             SDL_GL_SwapWindow(g_win);
         }
@@ -524,8 +549,11 @@ static int render_thread(void* arg) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        /* SR_MINIMIZED: start minimized and without taking focus (unattended test runs) */
+        int minimized = getenv("SR_MINIMIZED") != NULL;
+        if (minimized) SDL_SetHint("SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN", "1");
         g_win = SDL_CreateWindow("Sonic Riders (native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960,
-                                 SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+                                 SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
         if (!SDL_GL_CreateContext(g_win)) rt_fatal("SDL_GL_CreateContext: %s", SDL_GetError());
         SDL_GL_SetSwapInterval(0);
