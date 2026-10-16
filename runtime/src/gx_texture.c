@@ -4,6 +4,7 @@
  * Formats: YAGCD "Texture formats", Dolphin's TextureDecoder. */
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include "gx.h"
 #include "gx_render.h"
@@ -14,8 +15,14 @@ static uint8_t g_tmem[0x100000];  /* 1 MiB: TLUTs are loaded into the upper half
 #define MAX_TEX 65536
 static GxTexture* g_tex[MAX_TEX];
 static int g_ntex;
+/* ids freed by the backend (render thread), reused by new_texture (GX thread) */
+static int g_free_ids[MAX_TEX];
+static int g_nfree_ids;
+static mtx_t g_ids_lock;
+static once_flag g_ids_once = ONCE_FLAG_INIT;
+static void ids_init(void) { mtx_init(&g_ids_lock, mtx_plain); }
 
-typedef struct Entry { uint64_t key, hash; int id; uint32_t frame; } Entry;
+typedef struct Entry { uint64_t key, hash; int id, valid; uint32_t frame; } Entry;
 #define CACHE_SIZE 8192
 static Entry g_cache[CACHE_SIZE];
 
@@ -34,17 +41,37 @@ void gx_texture_free(int id) {
     free(g_tex[id]->rgba);
     free(g_tex[id]);
     g_tex[id] = NULL;
+    call_once(&g_ids_once, ids_init);
+    mtx_lock(&g_ids_lock);
+    g_free_ids[g_nfree_ids++] = id;
+    mtx_unlock(&g_ids_lock);
+}
+
+/* textures alive (allocated and not yet freed by the backend), for the [perf] line */
+int gx_texture_live(void) {
+    call_once(&g_ids_once, ids_init);
+    mtx_lock(&g_ids_lock);
+    int n = g_ntex - g_nfree_ids;
+    mtx_unlock(&g_ids_lock);
+    return n;
 }
 
 static GxTexture* new_texture(uint32_t w, uint32_t h, int is_copy) {
-    if (g_ntex >= MAX_TEX) rt_fatal("too many textures");
+    call_once(&g_ids_once, ids_init);
+    mtx_lock(&g_ids_lock);
+    int id = g_nfree_ids ? g_free_ids[--g_nfree_ids] : -1;
+    mtx_unlock(&g_ids_lock);
+    if (id < 0) {
+        if (g_ntex >= MAX_TEX) rt_fatal("too many textures");
+        id = g_ntex++;
+    }
     GxTexture* t = calloc(1, sizeof *t);
-    t->id = g_ntex;
+    t->id = id;
     t->width = w;
     t->height = h;
     t->is_copy = is_copy;
     if (!is_copy) t->rgba = malloc((size_t)w * h * 4);
-    g_tex[g_ntex++] = t;
+    g_tex[id] = t;
     return t;
 }
 
@@ -174,6 +201,7 @@ void gx_texture_load_tlut(void) {
 void gx_texture_set_copy(uint32_t addr, uint32_t w, uint32_t h, int id) {
     for (int i = 0; i < g_ncopies; i++)
         if (g_copies[i].addr == addr) {
+            if (g_copies[i].id != id) gx_frame_retire(g_copies[i].id);  /* replaced by a copy of another size */
             g_copies[i].w = w; g_copies[i].h = h; g_copies[i].id = id;
             return;
         }
@@ -192,7 +220,20 @@ int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h) {
     return t->id;
 }
 
-void gx_texture_new_frame(void) { g_frame++; }
+/* Cached textures the game has not drawn with for a while are released, so the backend's texture
+ * memory holds roughly the working set (the Switch's image pool is fixed). */
+#define EVICT_AFTER 600  /* frames */
+void gx_texture_new_frame(void) {
+    g_frame++;
+    if (g_frame % 64) return;
+    for (int i = 0; i < CACHE_SIZE; i++) {
+        Entry* e = &g_cache[i];
+        if (e->valid && g_frame - e->frame > EVICT_AFTER) {
+            gx_frame_retire(e->id);
+            e->valid = 0;
+        }
+    }
+}
 
 /* the texture bound to texmap `map` by the current BP state; -1 if none */
 int gx_texture_lookup(int map) {
@@ -222,21 +263,22 @@ int gx_texture_lookup(int map) {
     }
     uint64_t key = (uint64_t)addr << 32 ^ (uint64_t)fmt << 28 ^ (uint64_t)w << 14 ^ h ^ ((uint64_t)tfmt << 62);
     Entry* e = &g_cache[(key ^ (key >> 21)) % CACHE_SIZE];
-    if (e->key == key && e->frame == g_frame && e->id >= 0) return e->id;  /* already checked this frame */
+    if (e->valid && e->key == key && e->frame == g_frame) return e->id;  /* already checked this frame */
     uint64_t hsh = hash_bytes(src, size) ^ (tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0);
-    if (e->key == key && e->hash == hsh) {
+    if (e->valid && e->key == key && e->hash == hsh) {
         e->frame = g_frame;
         return e->id;
     }
     /* contents changed: a new texture (the render thread may still be uploading the old one from the
      * frame in flight); the old one is retired with this frame and freed by the backend after it */
-    if (e->key == key && e->id >= 0) gx_frame_retire(e->id);
+    if (e->valid) gx_frame_retire(e->id);  /* changed, or another texture in this slot */
     GxTexture* t = new_texture(w, h, 0);
     decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
     t->gen++;
     e->key = key;
     e->hash = hsh;
     e->id = t->id;
+    e->valid = 1;
     e->frame = g_frame;
     return t->id;
 }

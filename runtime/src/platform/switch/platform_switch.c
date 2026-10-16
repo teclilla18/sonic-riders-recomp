@@ -10,7 +10,7 @@
  * mapping, so a code-memory region is reserved for the whole physical window and only MEM1 (+ the
  * REL area) and the locked cache are backed, by mapping heap pages there. That needs
  * svcMapProcessCodeMemory, available when the Homebrew Menu runs in title mode (hold R while
- * starting a game). */
+ * starting a game); otherwise svcMapMemory into the stack region is used. */
 #include <dirent.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -89,29 +89,57 @@ static const struct { uint32_t start, size; } k_ranges[] = {
     {LOCKED_CACHE_PHYS, 0x10000},              /* the 16 KiB locked cache (mapped in 64 KiB) */
 };
 
-void mem_init(void) {
-    if (!envIsSyscallHinted(0x77) || !envIsSyscallHinted(0x73))
-        rt_fatal("guest memory needs svcMapProcessCodeMemory: start the Homebrew Menu in title mode "
-                 "(hold R while starting any game), not from the album");
-    const uint64_t window_size = 0x20010000ull;
+/* Map heap pages over [window + start, +size) for each guest range. Code memory (title mode) is
+ * tried first, as on SwitchWakerHD; svcMapMemory into the stack region is the fallback (also what
+ * emulators allow: they do not give homebrew its own process handle). */
+static int map_ranges(uint8_t* window, int code) {
     Handle self = envGetOwnProcessHandle();
-    virtmemLock();
-    void* window = virtmemFindCodeMemory(window_size, 0x10000);
-    if (!window || !virtmemAddReservation(window, window_size)) {
-        virtmemUnlock();
-        rt_fatal("cannot reserve the guest address window");
-    }
-    virtmemUnlock();
     for (size_t i = 0; i < sizeof k_ranges / sizeof k_ranges[0]; i++) {
         void* backing = aligned_alloc(0x1000, k_ranges[i].size);
         if (!backing) rt_fatal("out of memory for guest RAM");
         memset(backing, 0, k_ranges[i].size);
-        uint8_t* dst = (uint8_t*)window + k_ranges[i].start;
-        Result rc = svcMapProcessCodeMemory(self, (u64)dst, (u64)backing, k_ranges[i].size);
-        if (R_FAILED(rc)) rt_fatal("svcMapProcessCodeMemory %08X failed (0x%X)", k_ranges[i].start, rc);
-        rc = svcSetProcessMemoryPermission(self, (u64)dst, k_ranges[i].size, Perm_Rw);
-        if (R_FAILED(rc)) rt_fatal("svcSetProcessMemoryPermission %08X failed (0x%X)", k_ranges[i].start, rc);
+        uint8_t* dst = window + k_ranges[i].start;
+        Result rc;
+        if (code) {
+            rc = svcMapProcessCodeMemory(self, (u64)dst, (u64)backing, k_ranges[i].size);
+            if (R_SUCCEEDED(rc)) {
+                rc = svcSetProcessMemoryPermission(self, (u64)dst, k_ranges[i].size, Perm_Rw);
+                if (R_FAILED(rc)) rt_fatal("svcSetProcessMemoryPermission %08X failed (0x%X)", k_ranges[i].start, rc);
+            }
+        } else {
+            rc = svcMapMemory(dst, backing, k_ranges[i].size);
+        }
+        if (R_FAILED(rc)) {
+            if (code && i == 0) {
+                free(backing);
+                rt_log("[mem] code memory mapping failed (0x%X); using svcMapMemory", rc);
+                return 0;
+            }
+            rt_fatal("%s %08X failed (0x%X)", code ? "svcMapProcessCodeMemory" : "svcMapMemory", k_ranges[i].start, rc);
+        }
+    }
+    return 1;
+}
+
+static int try_window(int code) {
+    const uint64_t window_size = 0x20010000ull;
+    virtmemLock();
+    void* window = code ? virtmemFindCodeMemory(window_size, 0x10000) : virtmemFindStack(window_size, 0x10000);
+    VirtmemReservation* rv = window ? virtmemAddReservation(window, window_size) : NULL;
+    virtmemUnlock();
+    if (!rv) rt_fatal("cannot reserve the guest address window");
+    if (!map_ranges((uint8_t*)window, code)) {
+        virtmemLock();
+        virtmemRemoveReservation(rv);
+        virtmemUnlock();
+        return 0;
     }
     ppc_mem_base_var = (uint8_t*)window;
-    rt_log("[mem] guest window at %p", window);
+    rt_log("[mem] guest window at %p (%s)", window, code ? "code memory" : "svcMapMemory");
+    return 1;
+}
+
+void mem_init(void) {
+    int code = envIsSyscallHinted(0x77) && envIsSyscallHinted(0x73) && envGetOwnProcessHandle() != INVALID_HANDLE;
+    if (!(code && try_window(1)) && !try_window(0)) rt_fatal("cannot map guest memory");
 }

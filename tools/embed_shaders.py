@@ -8,6 +8,9 @@ The GLSL uses a few macros for what differs between the APIs (explicit locations
 required by deko3d, not available in GL 3.3 core):
   ATTR(n) vertex input location, VARY(n) varying location, SAMPLER(n) sampler binding,
   BIND_UBO the uniform block binding (inside layout(std140 ...)).
+  CLIP_Y the sign applied to clip-space y on top of the GX viewport's own: GL's clip +y is the
+  bottom row (flip, so the EFB is stored top row first), deko3d 0.5's upper-left origin puts clip
+  +y on the top row already (no flip).
 """
 import os
 import subprocess
@@ -16,9 +19,9 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHADERS = os.path.join(os.path.dirname(HERE), "runtime", "shaders")
 
-PRELUDE_GL = "#define ATTR(n)\n#define VARY(n)\n#define SAMPLER(n)\n#define BIND_UBO\n"
+PRELUDE_GL = "#define ATTR(n)\n#define VARY(n)\n#define SAMPLER(n)\n#define BIND_UBO\n#define CLIP_Y 1.0\n"
 PRELUDE_DK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(n) layout(location = n)\n"
-              "#define SAMPLER(n) layout(binding = n)\n#define BIND_UBO , binding = 0\n")
+              "#define SAMPLER(n) layout(binding = n)\n#define BIND_UBO , binding = 0\n#define CLIP_Y (-1.0)\n")
 
 
 def source(stage, prelude):

@@ -10,6 +10,7 @@
 void gx_texture_load_tlut(void);
 int gx_texture_lookup(int map);
 int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h);
+int gx_texture_live(void);
 void gx_texture_new_frame(void);
 
 static GxFrame* g_frame;
@@ -260,8 +261,8 @@ static void efb_copy(uint32_t v) {
             uint32_t f = vi_field_count();
             if (t0) {
                 double secs = (double)(t - t0) / 40500000.0;
-                rt_log("[perf] %.1f fps, %.1f retraces/s, %llu draws/frame, %llu MB disc, %llu AX frames", 120 / secs,
-                       (f - f0) / secs, draws_acc / 120, di_bytes_read() >> 20, ax_list_count());
+                rt_log("[perf] %.1f fps, %.1f retraces/s, %llu draws/frame, %llu MB disc, %llu AX frames, %d textures", 120 / secs,
+                       (f - f0) / secs, draws_acc / 120, di_bytes_read() >> 20, ax_list_count(), gx_texture_live());
             }
             t0 = t;
             f0 = f;

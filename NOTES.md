@@ -11,13 +11,35 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching plan below is superseded.
 
-**Status after session 2 (2026-10-15):**
+**Status after session 3 (2026-10-15):**
 - **Windows host build:** the game plays its intro (SEGA/Sonic Team logos), the opening FMV (Sofdec, decoded by CRI's own recompiled MPEG code), the title screen, and reaches the save-file menu with controller input, at a steady 60 fps.
-- **Switch build:** `build/switch/sonicriders.nro` (deko3d renderer, libnx input, SD-card paths). It builds cleanly but has **not been tested on hardware yet**.
+- **Switch build:** `build/switch/sonicriders.nro`. **First hardware test (session 3):**
+  - The game logic runs on the console: 60 fps for logos/menus, ~42 fps during the FMV, reaching the menus.
+  - The screen stayed **black**, then the game died with `FATAL: image pool exhausted (524288 bytes)`.
+  - Both are fixed in the build after commit f983dda (see below), but the fixes are **not yet verified on hardware**.
 - **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet.
 
+**Session 3 fixes from the hardware log:**
+- **Black screen** [likely cause]: with deko3d **0.5.0** (the installed version), an upper-left origin maps clip-space +y to the *top* row (D3D-style; see `gpu_3d_base.cpp` @v0.5.0, `scaleY = -halfHeight`). The shared vertex shader flipped y as GL needs, which made the EFB upside down *and* reversed every triangle's winding against `DkFrontFace_CCW`. GX leaves back-face culling on, so everything visible was culled. The fix is a `CLIP_Y` prelude macro (`tools/embed_shaders.py`): GL is 1, deko3d is -1. Newer deko3d (after v0.5.0) adds `DkDeviceFlags_YAxisPoints*`, so recheck this if deko3d is updated.
+- **Image pool exhausted**: the texture cache (`gx_texture.c`) overwrote colliding cache slots without retiring the old texture, and never reused texture ids. Now:
+  - colliding or replaced entries are retired;
+  - entries unused for 600 frames are evicted;
+  - ids are recycled through a locked free list;
+  - EFB-copy targets replaced by a different size are retired.
+  `[perf]` lines now end with the live texture count (1–6 on PC through the intro).
+- **EFB cleared at setup** (black, depth = far): pool memory is not zeroed.
+- **Guest memory without title mode:** if `svcMapProcessCodeMemory` is unavailable or fails, `svcMapMemory` into the stack region is used. This was verified in the Eden emulator. Title mode may therefore no longer be needed; untested on hardware.
+- **Hardware diagnostics:**
+  - `shot_<frame>.bmp` self-captures at presented frames 300/900/1800/3000/4500, written to the SD folder;
+  - a `[deko3d] X ms/frame on the render thread, Y KB/frame texture uploads` line every 120 frames, which separates GPU/render cost from guest CPU cost (the FMV ran at 42 fps).
+
+**Emulator testing: not available.** Eden v0.2.1 (official build in `build/ext/eden/`, gitignored) runs the NRO up to `dkDeviceCreate` and then aborts. devkitPro's stock `deko_basic` example aborts the same way, so the cause is the emulator setup (probably the missing firmware/keys), not this code. Ryujinx's servers (`git.`/`update.ryujinx.app`) time out from this network. Hardware is the only GPU test.
+
 **Next steps, in order:**
-1. **First hardware test** (user): see "Switch: install and test" below. Expect fixes from the log (`sonicriders.log`).
+1. **Second hardware test** (user): same steps as below. Send `sonicriders.log` and the `shot_*.bmp` files. Check:
+   - whether the picture appears and is upright;
+   - the front-face choice (if the logos are missing but the FMV shows, flip `rs.frontFace`);
+   - FMV speed versus the `[deko3d]` ms/frame line.
 2. **AX mixing** in `ax.c` (Dolphin AX.cpp is the reference):
    - Parse the AX command list: PB list, ADPCM/PCM decode, sample-rate conversion, volume envelopes, mix into the output buffer.
    - Then `audio_submit` → SDL audio (host) / audren or audout (Switch).
@@ -26,22 +48,6 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
    - Missing features: fog, indirect texturing, Z textures, mipmaps, EFB copy formats (intensity/Z/RGB565), EFB→RAM write-back for CPU readers, emboss texgen.
 4. **Switch performance:** waitIdle per frame (overlap CPU/GPU later), an EFB scale option, GPU-side caching of state uploads.
 5. Clean-ups: `[mmio]` logging of the remaining unmodelled registers, the 4 KiB interrupt-stack margin (sched.c `make_irq_cpu`).
-
-**Switch: build, install and test**
-- Build:
-  ```
-  $env:DEVKITPRO="C:/devkitPro"
-  python configure.py --target switch
-  ninja
-  ```
-  The result is `build/switch/sonicriders.nro`. It contains recompiled game code: never share or commit it.
-- SD card layout (`sdmc:/switch/sonicriders/`):
-  - `sonicriders.nro`
-  - a **copy** of the user's disc image (any `*.iso`, GXEE8P rev 0)
-  - created at runtime: `saves/card_a.raw` (memory card) and `sonicriders.log`
-- Launch from the Homebrew Menu **in title mode** (hold R while starting any installed game). The guest memory window needs `svcMapProcessCodeMemory`; album/applet mode is refused with a clear log message.
-- Controls: A B X Y = A B X Y, + = START, ZL/ZR = L/R, R = Z, sticks = main/C, D-pad. HOME exits.
-- The log's `[perf]` lines give fps every 120 frames.
 
 **Device and replacement boundary as implemented (revised from the plan below):**
 - **Register-level device models**, which keep the game's own SDK code running: VI, DI (DVD), CP/PE/PI (GX FIFO), DSP/ARAM/AI, EXI (memory card + IPL SRAM/RTC), SI (controllers).

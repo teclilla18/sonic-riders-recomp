@@ -1,12 +1,14 @@
 /* Switch backend: deko3d, executing the frames built by gx_render.c on a render thread. Mirrors the
  * GL backend (platform/host/render_gl.c); the shaders are the same GLSL, compiled ahead of time with
  * uam (tools/embed_shaders.py). The EFB is an image at EFB_SCALE x 640x528, stored top row first
- * like GX memory; deko3d's default upper-left origin keeps that orientation.
+ * like GX memory: with deko3d 0.5's upper-left origin, clip-space +y is the top row, so the shader
+ * does not flip y (CLIP_Y) as it does for GL, and front faces keep the GX winding (CCW).
  *
  * Memory: a code block for the shaders; two frame slots (command memory, vertices, uniforms,
  * texture staging), used alternately; an image pool with a first-fit allocator; descriptor tables
  * for up to MAX_IMAGES textures and the 36 sampler variants (wrap S x wrap T x mag x min). */
 #include <deko3d.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <switch.h>
@@ -45,6 +47,8 @@ static DkImage g_fb[2], g_efb, g_efb_depth;
 static DkImageView g_efb_view, g_efb_depth_view;
 static unsigned g_slot;
 static uint32_t g_vtx_off, g_ubo_off, g_stage_off;
+static uint64_t g_busy_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
+static unsigned g_busy_frames;
 
 /* ---- image pool: first-fit free list ---- */
 typedef struct Block { uint32_t off, size; struct Block* next; } Block;
@@ -172,6 +176,7 @@ static int tex_prepare(int id) {
         DkImageRect r = {0, 0, 0, gt->width, gt->height, 1};
         dkCmdBufCopyBufferToImage(g_cmd, &src, &v, &r, 0);
         g_stage_off = (g_stage_off + bytes + 255) & ~255u;
+        g_upload_bytes += bytes;
         t->gen = gt->gen;
     }
     return (int)t->slot;
@@ -269,6 +274,14 @@ static void dk_setup(void) {
     DkCopyBuf src = {dkMemBlockGetGpuAddr(g_slots[0]), 0, 0};
     DkImageRect r = {0, 0, 0, 1, 1, 1};
     dkCmdBufCopyBufferToImage(g_cmd, &src, &dv, &r, 0);
+    /* the EFB starts black with depth at the far plane (pool memory is not cleared) */
+    DkImageView const* efb_targets[1] = {&g_efb_view};
+    dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
+    DkScissor full = {0, 0, EFB_W, EFB_H};
+    dkCmdBufSetScissors(g_cmd, 0, &full, 1);
+    float black[4] = {0, 0, 0, 1};
+    dkCmdBufClearColor(g_cmd, 0, DkColorMask_RGBA, black);
+    dkCmdBufClearDepthStencil(g_cmd, true, 1.0f, 0, 0);
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     dkQueueWaitIdle(g_queue);
     dkCmdBufClear(g_cmd);
@@ -332,7 +345,7 @@ static void apply_state(const GxUniforms* u) {
     dkRasterizerStateDefaults(&rs);
     uint32_t cull = (u->bp[0x00] >> 14) & 3;
     rs.cullMode = cull == 0 ? DkFace_None : cull == 1 ? DkFace_Back : cull == 2 ? DkFace_Front : DkFace_FrontAndBack;
-    rs.frontFace = DkFrontFace_CCW;  /* the opposite of the GL backend: upper-left origin */
+    rs.frontFace = DkFrontFace_CCW;  /* the opposite of the GL backend, whose shader flips y */
     dkCmdBufBindRasterizerState(g_cmd, &rs);
 }
 
@@ -353,6 +366,53 @@ static void bind_textures(const GxCmd* c, const GxUniforms* u) {
 
 /* ---- EFB copies and presentation ---- */
 static int g_fb_slot = -1;
+
+/* Self-captures for hardware testing: presented frames k_shots[] are saved to the SD card as
+ * shot_<frame>.bmp, so a test run shows what was drawn without a capture card. */
+static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500};
+static unsigned g_presented;
+static DkMemBlock g_shot_mem;
+static unsigned g_shot_pending;  /* frame number captured into g_shot_mem by this command list */
+
+static void shot_request(DkImageView const* fv) {
+    unsigned n = ++g_presented;
+    int want = 0;
+    for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
+    if (!want) return;
+    if (!g_shot_mem) g_shot_mem = block(FB_W * FB_H * 4, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
+    dkCmdBufBarrier(g_cmd, DkBarrier_Full, 0);
+    DkCopyBuf dst = {dkMemBlockGetGpuAddr(g_shot_mem), 0, 0};
+    DkImageRect r = {0, 0, 0, FB_W, FB_H, 1};
+    dkCmdBufCopyImageToBuffer(g_cmd, fv, &r, &dst, 0);
+    g_shot_pending = n;
+}
+
+static void shot_write(void) {
+    if (!g_shot_pending) return;
+    const uint8_t* px = dkMemBlockGetCpuAddr(g_shot_mem);
+    char path[96];
+    snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.bmp", g_shot_pending);
+    g_shot_pending = 0;
+    FILE* f = fopen(path, "wb");
+    if (!f) return;
+    uint32_t row = FB_W * 3, size = 54 + row * FB_H;
+    uint8_t h[54] = {'B', 'M'};
+    memcpy(h + 2, &size, 4);
+    h[10] = 54; h[14] = 40;
+    int32_t w = FB_W, hh = FB_H;
+    memcpy(h + 18, &w, 4); memcpy(h + 22, &hh, 4);
+    h[26] = 1; h[28] = 24;
+    fwrite(h, 1, 54, f);
+    uint8_t* line = malloc(row);
+    for (int y = FB_H - 1; y >= 0; y--) {  /* BMP rows go bottom-up */
+        const uint8_t* s = px + (size_t)y * FB_W * 4;
+        for (int x = 0; x < FB_W; x++) { line[3 * x] = s[4 * x + 2]; line[3 * x + 1] = s[4 * x + 1]; line[3 * x + 2] = s[4 * x]; }
+        fwrite(line, 1, row, f);
+    }
+    free(line);
+    fclose(f);
+    rt_log("[deko3d] saved %s", path);
+}
 
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
@@ -376,6 +436,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         uint32_t dw = FB_H * 4 / 3;
         DkImageRect dst = {(FB_W - dw) / 2, 0, 0, dw, FB_H, 1};
         dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
+        shot_request(&fv);
         DkImageView const* efb_targets[1] = {&g_efb_view};
         dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
     } else if ((int)c->copy[8] >= 0) {  /* to a texture */
@@ -406,6 +467,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 }
 
 static void execute(GxFrame* f) {
+    uint64_t t_start = armGetSystemTick();
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
@@ -490,11 +552,20 @@ static void execute(GxFrame* f) {
     }
     dkQueueFlush(g_queue);
     dkQueueWaitIdle(g_queue);
+    shot_write();
     for (uint32_t i = 0; i < f->nretired; i++) {
         tex_destroy(f->retired[i]);
         gx_texture_free(f->retired[i]);
     }
     g_slot ^= 1;
+    /* render-thread cost per frame (build + GPU, as execute waits for the GPU) */
+    g_busy_ticks += armGetSystemTick() - t_start;
+    if (++g_busy_frames == 120) {
+        rt_log("[deko3d] %.2f ms/frame on the render thread, %llu KB/frame texture uploads",
+               armTicksToNs(g_busy_ticks) / 120 / 1e6, (unsigned long long)(g_upload_bytes / 120 / 1024));
+        g_busy_ticks = g_upload_bytes = 0;
+        g_busy_frames = 0;
+    }
 }
 
 /* ---- frame queue (as the GL backend) ---- */
