@@ -85,12 +85,13 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
 
     recomp_inputs = ["tools/recomp/gcrecomp.py", "tools/recomp/ppc2c.py", "tools/recomp/crlive.py",
                      "tools/recomp/leaflocal.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",
-                     "config/GXEE8P/_Main/symbols.txt"] + (["config/GXEE8P/hle.txt"] if os.path.exists(
-                         os.path.join(ROOT, "config/GXEE8P/hle.txt")) else [])
+                     "config/GXEE8P/_Main/symbols.txt"] + [p for p in ("config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt")
+                                                           if os.path.exists(os.path.join(ROOT, p))]
     n.build(gen_c + [GEN + "/funcs.h"], "recomp", recomp_inputs)
 
     # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
-    shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag", "tools/embed_shaders.py"]
+    shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
+                  "runtime/shaders/overlay.vert", "runtime/shaders/overlay.frag", "tools/embed_shaders.py"]
     if args.target == "host":
         shader_h = OUT + "/gen/gx_shaders_gl.h"
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")

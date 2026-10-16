@@ -5,7 +5,7 @@
  * does not flip y (CLIP_Y) as it does for GL, and front faces keep the GX winding (CCW).
  *
  * Memory: a code block for the shaders; two frame slots (command memory, vertices, uniforms,
- * texture staging), used alternately; an image pool with a first-fit allocator; descriptor tables
+ * texture staging, XF memory chunks), used alternately; an image pool with a first-fit allocator; descriptor tables
  * for up to MAX_IMAGES textures and the 36 sampler variants (wrap S x wrap T x mag x min). */
 #include <deko3d.h>
 #include <stdio.h>
@@ -17,7 +17,9 @@
 #include "gx.h"
 #include "gx_render.h"
 #include "gx_shaders_dksh.h"  /* generated: tools/embed_shaders.py dksh */
+#include "overlay.h"
 #include "runtime.h"
+#include "settings.h"
 
 void input_init(void);
 void input_pump(void);
@@ -32,22 +34,26 @@ void input_pump(void);
 
 #define SLOT_CMD   (4u << 20)
 #define SLOT_VTX   (48u << 20)
-#define SLOT_UBO   (16u << 20)
+#define SLOT_UBO   (8u << 20)
 #define SLOT_STAGE (32u << 20)
-#define SLOT_SIZE  (SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE)
+#define SLOT_XFM   (8u << 20)   /* the frame's XF memory chunk pool (storage buffer) */
+#define SLOT_SIZE  (SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE + SLOT_XFM)
 #define IMAGE_POOL (384u << 20)
 
 static DkDevice g_dev;
 static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
-static DkShader g_vsh, g_fsh;
+static DkShader g_vsh, g_fsh, g_ovs, g_ofs;  /* the GX ubershader; the overlay */
+#define OVERLAY_SLOT 1                         /* image descriptor of the overlay image */
+static DkImage g_ov_image;
+static unsigned g_ov_version = ~0u;
 static DkSwapchain g_swap;
 static DkImage g_fb[2], g_efb, g_efb_depth;
 static DkImageView g_efb_view, g_efb_depth_view;
 static unsigned g_slot;
 static uint32_t g_vtx_off, g_ubo_off, g_stage_off;
-static uint64_t g_busy_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
+static uint64_t g_busy_ticks, g_gpu_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
 static unsigned g_busy_frames;
 
 /* ---- image pool: first-fit free list ---- */
@@ -215,11 +221,14 @@ static void dk_setup(void) {
     dkCmdBufMakerDefaults(&cm, g_dev);
     g_cmd = dkCmdBufCreate(&cm);
 
-    g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + 2 * DK_SHADER_CODE_ALIGNMENT,
+    g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_overlay_vert_dksh + sizeof k_overlay_frag_dksh +
+                       4 * DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
     shader_load(&g_fsh, k_gx_frag_dksh, sizeof k_gx_frag_dksh, &off);
+    shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
+    shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
 
     for (int i = 0; i < 2; i++) g_slots[i] = block(SLOT_SIZE, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
     g_images = block(IMAGE_POOL, DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image);
@@ -227,7 +236,8 @@ static void dk_setup(void) {
     g_free_list->off = 0; g_free_list->size = IMAGE_POOL; g_free_list->next = NULL;
     g_desc = block(MAX_IMAGES * sizeof(DkImageDescriptor) + NUM_SAMPLERS * sizeof(DkSamplerDescriptor),
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
-    for (int i = 0; i < MAX_IMAGES - 1; i++) g_slot_free[g_nslot_free++] = (uint32_t)(MAX_IMAGES - 1 - i);  /* slot 0: dummy */
+    /* slot 0: the dummy texture, OVERLAY_SLOT: the overlay */
+    for (uint32_t i = MAX_IMAGES - 1; i > OVERLAY_SLOT; i--) g_slot_free[g_nslot_free++] = i;
 
     /* samplers */
     DkSamplerDescriptor* sd = (DkSamplerDescriptor*)((uint8_t*)dkMemBlockGetCpuAddr(g_desc) + MAX_IMAGES * sizeof(DkImageDescriptor));
@@ -260,6 +270,15 @@ static void dk_setup(void) {
     DkSwapchainMaker sm;
     dkSwapchainMakerDefaults(&sm, g_dev, nwindowGetDefault(), fbs, 2);
     g_swap = dkSwapchainCreate(&sm);
+
+    /* the overlay image */
+    {
+        uint32_t o2, sz2;
+        make_image(&g_ov_image, &o2, &sz2, OVERLAY_W, OVERLAY_H, DkImageFlags_Usage2DEngine, DkImageFormat_RGBA8_Unorm);
+        DkImageView ov;
+        dkImageViewDefaults(&ov, &g_ov_image);
+        dkImageDescriptorInitialize(&descriptors()[OVERLAY_SLOT], &ov, false, false);
+    }
 
     /* the 1x1 white dummy texture in descriptor slot 0 */
     DkTex dummy;
@@ -433,8 +452,12 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         float black[4] = {0, 0, 0, 1};
         dkCmdBufClearColor(g_cmd, 0, DkColorMask_RGBA, black);
         dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
-        uint32_t dw = FB_H * 4 / 3;
-        DkImageRect dst = {(FB_W - dw) / 2, 0, 0, dw, FB_H, 1};
+        /* at the chosen aspect (settings.h), centred */
+        float aspect = settings_display_aspect();
+        uint32_t dw = FB_W, dh = FB_H;
+        if ((float)FB_W > FB_H * aspect) dw = (uint32_t)(FB_H * aspect + 0.5f);
+        else dh = (uint32_t)(FB_W / aspect + 0.5f);
+        DkImageRect dst = {(FB_W - dw) / 2, (FB_H - dh) / 2, 0, dw, dh, 1};
         dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
         shot_request(&fv);
         DkImageView const* efb_targets[1] = {&g_efb_view};
@@ -466,6 +489,62 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     }
 }
 
+/* the settings menu / FPS counter (overlay.h) over the presented picture */
+static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
+    unsigned version;
+    const uint8_t* img = overlay_image(&version);
+    if (!img) return;
+    dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image);  /* after the blit into the picture */
+    DkImageView ov;
+    dkImageViewDefaults(&ov, &g_ov_image);
+    uint32_t bytes = OVERLAY_W * OVERLAY_H * 4;
+    if (version != g_ov_version && g_stage_off + bytes <= SLOT_STAGE) {
+        uint32_t so = SLOT_CMD + SLOT_VTX + SLOT_UBO + g_stage_off;
+        memcpy(cpu + so, img, bytes);
+        DkCopyBuf src = {gpu + so, 0, 0};
+        DkImageRect r = {0, 0, 0, OVERLAY_W, OVERLAY_H, 1};
+        dkCmdBufCopyBufferToImage(g_cmd, &src, &ov, &r, 0);
+        dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
+        g_stage_off = (g_stage_off + bytes + 255) & ~255u;
+        g_ov_version = version;
+    }
+    DkImageView fv;
+    dkImageViewDefaults(&fv, &g_fb[g_fb_slot]);
+    DkImageView const* targets[1] = {&fv};
+    dkCmdBufBindRenderTargets(g_cmd, targets, 1, NULL);
+    DkViewport vp = {0, 0, FB_W, FB_H, 0.0f, 1.0f};
+    dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
+    DkScissor sc = {0, 0, FB_W, FB_H};
+    dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
+    DkShader const* shaders[2] = {&g_ovs, &g_ofs};
+    dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
+    dkCmdBufBindVtxAttribState(g_cmd, NULL, 0);
+    dkCmdBufBindVtxBufferState(g_cmd, NULL, 0);
+    DkRasterizerState rs;
+    dkRasterizerStateDefaults(&rs);
+    rs.cullMode = DkFace_None;
+    dkCmdBufBindRasterizerState(g_cmd, &rs);
+    DkDepthStencilState ds;
+    dkDepthStencilStateDefaults(&ds);
+    ds.depthTestEnable = false;
+    ds.depthWriteEnable = false;
+    dkCmdBufBindDepthStencilState(g_cmd, &ds);
+    DkColorState cs;
+    dkColorStateDefaults(&cs);
+    dkColorStateSetBlendEnable(&cs, 0, true);
+    dkCmdBufBindColorState(g_cmd, &cs);
+    DkBlendState bs;
+    dkBlendStateDefaults(&bs);
+    dkBlendStateSetOps(&bs, DkBlendOp_Add, DkBlendOp_Add);
+    dkBlendStateSetFactors(&bs, DkBlendFactor_SrcAlpha, DkBlendFactor_InvSrcAlpha, DkBlendFactor_Zero, DkBlendFactor_One);
+    dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
+    DkColorWriteState cw;
+    dkColorWriteStateDefaults(&cw);
+    dkCmdBufBindColorWriteState(g_cmd, &cw);
+    dkCmdBufBindTexture(g_cmd, DkStage_Fragment, 0, dkMakeTextureHandle(OVERLAY_SLOT, 0));  /* clamp, nearest */
+    dkCmdBufDraw(g_cmd, DkPrimitive_TriangleStrip, 4, 1, 0, 0);
+}
+
 static void execute(GxFrame* f) {
     uint64_t t_start = armGetSystemTick();
     DkMemBlock mem = g_slots[g_slot];
@@ -482,6 +561,15 @@ static void execute(GxFrame* f) {
         vbytes = SLOT_VTX / sizeof(GxVertex) * sizeof(GxVertex);
     }
     memcpy(cpu + SLOT_CMD, f->verts, vbytes);
+
+    /* the XF memory chunk pool, read by the vertex shader through the states' chunk tables */
+    uint32_t xoff = SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE;
+    uint32_t xbytes = f->nxchunks * GX_XFM_CHUNK * 4;
+    if (xbytes > SLOT_XFM) {
+        rt_log("[deko3d] frame has %u XF memory chunks, more than the pool holds; truncated", f->nxchunks);
+        xbytes = SLOT_XFM;
+    }
+    memcpy(cpu + xoff, f->xchunks, xbytes);
 
     /* textures this frame uses: created and uploaded before any draw */
     for (uint32_t i = 0; i < f->ncmds; i++)
@@ -512,6 +600,7 @@ static void execute(GxFrame* f) {
     DkVtxBufferState vb = {sizeof(GxVertex), 0};
     dkCmdBufBindVtxBufferState(g_cmd, &vb, 1);
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
+    dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
 
     const GxUniforms* cur = NULL;
     uint32_t ubo_size = ((uint32_t)sizeof(GxUniforms) + 15) & ~15u;
@@ -545,13 +634,16 @@ static void execute(GxFrame* f) {
         default: break;
         }
     }
+    if (g_fb_slot >= 0) draw_overlay(cpu, gpu);
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     if (g_fb_slot >= 0) {
         dkQueuePresentImage(g_queue, g_swap, g_fb_slot);
         g_fb_slot = -1;
     }
     dkQueueFlush(g_queue);
+    uint64_t t_wait = armGetSystemTick();
     dkQueueWaitIdle(g_queue);
+    g_gpu_ticks += armGetSystemTick() - t_wait;
     shot_write();
     for (uint32_t i = 0; i < f->nretired; i++) {
         tex_destroy(f->retired[i]);
@@ -561,9 +653,10 @@ static void execute(GxFrame* f) {
     /* render-thread cost per frame (build + GPU, as execute waits for the GPU) */
     g_busy_ticks += armGetSystemTick() - t_start;
     if (++g_busy_frames == 120) {
-        rt_log("[deko3d] %.2f ms/frame on the render thread, %llu KB/frame texture uploads",
-               armTicksToNs(g_busy_ticks) / 120 / 1e6, (unsigned long long)(g_upload_bytes / 120 / 1024));
-        g_busy_ticks = g_upload_bytes = 0;
+        rt_log("[deko3d] %.2f ms/frame on the render thread (%.2f waiting for the GPU), %llu KB/frame texture uploads",
+               armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,
+               (unsigned long long)(g_upload_bytes / 120 / 1024));
+        g_busy_ticks = g_gpu_ticks = g_upload_bytes = 0;
         g_busy_frames = 0;
     }
 }
@@ -576,20 +669,33 @@ static GxFrame* g_free[2];
 static int g_nfree;
 static GxFrame* g_pending;
 
+/* watchdog diagnostics: where the game and render threads are in the frame handoff */
+static volatile int g_dbg_take, g_dbg_submit, g_dbg_exec;
+static volatile unsigned g_dbg_executed;
+void render_dump(void) {
+    rt_log("[render] game thread: %s%s; render thread: %s, %u frames executed, %d free, pending %d",
+           g_dbg_take ? "waiting for a free frame " : "", g_dbg_submit ? "waiting to submit" : "",
+           g_dbg_exec ? "executing" : "idle", g_dbg_executed, g_nfree, g_pending != NULL);
+}
+
 GxFrame* render_take_free_frame(void) {
+    g_dbg_take = 1;
     mtx_lock(&g_lock);
     while (!g_nfree) cnd_wait(&g_cv, &g_lock);
     GxFrame* f = g_free[--g_nfree];
     mtx_unlock(&g_lock);
+    g_dbg_take = 0;
     return f;
 }
 
 void render_submit(GxFrame* f) {
+    g_dbg_submit = 1;
     mtx_lock(&g_lock);
     while (g_pending) cnd_wait(&g_cv, &g_lock);
     g_pending = f;
     cnd_broadcast(&g_cv);
     mtx_unlock(&g_lock);
+    g_dbg_submit = 0;
 }
 
 int render_poll_quit(void) { return 0; }
@@ -617,7 +723,10 @@ static int render_thread(void* arg) {
         mtx_unlock(&g_lock);
         input_pump();
         if (!appletMainLoop()) exit(0);
+        g_dbg_exec = 1;
         execute(f);
+        g_dbg_exec = 0;
+        g_dbg_executed++;
         mtx_lock(&g_lock);
         g_pending = NULL;
         g_free[g_nfree++] = f;

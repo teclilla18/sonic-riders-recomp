@@ -8,6 +8,7 @@
 #include "gx_render.h"
 #include "recomp_table.h"
 #include "runtime.h"
+#include "settings.h"
 
 static Cpu g_main_cpu;
 
@@ -16,7 +17,8 @@ void cpu_dump_trace(void);
 void mmio_dump(void);
 void sched_dump(void);
 
-/* SR_WATCHDOG=N: record function entries and, after N seconds, dump where the game is and exit */
+/* SR_WATCHDOG=N: record function entries and, after N seconds, dump where the game is and exit
+ * (SR_WATCHDOG_NOTRACE=1: without the function-entry record) */
 static int watchdog(void* arg) {
     struct timespec ts = {(time_t)(intptr_t)arg, 0};
     thrd_sleep(&ts, NULL);
@@ -41,6 +43,7 @@ int main(int argc, char** argv) {
     platform_init();
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
+    settings_load();
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
     load_game();
     cpu_init(&g_main_cpu);
@@ -48,6 +51,7 @@ int main(int argc, char** argv) {
     gx_init();
     render_start();
     dsp_init();
+    di_init();
     {
         const char* card = getenv("SR_CARD");
         exi_init(card ? card : platform_save_path());
@@ -55,7 +59,7 @@ int main(int argc, char** argv) {
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
     if (wd && atoi(wd) > 0) {
-        g_ppc_trace = 1;
+        g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
         rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
     }
     rt_log("[boot] %u recompiled functions, %u native replacements; starting at %08X",

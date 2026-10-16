@@ -327,7 +327,15 @@ void sched_init(void) {
     rt_thread_start(dec_main, NULL);
 }
 
+void di_dump(void);
+void os_irq_dump(void);
+
+void render_dump(void);
+
 void sched_dump(void) {
+    render_dump();
+    di_dump();
+    os_irq_dump();
     rt_log("[threads] current %08X, run-queue bits %08X, running ctx %08X", ld32(OS_CURRENT_THREAD),
            ld32(OS_RUNQUEUE_BITS), g_running ? g_running->ctx : 0);
     for (GThread* g = g_threads; g; g = g->next) {
@@ -335,8 +343,9 @@ void sched_dump(void) {
         char bt[160] = "";
         int n = 0;
         for (int i = 0; i < 12 && g->bt[i]; i++) n += snprintf(bt + n, sizeof bt - n, " %08X", g->bt[i]);
-        rt_log("[threads]   %08X state %u prio %d queue %08X%s parked at:%s", t, t ? ld16(t + 0x2C8) : 0,
-               t ? (int)ld32(t + 0x2D0) : -1, t ? ld32(t + 0x2DC) : 0, g == g_running ? " (running)" : "", bt);
+        rt_log("[threads]   %08X state %u suspend %d prio %d queue %08X%s parked at:%s", t, t ? ld16(t + 0x2C8) : 0,
+               t ? (int)ld32(t + 0x2CC) : 0, t ? (int)ld32(t + 0x2D0) : -1, t ? ld32(t + 0x2DC) : 0,
+               g == g_running ? " (running)" : "", bt);
     }
 }
 

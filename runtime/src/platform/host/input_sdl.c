@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "overlay.h"
 #include "runtime.h"
 
 enum { B_LEFT = 0x1, B_RIGHT = 0x2, B_DOWN = 0x4, B_UP = 0x8, B_Z = 0x10, B_R = 0x20, B_L = 0x40,
@@ -127,6 +128,27 @@ void input_pump(void) {
         }
     }
     p.buttons |= g_script_held;
+    /* the settings menu (overlay.h): F1 or the controller's Back held opens it */
+    unsigned ov = 0;
+    if (k) {
+        if (k[SDL_SCANCODE_F1]) ov |= OV_MENU;
+        if (k[SDL_SCANCODE_UP]) ov |= OV_UP;
+        if (k[SDL_SCANCODE_DOWN]) ov |= OV_DOWN;
+        if (k[SDL_SCANCODE_LEFT]) ov |= OV_LEFT;
+        if (k[SDL_SCANCODE_RIGHT]) ov |= OV_RIGHT;
+        if (k[SDL_SCANCODE_RETURN] || k[SDL_SCANCODE_X]) ov |= OV_ACCEPT;
+        if (k[SDL_SCANCODE_ESCAPE] || k[SDL_SCANCODE_Z]) ov |= OV_BACK;
+    }
+    if (g_ctl && SDL_GameControllerGetAttached(g_ctl)) {
+        static const struct { SDL_GameControllerButton b; unsigned m; } om[] = {
+            {SDL_CONTROLLER_BUTTON_BACK, OV_MENU}, {SDL_CONTROLLER_BUTTON_DPAD_UP, OV_UP},
+            {SDL_CONTROLLER_BUTTON_DPAD_DOWN, OV_DOWN}, {SDL_CONTROLLER_BUTTON_DPAD_LEFT, OV_LEFT},
+            {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, OV_RIGHT}, {SDL_CONTROLLER_BUTTON_A, OV_ACCEPT},
+            {SDL_CONTROLLER_BUTTON_B, OV_BACK}};
+        for (size_t i = 0; i < sizeof om / sizeof om[0]; i++)
+            if (SDL_GameControllerGetButton(g_ctl, om[i].b)) ov |= om[i].m;
+    }
+    if (overlay_input(ov)) p = (GcPad){0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     atomic_store(&g_pad, pack(&p));
 }
 

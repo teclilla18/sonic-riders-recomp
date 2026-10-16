@@ -14,7 +14,9 @@
 #include "gx.h"
 #include "gx_render.h"
 #include "gx_shaders_gl.h"  /* generated: tools/embed_shaders.py */
+#include "overlay.h"
 #include "runtime.h"
+#include "settings.h"
 
 void input_init(void);
 void input_pump(void);
@@ -38,12 +40,16 @@ void input_pump(void);
     X(PFNGLGENFRAMEBUFFERSPROC, glGenFramebuffers) X(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer) \
     X(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D) X(PFNGLCHECKFRAMEBUFFERSTATUSPROC, glCheckFramebufferStatus) \
     X(PFNGLBLITFRAMEBUFFERPROC, glBlitFramebuffer) X(PFNGLACTIVETEXTUREPROC, glActiveTexture) \
-    X(PFNGLBLENDFUNCSEPARATEPROC, glBlendFuncSeparate) X(PFNGLBLENDEQUATIONPROC, glBlendEquation)
+    X(PFNGLBLENDFUNCSEPARATEPROC, glBlendFuncSeparate) X(PFNGLBLENDEQUATIONPROC, glBlendEquation)     X(PFNGLTEXBUFFERPROC, glTexBuffer)
 #define DECL(t, n) static t p_##n;
 GLFUNCS(DECL)
 #undef DECL
 
 static SDL_Window* g_win;
+#define XFM_UNIT 8  /* texture unit of the XF memory chunk pool (a buffer texture) */
+static GLuint g_xfm_buf, g_xfm_tex;
+static uint8_t* g_ubo_staging;
+static size_t g_ubo_staging_cap;
 static GLuint g_prog, g_vao, g_vbo, g_ubo, g_fbo, g_efb_color, g_efb_depth, g_copy_fbo;
 static GLint g_ubo_align = 256;
 static GLuint* g_gltex;
@@ -83,7 +89,7 @@ static void gl_setup(void) {
     GLFUNCS(LOAD)
 #undef LOAD
     rt_log("[gl] %s / %s", glGetString(GL_RENDERER), glGetString(GL_VERSION));
-    GLuint vs = compile(GL_VERTEX_SHADER, k_gx_vertex_shader), fs = compile(GL_FRAGMENT_SHADER, k_gx_fragment_shader);
+    GLuint vs = compile(GL_VERTEX_SHADER, k_gx_vert_glsl), fs = compile(GL_FRAGMENT_SHADER, k_gx_frag_glsl);
     g_prog = p_glCreateProgram();
     p_glAttachShader(g_prog, vs);
     p_glAttachShader(g_prog, fs);
@@ -103,6 +109,9 @@ static void gl_setup(void) {
         snprintf(n, sizeof n, "u_tex%d", i);
         p_glUniform1i(p_glGetUniformLocation(g_prog, n), i);
     }
+    p_glUniform1i(p_glGetUniformLocation(g_prog, "u_xfm"), XFM_UNIT);
+    p_glGenBuffers(1, &g_xfm_buf);
+    glGenTextures(1, &g_xfm_tex);
     glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &g_ubo_align);
     p_glGenVertexArrays(1, &g_vao);
     p_glBindVertexArray(g_vao);
@@ -233,6 +242,45 @@ static void apply_state(const GxUniforms* u) {
 /* ---- EFB copies and presentation ---- */
 static void save_png(const char* path, int w, int h, const uint8_t* rgba);
 
+/* ---- the settings menu / FPS counter (overlay.h), over the whole window ---- */
+static GLuint g_ov_prog, g_ov_tex;
+static unsigned g_ov_version = ~0u;
+
+static void draw_overlay(int ww, int wh) {
+    unsigned version;
+    const uint8_t* img = overlay_image(&version);
+    if (!img) return;
+    if (!g_ov_prog) {
+        g_ov_prog = p_glCreateProgram();
+        p_glAttachShader(g_ov_prog, compile(GL_VERTEX_SHADER, k_overlay_vert_glsl));
+        p_glAttachShader(g_ov_prog, compile(GL_FRAGMENT_SHADER, k_overlay_frag_glsl));
+        p_glLinkProgram(g_ov_prog);
+        glGenTextures(1, &g_ov_tex);
+        glBindTexture(GL_TEXTURE_2D, g_ov_tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+    p_glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_ov_tex);
+    if (version != g_ov_version) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, OVERLAY_W, OVERLAY_H, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
+        g_ov_version = version;
+    }
+    p_glUseProgram(g_ov_prog);
+    glViewport(0, 0, ww, wh);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glColorMask(1, 1, 1, 1);
+    glEnable(GL_BLEND);
+    p_glBlendEquation(0x8006 /* GL_FUNC_ADD */);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    p_glUseProgram(g_prog);  /* the GX state is set again by the next state command (apply_state) */
+}
+
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     int x = (int)c->copy[0], y = (int)c->copy[1], w = (int)c->copy[2], h = (int)c->copy[3];
     if (g_debug_frame)
@@ -248,9 +296,16 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             glColorMask(1, 1, 1, 1);
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
-            /* the EFB is stored top row first: flip while blitting to the window */
-            p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, 0, wh, ww, 0,
+            /* the picture at the chosen aspect (settings.h), centred; the EFB is stored top row first:
+             * flip while blitting to the window */
+            float aspect = settings_display_aspect();
+            int dw = ww, dh = wh;
+            if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
+            else dh = (int)((float)ww / aspect + 0.5f);
+            int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
+            p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            draw_overlay(ww, wh);
             g_presented++;
             if (g_shot_at && g_presented == (unsigned)g_shot_at) {
                 uint8_t* px = malloc((size_t)ww * wh * 4);
@@ -296,10 +351,22 @@ static void execute(GxFrame* f) {
     p_glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
     p_glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)f->nverts * sizeof(GxVertex), f->verts, GL_STREAM_DRAW);
     size_t stride = (sizeof(GxUniforms) + (size_t)g_ubo_align - 1) / (size_t)g_ubo_align * (size_t)g_ubo_align;
+    /* the states, packed at the UBO offset alignment, in one upload */
+    size_t ubo_bytes = stride * (f->nunis ? f->nunis : 1);
+    if (ubo_bytes > g_ubo_staging_cap) {
+        g_ubo_staging = realloc(g_ubo_staging, ubo_bytes);
+        g_ubo_staging_cap = ubo_bytes;
+    }
+    for (uint32_t i = 0; i < f->nunis; i++) memcpy(g_ubo_staging + stride * i, &f->unis[i], sizeof(GxUniforms));
     p_glBindBuffer(GL_UNIFORM_BUFFER, g_ubo);
-    p_glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)(stride * (f->nunis ? f->nunis : 1)), NULL, GL_STREAM_DRAW);
-    for (uint32_t i = 0; i < f->nunis; i++)
-        p_glBufferSubData(GL_UNIFORM_BUFFER, (GLintptr)(stride * i), sizeof(GxUniforms), &f->unis[i]);
+    p_glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)ubo_bytes, g_ubo_staging, GL_STREAM_DRAW);
+    /* the XF memory chunk pool */
+    p_glBindBuffer(0x8C2A /* GL_TEXTURE_BUFFER */, g_xfm_buf);
+    p_glBufferData(0x8C2A, (GLsizeiptr)(f->nxchunks ? f->nxchunks : 1) * GX_XFM_CHUNK * 4, f->xchunks, GL_STREAM_DRAW);
+    p_glActiveTexture(GL_TEXTURE0 + XFM_UNIT);
+    glBindTexture(0x8C2A, g_xfm_tex);
+    p_glTexBuffer(0x8C2A, 0x8236 /* GL_R32UI */, g_xfm_buf);
+    p_glActiveTexture(GL_TEXTURE0);
     const GxUniforms* cur = NULL;
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
@@ -342,6 +409,8 @@ static void execute(GxFrame* f) {
 }
 
 /* ---- frame queue ---- */
+void render_dump(void) {}
+
 GxFrame* render_take_free_frame(void) {
     mtx_lock(&g_lock);
     while (!g_nfree) cnd_wait(&g_cv, &g_lock);

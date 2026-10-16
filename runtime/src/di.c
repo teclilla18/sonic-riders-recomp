@@ -1,8 +1,13 @@
 /* DVD Interface (0xCC006000): a drive model so the game's own DVD library (DVDLow*, the state
- * machine, the file system, async reads, CRI's streaming on top) runs recompiled. Commands complete
- * immediately, reading straight from the user's disc image, and raise the DI interrupt.
+ * machine, the file system, async reads, CRI's streaming on top) runs recompiled. Data is read
+ * from the user's disc image when a command starts; the command completes (TSTART clears, the DI
+ * interrupt is raised) a few ms later, on a timer thread. Completing inside the register write (or
+ * too soon after it) raced the SDK's timeout alarm, which is armed after the command starts: the
+ * alarm then fired as a drive timeout and loading stopped at "Now Loading" (about 1 run in 20).
  * Register and command set: YAGCD "DVD Interface", Dolphin's DVDInterface. */
 #include <string.h>
+#include <threads.h>
+#include <time.h>
 
 #include "runtime.h"
 
@@ -11,6 +16,9 @@
 enum { DISR, DICVR, DICMD0, DICMD1, DICMD2, DIMAR, DILEN, DICR, DIIMM, DICFG, DI_NREGS };
 static uint32_t g_di[DI_NREGS];
 static unsigned long long g_read_bytes, g_read_ticks;
+static mtx_t g_di_lock;           /* g_di: the CPU's accesses vs. the completion thread */
+static cnd_t g_di_cv;
+static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress completes */
 
 /* DISR bits */
 #define DEINT_MASK  0x02u
@@ -62,14 +70,52 @@ static void execute(void) {
         rt_log("[di] unhandled drive command %08X %08X %08X", g_di[DICMD0], g_di[DICMD1], g_di[DICMD2]);
         break;
     }
-    g_di[DICR] &= ~1u;
-    g_di[DISR] |= TCINT;
-    if (g_di[DISR] & TCINT_MASK) os_raise_interrupt(OS_INTERRUPT_PI_DI);
+    /* completes after 2 ms + the transfer at 32 MB/s (a real drive: tens of ms + ~3 MB/s). The SDK
+     * arms its timeout alarm after starting a command (DVDLowRead: DICR, then OSSetAlarm); a
+     * completion before that leaves the alarm to fire later as a drive timeout, and loading stops. */
+    uint64_t bytes = cmd == 0xA8 ? len : 0;
+    g_di_done_at = (int64_t)rt_ticks() + 81000 + (int64_t)(bytes * 40500000ull / (32ull << 20));
+    cnd_signal(&g_di_cv);
+}
+
+static int di_timer(void* arg) {
+    (void)arg;
+    mtx_lock(&g_di_lock);
+    for (;;) {
+        if (g_di_done_at < 0) { cnd_wait(&g_di_cv, &g_di_lock); continue; }
+        int64_t left = g_di_done_at - (int64_t)rt_ticks();
+        if (left <= 0) {
+            g_di_done_at = -1;
+            g_di[DICR] &= ~1u;
+            g_di[DISR] |= TCINT;
+            int raise = (g_di[DISR] & TCINT_MASK) != 0;
+            mtx_unlock(&g_di_lock);
+            if (raise) os_raise_interrupt(OS_INTERRUPT_PI_DI);
+            mtx_lock(&g_di_lock);
+            continue;
+        }
+        struct timespec ts;
+        timespec_get(&ts, TIME_UTC);
+        int64_t ns = left * 2000 / 81;  /* ticks at 40.5 MHz -> ns */
+        ts.tv_sec += ns / 1000000000;
+        ts.tv_nsec += ns % 1000000000;
+        if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+        cnd_timedwait(&g_di_cv, &g_di_lock, &ts);
+    }
+    return 0;
+}
+
+void di_init(void) {
+    mtx_init(&g_di_lock, mtx_plain);
+    cnd_init(&g_di_cv);
+    rt_thread_start(di_timer, NULL);
 }
 
 uint32_t di_read(uint32_t ea, int size) {
     uint32_t r = (ea & 0x3F) >> 2;
+    mtx_lock(&g_di_lock);
     uint32_t v = r < DI_NREGS ? g_di[r] : 0;
+    mtx_unlock(&g_di_lock);
     if (r == DICVR) v &= ~1u;  /* cover closed */
     if (size == 2) v = (ea & 2) ? (v & 0xFFFF) : (v >> 16);
     return v;
@@ -81,6 +127,7 @@ void di_write(uint32_t ea, uint32_t v, int size) {
         rt_log("[di] unexpected %d-byte write %08X = %08X", size, ea, v);
         return;
     }
+    mtx_lock(&g_di_lock);
     switch (r) {
     case DISR:  /* interrupt status: write 1 to clear; masks and break are stored */
         g_di[DISR] = (g_di[DISR] & (DEINT | TCINT | BRKINT) & ~v) | (v & (DEINT_MASK | TCINT_MASK | BRKINT_MASK | 1u));
@@ -96,6 +143,13 @@ void di_write(uint32_t ea, uint32_t v, int size) {
         g_di[r] = v;
         break;
     }
+    mtx_unlock(&g_di_lock);
+}
+
+void di_dump(void) {
+    rt_log("[di] SR %08X CVR %08X CMD %08X %08X %08X MAR %08X LEN %08X CR %08X; completes in %lld ticks", g_di[DISR],
+           g_di[DICVR], g_di[DICMD0], g_di[DICMD1], g_di[DICMD2], g_di[DIMAR], g_di[DILEN], g_di[DICR],
+           g_di_done_at < 0 ? -1LL : (long long)(g_di_done_at - (int64_t)rt_ticks()));
 }
 
 unsigned long long di_bytes_read(void) { return g_read_bytes; }

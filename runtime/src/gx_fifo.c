@@ -130,7 +130,7 @@ static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
     gx_state_dirty();
     for (uint32_t i = 0; i < n; i++, addr++) {
         uint32_t v = rd32(data + 4 * i);
-        if (addr < 0x1000) g_gx.xf_mem[addr] = v;
+        if (addr < 0x1000) { g_gx.xf_mem[addr] = v; g_gx.xfm_dirty |= 1u << ((addr >> 6) & 31); }
         else if (addr < 0x1100) g_gx.xf_reg[addr - 0x1000] = v;
     }
 }
@@ -141,7 +141,10 @@ static void load_indexed(int array, uint32_t v) {
     uint32_t base = g_gx.cp[0xA0 + 12 + array] & 0x3FFFFFFF, stride = g_gx.cp[0xB0 + 12 + array] & 0xFF;
     uint32_t src = 0x80000000u | (base + index * stride);
     gx_state_dirty();
-    for (uint32_t i = 0; i < n && addr + i < 0x1000; i++) g_gx.xf_mem[addr + i] = ld32(src + 4 * i);
+    for (uint32_t i = 0; i < n && addr + i < 0x1000; i++) {
+        g_gx.xf_mem[addr + i] = ld32(src + 4 * i);
+        g_gx.xfm_dirty |= 1u << (((addr + i) >> 6) & 31);
+    }
 }
 
 static size_t parse(const uint8_t* p, size_t len, int depth);

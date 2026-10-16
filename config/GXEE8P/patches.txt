@@ -1,0 +1,18 @@
+# Code patches applied by the recompiler (tools/recomp/gcrecomp.py): ADDRESS before|after C-STATEMENT.
+# Addresses are this build's: main.dol as is, the REL at REL_BASE 0x81800000 (original runtime
+# address - 0x803FBD00 + 0x81800000, the module having been loaded at 0x803FBD00).
+
+# ---- Widescreen (any aspect): the camera projections' aspect ratio times g_aspect_scale
+# (target aspect / (4/3); 1 = the original 4:3). The native form of gamemasterplc's "16:9 Widescreen"
+# Gecko code for GXEE8P (Dolphin wiki, Sonic Riders), which multiplies by 0.6666667f then by 2.
+decl extern volatile double g_aspect_scale;
+# projection setup (fn_800645DC): f1 is the aspect ratio on entry
+800645DC before { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
+# race camera (REL text 0x14115C, originally 0x8053CF18): the aspect ratio computed by this fmadds
+81941218 after { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
+
+# ---- Diagnostics
+decl void rt_log(const char* fmt, ...);
+# the DVD library's command timeout fired (AlarmHandlerForTimeout): the drive model completed a
+# command too late, or before the SDK armed this alarm (see runtime/src/di.c)
+80012398 before { rt_log("[dvd] the SDK's drive timeout alarm fired"); }

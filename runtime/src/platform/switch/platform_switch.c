@@ -36,6 +36,20 @@ void platform_init(void) {
     if (!freopen(BASE_DIR "/sonicriders.log", "w", stderr)) return;
     setvbuf(stderr, NULL, _IOLBF, 0);
     rt_log("[switch] Sonic Riders native port; log started");
+    /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
+    FILE* f = fopen(BASE_DIR "/env.txt", "r");
+    if (f) {
+        char line[256];
+        while (fgets(line, sizeof line, f)) {
+            line[strcspn(line, "\r\n")] = 0;
+            char* eq = strchr(line, '=');
+            if (!eq || line[0] == '#') continue;
+            *eq = 0;
+            setenv(line, eq + 1, 1);
+            rt_log("[switch] env %s=%s", line, eq + 1);
+        }
+        fclose(f);
+    }
 }
 
 const char* platform_disc_path(void) {
@@ -56,6 +70,7 @@ const char* platform_disc_path(void) {
 }
 
 const char* platform_save_path(void) { return BASE_DIR "/saves/card_a.raw"; }
+const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
 
 /* ---- threads: libnx gives threads created without attributes a 128 KiB stack ---- */
 typedef struct { int (*fn)(void*); void* arg; } Start;

@@ -22,7 +22,7 @@ static mtx_t g_ids_lock;
 static once_flag g_ids_once = ONCE_FLAG_INIT;
 static void ids_init(void) { mtx_init(&g_ids_lock, mtx_plain); }
 
-typedef struct Entry { uint64_t key, hash; int id, valid; uint32_t frame; } Entry;
+typedef struct Entry { uint64_t key, hash, full; int id, valid; uint32_t frame; } Entry;
 #define CACHE_SIZE 8192
 static Entry g_cache[CACHE_SIZE];
 
@@ -85,6 +85,20 @@ static uint64_t hash_bytes(const uint8_t* p, size_t n) {
         h ^= h >> 29;
     }
     for (; i < n; i++) h = (h ^ p[i]) * 0x100000001B3ull;
+    return h;
+}
+
+/* a cheap per-frame check: 512 8-byte samples spread over the texture (all of it when small) */
+static uint64_t hash_sampled(const uint8_t* p, size_t n) {
+    if (n <= 4096) return hash_bytes(p, n);
+    uint64_t h = 0x9E3779B97F4A7C15ull ^ n;
+    size_t step = (n - 8) / 511;
+    for (int i = 0; i < 512; i++) {
+        uint64_t v;
+        memcpy(&v, p + (size_t)i * step, 8);
+        h = (h ^ v) * 0xFF51AFD7ED558CCDull;
+        h ^= h >> 29;
+    }
     return h;
 }
 
@@ -262,12 +276,25 @@ int gx_texture_lookup(int map) {
         tlut = g_tmem + toff;
     }
     uint64_t key = (uint64_t)addr << 32 ^ (uint64_t)fmt << 28 ^ (uint64_t)w << 14 ^ h ^ ((uint64_t)tfmt << 62);
-    Entry* e = &g_cache[(key ^ (key >> 21)) % CACHE_SIZE];
+    /* two-way set: slots i and i ^ 1 of a well-mixed index; a miss replaces the free or older one */
+    uint64_t m = key * 0x9E3779B97F4A7C15ull;
+    m = (m ^ (m >> 31)) * 0xBF58476D1CE4E5B9ull;
+    m ^= m >> 29;
+    Entry* e = &g_cache[m % CACHE_SIZE];
+    Entry* e2 = &g_cache[(m % CACHE_SIZE) ^ 1];
+    if (!(e->valid && e->key == key) &&
+        ((e2->valid && e2->key == key) || (e->valid && (!e2->valid || e2->frame < e->frame))))
+        e = e2;
     if (e->valid && e->key == key && e->frame == g_frame) return e->id;  /* already checked this frame */
-    uint64_t hsh = hash_bytes(src, size) ^ (tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0);
+    /* changed? a sampled hash every frame, the full hash every 16th frame (staggered), the palette
+     * always: textures the game rewrites in part are noticed within 16 frames */
+    uint64_t th = tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0;
+    uint64_t hsh = hash_sampled(src, size) ^ th;
     if (e->valid && e->key == key && e->hash == hsh) {
-        e->frame = g_frame;
-        return e->id;
+        if (((g_frame + (uint32_t)(key >> 5)) & 15) || (hash_bytes(src, size) ^ th) == e->full) {
+            e->frame = g_frame;
+            return e->id;
+        }
     }
     /* contents changed: a new texture (the render thread may still be uploading the old one from the
      * frame in flight); the old one is retired with this frame and freed by the backend after it */
@@ -277,6 +304,7 @@ int gx_texture_lookup(int map) {
     t->gen++;
     e->key = key;
     e->hash = hsh;
+    e->full = hash_bytes(src, size) ^ th;
     e->id = t->id;
     e->valid = 1;
     e->frame = g_frame;

@@ -42,6 +42,11 @@ void os_raise_interrupt(int id) {
     if (!atomic_exchange(&g_posted, 1)) rt_irq_post(dispatch_all, NULL);
 }
 
+void os_irq_dump(void) {
+    rt_log("[irq] pending %08X posted %d, OS mask %08X user mask %08X", atomic_load(&g_pending), atomic_load(&g_posted),
+           ld32(OS_INTERRUPT_MASK), ld32(OS_USER_MASK));
+}
+
 /* latched interrupts that were masked: try again (called when interrupts are re-enabled) */
 void os_irq_retry(void) {
     uint32_t mask = ld32(OS_INTERRUPT_MASK) | ld32(OS_USER_MASK);

@@ -41,6 +41,7 @@ const char* platform_disc_path(void) {
 }
 
 const char* platform_save_path(void) { return "saves/card_a.raw"; }
+const char* platform_settings_path(void) { return "saves/settings.ini"; }
 
 typedef struct { int (*fn)(void*); void* arg; } Start;
 

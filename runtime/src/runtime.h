@@ -12,6 +12,7 @@ extern "C" {
 void platform_init(void);                   /* logging, file system, clocks */
 const char* platform_disc_path(void);       /* default location of the game's disc image */
 const char* platform_save_path(void);       /* memory card image for slot A */
+const char* platform_settings_path(void);   /* settings.ini (settings.c) */
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 
@@ -77,6 +78,7 @@ void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max);  /* ti
 
 /* dsp.c: DSP mailboxes + boot ROM, ARAM and its DMA, AI DMA clock; ai_*: Audio Interface */
 void dsp_init(void);
+void di_init(void);   /* the DVD drive's completion timer */
 uint32_t dsp_read(uint32_t ea, int size);
 void dsp_write(uint32_t ea, uint32_t v, int size);
 uint32_t ai_read(uint32_t ea, int size);

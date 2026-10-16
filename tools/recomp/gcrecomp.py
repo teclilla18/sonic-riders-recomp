@@ -16,6 +16,10 @@ Front end for the forked ZeldaWWHDRecomp translator (ppc2c.py, crlive.py, leaflo
   OSLink would, and the runtime links the module at the same address (runtime/src/rel.c).
 - Native replacements (HLE): CONFIG_DIR/hle.txt lists `ADDRESS NAME` lines; f_ADDRESS then calls the
   runtime's hle_NAME(c), and the game's code stays available as f_ADDRESS_orig.
+- Code patches: CONFIG_DIR/patches.txt lists `ADDRESS before|after C-STATEMENT` lines (the statement
+  in the translator's terms: c->r[n], c->f[n].ps0, ...; it is rewritten with the instruction's) and
+  `decl C-DECLARATION` lines for runtime globals the statements use (emitted into funcs.h). Patches
+  are the native form of Gecko code hooks; a runtime flag in the statement makes them switchable.
 
 Output (all derived from the game: stays in build/, never committed):
   OUTDIR/funcs.h, OUTDIR/code_NNN.c, OUTDIR/table.c, OUTDIR/report.txt
@@ -127,6 +131,21 @@ class GcRecompiler:
                 if addr not in self.entries:
                     raise SystemExit("%s:%d: %08X is not a function entry" % (hle, ln, addr))
                 self.hooks[addr] = name
+        self.patches = collections.defaultdict(lambda: ["", ""])  # address -> [before, after]
+        self.patch_decls = []
+        pf = os.path.join(config_dir, "patches.txt")
+        if os.path.exists(pf):
+            for ln, line in enumerate(open(pf), 1):
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("decl "):
+                    self.patch_decls.append(line[5:].strip())
+                    continue
+                addr, where, stmt = line.split(None, 2)
+                if where not in ("before", "after"):
+                    raise SystemExit("%s:%d: expected before/after" % (pf, ln))
+                self.patches[int(addr, 16)][where == "after"] += " " + stmt
         self._fixpoint()
         self._assign_jump_tables()
 
@@ -260,6 +279,9 @@ class GcRecompiler:
             except Unhandled as e:
                 self.unhandled[str(e)] += 1
                 s = "ppc_unimplemented(c, 0x%08Xu, 0x%08Xu);" % (a, w)
+            if a in self.patches:
+                pre, post = self.patches[a]
+                s = "{%s %s%s }" % (pre, s, post)
             body.append((a, w, s))
         hooked = start in self.hooks
         plain = hooked
@@ -340,6 +362,9 @@ class GcRecompiler:
         lines = ['#pragma once\n%s%s#include "ppc.h"\n' % ("#define PPC_CR_CHECK 1\n" if CR_CHECK else "", gqr)]
         for e in self.sorted_entries:
             lines.append("void f_%08X(Cpu* __restrict c);" % e)
+        if self.patch_decls:
+            lines.append("\n/* runtime state used by code patches (config/GXEE8P/patches.txt) */")
+            lines += self.patch_decls
         lines.append("\n/* native replacements (config/GXEE8P/hle.txt) */")
         for a, name in sorted(self.hooks.items()):
             lines.append("void f_%08X_orig(Cpu* __restrict c);\nvoid hle_%s(Cpu* c);" % (a, name))

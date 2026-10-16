@@ -8,7 +8,9 @@
  * Command set and register layout: YAGCD "EXI", Dolphin's EXI_DeviceMemoryCard / EXI_DeviceIPL. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <string.h>
+#include <threads.h>
 #include <time.h>
 
 #include "runtime.h"
@@ -48,15 +50,46 @@ typedef struct {
     uint8_t cmd, status, irq_enable;
     uint32_t pos, addr, rd;
     uint8_t buf[128];
+    _Atomic int dirty;         /* changed since the file was last written */
+    _Atomic uint64_t touched;  /* rt_ticks() of the last change */
+    mtx_t lock;                /* mem vs. the writer thread's snapshot */
 } Card;
-static Card g_card_a;
 static struct Ipl g_ipl;
 
-static void card_save(Card* c) {
+/* The card file is written in the background, once the game has not changed the card for 0.5 s
+ * (and at exit): a save is ~1250 erase/program commands, and rewriting the whole image after each
+ * one took long enough on the Switch's SD card for the CARD library's timeout alarms to fire. */
+static void card_write_file(Card* c) {
+    static uint8_t snap[CARD_SIZE];
+    mtx_lock(&c->lock);
+    atomic_store(&c->dirty, 0);
+    memcpy(snap, c->mem, CARD_SIZE);
+    mtx_unlock(&c->lock);
     FILE* f = fopen(c->path, "wb");
     if (!f) { rt_log("[card] cannot write %s", c->path); return; }
-    fwrite(c->mem, 1, CARD_SIZE, f);
-    fclose(f);
+    size_t n = fwrite(snap, 1, CARD_SIZE, f);
+    if (fclose(f) || n != CARD_SIZE) rt_log("[card] write error on %s", c->path);
+}
+
+static void card_save(Card* c) {  /* called with mem changed */
+    atomic_store(&c->touched, rt_ticks());
+    atomic_store(&c->dirty, 1);
+}
+
+static Card g_card_a;
+
+static int card_writer(void* arg) {
+    Card* c = arg;
+    for (;;) {
+        struct timespec ts = {0, 100000000};
+        thrd_sleep(&ts, NULL);
+        if (atomic_load(&c->dirty) && rt_ticks() - atomic_load(&c->touched) > 40500000ull / 2) card_write_file(c);
+    }
+    return 0;
+}
+
+static void card_flush_at_exit(void) {
+    if (atomic_load(&g_card_a.dirty)) card_write_file(&g_card_a);
 }
 
 static void card_raise(Card* c) {
@@ -73,15 +106,17 @@ static uint32_t card_addr(const uint8_t* b) {  /* the 4 address bytes of read/pr
 static int g_card_log = 60;
 static void card_select(Device* d) {
     Card* c = (Card*)d;
-    if (c->cmd && g_card_log > 0) {
-        g_card_log--;
+    if (c->cmd && (c->cmd != 0x52 || g_card_log > 0)) {  /* reads: only the first ones (the mount) */
+        if (c->cmd == 0x52) g_card_log--;
         rt_log("[card] cmd %02X addr %06X wrote %u read %u", c->cmd, c->addr, c->pos, c->rd);
     }
     /* the end of a page program happens when the CPU deselects: commit it */
     if (c->cmd == 0xF2 && c->pos > 5) {
         uint32_t n = c->pos - 5 > 128 ? 128 : c->pos - 5;
         uint32_t page = c->addr & (CARD_SIZE - 1) & ~0x7Fu;
+        mtx_lock(&c->lock);
         for (uint32_t i = 0; i < n; i++) c->mem[(page + ((c->addr + i) & 0x7F)) & (CARD_SIZE - 1)] = c->buf[i];
+        mtx_unlock(&c->lock);
         card_save(c);
         card_raise(c);
     }
@@ -103,7 +138,9 @@ static void card_write(Device* d, uint8_t b) {
         if (c->pos <= 2) a[c->pos - 1] = b;
         if (c->pos == 2) {
             uint32_t sector = (((uint32_t)(a[0] & 0x7F) << 17) | ((uint32_t)a[1] << 9)) & (CARD_SIZE - 1) & ~0x1FFFu;
+            mtx_lock(&c->lock);
             memset(c->mem + sector, 0xFF, 0x2000);
+            mtx_unlock(&c->lock);
             card_save(c);
             card_raise(c);
         }
@@ -199,16 +236,19 @@ static void card_init(Card* c, int chan, const char* path, const uint8_t* sram) 
     c->base.chan = chan;
     c->status = 0x41;  /* ready | unlocked: the SDK skips the unlock sequence */
     c->mem = malloc(CARD_SIZE);
+    mtx_init(&c->lock, mtx_plain);
     snprintf(c->path, sizeof c->path, "%s", path);
     FILE* f = fopen(path, "rb");
     if (f && fread(c->mem, 1, CARD_SIZE, f) == CARD_SIZE) {
         rt_log("[card] slot A: %s", path);
     } else {
         card_format(c->mem, sram);
-        card_save(c);
+        card_write_file(c);
         rt_log("[card] slot A: new formatted card %s (59 blocks)", path);
     }
     if (f) fclose(f);
+    atexit(card_flush_at_exit);
+    rt_thread_start(card_writer, c);
 }
 
 /* ---------------------------------------------------------------- IPL: SRAM + RTC */

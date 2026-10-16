@@ -1,10 +1,12 @@
 /* Switch input: Joy-Con / Pro Controller (any player-1 style) -> GameCube controller 1.
  * A B X Y = A B X Y, + = START, ZL / ZR = L / R (full press), R = Z, D-pad = D-pad,
- * left stick = main stick, right stick = C stick. Pumped on the render thread. */
+ * left stick = main stick, right stick = C stick; Minus held: the settings menu. Pumped on the
+ * render thread. */
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <switch.h>
 
+#include "overlay.h"
 #include "runtime.h"
 
 enum { B_LEFT = 0x1, B_RIGHT = 0x2, B_DOWN = 0x4, B_UP = 0x8, B_Z = 0x10, B_R = 0x20, B_L = 0x40,
@@ -44,6 +46,16 @@ void input_pump(void) {
     if (b & HidNpadButton_Down) p.buttons |= B_DOWN;
     if (b & HidNpadButton_Left) p.buttons |= B_LEFT;
     if (b & HidNpadButton_Right) p.buttons |= B_RIGHT;
+    /* the settings menu (overlay.h): Minus held opens it */
+    unsigned ov = 0;
+    if (b & HidNpadButton_Minus) ov |= OV_MENU;
+    if (b & HidNpadButton_Up) ov |= OV_UP;
+    if (b & HidNpadButton_Down) ov |= OV_DOWN;
+    if (b & HidNpadButton_Left) ov |= OV_LEFT;
+    if (b & HidNpadButton_Right) ov |= OV_RIGHT;
+    if (b & HidNpadButton_A) ov |= OV_ACCEPT;
+    if (b & HidNpadButton_B) ov |= OV_BACK;
+    if (overlay_input(ov)) p = (GcPad){0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     uint64_t v = (uint64_t)p.buttons | (uint64_t)p.stick_x << 16 | (uint64_t)p.stick_y << 24 | (uint64_t)p.c_x << 32 |
                  (uint64_t)p.c_y << 40 | (uint64_t)p.trig_l << 48 | (uint64_t)p.trig_r << 56;
     atomic_store(&g_state, v);

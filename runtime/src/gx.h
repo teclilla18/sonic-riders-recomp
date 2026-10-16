@@ -14,6 +14,7 @@ typedef struct GxState {
     uint32_t konst[8];        /* TEV konstant colors: BP 0xE0-0xE7 written with bit 23 set */
     uint32_t xf_mem[0x1000];  /* XF memory: position/normal/texture/post matrices, lights */
     uint32_t xf_reg[0x100];   /* XF registers 0x1000-0x10FF */
+    uint32_t xfm_dirty;       /* XF memory chunks (64 words, GX_XFM_CHUNKS of them) changed since read */
     unsigned long long fifo_bytes, draws;
     unsigned bad_logged;
 } GxState;

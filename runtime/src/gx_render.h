@@ -21,12 +21,18 @@ typedef struct GxVertex {
     float tmtx[8];     /* texture matrix index per coordinate */
 } GxVertex;
 
-/* the register state the shaders read, std140-compatible (uploaded as one uniform buffer) */
+/* XF memory 0x000-0x67F (matrices, lights) as chunks of 64 words: each frame keeps a pool of chunk
+ * copies (GxFrame.xchunks); a state names the pool entry of each chunk (GxUniforms.xtab), so a state
+ * change copies only the chunks the game rewrote. */
+#define GX_XFM_CHUNK 64
+#define GX_XFM_CHUNKS 26
+
+/* the register state the shaders read per state, std140-compatible (one uniform buffer) */
 typedef struct GxUniforms {
     uint32_t bp[256];         /* BP registers */
     uint32_t xfr[128];        /* XF registers 0x1000-0x107F */
-    uint32_t xfm[0x680];      /* XF memory 0x000-0x67F (matrices, lights): float bits */
     uint32_t konst[8];        /* TEV konstant colors (raw BP values) */
+    uint32_t xtab[28];        /* pool index of XF memory chunk i (GX_XFM_CHUNKS used) */
 } GxUniforms;
 
 enum { GXC_STATE, GXC_DRAW, GXC_COPY, GXC_PRESENT };
@@ -54,6 +60,7 @@ typedef struct GxFrame {
     GxCmd* cmds; uint32_t ncmds, cap_cmds;
     GxVertex* verts; uint32_t nverts, cap_verts;
     GxUniforms* unis; uint32_t nunis, cap_unis;
+    uint32_t* xchunks; uint32_t nxchunks, cap_xchunks;  /* XF memory chunk copies (GX_XFM_CHUNK words) */
     int* retired; uint32_t nretired, cap_retired;  /* texture ids to free after this frame */
 } GxFrame;
 

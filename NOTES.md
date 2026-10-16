@@ -11,14 +11,49 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching plan below is superseded.
 
-**Status after session 4 (2026-10-16):**
-- **Windows host build:** the intro (SEGA/Sonic Team logos), the opening FMV, the title screen and the save-file menu, with controller input, at a steady 60 fps.
-- **Switch build** (verified in the Eden emulator, **not yet on hardware**): logos, FMV, title screen and the **attract-mode demo race in 3D** with HUD. The demo race was never shown on PC before; it looks blue-tinted, probably from missing fog and other renderer features.
+**Status after session 5 (2026-10-16):**
+- **Windows host build:** the intro, the opening FMV, the title screen, the save-file menu and **creating a save** (verified with scripted input), with controller input, at 60 fps.
+- **Switch build** (verified in Eden v0.1.1): logos, FMV, title screen, the attract-mode demo race in 3D, the settings menu and widescreen.
 - **Hardware tests so far:**
-  1. Black screen, then `image pool exhausted`. Fixed in session 3: texture-cache leak and deko3d clip orientation.
-  2. Black screen, no crash. Fixed in session 4: the uam miscompile below.
-  Test 3 is pending.
-- **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet.
+  1. Black screen, then `image pool exhausted`. Fixed in session 3.
+  2. Black screen. Fixed in session 4 (the uam miscompile below).
+  3. Picture OK. The user reported:
+     - the title screen is choppy and in slow motion;
+     - black side bars (wants 16:9 and a hold-Minus menu, like SwitchWakerHD);
+     - no sound;
+     - creating a save fails with "not present or corrupted".
+     Everything but sound was addressed in session 5. Test 4 is pending.
+- **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet. **This is the next big task.**
+
+**Session 5 changes (from hardware test 3):**
+- **Save creation:** `exi.c` rewrote the whole 512 KB card file after every page program or erase (~1250 per save, about 600 MB of SD writes). On the Switch that outlasted the CARD library's timeout alarms. The card is now written by a background thread once writes have been idle for 0.5 s, and at exit. Verified on PC: a fresh card gets `SONICRIDERS_GAMEDATA_01`.
+- **Texture cache thrash (the main slowdown):** the cache's slot index `(key ^ key >> 21) % 8192` ignored most address bits, so same-size textures evicted each other every frame: hundreds of re-decodes and 1–6 MB/frame of uploads, with "0 same key" in the churn log. It is now a two-way set with a splitmix index. Hashing is also cheaper: a 512-sample hash every frame, plus the full hash every 16th frame (staggered).
+- **GX state:** a state change used to copy 8 KB of registers (about 33 MB/frame in races), and overflowed the deko3d UBO area, silently dropping draws. Now:
+  - the state uniform block is 1.7 KB: BP, XF registers, konst, and a table of XF-memory chunks;
+  - XF memory travels as 64-word chunks, copied only when dirty (`g_gx.xfm_dirty`, set in `gx_fifo.c`), in a per-frame pool. It is read through `XFM_WORD()`: an SSBO on deko3d, a buffer texture on GL;
+  - identical consecutive states are dropped.
+  The vertex shader reads XF registers and memory; the fragment shader reads BP and konst only.
+- **DVD completion is asynchronous:** data is copied at command start, and completion (TSTART clear plus the interrupt) comes **2 ms + len/32 MB/s** later, from a timer thread in `di.c`.
+  - Why: the SDK's `DVDLowRead` (`fn_80012408`) writes DICR and *then* arms its timeout alarm (`OSSetAlarm(AlarmHandlerForTimeout)`).
+  - A completion before that (instant, or 200 µs plus a host stall) let the alarm fire later as a drive timeout, and loading stopped at "Now Loading" (≈1 in 20 runs).
+  - A `patches.txt` diagnostic logs `[dvd] the SDK's drive timeout alarm fired` if that ever happens again.
+- **Widescreen:** recompiler code patches (`config/GXEE8P/patches.txt`, documented in `gcrecomp.py`) are the native form of gamemasterplc's 16:9 Gecko code. Both projection sites multiply the aspect by `g_aspect_scale` (`settings.c`): `fn_800645DC` at entry, and REL text `0x14115C` after the `fmadds`. HUD/2D elements are stretched, as with that code. Muzzarino's code moves the HUD but is known to break on Egg Factory and Sand Ruins.
+- **Settings menu** (`overlay.c`, `settings.c`):
+  - open: hold Minus 0.5 s (Switch), F1 or the controller's Back (PC);
+  - options: Screen (4:3 / 16:9 widescreen / 16:9 stretched) and an FPS counter; saved to `settings.ini` next to the saves;
+  - drawing: software-rendered with `runtime/third_party/stb_easy_font.h` (public domain / MIT), then composited by both backends with `runtime/shaders/overlay.*`;
+  - `SR_TEST_MENU=1` opens it at start (screenshots).
+- **Diagnostics:**
+  - `env.txt` on the Switch SD folder (`KEY=VALUE` lines) sets debug variables such as `SR_WATCHDOG`;
+  - `SR_WATCHDOG_NOTRACE=1` keeps the dump without the function trace, which hides timing races;
+  - the dump shows render-thread handoff state, DI registers, pending OS interrupts and thread suspend counts.
+- **Hang hunting:** run Eden 20–30 times (`hangloop.sh`) with an `env.txt` watchdog dump.
+  - The "Now Loading" hang is explained by the DVD timeout race above.
+  - One other early freeze was seen once: interrupts pending with a delivery queued (`posted 1`) while no guest code ran. Watch for it; suspects are the native thread handoff in `sched.c`, or a host wait while a guest context is current.
+- **PC (GL) only: the race HUD's digits and labels are garbled** (rainbow noise). The Switch build draws them correctly, so it's a GL backend difference (sampler or texture setup) to investigate; the PC build is a development host only.
+- **Eden after these fixes:** the demo race runs at 50–59 fps (was 23–38), and texture uploads are 40–70 KB/frame (were 3.6–4.5 MB).
+
+**Test scripts (scratchpad, not committed; recreate if missing):** `swtest.sh` (build the Switch NRO, stop on build errors, deploy to Eden, run, filter the log), `eden_run.ps1` (start and kill eden-cli), `bmp2png.py`, `bmpstat.py`.
 
 **Session 4: why the Switch screen was black (fixed)**
 - **uam (deko3d's shader compiler) miscompiles a runtime component index into a uniform-buffer vector.** `xfm[i >> 2][i & 3]` in the vertex stage returned wrong values for components 1–3. Every vertex was therefore transformed by a garbage matrix, and nothing rasterized.
@@ -41,21 +76,37 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - **Demo race:** 28–38 fps, ~4000 draws/frame, 3–4 MB/frame texture re-uploads, texture lookup 5–16 ms/frame, render thread 21–26 ms/frame.
 
 **Next steps, in order:**
-1. **Hardware test 3** (user). Expected result: picture, logos, FMV (slow), title, demo race. Send `sonicriders.log` and the `shot_*.bmp` files (frames 300 … 7200).
-2. **Switch performance:**
-   - texture hashing: track guest writes, or rehash only after a texture's memory changed (e.g. a per-frame budget, or dirty pages via DMA/store hooks);
-   - avoid re-uploading unchanged textures;
-   - batch the ~4000 draws (state/UBO churn);
+1. **Hardware test 4** (user): the slow motion should be gone or much better; check that saves work and the hold-Minus menu and widescreen. Send `sonicriders.log` and `shot_*.bmp`.
+2. **Audio (AX HLE)** in `ax.c`, from the AX command-list and parameter-block formats:
+   - command list: PB list, ADPCM/PCM8/PCM16 decode from ARAM, sample-rate conversion, volume and ramps, aux buses, output to the AI DMA buffer;
+   - then host output: SDL audio (PC), audout/audren (Switch).
+3. **The rare loading hang** (see above).
+4. **Switch performance:**
    - overlap CPU and GPU (`dkQueueWaitIdle` per frame);
-   - profile the FMV decoder's hot recompiled functions (paired-single helpers, `crl_set`, memory helpers).
-3. **AX mixing** in `ax.c` (Dolphin AX.cpp is the reference):
-   - Parse the AX command list: PB list, ADPCM/PCM decode, sample-rate conversion, volume envelopes, mix into the output buffer.
-   - Then `audio_submit` → SDL audio (host) / audren or audout (Switch).
-4. **Renderer accuracy:**
-   - Fog (likely the blue tint in the demo race).
-   - The file-select background is black (cause unknown).
-   - Indirect texturing, Z textures, mipmaps, EFB copy formats, EFB→RAM write-back, emboss texgen.
-5. Clean-ups: `[mmio]` logging of the remaining unmodelled registers, the 4 KiB interrupt-stack margin (sched.c `make_irq_cpu`).
+   - EFB scale option (1x or 1.5x for handheld);
+   - batch draws;
+   - profile the FMV decoder (42 fps).
+5. **Renderer accuracy:**
+   - fog (the blue tint);
+   - the file-select background is black;
+   - indirect textures, Z textures, mipmaps, EFB copy formats, EFB→RAM write-back.
+6. Widescreen HUD placement (Muzzarino's approach), only if wanted.
+
+**Switch: build, install and test**
+- Build:
+  ```
+  $env:DEVKITPRO="C:/devkitPro"
+  python configure.py --target switch
+  ninja
+  ```
+  The result is `build/switch/sonicriders.nro`. It contains recompiled game code: never share or commit it.
+- SD card layout (`sdmc:/switch/sonicriders/`):
+  - `sonicriders.nro`
+  - a **copy** of the user's disc image (any `*.iso`, GXEE8P rev 0)
+  - created at runtime: `saves/card_a.raw` (memory card) and `sonicriders.log`
+- Launch from the Homebrew Menu **in title mode** (hold R while starting any installed game). The guest memory window prefers `svcMapProcessCodeMemory`; without it, it falls back to `svcMapMemory`, and the log's `[mem]` line says which was used. Applet mode is untested and has much less memory.
+- Controls: A B X Y = A B X Y, + = START, ZL/ZR = L/R, R = Z, sticks = main/C, D-pad. HOME exits. Hold − (Minus) for the settings menu.
+- The log's `[perf]` lines give fps every 120 frames, plus a ms/frame breakdown. `[deko3d]` lines give render-thread and GPU ms/frame. `shot_<frame>.bmp` files (frames 300 … 7200) are self-captures. `env.txt` sets debug variables.
 
 **Device and replacement boundary as implemented (revised from the plan below):**
 - **Register-level device models**, which keep the game's own SDK code running: VI, DI (DVD), CP/PE/PI (GX FIFO), DSP/ARAM/AI, EXI (memory card + IPL SRAM/RTC), SI (controllers).
@@ -75,6 +126,8 @@ The whole OS scheduler, alarms, mutexes and message queues run recompiled, which
 - `SR_HEADLESS=1`: no window.
 - `SR_INPUT="1500:START,1510:-START,..."`: scripted button presses at VI field counts.
 - `SR_CARD=<path>`: memory card image.
+- `SR_TEST_MENU=1`: start with the settings menu open.
+- Switch: `env.txt` in the SD folder sets these variables; `SR_WATCHDOG_NOTRACE=1` skips the function trace.
 - `tools/showfn.py ADDR|NAME`: print a function's disassembly from dtk's output.
 - `build/run.ps1 <seconds>` (local helper, not committed): rebuild + run + summarize.
 

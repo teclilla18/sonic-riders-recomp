@@ -5,6 +5,7 @@
 
 #include "gx.h"
 #include "gx_render.h"
+#include "overlay.h"
 #include "runtime.h"
 
 void gx_texture_load_tlut(void);
@@ -37,7 +38,8 @@ static GxFrame* frame(void) {
         uint64_t t = rt_ticks();
         g_frame = render_take_free_frame();
         g_wait_ticks += rt_ticks() - t;
-        g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = 0;
+        g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = 0;
+        g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
         gx_texture_new_frame();
     }
@@ -59,17 +61,34 @@ static GxCmd* push_cmd(int type) {
     return c;
 }
 
+/* a state snapshot: the registers, plus copies of the XF memory chunks changed since the last one;
+ * a snapshot equal to the previous one is not pushed */
 static void push_state(void) {
     GxFrame* f = frame();
+    static uint32_t xtab[28];
+    uint32_t dirty = g_gx.xfm_dirty;
+    for (int i = 0; i < GX_XFM_CHUNKS; i++) {
+        if (!(dirty & (1u << i))) continue;
+        f->xchunks = grow(f->xchunks, &f->cap_xchunks, (f->nxchunks + 1) * GX_XFM_CHUNK, sizeof(uint32_t));
+        memcpy(f->xchunks + (size_t)f->nxchunks * GX_XFM_CHUNK, g_gx.xf_mem + i * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
+        xtab[i] = f->nxchunks++;
+    }
+    g_gx.xfm_dirty = 0;
+    g_state_dirty = 0;
+    if (f->nunis) {
+        const GxUniforms* p = &f->unis[f->nunis - 1];
+        if (!(dirty & ((1u << GX_XFM_CHUNKS) - 1)) && !memcmp(p->bp, g_gx.bp, sizeof p->bp) &&
+            !memcmp(p->xfr, g_gx.xf_reg, sizeof p->xfr) && !memcmp(p->konst, g_gx.konst, sizeof p->konst))
+            return;
+    }
     f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof(GxUniforms));
     GxUniforms* u = &f->unis[f->nunis];
     memcpy(u->bp, g_gx.bp, sizeof u->bp);
     memcpy(u->xfr, g_gx.xf_reg, sizeof u->xfr);
-    memcpy(u->xfm, g_gx.xf_mem, sizeof u->xfm);
     memcpy(u->konst, g_gx.konst, sizeof u->konst);
+    memcpy(u->xtab, xtab, sizeof u->xtab);
     GxCmd* c = push_cmd(GXC_STATE);
     c->a = f->nunis++;
-    g_state_dirty = 0;
 }
 
 /* ---- vertex decoding ---- */
@@ -262,6 +281,12 @@ static void efb_copy(uint32_t v) {
         g_wait_ticks += rt_ticks() - ts;
         g_frame = NULL;
         g_frames++;
+        if (g_frames % 30 == 0) {  /* the overlay's FPS counter */
+            static uint64_t t30;
+            uint64_t now = rt_ticks();
+            if (t30) overlay_set_fps((float)(30.0 * 40500000.0 / (double)(now - t30)));
+            t30 = now;
+        }
         /* performance line every 120 frames: presented frames and VI fields per second */
         static uint64_t t0;
         static uint32_t f0;
