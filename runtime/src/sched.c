@@ -63,6 +63,7 @@ static void load_cpu_from_context(Cpu* c, uint32_t ctx) {
 
 static int thread_main(void* arg) {
     GThread* g = arg;
+    rt_thread_pin(0);
     mtx_lock(&g_lock);
     while (g_running != g) cnd_wait(&g->cv, &g_lock);
     mtx_unlock(&g_lock);
@@ -85,9 +86,7 @@ static void handoff(GThread* next) {
     g_running = next;
     if (!next->started) {
         next->started = 1;
-        thrd_t t;
-        if (thrd_create(&t, thread_main, next) != thrd_success) rt_fatal("cannot create a host thread");
-        thrd_detach(t);
+        rt_thread_start(thread_main, next);
     } else {
         cnd_signal(&next->cv);
     }
@@ -274,6 +273,7 @@ uint32_t sched_get_decrementer(void) {
 
 static int dec_main(void* arg) {
     (void)arg;
+    rt_thread_pin(2);
     mtx_lock(&g_dec_lock);
     for (;;) {
         if (g_dec_deadline == INT64_MAX) { cnd_wait(&g_dec_cv, &g_dec_lock); continue; }
@@ -307,10 +307,7 @@ void sched_init(void) {
     g_boot.started = 1;
     g_threads = &g_boot;
     g_running = &g_boot;
-    t_self = &g_boot;
-    thrd_t t;
-    if (thrd_create(&t, dec_main, NULL) != thrd_success) rt_fatal("cannot start the decrementer thread");
-    thrd_detach(t);
+    rt_thread_start(dec_main, NULL);
 }
 
 void sched_dump(void) {
@@ -325,3 +322,6 @@ void sched_dump(void) {
                t ? (int)ld32(t + 0x2D0) : -1, t ? ld32(t + 0x2DC) : 0, g == g_running ? " (running)" : "", bt);
     }
 }
+
+/* the calling host thread runs the game's boot code (the default thread until __OSThreadInit) */
+void sched_enter_boot_thread(void) { t_self = &g_boot; }

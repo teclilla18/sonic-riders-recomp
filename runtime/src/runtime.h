@@ -8,6 +8,13 @@
 extern "C" {
 #endif
 
+/* platform layer (platform/<target>/platform_*.c) */
+void platform_init(void);                   /* logging, file system, clocks */
+const char* platform_disc_path(void);       /* default location of the game's disc image */
+const char* platform_save_path(void);       /* memory card image for slot A */
+void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
+void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
+
 /* log.c */
 void rt_log(const char* fmt, ...);
 _Noreturn void rt_fatal(const char* fmt, ...);
@@ -42,6 +49,7 @@ uint64_t rt_ticks(void);  /* guest timebase ticks since boot (40.5 MHz) */
 #define RT_IRQ_DEC    1u   /* decrementer: OSAlarm */
 #define RT_IRQ_NATIVE 2u   /* native device callbacks queued with rt_irq_post */
 void sched_init(void);
+void sched_enter_boot_thread(void);
 void rt_irq_raise(uint32_t bits);
 void rt_irq_post(void (*fn)(Cpu* c, void* arg), void* arg);  /* run fn in interrupt context */
 void guest_call(Cpu* c, uint32_t addr);                       /* call a guest function on c */

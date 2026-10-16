@@ -53,6 +53,7 @@ uint32_t vi_field_count(void) { return g_fields; }
 
 static int vi_thread(void* arg) {
     (void)arg;
+    rt_thread_pin(2);
     g_field_start = rt_ticks();
     for (;;) {
         uint64_t next = g_field_start + TICKS_PER_FIELD;
@@ -76,7 +77,5 @@ static int vi_thread(void* arg) {
 
 void vi_init(void) {
     memset((void*)g_vi, 0, sizeof g_vi);
-    thrd_t t;
-    if (thrd_create(&t, vi_thread, NULL) != thrd_success) rt_fatal("cannot start the VI thread");
-    thrd_detach(t);
+    rt_thread_start(vi_thread, NULL);
 }

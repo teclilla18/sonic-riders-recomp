@@ -1,4 +1,4 @@
-/* Entry point (host build): sonicriders <path to the GXEE8P disc image> */
+/* Entry point: sonicriders [path to the GXEE8P disc image] (default: platform_disc_path) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -28,8 +28,18 @@ static int watchdog(void* arg) {
     _Exit(3);
 }
 
+static int game_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(0);
+    sched_enter_boot_thread();
+    g_main_cpu.pc = g_recomp_entry_point;
+    ppc_dispatch(&g_main_cpu);
+    rt_fatal("the game's entry point returned");
+}
+
 int main(int argc, char** argv) {
-    const char* disc = argc > 1 ? argv[1] : "game/SonicRiders.iso";
+    platform_init();
+    const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
     load_game();
@@ -40,19 +50,21 @@ int main(int argc, char** argv) {
     dsp_init();
     {
         const char* card = getenv("SR_CARD");
-        exi_init(card ? card : "saves/card_a.raw");
+        exi_init(card ? card : platform_save_path());
     }
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
     if (wd && atoi(wd) > 0) {
         g_ppc_trace = 1;
-        thrd_t t;
-        thrd_create(&t, watchdog, (void*)(intptr_t)atoi(wd));
+        rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
     }
     rt_log("[boot] %u recompiled functions, %u native replacements; starting at %08X",
            g_recomp_func_count, g_recomp_hle_count, g_recomp_entry_point);
-    g_main_cpu.pc = g_recomp_entry_point;
-    ppc_dispatch(&g_main_cpu);
-    rt_log("[boot] the game's entry point returned");
-    return 0;
+    /* the game's boot code runs on a thread of our own (a large stack: guest calls are host calls);
+     * this thread only waits */
+    rt_thread_start(game_thread, NULL);
+    for (;;) {
+        struct timespec ts = {3600, 0};
+        thrd_sleep(&ts, NULL);
+    }
 }

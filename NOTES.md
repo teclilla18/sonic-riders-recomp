@@ -11,36 +11,42 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching plan below is superseded.
 
-**Status after session 2 (2026-10-15):** the game boots into its main loop on the Windows host build. Nothing is visible yet: the renderer is a placeholder.
-- In a 20 s run:
-  - About 1,000 frames: ~134 draws and ~17 KB of GX commands per frame, 0 FIFO parse errors.
-  - 6.7 MB loaded from the ISO through the game's own DVD code; the AX audio frame loop runs.
-  - 9 guest threads scheduled correctly. The main thread sits in the REL main loop (`819BC5B8`), presumably on the intro/title screens.
-- How it got there:
-  - Native context switch: `sched.c`.
-  - Interrupts: decrementer/alarms, VI retrace, DI, PE, DSP, ARAM, AI-DMA.
-  - Device models: VI, DI (drive), CP/PE/PI FIFO + command parser, DSP mailboxes + boot ROM + AX stand-in, ARAM DMA, AI.
-  - Native OSLink: `rel.c`.
-- Session 1 (for reference): repo + game-data guards, ISO moved to Desktop\Backups, dtk analysis, recompiler working end to end.
-- Nothing has run on Switch hardware yet; no hardware test is needed until something draws.
+**Status after session 2 (2026-10-15):**
+- **Windows host build:** the game plays its intro (SEGA/Sonic Team logos), the opening FMV (Sofdec, decoded by CRI's own recompiled MPEG code), the title screen, and reaches the save-file menu with controller input, at a steady 60 fps.
+- **Switch build:** `build/switch/sonicriders.nro` (deko3d renderer, libnx input, SD-card paths). It builds cleanly but has **not been tested on hardware yet**.
+- **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet.
 
 **Next steps, in order:**
-1. **Renderer (desktop GL first).**
-   - Window: SDL2 window + GL context on a **render thread**. The GX parser runs on whichever guest thread writes the FIFO, so it queues draw packets.
-   - Vertex decode: VCD/VAT/arrays to floats.
-   - XF: matrices from `g_gx.xf_mem`, texgen, lighting.
-   - TEV ubershader.
-   - Texture decode: I4/I8/IA4/IA8/RGB565/RGB5A3/RGBA8/CI4/CI8/CI14X2/CMPR + TLUT.
-   - EFB copies: to XFB = present; to texture = render-to-texture.
-   - Then deko3d on Switch with the same GLSL (uam).
-2. **PAD**: the SI register model or PAD HLE (PADRead) → keyboard/gamepad (SDL), libnx hid on Switch. The game is likely waiting on the title screen for Start.
-3. **AX mixing** in `ax.c`: parse the AX command list (Dolphin AX.cpp is the reference): PB list, ADPCM/PCM decode, SRC, volume envelopes, mixing into the output buffer; then `audio_submit` → SDL audio / audren.
-4. **CARD** (memory card saves): the EXI register model or CARD HLE → save file on disk/SD.
-5. **Switch platform layer**: memory window (svcMapProcessCodeMemory, as SwitchWakerHD `core_switch.cpp`), threads (C11 threads via libnx), audio, hid, ISO path on SD, NRO packaging. **First hardware test then.**
-6. Remove/replace the still-raw pieces: `[mmio]` logging of unmodelled devices (EXI/SI), the 4 KiB interrupt-stack margin (see sched.c `make_irq_cpu`).
+1. **First hardware test** (user): see "Switch: install and test" below. Expect fixes from the log (`sonicriders.log`).
+2. **AX mixing** in `ax.c` (Dolphin AX.cpp is the reference):
+   - Parse the AX command list: PB list, ADPCM/PCM decode, sample-rate conversion, volume envelopes, mix into the output buffer.
+   - Then `audio_submit` → SDL audio (host) / audren or audout (Switch).
+3. **Renderer accuracy:**
+   - The file-select background is black (cause unknown; no texture lookups fail). Compare with the real game.
+   - Missing features: fog, indirect texturing, Z textures, mipmaps, EFB copy formats (intensity/Z/RGB565), EFB→RAM write-back for CPU readers, emboss texgen.
+4. **Switch performance:** waitIdle per frame (overlap CPU/GPU later), an EFB scale option, GPU-side caching of state uploads.
+5. Clean-ups: `[mmio]` logging of the remaining unmodelled registers, the 4 KiB interrupt-stack margin (sched.c `make_irq_cpu`).
 
-**HLE boundary as implemented (revised from the plan below):**
-- **Register-level device models**, which keep the game's own SDK code running: VI, DI (DVD), CP/PE/PI (GX FIFO), DSP/ARAM/AI.
+**Switch: build, install and test**
+- Build:
+  ```
+  $env:DEVKITPRO="C:/devkitPro"
+  python configure.py --target switch
+  ninja
+  ```
+  The result is `build/switch/sonicriders.nro`. It contains recompiled game code: never share or commit it.
+- SD card layout (`sdmc:/switch/sonicriders/`):
+  - `sonicriders.nro`
+  - a **copy** of the user's disc image (any `*.iso`, GXEE8P rev 0)
+  - created at runtime: `saves/card_a.raw` (memory card) and `sonicriders.log`
+- Launch from the Homebrew Menu **in title mode** (hold R while starting any installed game). The guest memory window needs `svcMapProcessCodeMemory`; album/applet mode is refused with a clear log message.
+- Controls: A B X Y = A B X Y, + = START, ZL/ZR = L/R, R = Z, sticks = main/C, D-pad. HOME exits.
+- The log's `[perf]` lines give fps every 120 frames.
+
+**Device and replacement boundary as implemented (revised from the plan below):**
+- **Register-level device models**, which keep the game's own SDK code running: VI, DI (DVD), CP/PE/PI (GX FIFO), DSP/ARAM/AI, EXI (memory card + IPL SRAM/RTC), SI (controllers).
+- **Renderer:** the guest side (`gx_render.c`, `gx_texture.c`) builds per-frame command lists. Backends: `platform/host/render_gl.c` (GL 3.3) and `platform/switch/render_deko.c` (deko3d). Shared ubershader GLSL in `runtime/shaders/`, embedded by `tools/embed_shaders.py` (uam for the Switch).
+- **Memory card:** a new card is formatted natively exactly as the game's `__CARDFormatRegionAsync` does (serial = SRAM flash ID + CARD LCG from the format time). The IPL SRAM sets `flashIDCheckSum = ~sum(flashID) = 0xFF`, which `DoMount` checks for an already-unlocked card. The card reports "unlocked", so the DSP card-unlock task is never needed.
 - **Native at function level**, only where the hardware semantics can't run natively:
   - `OSSaveContext`/`OSLoadContext`, i.e. the thread switch;
   - `OSLink`/`OSLinkFixed`;
@@ -50,6 +56,11 @@ The whole OS scheduler, alarms, mutexes and message queues run recompiled, which
 
 **Debugging aids:**
 - `SR_WATCHDOG=<seconds>`: records function entries and, when time runs out, dumps them, the last device accesses and every guest thread with its state, priority, wait queue and guest backtrace.
+- `SR_SCREENSHOT=<frame>`: saves `build/shot_<frame>.png` (host).
+- `SR_GXDEBUG=<frame>`: logs that frame's viewport/scissor/copies/draws.
+- `SR_HEADLESS=1`: no window.
+- `SR_INPUT="1500:START,1510:-START,..."`: scripted button presses at VI field counts.
+- `SR_CARD=<path>`: memory card image.
 - `tools/showfn.py ADDR|NAME`: print a function's disassembly from dtk's output.
 - `build/run.ps1 <seconds>` (local helper, not committed): rebuild + run + summarize.
 

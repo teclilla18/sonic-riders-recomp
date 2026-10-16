@@ -116,6 +116,7 @@ static uint32_t g_ai_start, g_ai_blocks;
 
 static int ai_thread(void* arg) {
     (void)arg;
+    rt_thread_pin(2);
     uint64_t next = rt_ticks();
     for (;;) {
         if (!atomic_load(&g_ai_dma_on)) {
@@ -258,7 +259,5 @@ void dsp_init(void) {
     g_aram = calloc(1, ARAM_SIZE);
     if (!g_aram) rt_fatal("cannot allocate ARAM");
     g_csr = CSR_HALT;
-    thrd_t t;
-    if (thrd_create(&t, ai_thread, NULL) != thrd_success) rt_fatal("cannot start the AI thread");
-    thrd_detach(t);
+    rt_thread_start(ai_thread, NULL);
 }

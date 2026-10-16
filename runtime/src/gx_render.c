@@ -245,9 +245,28 @@ static void efb_copy(uint32_t v) {
     c->copy[10] = dest;
     if (to_xfb) {
         push_cmd(GXC_PRESENT);
+        uint32_t ndraws = 0;
+        for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         render_submit(g_frame);
         g_frame = NULL;
         g_frames++;
+        /* performance line every 120 frames: presented frames and VI fields per second */
+        static uint64_t t0;
+        static uint32_t f0;
+        static unsigned long long draws_acc;
+        draws_acc += ndraws;
+        if (g_frames % 120 == 0) {
+            uint64_t t = rt_ticks();
+            uint32_t f = vi_field_count();
+            if (t0) {
+                double secs = (double)(t - t0) / 40500000.0;
+                rt_log("[perf] %.1f fps, %.1f retraces/s, %llu draws/frame, %llu MB disc, %llu AX frames", 120 / secs,
+                       (f - f0) / secs, draws_acc / 120, di_bytes_read() >> 20, ax_list_count());
+            }
+            t0 = t;
+            f0 = f;
+            draws_acc = 0;
+        }
     }
 }
 

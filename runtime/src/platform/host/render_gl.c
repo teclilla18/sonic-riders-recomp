@@ -13,7 +13,7 @@
 
 #include "gx.h"
 #include "gx_render.h"
-#include "gx_shaders.h"
+#include "gx_shaders_gl.h"  /* generated: tools/embed_shaders.py */
 #include "runtime.h"
 
 void input_init(void);
@@ -362,6 +362,7 @@ int render_poll_quit(void) { return g_quit; }
 
 static int render_thread(void* arg) {
     (void)arg;
+    rt_thread_pin(1);
     if (!g_headless) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -432,9 +433,7 @@ void render_start(void) {
     if (!g_headless && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();
-    thrd_t t;
-    if (thrd_create(&t, render_thread, NULL) != thrd_success) rt_fatal("cannot start the render thread");
-    thrd_detach(t);
+    rt_thread_start(render_thread, NULL);
 }
 
 /* ---- minimal PNG writer (stored deflate blocks), for screenshots ---- */

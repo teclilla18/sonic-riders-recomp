@@ -43,9 +43,9 @@ plat = "runtime/src/platform/%s" % args.target
 rt_c += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.c")))
 rt_cpp += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.cpp")))
 
-inc = "-Iruntime/include -Iruntime/src -I%s" % GEN
+inc = "-Iruntime/include -Iruntime/src -I%s -I%s/gen" % (GEN, OUT)
 # generated code: no FMA contraction (Gekko rounds the product of fmadds; ppc.h models it exactly)
-gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -w"
+gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
 
 with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     n = Writer(f)
@@ -63,13 +63,16 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32" % sdl)
         exe = OUT + "/sonicriders.exe"
     else:
-        dkp = os.environ.get("DEVKITPRO", "C:/devkitPro").replace("\\", "/")
+        dkp = os.environ.get("DEVKITPRO", "").replace("\\", "/")
+        if not os.path.isdir(os.path.join(dkp, "devkitA64")):  # msys-style /opt/devkitpro from a Windows shell
+            dkp = "C:/devkitPro"
         arch = "-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE"
         n.variable("cc", dkp + "/devkitA64/bin/aarch64-none-elf-gcc")
         n.variable("cxx", dkp + "/devkitA64/bin/aarch64-none-elf-g++")
         n.variable("cflags", "-std=gnu11 -g %s %s -D__SWITCH__ -I%s/libnx/include -ffunction-sections" % (arch, inc, dkp))
         n.variable("cxxflags", "-std=gnu++20 -g %s %s -D__SWITCH__ -I%s/libnx/include -ffunction-sections -fno-rtti -fno-exceptions" % (arch, inc, dkp))
-        n.variable("ldflags", "-specs=%s/libnx/switch.specs -g %s -L%s/libnx/lib -ldeko3d -lnx" % (dkp, arch, dkp))
+        n.variable("ldflags", "-specs=%s/libnx/switch.specs -g %s -L%s/libnx/lib -Wl,-Map,%s/sonicriders.map -ldeko3d -lnx -lm"
+                   % (dkp, arch, dkp, OUT))
         exe = OUT + "/sonicriders.elf"
 
     n.rule("cc", "$cc -MMD -MF $out.d $cflags $extra -c $in -o $out", depfile="$out.d", deps="gcc",
@@ -86,6 +89,17 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                          os.path.join(ROOT, "config/GXEE8P/hle.txt")) else [])
     n.build(gen_c + [GEN + "/funcs.h"], "recomp", recomp_inputs)
 
+    # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
+    shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag", "tools/embed_shaders.py"]
+    if args.target == "host":
+        shader_h = OUT + "/gen/gx_shaders_gl.h"
+        n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")
+    else:
+        shader_h = OUT + "/gen/gx_shaders_dksh.h"
+        n.rule("shaders", "%s tools/embed_shaders.py dksh $out %s/tools/bin/uam.exe %s/shaders" % (py, dkp, OUT),
+               description="UAM $out")
+    n.build(shader_h, "shaders", shader_src)
+
     objs = []
     for src in gen_c:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
@@ -93,13 +107,20 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     for src in rt_c:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cc", src, implicit=[GEN + "/funcs.h"], variables={"extra": "-O2 -Wall"})
+        n.build(o, "cc", src, implicit=[GEN + "/funcs.h", shader_h], variables={"extra": "-O2 -Wall"})
         objs.append(o)
     for src in rt_cpp:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"], variables={"extra": "-O2 -Wall"})
+        n.build(o, "cxx", src, implicit=[GEN + "/funcs.h", shader_h], variables={"extra": "-O2 -Wall"})
         objs.append(o)
     n.build(exe, "link", objs)
+    if args.target == "switch":
+        n.rule("nacp", "%s/tools/bin/nacptool.exe --create \"Sonic Riders\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,
+               description="NACP $out")
+        n.build(OUT + "/sonicriders.nacp", "nacp")
+        n.rule("nro", "%s/tools/bin/elf2nro.exe $in $out --nacp=%s/sonicriders.nacp" % (dkp, OUT), description="NRO $out")
+        n.build(OUT + "/sonicriders.nro", "nro", exe, implicit=[OUT + "/sonicriders.nacp"])
+        n.default(OUT + "/sonicriders.nro")
     if args.target == "host":
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
         n.build(OUT + "/SDL2.dll", "copy", sdl + "/lib/x64/SDL2.dll")
