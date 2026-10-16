@@ -204,7 +204,11 @@ int gx_texture_lookup(int map) {
     for (int k = 0; k < g_ncopies; k++)  /* render-to-texture result at this address */
         if (g_copies[k].addr == addr && g_copies[k].w == w && g_copies[k].h == h) return g_copies[k].id;
     uint32_t size = gx_texture_size((int)fmt, w, h);
-    if (!size || addr + size > GUEST_RAM_SIZE) return -1;
+    if (!size || addr + size > GUEST_RAM_SIZE) {
+        static int logged;
+        if (logged++ < 20) rt_log("[tex] map %d: no texture (fmt %u %ux%u at %08X)", map, fmt, w, h, addr);
+        return -1;
+    }
     const uint8_t* src = mem_phys(addr);
     const uint8_t* tlut = NULL;
     int tfmt = 0;

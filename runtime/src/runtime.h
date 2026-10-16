@@ -73,6 +73,21 @@ uint32_t ai_read(uint32_t ea, int size);
 void ai_write(uint32_t ea, uint32_t v, int size);
 uint8_t* aram_ptr(uint32_t addr);
 
+/* si.c: Serial Interface (controller ports) */
+uint32_t si_read(uint32_t ea, int size);
+void si_write(uint32_t ea, uint32_t v, int size);
+
+/* input (platform): the state of GameCube controller `chan`, from the host's keyboard/gamepads */
+typedef struct GcPad {
+    uint16_t buttons;            /* PAD_BUTTON_* bits: LEFT 0x1 RIGHT 0x2 DOWN 0x4 UP 0x8 Z 0x10 R 0x20 L 0x40
+                                    A 0x100 B 0x200 X 0x400 Y 0x800 START 0x1000 */
+    uint8_t stick_x, stick_y;    /* 0x80 = centre */
+    uint8_t c_x, c_y;
+    uint8_t trig_l, trig_r;
+} GcPad;
+void input_get_pad(int chan, GcPad* out);
+void input_set_rumble(int chan, int motor);
+
 /* exi.c: EXI bus: memory card (slot A), IPL SRAM/RTC */
 void exi_init(const char* card_path);
 uint32_t exi_read(uint32_t ea, int size);

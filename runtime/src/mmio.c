@@ -31,6 +31,7 @@ static void note(const char* what, uint32_t ea, uint32_t v, int size) {
 #define DSP_BASE 0xCC005000u
 #define AI_BASE 0xCC006C00u
 #define EXI_BASE 0xCC006800u
+#define SI_BASE 0xCC006400u
 
 uint32_t mmio_read(uint32_t ea, int size) {
     if (BLOCK(ea) == VI_BASE) return vi_read(ea, size);
@@ -41,6 +42,7 @@ uint32_t mmio_read(uint32_t ea, int size) {
     if (BLOCK(ea) == DSP_BASE) return dsp_read(ea, size);
     if ((ea & 0xFFFFFFE0u) == AI_BASE) return ai_read(ea, size);
     if (ea - EXI_BASE < 0x3Cu) return exi_read(ea, size);
+    if (BLOCK(ea) == SI_BASE) return si_read(ea, size);
     note("read", ea, 0, size);
     return 0;
 }
@@ -55,6 +57,7 @@ void mmio_write(uint32_t ea, uint32_t v, int size) {
     if (BLOCK(ea) == DSP_BASE) { dsp_write(ea, v, size); return; }
     if ((ea & 0xFFFFFFE0u) == AI_BASE) { ai_write(ea, v, size); return; }
     if (ea - EXI_BASE < 0x3Cu) { exi_write(ea, v, size); return; }
+    if (BLOCK(ea) == SI_BASE) { si_write(ea, v, size); return; }
     note("write", ea, v, size);
 }
 

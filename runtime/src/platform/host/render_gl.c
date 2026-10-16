@@ -16,6 +16,9 @@
 #include "gx_shaders.h"
 #include "runtime.h"
 
+void input_init(void);
+void input_pump(void);
+
 #define EFB_SCALE 2
 #define EFB_W (EFB_WIDTH * EFB_SCALE)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
@@ -308,6 +311,18 @@ static void execute(GxFrame* f) {
             break;
         case GXC_DRAW:
             if (!cur) break;
+            if (g_debug_frame) {
+                char t[160] = "";
+                int n = 0;
+                for (int m = 0; m < 8; m++)
+                    if (c->tex[m] >= 0) {
+                        GxTexture* gt = gx_texture_get(c->tex[m]);
+                        n += snprintf(t + n, sizeof t - n, " t%d=%d(%ux%u%s)", m, c->tex[m], gt ? gt->width : 0,
+                                      gt ? gt->height : 0, gt && gt->is_copy ? " copy" : "");
+                    }
+                rt_log("[gxdbg] draw prim %u verts %u stages %u genmode %06X ind %u%s | z %06X blend %06X", c->prim, c->b,
+                       ((cur->bp[0] >> 10) & 15) + 1, cur->bp[0], (cur->bp[0] >> 16) & 7, t, cur->bp[0x40], cur->bp[0x41]);
+            }
             bind_textures(c, cur);
             glDrawArrays(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,
                          (GLint)c->a, (GLsizei)c->b);
@@ -366,6 +381,7 @@ static int render_thread(void* arg) {
                 SDL_Event e;
                 while (SDL_PollEvent(&e))
                     if (e.type == SDL_QUIT) g_quit = 1;
+                input_pump();
             }
             mtx_lock(&g_lock);
             if (!g_pending) {
@@ -381,6 +397,10 @@ static int render_thread(void* arg) {
         if (g_headless) {
             for (uint32_t i = 0; i < f->nretired; i++) gx_texture_free(f->retired[i]);
         } else {
+            SDL_Event e;
+            while (SDL_PollEvent(&e))
+                if (e.type == SDL_QUIT) g_quit = 1;
+            input_pump();
             const char* dbg = getenv("SR_GXDEBUG");
             g_debug_frame = dbg && (unsigned)atoi(dbg) == g_presented + 1;
             execute(f);
@@ -411,6 +431,7 @@ void render_start(void) {
     g_shot_at = s ? atoi(s) : 0;
     if (!g_headless && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
         rt_fatal("SDL_Init: %s", SDL_GetError());
+    input_init();
     thrd_t t;
     if (thrd_create(&t, render_thread, NULL) != thrd_success) rt_fatal("cannot start the render thread");
     thrd_detach(t);
