@@ -34,7 +34,7 @@ void input_pump(void);
 
 #define SLOT_CMD   (4u << 20)
 #define SLOT_VTX   (48u << 20)
-#define SLOT_UBO   (8u << 20)
+#define SLOT_UBO   (24u << 20)  /* ~14000 states (1792 bytes each) */
 #define SLOT_STAGE (32u << 20)
 #define SLOT_XFM   (8u << 20)   /* the frame's XF memory chunk pool (storage buffer) */
 #define SLOT_SIZE  (SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE + SLOT_XFM)
@@ -54,6 +54,8 @@ static DkImageView g_efb_view, g_efb_depth_view;
 static unsigned g_slot;
 static uint32_t g_vtx_off, g_ubo_off, g_stage_off;
 static uint64_t g_busy_ticks, g_gpu_ticks, g_upload_bytes;  /* for the [deko3d] timing line */
+static uint64_t g_last_gpu;      /* this frame's GPU wait ([hitch]) */
+static uint32_t g_last_upload;   /* this frame's texture upload bytes ([hitch]) */
 static unsigned g_busy_frames;
 
 /* ---- image pool: first-fit free list ---- */
@@ -183,6 +185,7 @@ static int tex_prepare(int id) {
         dkCmdBufCopyBufferToImage(g_cmd, &src, &v, &r, 0);
         g_stage_off = (g_stage_off + bytes + 255) & ~255u;
         g_upload_bytes += bytes;
+        g_last_upload += bytes;
         t->gen = gt->gen;
     }
     return (int)t->slot;
@@ -386,8 +389,8 @@ static void bind_textures(const GxCmd* c, const GxUniforms* u) {
 /* ---- EFB copies and presentation ---- */
 static int g_fb_slot = -1;
 
-/* Self-captures for hardware testing: presented frames k_shots[] are saved to the SD card as
- * shot_<frame>.bmp, so a test run shows what was drawn without a capture card. */
+/* Self-captures for hardware testing (off unless SR_SHOTS=1, e.g. in env.txt): presented frames
+ * k_shots[] are saved to the SD card as shot_<frame>.bmp; each causes a visible hitch. */
 static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500, 6000, 7200};
 static unsigned g_presented;
 static DkMemBlock g_shot_mem;
@@ -395,6 +398,9 @@ static unsigned g_shot_pending;  /* frame number captured into g_shot_mem by thi
 
 static void shot_request(DkImageView const* fv) {
     unsigned n = ++g_presented;
+    static int on = -1;
+    if (on < 0) on = getenv("SR_SHOTS") != NULL;
+    if (!on) return;
     int want = 0;
     for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
     if (!want) return;
@@ -408,6 +414,7 @@ static void shot_request(DkImageView const* fv) {
 
 static void shot_write(void) {
     if (!g_shot_pending) return;
+    uint64_t t0 = armGetSystemTick();
     const uint8_t* px = dkMemBlockGetCpuAddr(g_shot_mem);
     char path[96];
     snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.bmp", g_shot_pending);
@@ -430,7 +437,8 @@ static void shot_write(void) {
     }
     free(line);
     fclose(f);
-    rt_log("[deko3d] saved %s", path);
+    rt_log("[deko3d] saved %s (%.0f ms: a [hitch] at this frame is this screenshot)", path,
+           armTicksToNs(armGetSystemTick() - t0) / 1e6);
 }
 
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
@@ -547,6 +555,7 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
 
 static void execute(GxFrame* f) {
     uint64_t t_start = armGetSystemTick();
+    g_last_upload = 0;
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
@@ -609,7 +618,12 @@ static void execute(GxFrame* f) {
         switch (c->type) {
         case GXC_STATE: {
             cur = &f->unis[c->a];
-            if (g_ubo_off + ubo_size > SLOT_UBO) { cur = NULL; break; }
+            if (g_ubo_off + ubo_size > SLOT_UBO) {
+                static int warned;
+                if (!warned++) rt_log("[deko3d] more than %u states in a frame: the rest of its draws are dropped", SLOT_UBO / ubo_size);
+                cur = NULL;
+                break;
+            }
             memcpy(cpu + SLOT_CMD + SLOT_VTX + g_ubo_off, cur, sizeof(GxUniforms));
             DkGpuAddr a = gpu + SLOT_CMD + SLOT_VTX + g_ubo_off;
             dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 0, a, ubo_size);
@@ -643,7 +657,8 @@ static void execute(GxFrame* f) {
     dkQueueFlush(g_queue);
     uint64_t t_wait = armGetSystemTick();
     dkQueueWaitIdle(g_queue);
-    g_gpu_ticks += armGetSystemTick() - t_wait;
+    g_last_gpu = armGetSystemTick() - t_wait;
+    g_gpu_ticks += g_last_gpu;
     shot_write();
     for (uint32_t i = 0; i < f->nretired; i++) {
         tex_destroy(f->retired[i]);
@@ -651,7 +666,11 @@ static void execute(GxFrame* f) {
     }
     g_slot ^= 1;
     /* render-thread cost per frame (build + GPU, as execute waits for the GPU) */
-    g_busy_ticks += armGetSystemTick() - t_start;
+    uint64_t busy = armGetSystemTick() - t_start;
+    g_busy_ticks += busy;
+    if (armTicksToNs(busy) > 50000000ull)
+        rt_log("[hitch] render thread: a frame took %.0f ms (%.0f ms waiting for the GPU), %u KB of texture uploads",
+               armTicksToNs(busy) / 1e6, armTicksToNs(g_last_gpu) / 1e6, g_last_upload >> 10);
     if (++g_busy_frames == 120) {
         rt_log("[deko3d] %.2f ms/frame on the render thread (%.2f waiting for the GPU), %llu KB/frame texture uploads",
                armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,

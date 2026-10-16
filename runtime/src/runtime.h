@@ -78,7 +78,8 @@ void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max);  /* ti
 
 /* dsp.c: DSP mailboxes + boot ROM, ARAM and its DMA, AI DMA clock; ai_*: Audio Interface */
 void dsp_init(void);
-void di_init(void);   /* the DVD drive's completion timer */
+void di_init(void);
+unsigned exi_card_file_writes(void);   /* memory card file writes so far (exi.c) */   /* the DVD drive's completion timer */
 uint32_t dsp_read(uint32_t ea, int size);
 void dsp_write(uint32_t ea, uint32_t v, int size);
 uint32_t ai_read(uint32_t ea, int size);

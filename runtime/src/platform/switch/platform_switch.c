@@ -33,6 +33,9 @@ int timespec_get(struct timespec* ts, int base) {
 void platform_init(void) {
     mkdir(BASE_DIR, 0777);
     mkdir(BASE_DIR "/saves", 0777);
+    /* the previous session's log is kept (a relaunch would otherwise erase it) */
+    remove(BASE_DIR "/sonicriders.prev.log");
+    rename(BASE_DIR "/sonicriders.log", BASE_DIR "/sonicriders.prev.log");
     if (!freopen(BASE_DIR "/sonicriders.log", "w", stderr)) return;
     setvbuf(stderr, NULL, _IOLBF, 0);
     rt_log("[switch] Sonic Riders native port; log started");

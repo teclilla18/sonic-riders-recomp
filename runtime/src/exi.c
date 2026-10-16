@@ -59,7 +59,11 @@ static struct Ipl g_ipl;
 /* The card file is written in the background, once the game has not changed the card for 0.5 s
  * (and at exit): a save is ~1250 erase/program commands, and rewriting the whole image after each
  * one took long enough on the Switch's SD card for the CARD library's timeout alarms to fire. */
+static _Atomic unsigned g_card_file_writes;
+unsigned exi_card_file_writes(void) { return atomic_load(&g_card_file_writes); }
+
 static void card_write_file(Card* c) {
+    atomic_fetch_add(&g_card_file_writes, 1);
     static uint8_t snap[CARD_SIZE];
     mtx_lock(&c->lock);
     atomic_store(&c->dirty, 0);

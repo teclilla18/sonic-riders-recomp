@@ -12,6 +12,7 @@ void gx_texture_load_tlut(void);
 int gx_texture_lookup(int map);
 int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h);
 int gx_texture_live(void);
+void gx_texture_decode_stats(unsigned long long* count, unsigned long long* bytes);
 void gx_texture_new_frame(void);
 
 static GxFrame* g_frame;
@@ -32,12 +33,13 @@ static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
 
 /* host time (timebase ticks) for the [perf] breakdown */
 static uint64_t g_wait_ticks, g_tex_ticks;
+static uint64_t g_wait_total, g_tex_total;  /* never reset ([hitch] deltas) */
 
 static GxFrame* frame(void) {
     if (!g_frame) {
         uint64_t t = rt_ticks();
         g_frame = render_take_free_frame();
-        g_wait_ticks += rt_ticks() - t;
+        { uint64_t d = rt_ticks() - t; g_wait_ticks += d; g_wait_total += d; }
         g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = 0;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
@@ -250,7 +252,7 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
         if ((order >> 6) & 1 && c->tex[map] < 0) {
             uint64_t t = rt_ticks();
             c->tex[map] = gx_texture_lookup(map);
-            g_tex_ticks += rt_ticks() - t;
+            { uint64_t d = rt_ticks() - t; g_tex_ticks += d; g_tex_total += d; }
         }
     }
     f->nverts += k;
@@ -278,9 +280,35 @@ static void efb_copy(uint32_t v) {
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         uint64_t ts = rt_ticks();
         render_submit(g_frame);
-        g_wait_ticks += rt_ticks() - ts;
+        { uint64_t d = rt_ticks() - ts; g_wait_ticks += d; g_wait_total += d; }
         g_frame = NULL;
         g_frames++;
+        /* [hitch]: a presented frame that took over 50 ms, and what the game thread spent it on */
+        {
+            static uint64_t last, tex0, wait0, disc_t0;
+            static unsigned long long disc_b0, dec0, decb0;
+            static unsigned card0;
+            uint64_t now = rt_ticks();
+            unsigned long long dec, decb;
+            gx_texture_decode_stats(&dec, &decb);
+            if (last && now - last > 40500000ull / 20) {
+                double ms = 1000.0 / 40500000.0;
+                double total = (now - last) * ms, disc = (di_read_ticks() - disc_t0) * ms, tex = (g_tex_total - tex0) * ms;
+                double wait = (g_wait_total - wait0) * ms;
+                rt_log("[hitch] frame %u took %.0f ms: game code %.0f ms, disc %.1f ms (%llu KB), %llu new textures (%llu KB "
+                       "RGBA, lookups %.1f ms), waiting for the render thread %.1f ms, card file writes %u", g_frames, total,
+                       total - disc - tex - wait, disc, (di_bytes_read() - disc_b0) >> 10, dec - dec0, (decb - decb0) >> 10, tex,
+                       wait, exi_card_file_writes() - card0);
+            }
+            last = now;
+            tex0 = g_tex_total;
+            wait0 = g_wait_total;
+            disc_t0 = di_read_ticks();
+            disc_b0 = di_bytes_read();
+            dec0 = dec;
+            decb0 = decb;
+            card0 = exi_card_file_writes();
+        }
         if (g_frames % 30 == 0) {  /* the overlay's FPS counter */
             static uint64_t t30;
             uint64_t now = rt_ticks();

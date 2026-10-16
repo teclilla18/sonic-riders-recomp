@@ -25,6 +25,25 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
      Everything but sound was addressed in session 5. Test 4 is pending.
 - **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet. **This is the next big task.**
 
+**Hardware test 4 (2026-10-16), user report:**
+- Working: saving, quitting, reloading, the hold-Minus menu, aspect changes.
+- Problems:
+  1. many textures missing in races;
+  2. a constant ~20 fps and slow motion after the save/load screen;
+  3. frequent short freezes.
+- The user prefers a prepared/cached approach for freezes if that's the cause, like SwitchWakerHD's one-time cache.
+- **The files in `build/switch/` were still test 3's** (00:44–00:52, no `[settings]` line), so test 4's log has not been analysed yet.
+
+**Logging since test 4:**
+- Screenshots are off unless `SR_SHOTS=1` (`env.txt`); the user asked for that default.
+- The previous launch's log is kept as `sonicriders.prev.log`.
+- `[hitch]` lines for every frame over 50 ms:
+  - game side: game code, disc, new textures, render wait, card writes;
+  - render side: GPU wait and uploads.
+  - A screenshot's own line names its cost.
+- A warning when a frame has more states than the UBO area holds (raised to 24 MB, ~14000 states).
+- In Eden, the large GPU waits at new scenes are the emulator compiling host shaders: not representative of hardware.
+
 **Session 5 changes (from hardware test 3):**
 - **Save creation:** `exi.c` rewrote the whole 512 KB card file after every page program or erase (~1250 per save, about 600 MB of SD writes). On the Switch that outlasted the CARD library's timeout alarms. The card is now written by a background thread once writes have been idle for 0.5 s, and at exit. Verified on PC: a fresh card gets `SONICRIDERS_GAMEDATA_01`.
 - **Texture cache thrash (the main slowdown):** the cache's slot index `(key ^ key >> 21) % 8192` ignored most address bits, so same-size textures evicted each other every frame: hundreds of re-decodes and 1–6 MB/frame of uploads, with "0 same key" in the churn log. It is now a two-way set with a splitmix index. Hashing is also cheaper: a 512-sample hash every frame, plus the full hash every 16th frame (staggered).
@@ -76,7 +95,7 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - **Demo race:** 28–38 fps, ~4000 draws/frame, 3–4 MB/frame texture re-uploads, texture lookup 5–16 ms/frame, render thread 21–26 ms/frame.
 
 **Next steps, in order:**
-1. **Hardware test 4** (user): the slow motion should be gone or much better; check that saves work and the hold-Minus menu and widescreen. Send `sonicriders.log` and `shot_*.bmp`.
+1. **Analyse hardware test 4/5 logs** (`[hitch]`, `[perf]`, `[deko3d]` lines): decide whether the 20 fps is GPU-bound (then an EFB scale option and/or specialized shaders) or CPU-bound, and whether the freezes come from texture decodes (pre-decode/cache), disc reads (async/prefetch) or the GPU. Find the missing race textures (dropped states? stale sampled hashes? a format?).
 2. **Audio (AX HLE)** in `ax.c`, from the AX command-list and parameter-block formats:
    - command list: PB list, ADPCM/PCM8/PCM16 decode from ARAM, sample-rate conversion, volume and ramps, aux buses, output to the AI DMA buffer;
    - then host output: SDL audio (PC), audout/audren (Switch).
@@ -127,6 +146,7 @@ The whole OS scheduler, alarms, mutexes and message queues run recompiled, which
 - `SR_INPUT="1500:START,1510:-START,..."`: scripted button presses at VI field counts.
 - `SR_CARD=<path>`: memory card image.
 - `SR_TEST_MENU=1`: start with the settings menu open.
+- `SR_SHOTS=1` (Switch, via `env.txt`): save `shot_<frame>.bmp` at frames 300 … 7200 (off by default).
 - Switch: `env.txt` in the SD folder sets these variables; `SR_WATCHDOG_NOTRACE=1` skips the function trace.
 - `tools/showfn.py ADDR|NAME`: print a function's disassembly from dtk's output.
 - `build/run.ps1 <seconds>` (local helper, not committed): rebuild + run + summarize.

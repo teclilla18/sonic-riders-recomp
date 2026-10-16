@@ -56,6 +56,13 @@ int gx_texture_live(void) {
     return n;
 }
 
+/* textures decoded so far (count, RGBA bytes), for the [hitch] lines */
+static unsigned long long g_decoded, g_decoded_bytes;
+void gx_texture_decode_stats(unsigned long long* count, unsigned long long* bytes) {
+    *count = g_decoded;
+    *bytes = g_decoded_bytes;
+}
+
 static GxTexture* new_texture(uint32_t w, uint32_t h, int is_copy) {
     call_once(&g_ids_once, ids_init);
     mtx_lock(&g_ids_lock);
@@ -300,6 +307,8 @@ int gx_texture_lookup(int map) {
      * frame in flight); the old one is retired with this frame and freed by the backend after it */
     if (e->valid) gx_frame_retire(e->id);  /* changed, or another texture in this slot */
     GxTexture* t = new_texture(w, h, 0);
+    g_decoded++;
+    g_decoded_bytes += (unsigned long long)w * h * 4;
     decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
     t->gen++;
     e->key = key;
