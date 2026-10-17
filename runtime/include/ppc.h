@@ -81,7 +81,12 @@ void ppc_trace_enter(uint32_t addr);
    entry and loop back-edge; ppc_preempt delivers it if this context has MSR.EE set. */
 extern volatile int g_core_preempt[3];
 void ppc_preempt(Cpu* c);
+/* the guest function entered last, or a PROF_* tag (runtime.h) while the runtime works: what the
+   Switch's sampling profiler reads (SR_PROFILE) */
+extern volatile uint32_t g_ppc_cur_fn, g_ppc_cur_lr;  /* and its return address */
 #define PPC_ENTER(a) do {                                                     \
+        g_ppc_cur_fn = (a);                                                   \
+        g_ppc_cur_lr = c->lr;                                                 \
         if (__builtin_expect(g_ppc_trace, 0)) ppc_trace_enter(a);             \
         if (__builtin_expect(g_core_preempt[0], 0)) ppc_preempt(c);           \
     } while (0)

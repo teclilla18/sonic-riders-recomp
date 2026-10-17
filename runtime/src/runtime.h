@@ -86,6 +86,10 @@ void di_init(void);
 void profile_register_thread(void);  /* a thread that runs guest code */
 void profile_start(void);
 void profile_dump(void);
+/* g_ppc_cur_fn tags for runtime work on the game thread, named in the Switch profiler report */
+#define PROF_IDLE 0xF0000000u  /* no ready guest thread */
+#define PROF_DRAW 0xF0000001u  /* gx_render draw(): vertex decode, state, texture lookups */
+#define PROF_PIPE 0xF0000002u  /* the GX FIFO: write-gather pipe stores and command parsing */
 void dbg_event(int kind, uint32_t a, uint32_t b);  /* hang-dump event ring (sched.c) */
 unsigned exi_card_file_writes(void);   /* memory card file writes so far (exi.c) */   /* the DVD drive's completion timer */
 uint32_t dsp_read(uint32_t ea, int size);

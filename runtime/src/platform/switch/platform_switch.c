@@ -179,7 +179,63 @@ void mem_init(void) {
     if (!(code && try_window(1)) && !try_window(0)) rt_fatal("cannot map guest memory");
 }
 
-/* the sampling profiler is desktop-only (platform/host/profile_win.c) */
+/* Sampling profiler (SR_PROFILE=1 in env.txt): a thread on core 2 reads g_ppc_cur_fn, the guest
+ * function entered last on the game core or a PROF_* tag for runtime work, every millisecond, and
+ * logs the 30 most frequent every 10 seconds. A sample is charged to the last function entered, so a
+ * caller's own code after a call returns counts for the callee: a leaf-heavy approximation, enough
+ * to see where the time goes on the hardware (the desktop build samples real instruction
+ * pointers, platform/host/profile_win.c). */
+#define PROF_BUCKETS 16384u
+static struct { uint32_t fn, lr, count; } g_prof[PROF_BUCKETS];
+static uint32_t g_prof_samples, g_prof_overflow;
+
+static void prof_report(void) {
+    uint32_t n = g_prof_samples;
+    if (!n) return;
+    rt_log("[profile] %u samples (1 ms) over the last 10 s: last function entered on the game core, and its return address:", n);
+    for (int k = 0; k < 30; k++) {
+        uint32_t best = 0, bi = 0;
+        for (uint32_t i = 0; i < PROF_BUCKETS; i++)
+            if (g_prof[i].count > best) { best = g_prof[i].count; bi = i; }
+        if (!best) break;
+        uint32_t fn = g_prof[bi].fn, lr = g_prof[bi].lr;
+        const char* tag = fn == PROF_IDLE ? " (idle)" : fn == PROF_DRAW ? " (draw processing)" : fn == PROF_PIPE ? " (GX FIFO)" : "";
+        if (*tag) rt_log("[profile]   %5.1f%%  %08X%s", 100.0 * best / n, fn, tag);
+        else rt_log("[profile]   %5.1f%%  %08X  from %08X", 100.0 * best / n, fn, lr);
+        g_prof[bi].count = 0;
+    }
+    if (g_prof_overflow) rt_log("[profile]   (%u samples lost: table full)", g_prof_overflow);
+    memset(g_prof, 0, sizeof g_prof);
+    g_prof_samples = g_prof_overflow = 0;
+}
+
+static int prof_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(2);
+    uint64_t next_report = armGetSystemTick() + armNsToTicks(10000000000ull);
+    for (;;) {
+        svcSleepThread(1000000);
+        uint32_t fn = g_ppc_cur_fn, lr = fn >= 0xF0000000u ? 0 : g_ppc_cur_lr;
+        uint32_t h = ((fn ^ (lr * 31u)) * 2654435761u) >> 18;
+        for (uint32_t probe = 0;; probe++) {
+            uint32_t i = (h + probe) & (PROF_BUCKETS - 1);
+            if (g_prof[i].fn == fn && g_prof[i].lr == lr && g_prof[i].count) { g_prof[i].count++; break; }
+            if (!g_prof[i].count) { g_prof[i].fn = fn; g_prof[i].lr = lr; g_prof[i].count = 1; break; }
+            if (probe == 64) { g_prof_overflow++; break; }
+        }
+        g_prof_samples++;
+        if (armGetSystemTick() >= next_report) {
+            prof_report();
+            next_report = armGetSystemTick() + armNsToTicks(10000000000ull);
+        }
+    }
+    return 0;
+}
+
 void profile_register_thread(void) {}
-void profile_start(void) {}
+void profile_start(void) {
+    if (!getenv("SR_PROFILE")) return;
+    rt_log("[profile] sampling the game core every 1 ms (SR_PROFILE); reports every 10 s");
+    rt_thread_start(prof_thread, NULL);
+}
 void profile_dump(void) {}

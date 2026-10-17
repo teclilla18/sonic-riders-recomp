@@ -247,8 +247,15 @@ static void lookup_map(GxCmd* c, int map) {
     g_tex_total += d;
 }
 
+static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices);
 static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     (void)vertex_size;
+    uint32_t prev = g_ppc_cur_fn;
+    g_ppc_cur_fn = PROF_DRAW;
+    draw_impl(prim, vat, count, vertices);
+    g_ppc_cur_fn = prev;
+}
+static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices) {
     if (!count) return;
     if (g_state_dirty) push_state();
     GxFrame* f = frame();
@@ -432,6 +439,15 @@ static void efb_copy(uint32_t v) {
                 rt_log("[perf]   ms/frame: textures %.2f, render wait %.2f, disc %.2f, guest idle %.2f; timer late avg %.3f max %.3f ms",
                        g_tex_ticks * ms, g_wait_ticks * ms, (di_read_ticks() - disc0) * ms, idle * ms, late_avg * ms * 120,
                        late_max * ms * 120);
+                {
+                    void dsp_aram_stats(uint64_t*, uint64_t*);
+                    void di_late_stats(uint64_t*, uint64_t*, uint64_t*);
+                    uint64_t ab, at, da, dm, dn;
+                    dsp_aram_stats(&ab, &at);
+                    di_late_stats(&da, &dm, &dn);
+                    rt_log("[perf]   devices: ARAM DMA %llu KB in %.1f ms (game thread); %llu disc completions, late avg %.2f max %.2f ms",
+                           (unsigned long long)(ab >> 10), at * ms * 120, (unsigned long long)dn, da * ms * 120, dm * ms * 120);
+                }
             }
             t0 = t;
             f0 = f;

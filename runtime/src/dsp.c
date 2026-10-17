@@ -145,6 +145,11 @@ static int ai_thread(void* arg) {
 }
 
 /* ---- ARAM DMA ---- */
+static uint64_t g_aram_bytes, g_aram_ticks;  /* for [perf] (game thread only) */
+void dsp_aram_stats(uint64_t* bytes, uint64_t* ticks) {
+    *bytes = g_aram_bytes; *ticks = g_aram_ticks;
+    g_aram_bytes = g_aram_ticks = 0;
+}
 static void aram_dma(void) {
     uint32_t mm = ((uint32_t)g_regs[0x20 >> 1] << 16 | g_regs[0x22 >> 1]) & 0x03FFFFE0;
     uint32_t ar = ((uint32_t)g_regs[0x24 >> 1] << 16 | g_regs[0x26 >> 1]) & 0x03FFFFE0;
@@ -152,11 +157,16 @@ static void aram_dma(void) {
     uint32_t len = cnt & 0x7FFFFFE0;
     int to_mm = (cnt >> 31) & 1;
     if (mm + len > GUEST_RAM_SIZE) rt_fatal("ARAM DMA beyond main RAM (%08X+%X)", mm, len);
-    for (uint32_t i = 0; i < len; i++) {  /* ARAM addresses wrap at its size */
-        uint32_t a = (ar + i) % ARAM_SIZE;
-        if (to_mm) *mem_phys(mm + i) = g_aram[a];
-        else g_aram[a] = *mem_phys(mm + i);
+    uint64_t t0 = rt_ticks();
+    for (uint32_t done = 0; done < len;) {  /* ARAM addresses wrap at its size */
+        uint32_t a = (ar + done) % ARAM_SIZE, n = len - done;
+        if (n > ARAM_SIZE - a) n = ARAM_SIZE - a;
+        if (to_mm) memcpy(mem_phys(mm + done), g_aram + a, n);
+        else memcpy(g_aram + a, mem_phys(mm + done), n);
+        done += n;
     }
+    g_aram_bytes += len;
+    g_aram_ticks += rt_ticks() - t0;
     g_regs[0x28 >> 1] = 0;
     g_regs[0x2A >> 1] = 0;
     g_csr |= CSR_ARINT;

@@ -7,6 +7,7 @@
 #include "runtime.h"
 
 int g_ppc_trace;
+volatile uint32_t g_ppc_cur_fn, g_ppc_cur_lr;
 uint8_t* g_mod_hook_flags;
 
 /* ---- dispatch: guest address -> recompiled function ---- */

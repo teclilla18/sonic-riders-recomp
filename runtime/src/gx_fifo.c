@@ -240,7 +240,14 @@ static void gp_feed(const uint8_t* p, size_t n) {
 }
 
 /* ---- write-gather pipe ---- */
+static void pipe_write(uint32_t v, int size);
 void gx_pipe_write(uint32_t v, int size) {
+    uint32_t prev = g_ppc_cur_fn;
+    g_ppc_cur_fn = PROF_PIPE;
+    pipe_write(v, size);
+    g_ppc_cur_fn = prev;
+}
+static void pipe_write(uint32_t v, int size) {
     uint8_t b[4];
     for (int k = 0; k < size; k++) b[k] = (uint8_t)(v >> (8 * (size - 1 - k)));
     g_pipe_stores++;

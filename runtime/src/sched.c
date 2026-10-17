@@ -254,6 +254,8 @@ void sched_interrupts_enabled(Cpu* c) {
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
         record_backtrace(c);
+        uint32_t prof_prev = g_ppc_cur_fn;
+        g_ppc_cur_fn = PROF_IDLE;
         uint64_t t_idle = rt_ticks();
         mtx_lock(&g_irq_lock);
         if (!g_core_preempt[0]) {
@@ -267,6 +269,7 @@ void sched_interrupts_enabled(Cpu* c) {
         uint64_t d = rt_ticks() - t_idle;
         g_idle_ticks += d;
         g_idle_total += d;
+        g_ppc_cur_fn = prof_prev;
         if (g_core_preempt[0]) deliver(c);
     }
 }

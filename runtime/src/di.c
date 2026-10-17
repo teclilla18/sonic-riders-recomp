@@ -23,6 +23,15 @@ static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress com
 /* a read's data lands at completion, as on the hardware (the DMA runs during the transfer): a game
  * write into the buffer while the read is in flight is overwritten, not kept */
 static struct { uint64_t offset; uint32_t addr, len; } g_di_dma;
+static uint64_t g_late_sum, g_late_max, g_late_n;  /* completion lateness, for [perf] (under g_di_lock) */
+void di_late_stats(uint64_t* avg, uint64_t* max, uint64_t* n) {
+    mtx_lock(&g_di_lock);
+    *n = g_late_n;
+    *avg = g_late_n ? g_late_sum / g_late_n : 0;
+    *max = g_late_max;
+    g_late_sum = g_late_max = g_late_n = 0;
+    mtx_unlock(&g_di_lock);
+}
 
 /* DISR bits */
 #define DEINT_MASK  0x02u
@@ -94,6 +103,9 @@ static int di_timer(void* arg) {
         if (g_di_done_at < 0) { cnd_wait(&g_di_cv, &g_di_lock); continue; }
         int64_t left = g_di_done_at - (int64_t)rt_ticks();
         if (left <= 0) {
+            g_late_sum += (uint64_t)-left;  /* how late this thread got to the completion */
+            if ((uint64_t)-left > g_late_max) g_late_max = (uint64_t)-left;
+            g_late_n++;
             g_di_done_at = -1;
             if (g_di_dma.len) {
                 dma_from_disc(g_di_dma.offset, g_di_dma.addr, g_di_dma.len);
