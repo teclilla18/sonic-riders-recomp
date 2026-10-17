@@ -420,33 +420,51 @@ static void shot_request(DkImageView const* fv) {
     g_shot_pending = n;
 }
 
+/* The capture is copied out of the uncached GPU buffer in one memcpy (byte reads there made a save
+ * take 7-10 s), then converted and written to the SD card by a thread of its own: no hitch. */
+typedef struct { uint8_t* px; unsigned frame; } Shot;
+
+static int shot_thread(void* arg) {
+    Shot* sh = arg;
+    rt_thread_pin(2);
+    rt_thread_lower_priority();
+    uint64_t t0 = armGetSystemTick();
+    char path[96];
+    snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.bmp", sh->frame);
+    FILE* f = fopen(path, "wb");
+    if (f) {
+        uint32_t row = FB_W * 3, size = 54 + row * FB_H;
+        uint8_t h[54] = {'B', 'M'};
+        memcpy(h + 2, &size, 4);
+        h[10] = 54; h[14] = 40;
+        int32_t w = FB_W, hh = FB_H;
+        memcpy(h + 18, &w, 4); memcpy(h + 22, &hh, 4);
+        h[26] = 1; h[28] = 24;
+        uint8_t* img = malloc((size_t)size);
+        memcpy(img, h, 54);
+        for (int y = FB_H - 1, oy = 0; y >= 0; y--, oy++) {  /* BMP rows go bottom-up */
+            const uint8_t* s = sh->px + (size_t)y * FB_W * 4;
+            uint8_t* line = img + 54 + (size_t)oy * row;
+            for (int x = 0; x < FB_W; x++) { line[3 * x] = s[4 * x + 2]; line[3 * x + 1] = s[4 * x + 1]; line[3 * x + 2] = s[4 * x]; }
+        }
+        fwrite(img, 1, size, f);
+        free(img);
+        fclose(f);
+        rt_log("[deko3d] saved %s in the background (%.0f ms)", path, armTicksToNs(armGetSystemTick() - t0) / 1e6);
+    }
+    free(sh->px);
+    free(sh);
+    return 0;
+}
+
 static void shot_write(void) {
     if (!g_shot_pending) return;
-    uint64_t t0 = armGetSystemTick();
-    const uint8_t* px = dkMemBlockGetCpuAddr(g_shot_mem);
-    char path[96];
-    snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.bmp", g_shot_pending);
+    Shot* sh = malloc(sizeof *sh);
+    sh->px = malloc((size_t)FB_W * FB_H * 4);
+    sh->frame = g_shot_pending;
     g_shot_pending = 0;
-    FILE* f = fopen(path, "wb");
-    if (!f) return;
-    uint32_t row = FB_W * 3, size = 54 + row * FB_H;
-    uint8_t h[54] = {'B', 'M'};
-    memcpy(h + 2, &size, 4);
-    h[10] = 54; h[14] = 40;
-    int32_t w = FB_W, hh = FB_H;
-    memcpy(h + 18, &w, 4); memcpy(h + 22, &hh, 4);
-    h[26] = 1; h[28] = 24;
-    fwrite(h, 1, 54, f);
-    uint8_t* line = malloc(row);
-    for (int y = FB_H - 1; y >= 0; y--) {  /* BMP rows go bottom-up */
-        const uint8_t* s = px + (size_t)y * FB_W * 4;
-        for (int x = 0; x < FB_W; x++) { line[3 * x] = s[4 * x + 2]; line[3 * x + 1] = s[4 * x + 1]; line[3 * x + 2] = s[4 * x]; }
-        fwrite(line, 1, row, f);
-    }
-    free(line);
-    fclose(f);
-    rt_log("[deko3d] saved %s (%.0f ms: a [hitch] at this frame is this screenshot)", path,
-           armTicksToNs(armGetSystemTick() - t0) / 1e6);
+    memcpy(sh->px, dkMemBlockGetCpuAddr(g_shot_mem), (size_t)FB_W * FB_H * 4);
+    rt_thread_start(shot_thread, sh);
 }
 
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
