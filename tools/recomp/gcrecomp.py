@@ -131,6 +131,8 @@ class GcRecompiler:
                 if addr not in self.entries:
                     raise SystemExit("%s:%d: %08X is not a function entry" % (hle, ln, addr))
                 self.hooks[addr] = name
+                if name in ("OSSaveContext", "OSLoadContext"):  # context switches: no calling convention
+                    leaflocal.NO_ABI.update({"f_%08X" % addr, "f_%08X_orig" % addr})
         self.patches = collections.defaultdict(lambda: ["", ""])  # address -> [before, after]
         self.patch_decls = []
         pf = os.path.join(config_dir, "patches.txt")
@@ -158,9 +160,19 @@ class GcRecompiler:
         sec = self.REL_SECTIONS[sym["section"]]
         return self.rel_addrs[sec] + sym["addr"]
 
+    NO_ABI_NAMES = ("__restore_fpr", "__init_registers", "__OSLoadFPUContext", "OSLoadContext", "OSSwitchFPUContext",
+                    "TRKLoadContext")
+
     def _load_dtk(self, path, rel):
         self.pending_jts = getattr(self, "pending_jts", [])
         for s in read_symbols(path):
+            # hand-written routines that set callee-saved registers on purpose: the FPR restore
+            # routine (and its _restfpr_N entry labels) for the epilogue that calls it, register
+            # set-up at boot, context and FPU context loads. A call there is not a calling-convention
+            # call (leaflocal.py reloads every register after it).
+            if s["name"] in self.NO_ABI_NAMES or s["name"].startswith("_restfpr_"):
+                base, size = self._addr(s, rel), s["size"] or 4
+                leaflocal.NO_ABI.update({"f_%08X" % a for a in range(base, base + size, 4)})
             if s["type"] == "function" and s["section"] in ("init", "text"):
                 self.entries.add(self._addr(s, rel))
             elif s["type"] == "object" and s["size"] >= 4 and s["size"] % 4 == 0 and \

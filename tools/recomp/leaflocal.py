@@ -162,6 +162,17 @@ def _assigned(text):
     return regs
 
 
+# After a call, the callee-saved registers (r1, r2, r13, r14-r31, f14-f31) keep the caller's values:
+# the EABI that the returns above already rely on. They are not read back from the struct then (the
+# volatile ones still are; the C compiler drops those that are dead). RECOMP_CALLEE_SAVED=0 turns this
+# off. NO_ABI: callees that do not follow the convention (context switches), filled by gcrecomp.py;
+# indirect calls (ppc_dispatch) and instruction hooks (site_) also get the full reload.
+CALLEE_SAVED = os.environ.get("RECOMP_CALLEE_SAVED", "1") != "0"
+SAVED_GPR = {1, 2, 13} | set(range(14, 32))
+SAVED_FPR = set(range(14, 32))
+NO_ABI = set()
+
+
 def transform_nonleaf(stmts, addrs):
     """stmts: the statements (site calls already prefixed to theirs), addrs: their guest addresses.
     Returns (prologue, statements, write-back for falling off the end), or None to keep the struct
@@ -235,6 +246,10 @@ def transform_nonleaf(stmts, addrs):
         return " ".join(parts)
 
     reload_all = rl(gprs, fprs)
+    reload_vol = rl(gprs - SAVED_GPR, fprs - SAVED_FPR) if CALLEE_SAVED else reload_all
+
+    def reload_after(name):
+        return reload_all if not name or name == "ppc_dispatch" or name.startswith("site_") or name in NO_ABI else reload_vol
     ret_regs = RET_GPR | {32 + r for r in RET_FPR}
     final = []
     for i, s in enumerate(out):
@@ -245,7 +260,7 @@ def transform_nonleaf(stmts, addrs):
             d |= segs[i][k]
             exit_dirty |= segs[i][k]
             pieces.append(s[pos:m.start()])
-            pieces.append("{ %s %s %s }" % (wb(d), m.group(0), reload_all))
+            pieces.append("{ %s %s %s }" % (wb(d), m.group(0), reload_after(m.group(1))))
             pos = m.end()
             d = set()
         pieces.append(s[pos:])
