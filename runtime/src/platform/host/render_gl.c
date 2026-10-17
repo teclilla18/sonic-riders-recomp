@@ -326,6 +326,9 @@ static void draw_overlay(int ww, int wh) {
     p_glUseProgram(g_prog);  /* the GX state is set again by the next state command (apply_state) */
 }
 
+/* EFB copy target formats (BP 0x52 bits 4-6, bit 3 the high bit) without alpha: RGB565 */
+static int copy_format_opaque(uint32_t exec) { return (((exec >> 4) & 7) | ((exec >> 3) & 1) << 3) == 4; }
+
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     int x = (int)c->copy[0], y = (int)c->copy[1], w = (int)c->copy[2], h = (int)c->copy[3];
     if (g_debug_frame)
@@ -385,6 +388,12 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             glColorMask(1, 1, 1, 1);
             p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, 0, 0,
                                 (GLint)(t->width * EFB_SCALE), (GLint)(t->height * EFB_SCALE), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            if (copy_format_opaque(c->copy[9])) {  /* the target format has no alpha: it samples as 1 */
+                glColorMask(0, 0, 0, 1);
+                glClearColor(0, 0, 0, 1);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glColorMask(1, 1, 1, 1);
+            }
         }
     }
     p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);

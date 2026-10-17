@@ -511,6 +511,19 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             dkImageViewDefaults(&tv, &t->image);
             DkImageRect dst = {0, 0, 0, t->w, t->h, 1};
             dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &tv, &dst, DkBlitFlag_FilterLinear, 0);
+            uint32_t exec = c->copy[9];
+            if ((((exec >> 4) & 7) | ((exec >> 3) & 1) << 3) == 4) {  /* RGB565 target: no alpha, it samples as 1 */
+                dkCmdBufBarrier(g_cmd, DkBarrier_Full, 0);
+                DkImageView const* tt[1] = {&tv};
+                dkCmdBufBindRenderTargets(g_cmd, tt, 1, NULL);
+                DkScissor fs = {0, 0, t->w, t->h};
+                dkCmdBufSetScissors(g_cmd, 0, &fs, 1);
+                float one[4] = {0, 0, 0, 1};
+                dkCmdBufClearColor(g_cmd, 0, DkColorMask_A, one);
+                DkImageView const* efb_targets[1] = {&g_efb_view};
+                dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
+                if (u) apply_state(u);  /* the scissor (and the rest) of the draws that follow */
+            }
             dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image);
         }
     }
