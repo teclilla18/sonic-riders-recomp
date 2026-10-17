@@ -2,6 +2,7 @@
  * keyed by (address, format, size, palette) plus a hash of the bytes, so textures the game rewrites
  * are decoded again. EFB copies made to an address are found here too (gx_texture_set_copy).
  * Formats: YAGCD "Texture formats", Dolphin's TextureDecoder. */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -142,6 +143,29 @@ static inline void from_tlut(uint8_t* o, uint16_t v, int tfmt) {
 static inline uint16_t be16(const uint8_t* p) { return (uint16_t)(p[0] << 8 | p[1]); }
 
 void gx_frame_retire(int id);
+
+/* SR_DUMPTEX: every decoded texture to build/tex/<id>_f<format>_t<tlut format>_<address>_<w>x<h>.tga
+ * (debugging decode problems, desktop) */
+static void dump_texture(const GxTexture* t, int fmt, int tfmt, uint32_t addr) {
+    static int on = -1;
+    if (on < 0) on = getenv("SR_DUMPTEX") != NULL;
+    if (!on) return;
+    char path[128];
+    snprintf(path, sizeof path, "build/tex/%04d_f%d_t%d_%08X_%ux%u.tga", t->id, fmt, tfmt, addr, t->width, t->height);
+    FILE* f = fopen(path, "wb");
+    if (!f) return;
+    uint8_t hdr[18] = {0, 0, 2};
+    hdr[12] = (uint8_t)t->width; hdr[13] = (uint8_t)(t->width >> 8);
+    hdr[14] = (uint8_t)t->height; hdr[15] = (uint8_t)(t->height >> 8);
+    hdr[16] = 32; hdr[17] = 0x28;  /* 32 bpp, top-left origin, 8 alpha bits */
+    fwrite(hdr, 1, 18, f);
+    for (uint32_t i = 0; i < t->width * t->height; i++) {
+        const uint8_t* p = t->rgba + 4 * i;
+        uint8_t bgra[4] = {p[2], p[1], p[0], p[3]};
+        fwrite(bgra, 1, 4, f);
+    }
+    fclose(f);
+}
 
 static void decode(uint8_t* out, const uint8_t* src, int fmt, uint32_t w, uint32_t h, const uint8_t* tlut, int tfmt) {
     int bw = k_bw[fmt], bh = k_bh[fmt];
@@ -311,6 +335,7 @@ int gx_texture_lookup(int map) {
     g_decoded_bytes += (unsigned long long)w * h * 4;
     decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
     t->gen++;
+    dump_texture(t, (int)fmt, tfmt, addr);
     e->key = key;
     e->hash = hsh;
     e->full = hash_bytes(src, size) ^ th;

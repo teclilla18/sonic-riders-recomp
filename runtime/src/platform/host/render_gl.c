@@ -87,7 +87,10 @@ static GxFrame* g_pending;
 static volatile int g_quit;
 static int g_headless;
 static int g_shot_at;
-static int g_shot_list[32], g_nshots;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
+static int g_shot_list[32], g_nshots;
+/* SR_SKIPSCAN=FRAME,STEP: from presented frame FRAME on, frame FRAME+k leaves out draws k*STEP up to
+ * (k+1)*STEP and is saved as a screenshot (finding the draws behind a visual problem; debugging) */
+static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
 static unsigned g_presented;
 
 static GLuint compile(GLenum type, const char* src) {
@@ -134,6 +137,8 @@ static void gl_setup(void) {
         p_glUniform1i(p_glGetUniformLocation(g_prog, n), i);
     }
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_xfm"), XFM_UNIT);
+    /* SR_SHOWALPHA: every pixel shows the TEV alpha as gray (debugging see-through surfaces) */
+    p_glUniform1i(p_glGetUniformLocation(g_prog, "u_show_alpha"), getenv("SR_SHOWALPHA") != NULL);
     p_glGenBuffers(1, &g_xfm_buf);
     glGenTextures(1, &g_xfm_tex);
     glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &g_ubo_align);
@@ -250,6 +255,9 @@ static void apply_state(const GxUniforms* u) {
                                  GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA};
     static const GLenum df[8] = {GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
                                  GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA};
+    static int no_ab = -1;  /* SR_NOALPHABLEND: depth-writing src-alpha blends drawn opaque (debugging) */
+    if (no_ab < 0) no_ab = getenv("SR_NOALPHABLEND") != NULL;
+    if (no_ab && (cm & 1) && ((cm >> 8) & 7) == 4 && ((cm >> 5) & 7) == 5 && ((z >> 4) & 1)) cm &= ~1u;
     if (cm & 1) {
         glEnable(GL_BLEND);
         if ((cm >> 11) & 1) { p_glBlendEquation(0x800B /* GL_FUNC_REVERSE_SUBTRACT */); glBlendFunc(GL_ONE, GL_ONE); }
@@ -344,6 +352,8 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 uint8_t* px = malloc((size_t)ww * wh * 4);
                 p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
                 glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
+                /* opaque: the picture's alpha is the EFB's, and viewers composite it over white */
+                for (size_t k = 3; k < (size_t)ww * wh * 4; k += 4) px[k] = 255;
                 char path[64];
                 snprintf(path, sizeof path, "build/shot_%u.png", menu_shot ? g_presented : (unsigned)g_shot_at);
                 save_png(path, ww, wh, px);
@@ -420,6 +430,9 @@ static void execute(GxFrame* f) {
     p_glTexBuffer(0x8C2A, 0x8236 /* GL_R32UI */, g_xfm_buf);
     p_glActiveTexture(GL_TEXTURE0);
     const GxUniforms* cur = NULL;
+    int scan_k = g_scan_at ? (int)g_presented + 1 - g_scan_at : -1;
+    int scanning = scan_k >= 0 && scan_k < 32;
+    uint32_t draw_no = 0, skip_lo = scanning ? (uint32_t)(scan_k * g_scan_step) : 0, skip_hi = skip_lo + (uint32_t)g_scan_step;
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
@@ -435,6 +448,8 @@ static void execute(GxFrame* f) {
             break;
         case GXC_DRAW:
             if (!cur) break;
+            if (scanning && draw_no >= skip_lo && draw_no < skip_hi) { draw_no++; break; }
+            draw_no++;
             if (g_debug_frame) {
                 char t[160] = "";
                 int n = 0;
@@ -500,9 +515,11 @@ static void execute(GxFrame* f) {
                             l[r] = lp[r] - pv[r];
                         }
                         float ll = sqrtf(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]), nl = sqrtf(nv[0] * nv[0] + nv[1] * nv[1] + nv[2] * nv[2]);
-                        rt_log("[gxdbg]   v%u: idx %d view pos %g %g %g | view normal %g %g %g | light vec %g %g %g | diffuse %g", vi,
+                        rt_log("[gxdbg]   v%u: idx %d view pos %g %g %g | view normal %g %g %g | light vec %g %g %g | diffuse %g"
+                               " | col0 %.3f %.3f %.3f %.3f", vi,
                                idx, pv[0], pv[1], pv[2], nv[0], nv[1], nv[2], l[0], l[1], l[2],
-                               (l[0] * nv[0] + l[1] * nv[1] + l[2] * nv[2]) / (ll * nl + 1e-9f));
+                               (l[0] * nv[0] + l[1] * nv[1] + l[2] * nv[2]) / (ll * nl + 1e-9f), vx->col[0][0], vx->col[0][1],
+                               vx->col[0][2], vx->col[0][3]);
                     }
                     rt_log("[gxdbg]   tev regs E0-E7 %06X %06X %06X %06X %06X %06X %06X %06X | konst %06X %06X | alpha test %06X",
                            cur->bp[0xE0], cur->bp[0xE1], cur->bp[0xE2], cur->bp[0xE3], cur->bp[0xE4], cur->bp[0xE5],
@@ -623,6 +640,14 @@ void render_start(void) {
     g_shot_at = s ? atoi(s) : 0;
     for (const char* q = s; q && *q && g_nshots < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
         g_shot_list[g_nshots++] = atoi(q);
+    const char* scan = getenv("SR_SKIPSCAN");
+    if (scan && sscanf(scan, "%d,%d", &g_scan_at, &g_scan_step) == 2 && g_scan_at > 0 && g_scan_step > 0) {
+        g_nshots = 0;
+        for (int k = 0; k < 32; k++) g_shot_list[g_nshots++] = g_scan_at + k;
+        rt_log("[gl] SR_SKIPSCAN: frames %d-%d leave out %d draws each", g_scan_at, g_scan_at + 31, g_scan_step);
+    } else {
+        g_scan_at = 0;
+    }
     if (!g_headless && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();

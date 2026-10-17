@@ -212,5 +212,6 @@ void main() {
   uint cm1 = BP(0x42);
   if (bits(cm1, 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
   else if (bits(BP(0x43), 0, 3) != 1u) o.a = 1.0;  /* EFB formats without alpha */
+  if (DEBUG_SHOW_ALPHA != 0) o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0);  /* the TEV alpha as gray (debugging) */
   o_color = o;
 }
