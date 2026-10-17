@@ -269,7 +269,17 @@ static uint32_t g_ai[4];
 uint32_t ai_read(uint32_t ea, int size) {
     (void)size;
     uint32_t r = (ea & 0x1F) >> 2;
-    if (r == 2) return (uint32_t)(rt_ticks() * 32000 / 40500000);  /* AISCNT */
+    if (r == 2) {  /* AISCNT: 32 kHz samples; a read that would repeat the last value returns the next one */
+        /* __AI_SRC_INIT (boot) times two consecutive counter steps with OSGetTime and retries until
+         * the gap is under ~28.5 us or within 34.5-39 us: an exact 32 kHz counter gives 31.25 us,
+         * the one gap it rejects, and only host jitter let it through (38 s on the Switch). A polling
+         * loop now sees the next step at once; the counter still follows real time. */
+        static uint32_t last, bump;
+        uint32_t v = (uint32_t)(rt_ticks() * 32000 / 40500000) + bump;
+        if (v == last) { bump++; v++; }
+        last = v;
+        return v;
+    }
     return r < 4 ? g_ai[r] : 0;
 }
 void ai_write(uint32_t ea, uint32_t v, int size) {

@@ -84,6 +84,8 @@ static int thread_main(void* arg) {
 
 /* hand the CPU to `next` and park until this host thread's context is loaded again */
 static void handoff(GThread* next) {
+    uint32_t prof_fn = g_ppc_cur_fn;
+    g_ppc_cur_fn = PROF_SWITCH;
     mtx_lock(&g_lock);
     g_running = next;
     if (!next->started) {
@@ -94,6 +96,7 @@ static void handoff(GThread* next) {
     }
     while (g_running != t_self) cnd_wait(&t_self->cv, &g_lock);
     mtx_unlock(&g_lock);
+    g_ppc_cur_fn = prof_fn;  /* this thread runs again: the time from the switch until here was the switch's */
 }
 
 /* where this thread parks: the guest stack's back chain (frame word 0 = caller's r1, +4 = LR) */
@@ -202,6 +205,8 @@ static void make_irq_cpu(Cpu* ic, const Cpu* c) {
 static void deliver(Cpu* c) {
     if (t_in_irq) return;
     t_in_irq = 1;
+    /* the profiler charges the time after the handlers to the interrupted code again */
+    uint32_t prof_fn = g_ppc_cur_fn, prof_lr = g_ppc_cur_lr;
     while (g_core_preempt[0] && (c->msr & MSR_EE)) {
         mtx_lock(&g_irq_lock);
         g_core_preempt[0] = 0;
@@ -222,6 +227,8 @@ static void deliver(Cpu* c) {
         c->msr |= MSR_EE;
     }
     t_in_irq = 0;
+    g_ppc_cur_fn = prof_fn;
+    g_ppc_cur_lr = prof_lr;
     /* a thread made ready by the interrupt may preempt the interrupted one */
     if (ld32(OS_RUNQUEUE_HINT) && ld32(OS_CURRENT_THREAD) && ld32(OS_CURRENT_CONTEXT) == ld32(OS_CURRENT_THREAD)) {
         Cpu ic;
