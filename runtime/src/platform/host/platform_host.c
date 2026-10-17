@@ -103,3 +103,4 @@ void rt_thread_start(int (*fn)(void*), void* arg) {
 #endif
 
 void rt_thread_pin(int core) { (void)core; }
+void rt_thread_lower_priority(void) {}

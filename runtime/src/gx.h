@@ -23,6 +23,7 @@ typedef struct GxState {
 extern GxState g_gx;
 
 void gx_init(void);
+int gx_async(void);  /* the FIFO is parsed on the GP thread (gx_fifo.c) */
 int gx_vertex_size(int vat);
 
 /* gx_fifo.c: device side */

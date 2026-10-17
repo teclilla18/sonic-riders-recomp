@@ -112,6 +112,15 @@ void rt_thread_start(int (*fn)(void*), void* arg) {
     pthread_attr_destroy(&a);
 }
 
+/* Horizon runs the highest-priority ready thread of a core and does not time-slice equal ones: a busy
+ * thread one step below the others yields to them whenever they wake */
+void rt_thread_lower_priority(void) {
+    s32 prio = 0x2C;
+    svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+    Result rc = svcSetThreadPriority(CUR_THREAD_HANDLE, (u32)prio + 1);
+    if (R_FAILED(rc)) rt_log("[switch] svcSetThreadPriority(%d) failed (0x%X)", prio + 1, rc);
+}
+
 void rt_thread_pin(int core) {
     Result rc = svcSetThreadCoreMask(CUR_THREAD_HANDLE, core, 1u << core);
     if (R_FAILED(rc)) rt_log("[switch] svcSetThreadCoreMask(%d) failed (0x%X)", core, rc);

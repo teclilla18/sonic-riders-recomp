@@ -253,6 +253,10 @@ static void lookup_map(GxCmd* c, int map) {
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices);
 static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     (void)vertex_size;
+    if (gx_async()) {  /* on the GP thread: the profiler's variable is the game core's */
+        draw_impl(prim, vat, count, vertices);
+        return;
+    }
     uint32_t prev = g_ppc_cur_fn;
     g_ppc_cur_fn = PROF_DRAW;
     draw_impl(prim, vat, count, vertices);

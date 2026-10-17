@@ -8,11 +8,17 @@
  *    loads, display-list calls and draws. Draws go to the renderer (gx_draw hook).
  *  - PE: the "draw done" (BP 0x45) and token (BP 0x47/0x48) commands raise the PE finish/token
  *    interrupts, so GXDrawDone, GXSetDrawSync and draw-sync callbacks run through the game's own
- *    handlers. The GP is treated as infinitely fast: commands complete as they are parsed.
+ *    handlers, when the parser reaches them.
+ *  - The parser runs on its own thread (the "GP thread", core 2 on the Switch), as the real GP works
+ *    in parallel with the CPU: the game thread only stores the pipe's bytes and appends them to a
+ *    ring. Everything after (decoding, draw processing, frame building) happens on the GP thread.
+ *    SR_GX_SYNC=1 parses on the game thread instead, as before (comparisons, debugging).
  *
  * Command formats follow YAGCD / Dolphin's OpcodeDecoding and VertexLoader (vertex sizes). */
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include "gx.h"
 #include "runtime.h"
@@ -32,6 +38,7 @@ static uint16_t g_pe_mmio[0x80];
 #define CP_CR      (g_cp_mmio[0x02 >> 1])
 #define PE_INTRSR  (g_pe_mmio[0x0A >> 1])
 #define PE_TOKEN   (g_pe_mmio[0x0E >> 1])
+static mtx_t g_pe_lock;  /* PE status and token: the GP thread sets them, the CPU reads and clears */
 
 /* ---- command parser ---- */
 static uint8_t* g_pend;
@@ -88,16 +95,23 @@ int gx_vertex_size(int vat) {
 }
 
 static void pe_finish(void) {
+    mtx_lock(&g_pe_lock);
     PE_INTRSR |= 0x8;  /* finish status */
-    if (PE_INTRSR & 0x2) os_raise_interrupt(OS_INTERRUPT_PI_PE_FINISH);
+    int irq = (PE_INTRSR & 0x2) != 0;
+    mtx_unlock(&g_pe_lock);
+    if (irq) os_raise_interrupt(OS_INTERRUPT_PI_PE_FINISH);
 }
 
 static void pe_token(uint16_t token, int irq) {
+    mtx_lock(&g_pe_lock);
     PE_TOKEN = token;
+    int raise = 0;
     if (irq) {
         PE_INTRSR |= 0x4;  /* token status */
-        if (PE_INTRSR & 0x1) os_raise_interrupt(OS_INTERRUPT_PI_PE_TOKEN);
+        raise = (PE_INTRSR & 0x1) != 0;
     }
+    mtx_unlock(&g_pe_lock);
+    if (raise) os_raise_interrupt(OS_INTERRUPT_PI_PE_TOKEN);
 }
 
 static void load_bp(uint32_t v) {
@@ -239,6 +253,68 @@ static void gp_feed(const uint8_t* p, size_t n) {
     g_need = g_parse_need;
 }
 
+/* ---- the GP thread: a single-producer (game thread), single-consumer ring of pipe bytes ---- */
+#define RING_SIZE (16u << 20)
+static uint8_t* g_ring;
+static _Atomic size_t g_ring_head, g_ring_tail;  /* bytes written / consumed, ever */
+static atomic_int g_gp_sleeping;
+static mtx_t g_gp_lock;
+static cnd_t g_gp_cv, g_space_cv;
+static int g_gx_async = 1;
+
+static void ring_push(const uint8_t* b, size_t n) {
+    size_t head = atomic_load_explicit(&g_ring_head, memory_order_relaxed);
+    while (head + n - atomic_load_explicit(&g_ring_tail, memory_order_acquire) > RING_SIZE) {
+        /* full: the GP is a whole ring behind; wait for it */
+        mtx_lock(&g_gp_lock);
+        cnd_signal(&g_gp_cv);
+        if (head + n - atomic_load(&g_ring_tail) > RING_SIZE) {
+            struct timespec ts;
+            timespec_get(&ts, TIME_UTC);
+            ts.tv_nsec += 1000000;
+            if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+            cnd_timedwait(&g_space_cv, &g_gp_lock, &ts);
+        }
+        mtx_unlock(&g_gp_lock);
+    }
+    for (size_t k = 0; k < n; k++) g_ring[(head + k) & (RING_SIZE - 1)] = b[k];
+    atomic_store_explicit(&g_ring_head, head + n, memory_order_release);
+    if (atomic_load_explicit(&g_gp_sleeping, memory_order_acquire)) {
+        mtx_lock(&g_gp_lock);
+        cnd_signal(&g_gp_cv);
+        mtx_unlock(&g_gp_lock);
+    }
+}
+
+static int gp_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(2);
+    rt_thread_lower_priority();
+    for (;;) {
+        size_t tail = atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
+        size_t head = atomic_load_explicit(&g_ring_head, memory_order_acquire);
+        if (head == tail) {
+            mtx_lock(&g_gp_lock);
+            atomic_store(&g_gp_sleeping, 1);
+            while (atomic_load(&g_ring_head) == tail) cnd_wait(&g_gp_cv, &g_gp_lock);
+            atomic_store(&g_gp_sleeping, 0);
+            mtx_unlock(&g_gp_lock);
+            continue;
+        }
+        size_t off = tail & (RING_SIZE - 1), n = head - tail;
+        if (n > RING_SIZE - off) n = RING_SIZE - off;  /* up to the end of the ring; the rest next time */
+        if (n > 65536) n = 65536;
+        gp_feed(g_ring + off, n);
+        atomic_store_explicit(&g_ring_tail, tail + n, memory_order_release);
+        if (head + 65536 - (tail + n) > RING_SIZE) {  /* the producer may be waiting for space */
+            mtx_lock(&g_gp_lock);
+            cnd_signal(&g_space_cv);
+            mtx_unlock(&g_gp_lock);
+        }
+    }
+    return 0;
+}
+
 /* ---- write-gather pipe ---- */
 static void pipe_write(uint32_t v, int size);
 void gx_pipe_write(uint32_t v, int size) {
@@ -272,7 +348,10 @@ static void pipe_write(uint32_t v, int size) {
         }
     }
     g_gx.fifo_bytes += (unsigned)size;
-    if ((CP_CR & 0x11) == 0x11) gp_feed(b, (size_t)size);  /* GP read enable + linked: immediate mode */
+    if ((CP_CR & 0x11) == 0x11) {  /* GP read enable + linked: immediate mode */
+        if (g_gx_async) ring_push(b, (size_t)size);
+        else gp_feed(b, (size_t)size);
+    }
 }
 
 /* ---- register blocks ---- */
@@ -290,13 +369,17 @@ void gx_cp_write(uint32_t off, uint32_t v, int size) {
 
 uint32_t gx_pe_read(uint32_t off, int size) {
     off &= 0xFF;
-    if (size == 4) return (uint32_t)g_pe_mmio[off >> 1] << 16 | g_pe_mmio[(off >> 1) + 1];
-    return g_pe_mmio[off >> 1];
+    mtx_lock(&g_pe_lock);
+    uint32_t v = size == 4 ? (uint32_t)g_pe_mmio[off >> 1] << 16 | g_pe_mmio[(off >> 1) + 1] : g_pe_mmio[off >> 1];
+    mtx_unlock(&g_pe_lock);
+    return v;
 }
 void gx_pe_write(uint32_t off, uint32_t v, int size) {
     off &= 0xFF;
     if (off == 0x0A) {  /* writing a 1 to a status bit clears it; the enable bits are stored */
+        mtx_lock(&g_pe_lock);
         PE_INTRSR = (uint16_t)((PE_INTRSR & 0xC & ~v) | (v & 0x3));
+        mtx_unlock(&g_pe_lock);
         return;
     }
     if (size == 4) { g_pe_mmio[off >> 1] = (uint16_t)(v >> 16); g_pe_mmio[(off >> 1) + 1] = (uint16_t)v; }
@@ -326,4 +409,20 @@ void gx_pi_write(uint32_t off, uint32_t v, int size) {
     }
 }
 
-void gx_init(void) { g_gx.bp_mask = 0xFFFFFF; }
+int gx_async(void) { return g_gx_async; }
+
+void gx_init(void) {
+    g_gx.bp_mask = 0xFFFFFF;
+    mtx_init(&g_pe_lock, mtx_plain);
+    if (getenv("SR_GX_SYNC")) {
+        g_gx_async = 0;
+        rt_log("[gx] SR_GX_SYNC: the FIFO is parsed on the game thread");
+        return;
+    }
+    g_ring = malloc(RING_SIZE);
+    if (!g_ring) rt_fatal("cannot allocate the GP ring");
+    mtx_init(&g_gp_lock, mtx_plain);
+    cnd_init(&g_gp_cv);
+    cnd_init(&g_space_cv);
+    rt_thread_start(gp_thread, NULL);
+}
