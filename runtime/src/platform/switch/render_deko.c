@@ -374,7 +374,7 @@ static void apply_state(const GxUniforms* u) {
     dkRasterizerStateDefaults(&rs);
     uint32_t cull = (u->bp[0x00] >> 14) & 3;
     rs.cullMode = cull == 0 ? DkFace_None : cull == 1 ? DkFace_Back : cull == 2 ? DkFace_Front : DkFace_FrontAndBack;
-    rs.frontFace = DkFrontFace_CCW;  /* the opposite of the GL backend, whose shader flips y */
+    rs.frontFace = DkFrontFace_CW;  /* GX front faces are clockwise on screen (upper-left origin, no flip here) */
     dkCmdBufBindRasterizerState(g_cmd, &rs);
 }
 

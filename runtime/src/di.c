@@ -9,6 +9,7 @@
 #include <threads.h>
 #include <time.h>
 
+#include "game_addrs.h"
 #include "runtime.h"
 
 #define OS_INTERRUPT_PI_DI 21
@@ -19,6 +20,9 @@ static unsigned long long g_read_bytes, g_read_ticks;
 static mtx_t g_di_lock;           /* g_di: the CPU's accesses vs. the completion thread */
 static cnd_t g_di_cv;
 static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress completes */
+/* a read's data lands at completion, as on the hardware (the DMA runs during the transfer): a game
+ * write into the buffer while the read is in flight is overwritten, not kept */
+static struct { uint64_t offset; uint32_t addr, len; } g_di_dma;
 
 /* DISR bits */
 #define DEINT_MASK  0x02u
@@ -46,9 +50,9 @@ static void execute(void) {
         uint64_t off = (uint64_t)g_di[DICMD1] << 2;
         uint32_t n = g_di[DICMD2] ? g_di[DICMD2] : len;
         if (n > len && len) n = len;
-        dma_from_disc(off, g_di[DIMAR], n);
-        g_di[DIMAR] += n;
-        g_di[DILEN] = len - n;
+        g_di_dma.offset = off;
+        g_di_dma.addr = g_di[DIMAR];
+        g_di_dma.len = n;
         break;
     }
     case 0x12: {  /* inquiry: drive revision info, 0x20 bytes */
@@ -91,6 +95,12 @@ static int di_timer(void* arg) {
         int64_t left = g_di_done_at - (int64_t)rt_ticks();
         if (left <= 0) {
             g_di_done_at = -1;
+            if (g_di_dma.len) {
+                dma_from_disc(g_di_dma.offset, g_di_dma.addr, g_di_dma.len);
+                g_di[DIMAR] += g_di_dma.len;
+                g_di[DILEN] -= g_di_dma.len;
+                g_di_dma.len = 0;
+            }
             dbg_event(4, 0, 0);
             g_di[DICR] &= ~1u;
             g_di[DISR] |= TCINT;
@@ -157,6 +167,15 @@ void di_dump(void) {
     rt_log("[di] SR %08X CVR %08X CMD %08X %08X %08X MAR %08X LEN %08X CR %08X; completes in %lld ticks", g_di[DISR],
            g_di[DICVR], g_di[DICMD0], g_di[DICMD1], g_di[DICMD2], g_di[DIMAR], g_di[DILEN], g_di[DICR],
            g_di_done_at < 0 ? -1LL : (long long)(g_di_done_at - (int64_t)rt_ticks()));
+    /* what DVDGetDriveStatus reports: fatal error, pausing, or the executing block's state */
+    uint32_t ex = ld32(DVD_EXECUTING);
+    rt_log("[dvd] fatal %u pause %u pausing %u curr command %u resume-from-here %u; executing %08X%s", ld32(DVD_FATAL_ERROR_FLAG),
+           ld32(DVD_PAUSE_FLAG), ld32(DVD_PAUSING_FLAG), ld32(DVD_CURR_COMMAND), ld32(DVD_RESUME_FROM_HERE), ex,
+           ex == DVD_DUMMY_BLOCK ? " (dummy)" : "");
+    if (ex >= 0x80000000u && ex < 0x81800000u)
+        rt_log("[dvd]   block: command %u state %d offset %08X length %08X addr %08X transferred %08X callback %08X",
+               ld32(ex + 8), (int32_t)ld32(ex + 0xC), ld32(ex + 0x10), ld32(ex + 0x14), ld32(ex + 0x18), ld32(ex + 0x20),
+               ld32(ex + 0x2C));
 }
 
 unsigned long long di_bytes_read(void) { return g_read_bytes; }

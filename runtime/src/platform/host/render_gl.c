@@ -258,10 +258,12 @@ static void apply_state(const GxUniforms* u) {
     }
     GLboolean cu = (cm >> 3) & 1, au = (cm >> 4) & 1;
     glColorMask(cu, cu, cu, au);
-    /* culling: the y flip in the vertex shader reverses the winding */
+    /* culling: GX front faces are clockwise on screen (checked against the vertex normals of a race
+     * frame); the EFB is stored top row first, upside down in GL's window space, where they turn
+     * counter-clockwise */
     uint32_t cull = (u->bp[0x00] >> 14) & 3;
     if (cull == 0) glDisable(GL_CULL_FACE);
-    else { glEnable(GL_CULL_FACE); glFrontFace(GL_CW); glCullFace(cull == 1 ? GL_BACK : cull == 2 ? GL_FRONT : GL_FRONT_AND_BACK); }
+    else { glEnable(GL_CULL_FACE); glFrontFace(GL_CCW); glCullFace(cull == 1 ? GL_BACK : cull == 2 ? GL_FRONT : GL_FRONT_AND_BACK); }
 }
 
 /* ---- EFB copies and presentation ---- */

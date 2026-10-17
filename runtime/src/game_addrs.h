@@ -16,6 +16,15 @@
 #define OS_RUNQUEUE_HINT    0x8021BCFCu
 #define OS_RESCHEDULE       0x8021BD00u
 
+/* dvd.c statics (hang dumps only) */
+#define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */
+#define DVD_PAUSE_FLAG       0x8021BD8Cu
+#define DVD_PAUSING_FLAG     0x8021BD90u
+#define DVD_FATAL_ERROR_FLAG 0x8021BD98u
+#define DVD_CURR_COMMAND     0x8021BD9Cu
+#define DVD_RESUME_FROM_HERE 0x8021BDA8u
+#define DVD_DUMMY_BLOCK      0x801B3D00u
+
 /* functions */
 #define FN_OSSaveContext                 0x8000BB78u
 #define FN_OSLoadContext                 0x8000BBF8u
