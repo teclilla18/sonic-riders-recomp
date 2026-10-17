@@ -23,6 +23,7 @@
 #include <time.h>
 
 #include "game_addrs.h"
+#include "gx.h"
 #include "runtime.h"
 
 volatile int g_core_preempt[3];  /* [0]: an interrupt is pending */
@@ -263,6 +264,7 @@ void sched_interrupts_enabled(Cpu* c) {
         record_backtrace(c);
         uint32_t prof_prev = g_ppc_cur_fn;
         g_ppc_cur_fn = PROF_IDLE;
+        gx_pipe_idle();
         uint64_t t_idle = rt_ticks();
         mtx_lock(&g_irq_lock);
         if (!g_core_preempt[0]) {

@@ -179,6 +179,22 @@ static void aram_dma(void) {
     }
 }
 
+/* whether the DSP interface still asserts interrupt `id` (os_irq.c, just before the handler runs):
+ * the hardware's line follows the CSR, so a latched raise whose status the game already acknowledged
+ * (and whose mail it already took) is not delivered; the SDK's DSP handler waits for mail on entry
+ * with interrupts off, and spun forever on such a stale one */
+int dsp_irq_asserted(int id) {
+    mtx_lock(&g_lock);
+    uint32_t csr = g_csr;
+    mtx_unlock(&g_lock);
+    switch (id) {
+    case OS_INTERRUPT_DSP_DSP: return (csr & CSR_DSPINT) && (csr & CSR_DSPMSK);
+    case OS_INTERRUPT_DSP_ARAM: return (csr & CSR_ARINT) && (csr & CSR_ARMSK);
+    case OS_INTERRUPT_DSP_AI: return (csr & CSR_AIDINT) && (csr & CSR_AIDMSK);
+    default: return 1;
+    }
+}
+
 void dsp_dump(void) {
     rt_log("[dsp] CSR %04X, ARAM DMA mm %04X%04X ar %04X%04X cnt %04X%04X", g_csr, g_regs[0x20 >> 1], g_regs[0x22 >> 1],
            g_regs[0x24 >> 1], g_regs[0x26 >> 1], g_regs[0x28 >> 1], g_regs[0x2A >> 1]);

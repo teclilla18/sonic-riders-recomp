@@ -19,7 +19,8 @@ void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a larg
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 void rt_thread_lower_priority(void);
 void game_mods_linked(void);  /* game_mods.c: _Main.rel is linked; apply the gameplay options */
-void game_mods_apply(void);   /* after a settings change */  /* below the device threads sharing its core (Switch); no-op elsewhere */
+void game_mods_apply(void);   /* after a settings change */
+void game_mods_frame(void);   /* once a presented frame (gx_render.c) */  /* below the device threads sharing its core (Switch); no-op elsewhere */
 
 /* log.c */
 void rt_log(const char* fmt, ...);

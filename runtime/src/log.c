@@ -16,8 +16,10 @@ void rt_log(const char* fmt, ...) {
     va_end(ap);
     fputc('\n', stderr);
     static _Atomic uint64_t last;
+    static int sync = -1;  /* SR_LOGSYNC: flush every line (finding where a hang stops) */
+    if (sync < 0) sync = getenv("SR_LOGSYNC") != NULL;
     uint64_t now = rt_ticks();
-    if (now - atomic_load(&last) >= 40500000ull) {
+    if (sync || now - atomic_load(&last) >= 40500000ull) {
         atomic_store(&last, now);
         fflush(stderr);
     }

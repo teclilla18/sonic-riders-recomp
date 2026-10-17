@@ -23,6 +23,8 @@
 #define GAME_GEAR_STATUS     0x81AAD348u
 #define GAME_GEAR_CHAOS_EMERALD 18
 #define GAME_CHAR_STATUS     0x81AAD3A0u
+#define GAME_PLAYERS         0x81A0D740u  /* _Main.rel bss: the 8 racers (code indexes it by i * 0x1080) */
+#define GAME_PLAYER_SIZE     0x1080u
 #define GAME_GEAR_TABLE      0x819EA240u  /* _Main.rel data: 41 Extreme Gear records of 0x1D0 bytes (game_mods.c) */
 
 /* dvd.c statics (hang dumps only) */

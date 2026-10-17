@@ -374,11 +374,7 @@ static void efb_copy(uint32_t v) {
                 if (df) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, df); fclose(df); rt_log("[gx] guest RAM dumped to build/ram.bin"); }
             }
         }
-        /* the Chaos Emerald gear unlocked (settings.h): kept set once a frame, as the save loads */
-        if (g_settings.chaos_emerald) {
-            uint8_t* st = mem_phys((GAME_GEAR_STATUS + GAME_GEAR_CHAOS_EMERALD) & 0x3FFFFFFF);
-            if (*st == 0) *st = 2;
-        }
+        game_mods_frame();
         push_cmd(GXC_PRESENT);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
@@ -446,9 +442,11 @@ static void efb_copy(uint32_t v) {
                 static unsigned long long st0, by0;
                 static uint64_t draw_t0;
                 static unsigned long long verts0;
+                uint64_t gx_gp_busy_ticks(void);
                 rt_log("[perf]   GX pipe: %llu stores/frame (%llu KB); draw processing %.2f ms/frame (lookups included), "
-                       "%llu vertices/frame", (g_pipe_stores - st0) / 120, (g_pipe_bytes - by0) / 120 >> 10,
-                       (g_draw_total - draw_t0) * 1000.0 / 40500000.0 / 120, (g_verts_total - verts0) / 120);
+                       "%llu vertices/frame; GP thread busy %.2f ms/frame", (g_pipe_stores - st0) / 120,
+                       (g_pipe_bytes - by0) / 120 >> 10, (g_draw_total - draw_t0) * 1000.0 / 40500000.0 / 120,
+                       (g_verts_total - verts0) / 120, gx_gp_busy_ticks() * 1000.0 / 40500000.0 / 120);
                 draw_t0 = g_draw_total;
                 verts0 = g_verts_total;
                 st0 = g_pipe_stores;

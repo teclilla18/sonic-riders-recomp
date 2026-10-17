@@ -114,18 +114,24 @@ static void pe_token(uint16_t token, int irq) {
     if (raise) os_raise_interrupt(OS_INTERRUPT_PI_PE_TOKEN);
 }
 
+/* BP registers whose write is an action (draw done, tokens, EFB copy, TLUT load), not only state */
+static int bp_is_action(uint32_t reg) { return reg == 0x45 || reg == 0x47 || reg == 0x48 || reg == 0x52 || reg == 0x65; }
+
 static void load_bp(uint32_t v) {
     uint32_t reg = v >> 24, val = v & 0xFFFFFF;
-    g_gx.regs_dirty = 1;
     if (reg >= 0xE0 && reg <= 0xE7 && (val >> 23)) {  /* konstant color: same address, type bit set */
+        if (g_gx.konst[reg - 0xE0] == val) return;  /* games rewrite unchanged state: nothing to snapshot */
         g_gx.konst[reg - 0xE0] = val;
+        g_gx.regs_dirty = 1;
         gx_bp_written(reg, val);
         return;
     }
     if (reg != 0xFE) {  /* BP mask register: the next write only changes the masked bits */
-        uint32_t m = g_gx.bp_mask;
-        g_gx.bp[reg] = (g_gx.bp[reg] & ~m) | (val & m);
+        uint32_t m = g_gx.bp_mask, nv = (g_gx.bp[reg] & ~m) | (val & m);
         g_gx.bp_mask = 0xFFFFFF;
+        if (nv == g_gx.bp[reg] && !bp_is_action(reg)) return;
+        g_gx.bp[reg] = nv;
+        g_gx.regs_dirty = 1;
     } else {
         g_gx.bp_mask = val;
         return;
@@ -142,12 +148,22 @@ static void load_bp(uint32_t v) {
 void gx_state_dirty(void);
 
 static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
-    gx_state_dirty();
+    int changed = 0;
     for (uint32_t i = 0; i < n; i++, addr++) {
         uint32_t v = rd32(data + 4 * i);
-        if (addr < 0x1000) { g_gx.xf_mem[addr] = v; g_gx.xfm_dirty |= 1u << ((addr >> 6) & 31); }
-        else if (addr < 0x1100) { g_gx.xf_reg[addr - 0x1000] = v; g_gx.regs_dirty = 1; }
+        if (addr < 0x1000) {
+            if (g_gx.xf_mem[addr] == v) continue;
+            g_gx.xf_mem[addr] = v;
+            g_gx.xfm_dirty |= 1u << ((addr >> 6) & 31);
+            changed = 1;
+        } else if (addr < 0x1100) {
+            if (g_gx.xf_reg[addr - 0x1000] == v) continue;
+            g_gx.xf_reg[addr - 0x1000] = v;
+            g_gx.regs_dirty = 1;
+            changed = 1;
+        }
     }
+    if (changed) gx_state_dirty();
 }
 
 /* LOAD_INDX_A..D: copy n words from an indexed array element into XF memory */
@@ -155,10 +171,12 @@ static void load_indexed(int array, uint32_t v) {
     uint32_t index = v >> 16, n = ((v >> 12) & 0xF) + 1, addr = v & 0xFFF;
     uint32_t base = g_gx.cp[0xA0 + 12 + array] & 0x3FFFFFFF, stride = g_gx.cp[0xB0 + 12 + array] & 0xFF;
     uint32_t src = 0x80000000u | (base + index * stride);
-    gx_state_dirty();
     for (uint32_t i = 0; i < n && addr + i < 0x1000; i++) {
-        g_gx.xf_mem[addr + i] = ld32(src + 4 * i);
+        uint32_t w = ld32(src + 4 * i);
+        if (g_gx.xf_mem[addr + i] == w) continue;
+        g_gx.xf_mem[addr + i] = w;
         g_gx.xfm_dirty |= 1u << (((addr + i) >> 6) & 31);
+        gx_state_dirty();
     }
 }
 
@@ -261,6 +279,8 @@ static atomic_int g_gp_sleeping;
 static mtx_t g_gp_lock;
 static cnd_t g_gp_cv, g_space_cv;
 static int g_gx_async = 1;
+static _Atomic uint64_t g_gp_busy;  /* ticks the GP thread spent parsing (draw processing included) */
+uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
 
 static void ring_push(const uint8_t* b, size_t n) {
     size_t head = atomic_load_explicit(&g_ring_head, memory_order_relaxed);
@@ -277,7 +297,9 @@ static void ring_push(const uint8_t* b, size_t n) {
         }
         mtx_unlock(&g_gp_lock);
     }
-    for (size_t k = 0; k < n; k++) g_ring[(head + k) & (RING_SIZE - 1)] = b[k];
+    size_t off = head & (RING_SIZE - 1), first = n < RING_SIZE - off ? n : RING_SIZE - off;
+    memcpy(g_ring + off, b, first);
+    memcpy(g_ring, b + first, n - first);
     atomic_store_explicit(&g_ring_head, head + n, memory_order_release);
     if (atomic_load_explicit(&g_gp_sleeping, memory_order_acquire)) {
         mtx_lock(&g_gp_lock);
@@ -290,6 +312,7 @@ static int gp_thread(void* arg) {
     (void)arg;
     rt_thread_pin(2);
     rt_thread_lower_priority();
+    profile_register_thread();
     for (;;) {
         size_t tail = atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
         size_t head = atomic_load_explicit(&g_ring_head, memory_order_acquire);
@@ -304,7 +327,9 @@ static int gp_thread(void* arg) {
         size_t off = tail & (RING_SIZE - 1), n = head - tail;
         if (n > RING_SIZE - off) n = RING_SIZE - off;  /* up to the end of the ring; the rest next time */
         if (n > 65536) n = 65536;
+        uint64_t t0 = rt_ticks();
         gp_feed(g_ring + off, n);
+        atomic_fetch_add_explicit(&g_gp_busy, rt_ticks() - t0, memory_order_relaxed);
         atomic_store_explicit(&g_ring_tail, tail + n, memory_order_release);
         if (head + 65536 - (tail + n) > RING_SIZE) {  /* the producer may be waiting for space */
             mtx_lock(&g_gp_lock);
@@ -323,12 +348,33 @@ void gx_pipe_write(uint32_t v, int size) {
     pipe_write(v, size);
     g_ppc_cur_fn = prev;
 }
+/* The write-gather pipe collects stores into 32-byte bursts, as the hardware's does (the SDK's GXFlush
+ * pads with 32 zero bytes to push the last one out); a burst goes to RAM and the GP at once. Accesses
+ * to the PI and CP registers flush a partial one first (the game may be reading the FIFO pointers). */
+static uint8_t g_wg[32 + 4];  /* room for a store that crosses the 32-byte boundary */
+static int g_wg_n;
+static void burst_out(const uint8_t* b, int size);
+
+static void pipe_flush(void) {
+    if (!g_wg_n) return;
+    int n = g_wg_n;
+    g_wg_n = 0;
+    burst_out(g_wg, n);
+}
+
 static void pipe_write(uint32_t v, int size) {
-    uint8_t b[4];
-    for (int k = 0; k < size; k++) b[k] = (uint8_t)(v >> (8 * (size - 1 - k)));
     g_pipe_stores++;
     g_pipe_bytes += (unsigned)size;
-    /* into RAM at the PI write pointer: in one piece unless the FIFO wraps inside this store */
+    for (int k = 0; k < size; k++) g_wg[g_wg_n++] = (uint8_t)(v >> (8 * (size - 1 - k)));
+    if (g_wg_n >= 32) {  /* a full burst; a store crossing the boundary carries over */
+        burst_out(g_wg, 32);
+        g_wg_n -= 32;
+        memmove(g_wg, g_wg + 32, (size_t)g_wg_n);
+    }
+}
+
+static void burst_out(const uint8_t* b, int size) {
+    /* into RAM at the PI write pointer: in one piece unless the FIFO wraps inside this burst */
     uint32_t w = g_pi_wptr & 0x03FFFFFF;
     uint32_t end = g_pi_end ? (g_pi_end & 0x03FFFFFF) + 32 : 0;  /* end is inclusive of the last 32 bytes */
     if (g_pi_end && w + (uint32_t)size < end && w + (uint32_t)size <= GUEST_RAM_SIZE) {
@@ -356,18 +402,21 @@ static void pipe_write(uint32_t v, int size) {
 
 /* ---- register blocks ---- */
 uint32_t gx_cp_read(uint32_t off, int size) {
+    pipe_flush();
     off &= 0x7F;
     if (off == 0x00) return 0x000C;  /* SR: GP read idle + command idle */
     if (size == 4) return (uint32_t)g_cp_mmio[off >> 1] << 16 | g_cp_mmio[(off >> 1) + 1];
     return g_cp_mmio[off >> 1];
 }
 void gx_cp_write(uint32_t off, uint32_t v, int size) {
+    pipe_flush();
     off &= 0x7F;
     if (size == 4) { g_cp_mmio[off >> 1] = (uint16_t)(v >> 16); g_cp_mmio[(off >> 1) + 1] = (uint16_t)v; }
     else g_cp_mmio[off >> 1] = (uint16_t)v;
 }
 
 uint32_t gx_pe_read(uint32_t off, int size) {
+    pipe_flush();  /* a game polling draw sync tokens waits for commands still in the gather buffer */
     off &= 0xFF;
     mtx_lock(&g_pe_lock);
     uint32_t v = size == 4 ? (uint32_t)g_pe_mmio[off >> 1] << 16 | g_pe_mmio[(off >> 1) + 1] : g_pe_mmio[off >> 1];
@@ -375,6 +424,7 @@ uint32_t gx_pe_read(uint32_t off, int size) {
     return v;
 }
 void gx_pe_write(uint32_t off, uint32_t v, int size) {
+    pipe_flush();
     off &= 0xFF;
     if (off == 0x0A) {  /* writing a 1 to a status bit clears it; the enable bits are stored */
         mtx_lock(&g_pe_lock);
@@ -389,6 +439,7 @@ void gx_pe_write(uint32_t off, uint32_t v, int size) {
 /* PI: interrupt cause/mask (0x00/0x04), FIFO base/end/write pointer (0x0C/0x10/0x14) */
 uint32_t gx_pi_read(uint32_t off, int size) {
     (void)size;
+    pipe_flush();
     off &= 0xFF;
     switch (off) {
     case 0x0C: return g_pi_base;
@@ -400,6 +451,7 @@ uint32_t gx_pi_read(uint32_t off, int size) {
 }
 void gx_pi_write(uint32_t off, uint32_t v, int size) {
     (void)size;
+    pipe_flush();
     off &= 0xFF;
     switch (off) {
     case 0x0C: g_pi_base = v & 0x03FFFFE0; break;
@@ -410,6 +462,8 @@ void gx_pi_write(uint32_t off, uint32_t v, int size) {
 }
 
 int gx_async(void) { return g_gx_async; }
+/* the game thread has nothing to run (sched.c): what it wrote reaches the GP now */
+void gx_pipe_idle(void) { pipe_flush(); }
 
 void gx_init(void) {
     g_gx.bp_mask = 0xFFFFFF;

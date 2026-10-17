@@ -12,6 +12,8 @@
 
 #define OS_INTERRUPT_TABLE 0x80003040u
 
+int dsp_irq_asserted(int id);  /* dsp.c */
+
 static _Atomic uint32_t g_pending;  /* bit (0x80000000 >> id): raised, not delivered yet */
 static _Atomic int g_posted;        /* a delivery item is queued */
 
@@ -28,6 +30,7 @@ static void dispatch_all(Cpu* ic, void* arg) {
             atomic_fetch_or(&g_pending, bit);
             continue;
         }
+        if (id >= 5 && id <= 7 && !dsp_irq_asserted(id)) continue;  /* acknowledged meanwhile: not pending any more */
         uint32_t handler = ld32(OS_INTERRUPT_TABLE + 4 * (uint32_t)id);
         if (id == 21) dbg_event(5, 0, 0);  /* DVD */
         if (!handler) continue;

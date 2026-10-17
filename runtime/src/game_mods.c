@@ -45,6 +45,28 @@ void game_mods_apply(void) {
            SHOWN(getf(emerald + GEAR_LEVEL_BOOST(2))));
 }
 
+/* Once a frame: a racer's live per-level stats (player record +0x8DC, three blocks of 0x38 bytes,
+ * boost speed at +0x34 in each) are filled at race start, and Super Sonic's not from the gear table
+ * (the transformation makes him a separate character, Sonic + 14), so the boost is set there too.
+ * Only values that look like boost speeds (150-400 shown) are replaced: outside a race this memory
+ * holds other things. */
+void game_mods_frame(void) {
+    if (!g_linked) return;  /* before OSLink the REL's bss is other memory (the OS arena) */
+    /* the Chaos Emerald gear unlocked: its status byte kept "owned" as the save loads */
+    if (g_settings.chaos_emerald && ld8(GAME_GEAR_STATUS + GAME_GEAR_CHAOS_EMERALD) == 0)
+        st8(GAME_GEAR_STATUS + GAME_GEAR_CHAOS_EMERALD, 2);
+    if (!g_settings.super_sonic_fast) return;
+    for (int i = 0; i < 8; i++) {
+        uint32_t p = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
+        if (ld8(p + 0x1034) != GAME_GEAR_CHAOS_EMERALD) continue;
+        for (int l = 0; l < 3; l++) {
+            uint32_t ea = p + 0x8DC + 0x38u * (uint32_t)l + 0x34;
+            float shown = SHOWN(getf(ea));
+            if (shown >= 150.0f && shown <= 400.0f && shown != 350.0f) setf(ea, 350.0f / 216.0f);
+        }
+    }
+}
+
 void game_mods_linked(void) {
     uint32_t emerald = GEAR_RECORD(GAME_GEAR_CHAOS_EMERALD);
     g_orig_topmod = getf(emerald + GEAR_TOP_SPEED_MOD);
