@@ -1,10 +1,13 @@
 /* Guest side of the renderer: decodes draws and EFB copies from the GX command stream into the
  * current frame's command list (gx_render.h). Runs on the guest thread that writes the FIFO. */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "gx.h"
+#include "game_addrs.h"
 #include "gx_render.h"
+#include "settings.h"
 #include "overlay.h"
 #include "runtime.h"
 
@@ -358,6 +361,11 @@ static void efb_copy(uint32_t v) {
     c->copy[9] = v;
     c->copy[10] = dest;
     if (to_xfb) {
+        /* the Chaos Emerald gear unlocked (settings.h): kept set once a frame, as the save loads */
+        if (g_settings.chaos_emerald) {
+            uint8_t* st = mem_phys((GAME_GEAR_STATUS + GAME_GEAR_CHAOS_EMERALD) & 0x3FFFFFFF);
+            if (*st == 0) *st = 2;
+        }
         push_cmd(GXC_PRESENT);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
@@ -439,6 +447,30 @@ static void efb_copy(uint32_t v) {
                 rt_log("[perf]   ms/frame: textures %.2f, render wait %.2f, disc %.2f, guest idle %.2f; timer late avg %.3f max %.3f ms",
                        g_tex_ticks * ms, g_wait_ticks * ms, (di_read_ticks() - disc0) * ms, idle * ms, late_avg * ms * 120,
                        late_max * ms * 120);
+                {
+                    /* SR_PEEK=ADDR,LEN (hex): dump guest memory with each [perf] block (debugging) */
+                    static int peek_init;
+                    static uint32_t peek_addr, peek_len;
+                    if (!peek_init++) {
+                        const char* pk = getenv("SR_PEEK");
+                        if (pk) sscanf(pk, "%x,%x", &peek_addr, &peek_len);
+                    }
+                    /* SR_POKE=ADDR,BYTE (hex): keep a guest byte set (debugging) */
+                    static int poke_init;
+                    static uint32_t poke_addr, poke_val;
+                    if (!poke_init++) {
+                        const char* pk = getenv("SR_POKE");
+                        if (pk) sscanf(pk, "%x,%x", &poke_addr, &poke_val);
+                    }
+                    if (poke_addr) *mem_phys(poke_addr & 0x3FFFFFFF) = (uint8_t)poke_val;
+                    for (uint32_t o = 0; o < peek_len; o += 32) {
+                        char line[128];
+                        int n = snprintf(line, sizeof line, "[peek] %08X:", peek_addr + o);
+                        for (uint32_t k = o; k < o + 32 && k < peek_len; k++)
+                            n += snprintf(line + n, sizeof line - n, "%s%02X", (k & 3) ? "" : " ", *mem_phys((peek_addr + k) & 0x3FFFFFFF));
+                        rt_log("%s", line);
+                    }
+                }
                 {
                     void dsp_aram_stats(uint64_t*, uint64_t*);
                     void di_late_stats(uint64_t*, uint64_t*, uint64_t*);

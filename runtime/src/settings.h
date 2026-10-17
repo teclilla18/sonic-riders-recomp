@@ -11,6 +11,7 @@ typedef struct Settings {
     int screen;    /* SCREEN_*: 4:3 letterboxed, 16:9 widescreen (patched cameras), 16:9 stretched */
     int show_fps;  /* frame counter in the corner */
     int resolution;  /* RES_*: internal resolution of the Switch renderer (the PC build keeps 2x) */
+    int chaos_emerald;  /* the Chaos Emerald gear (Super Sonic) is unlocked; nothing else is (gx_render.c) */
 } Settings;
 
 enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };

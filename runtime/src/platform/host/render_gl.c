@@ -87,6 +87,7 @@ static GxFrame* g_pending;
 static volatile int g_quit;
 static int g_headless;
 static int g_shot_at;
+static int g_shot_list[32], g_nshots;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
 static unsigned g_presented;
 
 static GLuint compile(GLenum type, const char* src) {
@@ -336,6 +337,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             draw_overlay(ww, wh);
             g_presented++;
             int menu_shot = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
+            int listed = 0;
+            for (int k = 0; k < g_nshots; k++) listed |= g_presented == (unsigned)g_shot_list[k];
+            if (listed) g_shot_at = (int)g_presented;
             if (menu_shot || (g_shot_at && g_presented == (unsigned)g_shot_at)) {
                 uint8_t* px = malloc((size_t)ww * wh * 4);
                 p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
@@ -617,6 +621,8 @@ void render_start(void) {
     g_headless = h && *h == '1';
     const char* s = getenv("SR_SCREENSHOT");
     g_shot_at = s ? atoi(s) : 0;
+    for (const char* q = s; q && *q && g_nshots < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
+        g_shot_list[g_nshots++] = atoi(q);
     if (!g_headless && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();

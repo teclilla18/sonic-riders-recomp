@@ -6,7 +6,7 @@
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0, RES_1X};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1};
 volatile double g_aspect_scale = 1.0;
 
 const char* settings_screen_name(int mode) {
@@ -40,12 +40,14 @@ void settings_load(void) {
             if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
             else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
+            else if (!strcmp(line, "chaos_emerald")) g_settings.chaos_emerald = v != 0;
         }
         fclose(f);
     }
     apply();
-    rt_log("[settings] screen: %s, fps counter %s, resolution %s", settings_screen_name(g_settings.screen),
-           g_settings.show_fps ? "on" : "off", settings_resolution_name(g_settings.resolution));
+    rt_log("[settings] screen: %s, fps counter %s, resolution %s, Chaos Emerald gear %s", settings_screen_name(g_settings.screen),
+           g_settings.show_fps ? "on" : "off", settings_resolution_name(g_settings.resolution),
+           g_settings.chaos_emerald ? "unlocked" : "as in the save");
 }
 
 void settings_apply(void) {
@@ -55,6 +57,7 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\n", g_settings.screen, g_settings.show_fps, g_settings.resolution);
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\n", g_settings.screen, g_settings.show_fps,
+            g_settings.resolution, g_settings.chaos_emerald);
     fclose(f);
 }

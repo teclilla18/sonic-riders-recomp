@@ -16,6 +16,14 @@
 #define OS_RUNQUEUE_HINT    0x8021BCFCu
 #define OS_RESCHEDULE       0x8021BD00u
 
+/* _Main.rel: the unlock data (REL bss at the runtime's fixed 819FF380; a GameCube runs it from 805FB080,
+ * where these are 806A9048 / 806A90A0). One status byte per Extreme Gear (0 locked, 1 the default gear,
+ * 2 owned) and per character. The Chaos Emerald is gear 18: race code tests the player's gear
+ * (player +0x1034) against 18 and 19, the two gears that run on rings. */
+#define GAME_GEAR_STATUS     0x81AAD348u
+#define GAME_GEAR_CHAOS_EMERALD 18
+#define GAME_CHAR_STATUS     0x81AAD3A0u
+
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */
 #define DVD_PAUSE_FLAG       0x8021BD8Cu
