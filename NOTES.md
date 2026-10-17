@@ -474,3 +474,12 @@ Each library gets its own `mw_version`. Steps:
 - PC: two full-route race loads, no loading hang this time.
 - **Open: EFB Z peeks.** The game reads `C85xxxxx` (EFB Z, bit 22) during races, probably lens-flare occlusion; mmio returns 0 (= nearest, so always occluded). Fix: queue peek coordinates, read depth back on the render thread, answer with last frame's value.
 - Next hardware test: race fps with the FPS counter, screenshots ("Save screenshot") of missing water / Metal City floor / racer faces.
+
+### Session 2026-10-16 (c)
+- **Face culling was inverted in both backends** (the cause of missing floors/water, see-through walls, dark characters). Proof: in a race frame's `SR_GXDEBUG` dump, every camera-facing triangle (by its vertex normals) is clockwise on screen, so GX front = CW. GL: `glFrontFace(GL_CCW)` (EFB stored upside down in GL window space); deko3d: `DkFrontFace_CW`.
+- **Guest memory helpers forced inline** (`PPC_ALWAYS_INLINE` in ppc.h): GCC had left ~130K `ld32`/`st32`/... call sites as real calls in the Switch build (clang inlined them on PC, so the PC profile never showed it). NRO 18 -> 30 MB.
+- Hardware test 8 (before both fixes): race frame = game code ~23 ms + draw processing ~8 ms -> 30 fps.
+- Disc DMA now lands at command completion (on the di_timer thread), as on hardware.
+- **Loading hang (still open, PC, ~1 in 3 runs, more when the PC is busy):** not the disc. The last read of a short stream file completes, the loader (81A93B68) idles at 8194DF20, the stream consumer thread 81A93E80 (prio 31) spins forever in its loop at 8194DD4C calling the stream parser f_819594F4, which keeps returning "not ready"; the game thread waits for the stream in 8194CCBC/8194BEC0. DVD library state is clean (executing NULL, no fatal). In both captured hangs the pump thread 81A93850 resumed the loader between the read's completion (TCINT set by di_timer) and the interrupt's delivery. Next: what f_819594F4 waits for (status byte at stream struct +0x22, r29 = 81A8F3A0), and whether delivering TCINT atomically with the interrupt (from a guest-side irq callback) changes the rate.
+- Test windows: PC `SR_MINIMIZED` (build/run.ps1 sets it); Eden starts `-WindowStyle Hidden` (minimized crashes Eden: zero-size surface).
+- Open: EFB Z peeks return 0 (lens flare occlusion).
