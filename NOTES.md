@@ -505,3 +505,10 @@ Each library gets its own `mw_version`. Steps:
 - **Player array**: 0x81A0D740, 8 x 0x1080; +0x1034 gear id, +0x1E4 position, per-level stats copied at +0x8DC/+0x914/+0x94C.
 - **Camera** (for the C-stick look-back request): block at 0x81A05D74 (0x38-byte entries per viewport), eye at +0x14, target at +0x20; view matrix at 0x81A0583C. The writer of the view matrix / eye is not found yet; the game frustum-culls, so look-back must move the game's camera, not only the view matrix. Next: a PC debug build with a store watchpoint in st32 to find the writers.
 - SR_PEEK / SR_POKE / SR_DUMPRAM / SR_SCREENSHOT=list debug options (desktop).
+
+### Hardware test 11 (2026-10-17) and follow-up
+- User: Super Sonic cruise 230-231 (the +50 worked), boost unchanged (wanted 350); Metal City half smooth, half 30 fps.
+- Log: at 30 fps the game core was ~45% idle waiting for the GP thread; draw processing 8-10 ms + parsing on the GP thread; "GX FIFO" on the game core ~18% (per-store ring push).
+- Changes: 32-byte write-gather bursts (pipe_write -> burst_out; flushed on PI/CP/PE access and in the scheduler's idle wait, otherwise the game can wait on a command still in the buffer); unchanged BP/konst/XF writes no longer dirty state; [perf] "GP thread busy"; Super Sonic: the transformation makes him character Sonic+14 (f_8188BE1C plays the voice), his live level stats are not from the gear table, so game_mods_frame sets the racer's boost fields (+0x8DC+0x38*l+0x34) to 350 for gear-18 racers when they look like boost speeds.
+- **Boot hang fixed:** latched DSP-side interrupts were delivered after the game had acknowledged them; the SDK DSP handler (fn_8002612C) then waits for mail with interrupts off forever (polls 80025E5C). os_irq.c now asks dsp_irq_asserted() before delivering ids 5-7. Also the Chaos Emerald byte is only written after OSLink (before it, that memory is the OS arena).
+- SR_LOGSYNC=1 flushes every log line (find where a hang stops).
