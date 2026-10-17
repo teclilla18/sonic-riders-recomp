@@ -251,17 +251,26 @@ static void apply_state(const GxUniforms* u) {
     glDepthMask((z >> 4) & 1 ? GL_TRUE : GL_FALSE);
     /* blending and write masks */
     uint32_t cm = u->bp[0x41];
-    static const GLenum sf[8] = {GL_ZERO, GL_ONE, GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-                                 GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA};
-    static const GLenum df[8] = {GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-                                 GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA};
+    /* source alpha = the shader's second output (the TEV alpha; the first carries the stored alpha,
+     * which BP 0x42 can make a constant); destination alpha reads 1 when the EFB format has none */
+    enum { SRC1_ALPHA = 0x8589, ONE_MINUS_SRC1_ALPHA = 0x88FB };
+    int efb_alpha = (u->bp[0x43] & 7) == 1;  /* RGBA6_Z24 */
+    const GLenum sf[8] = {GL_ZERO, GL_ONE, GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, SRC1_ALPHA, ONE_MINUS_SRC1_ALPHA,
+                          efb_alpha ? GL_DST_ALPHA : GL_ONE, efb_alpha ? GL_ONE_MINUS_DST_ALPHA : GL_ZERO};
+    const GLenum df[8] = {GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, SRC1_ALPHA, ONE_MINUS_SRC1_ALPHA,
+                          efb_alpha ? GL_DST_ALPHA : GL_ONE, efb_alpha ? GL_ONE_MINUS_DST_ALPHA : GL_ZERO};
+    int const_alpha = (u->bp[0x42] >> 8) & 1;  /* the stored alpha is the constant: written as is */
     static int no_ab = -1;  /* SR_NOALPHABLEND: depth-writing src-alpha blends drawn opaque (debugging) */
     if (no_ab < 0) no_ab = getenv("SR_NOALPHABLEND") != NULL;
     if (no_ab && (cm & 1) && ((cm >> 8) & 7) == 4 && ((cm >> 5) & 7) == 5 && ((z >> 4) & 1)) cm &= ~1u;
     if (cm & 1) {
         glEnable(GL_BLEND);
         if ((cm >> 11) & 1) { p_glBlendEquation(0x800B /* GL_FUNC_REVERSE_SUBTRACT */); glBlendFunc(GL_ONE, GL_ONE); }
-        else { p_glBlendEquation(0x8006 /* GL_FUNC_ADD */); glBlendFunc(sf[(cm >> 8) & 7], df[(cm >> 5) & 7]); }
+        else {
+            p_glBlendEquation(0x8006 /* GL_FUNC_ADD */);
+            GLenum s = sf[(cm >> 8) & 7], d = df[(cm >> 5) & 7];
+            p_glBlendFuncSeparate(s, d, const_alpha ? GL_ONE : s, const_alpha ? GL_ZERO : d);
+        }
     } else {
         glDisable(GL_BLEND);
     }
@@ -459,8 +468,9 @@ static void execute(GxFrame* f) {
                         n += snprintf(t + n, sizeof t - n, " t%d=%d(%ux%u%s)", m, c->tex[m], gt ? gt->width : 0,
                                       gt ? gt->height : 0, gt && gt->is_copy ? " copy" : "");
                     }
-                rt_log("[gxdbg] draw prim %u verts %u stages %u genmode %06X ind %u%s | z %06X blend %06X", c->prim, c->b,
-                       ((cur->bp[0] >> 10) & 15) + 1, cur->bp[0], (cur->bp[0] >> 16) & 7, t, cur->bp[0x40], cur->bp[0x41]);
+                rt_log("[gxdbg] draw prim %u verts %u stages %u genmode %06X ind %u%s | z %06X blend %06X dstalpha %06X pe %06X",
+                       c->prim, c->b, ((cur->bp[0] >> 10) & 15) + 1, cur->bp[0], (cur->bp[0] >> 16) & 7, t, cur->bp[0x40],
+                       cur->bp[0x41], cur->bp[0x42], cur->bp[0x43]);
                 /* the first draw of each genmode in full: TEV stages, channel controls, ambient/material */
                 static uint32_t seen[64];
                 static int nseen;

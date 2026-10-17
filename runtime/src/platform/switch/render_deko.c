@@ -346,10 +346,16 @@ static void apply_state(const GxUniforms* u) {
     dkCmdBufBindDepthStencilState(g_cmd, &ds);
 
     uint32_t cm = u->bp[0x41];
-    static const DkBlendFactor sf[8] = {DkBlendFactor_Zero, DkBlendFactor_One, DkBlendFactor_DstColor, DkBlendFactor_InvDstColor,
-                                        DkBlendFactor_SrcAlpha, DkBlendFactor_InvSrcAlpha, DkBlendFactor_DstAlpha, DkBlendFactor_InvDstAlpha};
-    static const DkBlendFactor df[8] = {DkBlendFactor_Zero, DkBlendFactor_One, DkBlendFactor_SrcColor, DkBlendFactor_InvSrcColor,
-                                        DkBlendFactor_SrcAlpha, DkBlendFactor_InvSrcAlpha, DkBlendFactor_DstAlpha, DkBlendFactor_InvDstAlpha};
+    /* source alpha = the shader's second output (the TEV alpha; the first carries the stored alpha,
+     * which BP 0x42 can make a constant); destination alpha reads 1 when the EFB format has none */
+    int efb_alpha = (u->bp[0x43] & 7) == 1;  /* RGBA6_Z24 */
+    const DkBlendFactor da = efb_alpha ? DkBlendFactor_DstAlpha : DkBlendFactor_One;
+    const DkBlendFactor ida = efb_alpha ? DkBlendFactor_InvDstAlpha : DkBlendFactor_Zero;
+    const DkBlendFactor sf[8] = {DkBlendFactor_Zero, DkBlendFactor_One, DkBlendFactor_DstColor, DkBlendFactor_InvDstColor,
+                                 DkBlendFactor_Src1Alpha, DkBlendFactor_InvSrc1Alpha, da, ida};
+    const DkBlendFactor df[8] = {DkBlendFactor_Zero, DkBlendFactor_One, DkBlendFactor_SrcColor, DkBlendFactor_InvSrcColor,
+                                 DkBlendFactor_Src1Alpha, DkBlendFactor_InvSrc1Alpha, da, ida};
+    int const_alpha = (u->bp[0x42] >> 8) & 1;
     DkColorState cs;
     dkColorStateDefaults(&cs);
     dkColorStateSetBlendEnable(&cs, 0, cm & 1);
@@ -362,7 +368,7 @@ static void apply_state(const GxUniforms* u) {
     } else {
         dkBlendStateSetOps(&bs, DkBlendOp_Add, DkBlendOp_Add);
         DkBlendFactor s = sf[(cm >> 8) & 7], d = df[(cm >> 5) & 7];
-        dkBlendStateSetFactors(&bs, s, d, s, d);
+        dkBlendStateSetFactors(&bs, s, d, const_alpha ? DkBlendFactor_One : s, const_alpha ? DkBlendFactor_Zero : d);
     }
     dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
     DkColorWriteState cw;

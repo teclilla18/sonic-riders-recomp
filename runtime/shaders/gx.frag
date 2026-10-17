@@ -19,7 +19,8 @@ SAMPLER(4) uniform sampler2D u_tex4;
 SAMPLER(5) uniform sampler2D u_tex5;
 SAMPLER(6) uniform sampler2D u_tex6;
 SAMPLER(7) uniform sampler2D u_tex7;
-layout(location = 0) out vec4 o_color;
+layout(location = 0) out vec4 o_color;            // color, and the alpha the EFB stores
+layout(location = 0, index = 1) out vec4 o_blend;  // .a: the TEV alpha the blend factors use
 vec3 coord(uint i) {
   return i == 0u ? v_tex0 : i == 1u ? v_tex1 : i == 2u ? v_tex2 : i == 3u ? v_tex3 :
          i == 4u ? v_tex4 : i == 5u ? v_tex5 : i == 6u ? v_tex6 : v_tex7;
@@ -209,9 +210,11 @@ void main() {
   uint lg = bits(ac, 22, 2);
   bool pass = lg == 0u ? (t0 && t1) : lg == 1u ? (t0 || t1) : lg == 2u ? (t0 != t1) : (t0 == t1);
   if (!pass) discard;
+  /* blending uses the TEV alpha (second source); the "destination alpha" register only sets the
+     alpha the EFB stores. (The backends read DSTALPHA as 1 when the EFB format has no alpha.) */
+  o_blend = vec4(0.0, 0.0, 0.0, o.a);
   uint cm1 = BP(0x42);
   if (bits(cm1, 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
-  else if (bits(BP(0x43), 0, 3) != 1u) o.a = 1.0;  /* EFB formats without alpha */
-  if (DEBUG_SHOW_ALPHA != 0) o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0);  /* the TEV alpha as gray (debugging) */
+  if (DEBUG_SHOW_ALPHA != 0) { o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0); o_blend = vec4(1.0); }  /* the TEV alpha as gray */
   o_color = o;
 }
