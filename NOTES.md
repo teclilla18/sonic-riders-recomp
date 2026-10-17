@@ -512,3 +512,7 @@ Each library gets its own `mw_version`. Steps:
 - Changes: 32-byte write-gather bursts (pipe_write -> burst_out; flushed on PI/CP/PE access and in the scheduler's idle wait, otherwise the game can wait on a command still in the buffer); unchanged BP/konst/XF writes no longer dirty state; [perf] "GP thread busy"; Super Sonic: the transformation makes him character Sonic+14 (f_8188BE1C plays the voice), his live level stats are not from the gear table, so game_mods_frame sets the racer's boost fields (+0x8DC+0x38*l+0x34) to 350 for gear-18 racers when they look like boost speeds.
 - **Boot hang fixed:** latched DSP-side interrupts were delivered after the game had acknowledged them; the SDK DSP handler (fn_8002612C) then waits for mail with interrupts off forever (polls 80025E5C). os_irq.c now asks dsp_irq_asserted() before delivering ids 5-7. Also the Chaos Emerald byte is only written after OSLink (before it, that memory is the OS arena).
 - SR_LOGSYNC=1 flushes every log line (find where a hang stops).
+
+### 2026-10-17: Super Sonic speed changes removed at the user's request
+- The gear-table edit and the per-frame racer boost writes (game_mods.c) are gone; the setting key super_sonic_fast is ignored if present. The data notes above stay for later work (Super Shadow).
+- Hardware test 12: Metal City and Sand Ruins at 60 fps about 90% of the time; a little see-through wall/floor left.
