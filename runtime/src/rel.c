@@ -18,5 +18,6 @@ void hle_OSLink(Cpu* c) {
     st32(m + 0x3C, 0);             /* unresolved: none */
     rt_log("[rel] OSLink(%08X, bss %08X): module %u runs from its fixed image at %08X (prolog %08X)", m, bss, id,
            g_rel_base, g_rel_prolog);
+    game_mods_linked();
     c->r[3] = 1;
 }

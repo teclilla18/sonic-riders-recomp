@@ -23,6 +23,7 @@
 #define GAME_GEAR_STATUS     0x81AAD348u
 #define GAME_GEAR_CHAOS_EMERALD 18
 #define GAME_CHAR_STATUS     0x81AAD3A0u
+#define GAME_GEAR_TABLE      0x819EA240u  /* _Main.rel data: 41 Extreme Gear records of 0x1D0 bytes (game_mods.c) */
 
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */

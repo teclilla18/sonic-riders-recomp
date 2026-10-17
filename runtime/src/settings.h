@@ -12,6 +12,7 @@ typedef struct Settings {
     int show_fps;  /* frame counter in the corner */
     int resolution;  /* RES_*: internal resolution of the Switch renderer (the PC build keeps 2x) */
     int chaos_emerald;  /* the Chaos Emerald gear (Super Sonic) is unlocked; nothing else is (gx_render.c) */
+    int super_sonic_fast;  /* Super Sonic: top speed +50, boost 350 (game_mods.c) */
 } Settings;
 
 enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };

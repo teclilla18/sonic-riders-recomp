@@ -16,7 +16,7 @@
 #define HOLD_TICKS (40500000ull / 2)  /* Minus held this long opens the menu (0.5 s) */
 #define TEXT_SCALE 2
 
-enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_SUPER, ITEM_SHOT, ITEM_CLOSE, ITEMS };
 static int g_shot_request;
 
 int overlay_take_screenshot_request(void) {
@@ -84,6 +84,7 @@ int overlay_input(unsigned held) {
         case ITEM_RES: g_settings.resolution = (g_settings.resolution + RES_MODES + step) % RES_MODES; settings_apply(); break;
         case ITEM_FPS: g_settings.show_fps = !g_settings.show_fps; settings_apply(); break;
         case ITEM_EMERALD: g_settings.chaos_emerald = !g_settings.chaos_emerald; settings_apply(); break;
+        case ITEM_SUPER: g_settings.super_sonic_fast = !g_settings.super_sonic_fast; settings_apply(); break;
         case ITEM_SHOT:
             if (pressed & OV_ACCEPT) {
                 close_menu();
@@ -148,6 +149,7 @@ static void redraw(void) {
     snprintf(lines[ITEM_RES], 64, "Resolution:  < %s >", settings_resolution_name(g_settings.resolution));
     snprintf(lines[ITEM_FPS], 64, "FPS counter:  < %s >", g_settings.show_fps ? "On" : "Off");
     snprintf(lines[ITEM_EMERALD], 64, "Unlock Chaos Emerald gear:  < %s >", g_settings.chaos_emerald ? "On" : "Off");
+    snprintf(lines[ITEM_SUPER], 64, "Faster Super Sonic:  < %s >", g_settings.super_sonic_fast ? "On" : "Off");
     snprintf(lines[ITEM_SHOT], 64, "Save screenshot (A)");
     snprintf(lines[ITEM_CLOSE], 64, "Close");
     for (int i = 0; i < ITEMS; i++) {

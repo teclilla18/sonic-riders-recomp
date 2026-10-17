@@ -365,6 +365,15 @@ static void efb_copy(uint32_t v) {
     c->copy[9] = v;
     c->copy[10] = dest;
     if (to_xfb) {
+        /* SR_DUMPRAM=FRAME: guest RAM to build/ram.bin at that presented frame (debugging, desktop) */
+        {
+            static int dump_at = -1;
+            if (dump_at < 0) dump_at = getenv("SR_DUMPRAM") ? atoi(getenv("SR_DUMPRAM")) : 0;
+            if (dump_at && g_frames + 1 == (unsigned)dump_at) {
+                FILE* df = fopen("build/ram.bin", "wb");
+                if (df) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, df); fclose(df); rt_log("[gx] guest RAM dumped to build/ram.bin"); }
+            }
+        }
         /* the Chaos Emerald gear unlocked (settings.h): kept set once a frame, as the save loads */
         if (g_settings.chaos_emerald) {
             uint8_t* st = mem_phys((GAME_GEAR_STATUS + GAME_GEAR_CHAOS_EMERALD) & 0x3FFFFFFF);
