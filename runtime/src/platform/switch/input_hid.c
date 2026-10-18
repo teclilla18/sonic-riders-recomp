@@ -26,6 +26,7 @@ enum { B_LEFT = 0x1, B_RIGHT = 0x2, B_DOWN = 0x4, B_UP = 0x8, B_Z = 0x10, B_R = 
 #define PLAYERS 4
 
 static PadState g_pad[PLAYERS];
+static PadState g_handheld;  /* the console's attached Joy-Cons: player 1 when No1 has no controller */
 static _Atomic uint64_t g_state[PLAYERS];
 static _Atomic int g_connected[PLAYERS];
 static int g_logged[PLAYERS];  /* last style set logged per player */
@@ -46,7 +47,10 @@ void input_init(void) {
     padConfigureInput(PLAYERS, HidNpadStyleSet_NpadStandard);
     /* single Joy-Cons are held sideways (only matters once the user splits a pair) */
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
-    padInitialize(&g_pad[0], HidNpadIdType_No1, HidNpadIdType_Handheld);
+    /* player 1's controller and handheld mode are read separately: one combined PadState reported
+     * a sideways single Joy-Con on No1 as "handheld", and it got the two-handed mapping */
+    padInitialize(&g_pad[0], HidNpadIdType_No1);
+    padInitialize(&g_handheld, HidNpadIdType_Handheld);
     padInitialize(&g_pad[1], HidNpadIdType_No2);
     padInitialize(&g_pad[2], HidNpadIdType_No3);
     padInitialize(&g_pad[3], HidNpadIdType_No4);
@@ -75,15 +79,28 @@ static void show_controller_applet(void) {
 /* one player's buttons/sticks; *ov gets the menu buttons (player 1 only) */
 static GcPad read_player(int i, unsigned* ov) {
     PadState* pad = &g_pad[i];
+    int handheld = 0;
+    if (i == 0 && !padIsConnected(pad) && padIsConnected(&g_handheld)) {
+        pad = &g_handheld;
+        handheld = 1;
+    }
     u64 b = padGetButtons(pad);
     u32 style = padGetStyleSet(pad);
-    int handheld = padIsHandheld(pad);
+    u32 attr = padGetAttributes(pad);
     GcPad p = k_neutral;
     unsigned o = 0;
-    if (!handheld && (style & (HidNpadStyleTag_NpadJoyLeft | HidNpadStyleTag_NpadJoyRight)) &&
-        !(style & (HidNpadStyleTag_NpadJoyDual | HidNpadStyleTag_NpadFullKey))) {
+    /* a lone Joy-Con: assigned singly (JoyLeft/JoyRight style), or still in dual mode with only one
+     * half connected; either way it is held sideways */
+    int single_left = (style & HidNpadStyleTag_NpadJoyLeft) && !(style & HidNpadStyleTag_NpadJoyDual);
+    int single_right = (style & HidNpadStyleTag_NpadJoyRight) && !(style & HidNpadStyleTag_NpadJoyDual);
+    if (style & HidNpadStyleTag_NpadJoyDual) {
+        int l = (attr & HidNpadAttribute_IsLeftConnected) != 0, r = (attr & HidNpadAttribute_IsRightConnected) != 0;
+        if (l && !r) single_left = 1;
+        if (r && !l) single_right = 1;
+    }
+    if (!handheld && !(style & HidNpadStyleTag_NpadFullKey) && (single_left || single_right)) {
         /* a single Joy-Con held sideways */
-        int left = (style & HidNpadStyleTag_NpadJoyLeft) != 0;
+        int left = single_left;
         HidAnalogStickState s = padGetStickPos(pad, left ? 0 : 1);
         int x = left ? -s.y : s.y, y = left ? s.x : -s.x;
         p.stick_x = axis8(x); p.stick_y = axis8(y);
@@ -136,9 +153,12 @@ static GcPad read_player(int i, unsigned* ov) {
         if (b & HidNpadButton_A) o |= OV_ACCEPT;
         if (b & HidNpadButton_B) o |= OV_BACK;
     }
-    if ((int)style != g_logged[i]) {
-        g_logged[i] = (int)style;
-        if (style) rt_log("[input] player %d: controller style %X%s", i + 1, style, handheld ? " (handheld)" : "");
+    int tag = (int)(style | attr << 16);
+    if (tag != g_logged[i]) {
+        g_logged[i] = tag;
+        if (style)
+            rt_log("[input] player %d: controller style %X attributes %X%s%s", i + 1, style, attr, handheld ? " (handheld)" : "",
+                   !handheld && !(style & HidNpadStyleTag_NpadFullKey) && (single_left || single_right) ? " (single Joy-Con, sideways)" : "");
         else rt_log("[input] player %d: disconnected", i + 1);
     }
     *ov = o;
@@ -151,6 +171,7 @@ void input_pump(void) {
     unsigned ov = 0;
     for (int i = 0; i < PLAYERS; i++) {
         padUpdate(&g_pad[i]);
+        if (i == 0) padUpdate(&g_handheld);
         unsigned o;
         p[i] = read_player(i, &o);
         if (i == 0) ov = o;
