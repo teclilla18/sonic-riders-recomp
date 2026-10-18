@@ -535,13 +535,19 @@ Each library gets its own `mw_version`. Steps:
 - **Debug tools added (desktop):** `[crash]` handler (exception, address, guest-window offset, trace/threads dump); `[mmio] ... is not a device or EFB address` dumps the function trace once (with SR_WATCHDOG); `SR_WATCH=ADDR,VALUE` / `ADDR,~VALUE` (stops holding VALUE) / `ADDR,*[,A2,A3,A4]` (log every change with the VI field) - a spinning thread that also samples every host thread's RIP (`[sample] thread N at exe+OFF`, map with build/host/sonicriders.map); `SR_DVDLOG=1` logs every disc read by FST file name + offset, completions, and ARAM DMAs; trace ring 4096 entries (dump shows the last 256).
 - **Today's Switch log (hw test before this session, no user report):** slow race sections are now **GPU-bound** at 1x: render thread up to 33 ms/frame of which ~30 ms waiting for the GPU (hw14 log too). So the ahead-of-time specialized shader cache (plan above) is the next performance step, and it matters more for 2P/4P (2.5x the draws).
 
+### Hardware test 15 (2026-10-18), user report and follow-up (logs in build/switch/hw15/)
+- Multiple controllers work. With 3-4 players: 30 fps. Log (3 players, Metal City): ~7,500 draws/frame; render thread 6.5 ms, GPU wait 0; GP thread busy 12.5 ms; game thread only ~1.5 ms idle -> **the game thread (game code for 3-4 viewports + GX pipe stores) is the limit, not the GPU**. PC profile is useless here (PC 90% idle). Next: SR_PROFILE=1 on hardware during a 3-4 player race (env.txt with SR_PROFILE=1 is on the SD card now).
+- **Sideways Joy-Con bug:** player 1 used one PadState for No1 + Handheld, so a single left Joy-Con on player 1 reported style 0xA (JoyLeft + Handheld) and got the two-handed mapping. Fixed (commit 924c7df): handheld is a separate PadState used only when No1 has no controller; a JoyDual npad with only one half connected (attributes IsLeft/IsRightConnected) is also treated as a sideways single Joy-Con. Log line shows attributes and "(single Joy-Con, sideways)". Untested on hardware.
+- The 10 s / 24 s hitches in the log coincide with the system Controllers screen being open (the game is paused while it is up).
+- **NSP for the home screen (user request):** plan = forwarder NSP: nx-hbloader (build/ext/nx-hbloader, patched: DEFAULT_NRO = sdmc:/switch/sonicriders/sonicriders.nro, exit instead of reloading after the game returns; npdm config sonicriders.json, title id 0x010053520D9A0000) packed with hacBrewPack (source mirror rlaphoenix/hacBrewPack in build/ext) using the user's own keys, plus a NACP (nacptool) and a 256x256 JPEG icon. **Blocked**: the auto-mode safety check denied building/integrating downloaded third-party code; waiting for the user's permission. Note: the s_ranOnce edit to nx-hbloader's main.c did not apply yet (whitespace mismatch) - redo it.
+
 ## STATE 2026-10-18 - for the next session
-**On the user's SD card:** build EEC7AA75 (= commit 88ee47d: 4-player input + progressive disc DMA). The pre-session Switch logs are in build/switch/hw15pre/.
+**On the user's SD card:** build CFC53AB8 (= commit 924c7df: 4-player input, progressive disc DMA, Joy-Con fix) and env.txt with SR_PROFILE=1 (remove it after the profiling test).
 
 **Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
 
 **Open items, in order:**
-1. Hardware test 15 results (multiplayer input, single Joy-Con mapping, controller applet).
+1. Hardware test 16: sideways single Joy-Cons after the fix; a 3-4 player race with the profiler on (env.txt) -> optimize the game thread for split screen. NSP forwarder if the user allows it.
 2. **Specialized shader cache** (GPU-bound slow sections; split screen doubles/quadruples draws).
 3. Menus/HUD discoloration on Switch (need a screenshot of a glitch; compare PC). Splash Canyon HUD panels blocky in hw13/shot_35178.
 4. Rainbow road in Splash Canyon renders clear (compare with Dolphin's Splash Canyon attract demo, scratchpad dolsc/ of the old session).
