@@ -536,7 +536,7 @@ Each library gets its own `mw_version`. Steps:
 - **Today's Switch log (hw test before this session, no user report):** slow race sections are now **GPU-bound** at 1x: render thread up to 33 ms/frame of which ~30 ms waiting for the GPU (hw14 log too). So the ahead-of-time specialized shader cache (plan above) is the next performance step, and it matters more for 2P/4P (2.5x the draws).
 
 ## STATE 2026-10-18 - for the next session
-**On the user's SD card:** see the session summary (the new NRO with 4-player input and the DMA fix, if copied).
+**On the user's SD card:** build EEC7AA75 (= commit 88ee47d: 4-player input + progressive disc DMA). The pre-session Switch logs are in build/switch/hw15pre/.
 
 **Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
 
