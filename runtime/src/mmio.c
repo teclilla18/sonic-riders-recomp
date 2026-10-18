@@ -19,6 +19,16 @@ static void note(const char* what, uint32_t ea, uint32_t v, int size) {
     if (g_logged < 300) rt_log("[mmio] %s%d %08X = %08X", what, size * 8, ea, v);
     else if (g_logged == 300) rt_log("[mmio] (further accesses not logged)");
     g_logged++;
+    /* outside the EFB and every device: a bad guest pointer. With SR_WATCHDOG's function trace on,
+     * show where it came from (once). */
+    static int traced;
+    extern int g_ppc_trace;
+    void cpu_dump_trace(void);
+    if (g_ppc_trace && !traced && ea >= 0xC8800000u && ea < 0xCC000000u) {
+        traced = 1;
+        rt_log("[mmio] %08X is not a device or EFB address (bad pointer?)", ea);
+        cpu_dump_trace();
+    }
 }
 
 /* modelled devices, by 0xCC00xxxx block */

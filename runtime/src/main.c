@@ -1,6 +1,7 @@
 /* Entry point: sonicriders [path to the GXEE8P disc image] (default: platform_disc_path) */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <threads.h>
 #include <time.h>
 
@@ -28,6 +29,45 @@ static int watchdog(void* arg) {
     sched_dump();
     fflush(stderr);
     _Exit(3);
+}
+
+/* SR_WATCH=ADDR,VALUE (hex): a spare thread spins on a guest word and, the moment it holds VALUE
+ * (SR_WATCH=ADDR,~VALUE: the moment it stops holding VALUE), dumps the function trace (with
+ * SR_WATCHDOG on) and the threads: finds who overwrites memory */
+static uint32_t g_watch_addr, g_watch_val, g_watch_more[3];
+static int g_watch_leave;
+static int watch_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(3);
+    uint32_t last = mem_r32(g_watch_addr);
+    rt_log("[watch] %08X = %08X, waiting for %08X", g_watch_addr, last, g_watch_val);
+    for (;;) {
+        uint32_t v = mem_r32(g_watch_addr);
+        if (g_watch_leave == 2) {  /* SR_WATCH=ADDR,*[,ADDR2,ADDR3,ADDR4]: log every change */
+            static uint32_t prev[3];
+            if (v != last) {
+                rt_log("[watch] %08X: %08X -> %08X (field %u)", g_watch_addr, last, v, vi_field_count());
+                platform_sample_threads();
+            }
+            last = v;
+            for (int k = 0; k < 3; k++) {
+                if (!g_watch_more[k]) continue;
+                uint32_t u = mem_r32(g_watch_more[k]);
+                if (u != prev[k]) rt_log("[watch] %08X: %08X -> %08X (field %u)", g_watch_more[k], prev[k], u, vi_field_count());
+                prev[k] = u;
+            }
+            continue;
+        }
+        if (v != last && (g_watch_leave ? last == g_watch_val : v == g_watch_val)) {
+            platform_sample_threads();
+            rt_log("[watch] %08X changed %08X -> %08X", g_watch_addr, last, v);
+            cpu_dump_trace();
+            sched_dump();
+            fflush(stderr);
+            return 0;
+        }
+        last = v;
+    }
 }
 
 static int game_thread(void* arg) {
@@ -62,6 +102,15 @@ int main(int argc, char** argv) {
     if (wd && atoi(wd) > 0) {
         g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
         rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
+    }
+    const char* w = getenv("SR_WATCH");
+    if (w && sscanf(w, "%x,", &g_watch_addr) == 1 && strchr(w, ',')) {
+        const char* v = strchr(w, ',') + 1;
+        g_watch_leave = *v == '~' ? 1 : *v == '*' ? 2 : 0;
+        g_watch_val = (uint32_t)strtoul(v + (g_watch_leave != 0), NULL, 16);
+        const char* m = strchr(v, ',');
+        for (int k = 0; k < 3 && m; k++, m = strchr(m + 1, ',')) g_watch_more[k] = (uint32_t)strtoul(m + 1, NULL, 16);
+        rt_thread_start(watch_thread, NULL);
     }
     rt_log("[boot] %u recompiled functions, %u native replacements; starting at %08X",
            g_recomp_func_count, g_recomp_hle_count, g_recomp_entry_point);

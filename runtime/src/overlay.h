@@ -23,6 +23,8 @@ const uint8_t* overlay_image(unsigned* version);
 void overlay_set_fps(float fps);  /* any thread */
 /* the menu's "Save screenshot": 1 once after it was chosen (the backend saves the next picture) */
 int overlay_take_screenshot_request(void);
+/* the menu's "Controllers": 1 once after it was chosen (Switch: show the system's controller screen) */
+int overlay_take_controllers_request(void);
 
 #ifdef __cplusplus
 }

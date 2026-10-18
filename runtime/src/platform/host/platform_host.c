@@ -14,7 +14,78 @@
 #include <pthread.h>
 #endif
 
-void platform_init(void) {}
+#ifdef _WIN32
+void cpu_dump_trace(void);
+void mmio_dump(void);
+void sched_dump(void);
+extern int g_ppc_trace;
+
+/* a host crash (usually a bad guest pointer reaching host code): log where, then the guest's recent
+ * function entries (with SR_WATCHDOG) and its threads */
+static LONG WINAPI crash_handler(EXCEPTION_POINTERS* ep) {
+    static volatile LONG once;
+    if (InterlockedExchange(&once, 1)) return EXCEPTION_CONTINUE_SEARCH;
+    EXCEPTION_RECORD* r = ep->ExceptionRecord;
+    HMODULE mod = GetModuleHandleA(NULL);
+    rt_log("[crash] exception %08lX at %p (exe+%llX)", r->ExceptionCode, r->ExceptionAddress,
+           (unsigned long long)((uintptr_t)r->ExceptionAddress - (uintptr_t)mod));
+    if (r->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && r->NumberParameters >= 2)
+        rt_log("[crash] %s address %p (guest window offset %llX)", r->ExceptionInformation[0] ? "writing" : "reading",
+               (void*)r->ExceptionInformation[1],
+               (unsigned long long)((uintptr_t)r->ExceptionInformation[1] - (uintptr_t)ppc_mem_base_var));
+    if (g_ppc_trace) cpu_dump_trace();
+    mmio_dump();
+    sched_dump();
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
+#ifdef _WIN32
+#include <tlhelp32.h>
+/* debugging (SR_WATCH): freeze every other thread of the process and log where each one is, as
+ * exe+offset (map with build/host/sonicriders.map: recompiled functions are f_<guest address>) */
+void platform_sample_threads(void) {
+    DWORD self = GetCurrentThreadId(), pid = GetCurrentProcessId();
+    uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snap == INVALID_HANDLE_VALUE) return;
+    THREADENTRY32 te = {.dwSize = sizeof te};
+    HANDLE held[256];
+    uint64_t rip[256];
+    DWORD ids[256];
+    int n = 0;
+    for (BOOL ok = Thread32First(snap, &te); ok && n < 256; ok = Thread32Next(snap, &te)) {
+        if (te.th32OwnerProcessID != pid || te.th32ThreadID == self) continue;
+        HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, te.th32ThreadID);
+        if (!h) continue;
+        SuspendThread(h);
+        held[n] = h;
+        ids[n] = te.th32ThreadID;
+        n++;
+    }
+    CloseHandle(snap);
+    for (int i = 0; i < n; i++) {
+        CONTEXT ctx = {.ContextFlags = CONTEXT_CONTROL};
+        rip[i] = GetThreadContext(held[i], &ctx) ? ctx.Rip : 0;
+    }
+    for (int i = 0; i < n; i++) {
+        ResumeThread(held[i]);
+        CloseHandle(held[i]);
+    }
+    for (int i = 0; i < n; i++)
+        if (rip[i] >= base && rip[i] < base + 0x10000000)
+            rt_log("[sample] thread %lu at exe+%llX", ids[i], (unsigned long long)(rip[i] - base));
+}
+#else
+void platform_sample_threads(void) {}
+#endif
+
+void platform_init(void) {
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(crash_handler);
+#endif
+}
 
 /* the first *.iso in baserom/ (the working copy of the user's disc) */
 const char* platform_disc_path(void) {

@@ -33,14 +33,15 @@ void ppc_unimplemented(Cpu* c, uint32_t addr, uint32_t insn) {
 }
 void ppc_trap(Cpu* c, uint32_t addr) { rt_fatal("trap at %08X (lr %08X)", addr, c->lr); }
 /* function-entry ring buffer (SR_WATCHDOG=seconds turns it on; dumped by the watchdog) */
-#define TRACE_RING 64
+#define TRACE_RING 4096
 static volatile uint32_t g_trace_ring[TRACE_RING];
 static volatile unsigned g_trace_pos;
 void ppc_trace_enter(uint32_t addr) { g_trace_ring[g_trace_pos++ % TRACE_RING] = addr; }
 void cpu_dump_trace(void) {
     unsigned p = g_trace_pos;
-    rt_log("[trace] last %u function entries (oldest first):", TRACE_RING);
-    for (unsigned i = 0; i < TRACE_RING; i++) {
+    enum { SHOW = 256 };
+    rt_log("[trace] last %u function entries (oldest first):", SHOW);
+    for (unsigned i = TRACE_RING - SHOW; i < TRACE_RING; i++) {
         uint32_t a = g_trace_ring[(p + i) % TRACE_RING];
         if (a) rt_log("[trace]   %08X", a);
     }

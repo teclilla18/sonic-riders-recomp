@@ -1,7 +1,7 @@
 /* DVD Interface (0xCC006000): a drive model so the game's own DVD library (DVDLow*, the state
- * machine, the file system, async reads, CRI's streaming on top) runs recompiled. Data is read
- * from the user's disc image when a command starts; the command completes (TSTART clears, the DI
- * interrupt is raised) a few ms later, on a timer thread. Completing inside the register write (or
+ * machine, the file system, async reads, CRI's streaming on top) runs recompiled. A read's data
+ * reaches RAM gradually during the transfer and the command completes (TSTART clears, the DI
+ * interrupt is raised) when the last piece has landed, on a timer thread. Completing inside the register write (or
  * too soon after it) raced the SDK's timeout alarm, which is armed after the command starts: the
  * alarm then fired as a drive timeout and loading stopped at "Now Loading" (about 1 run in 20).
  * Register and command set: YAGCD "DVD Interface", Dolphin's DVDInterface. */
@@ -10,6 +10,8 @@
 #include <time.h>
 
 #include "game_addrs.h"
+#include <stdlib.h>
+
 #include "runtime.h"
 
 #define OS_INTERRUPT_PI_DI 21
@@ -20,9 +22,13 @@ static unsigned long long g_read_bytes, g_read_ticks;
 static mtx_t g_di_lock;           /* g_di: the CPU's accesses vs. the completion thread */
 static cnd_t g_di_cv;
 static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress completes */
-/* a read's data lands at completion, as on the hardware (the DMA runs during the transfer): a game
- * write into the buffer while the read is in flight is overwritten, not kept */
-static struct { uint64_t offset; uint32_t addr, len; } g_di_dma;
+/* a read's data arrives in pieces during the transfer, as on the hardware (the DI DMAs each 32-byte
+ * block as the drive delivers it). The game's streaming decompressor (CRI's loader, REL f_819594F4)
+ * starts on a chunk while the rest of it is still arriving; with the whole chunk landing only at
+ * completion it decompressed stale memory, and 4-player races crashed loading the "1M" stage pack. */
+#define DMA_PIECE 0x4000u
+static struct { uint64_t offset; uint32_t addr, len, done; int64_t start; } g_di_dma;
+#define TICKS_PER_KB (40500000ll * 1024 / (32ll << 20))  /* the transfer at 32 MB/s */
 static uint64_t g_late_sum, g_late_max, g_late_n;  /* completion lateness, for [perf] (under g_di_lock) */
 void di_late_stats(uint64_t* avg, uint64_t* max, uint64_t* n) {
     mtx_lock(&g_di_lock);
@@ -51,6 +57,21 @@ static void dma_from_disc(uint64_t offset, uint32_t addr, uint32_t len) {
     g_read_bytes += len;
 }
 
+/* the read in progress has delivered `upto` bytes: copy the new ones into RAM (DIMAR/DILEN follow) */
+static void dma_piece(uint32_t upto) {
+    uint32_t n = upto - g_di_dma.done;
+    if (!n) return;
+    dma_from_disc(g_di_dma.offset + g_di_dma.done, g_di_dma.addr + g_di_dma.done, n);
+    g_di_dma.done = upto;
+    g_di[DIMAR] += n;
+    g_di[DILEN] -= n;
+    if (upto == g_di_dma.len) {
+        static int log_done = -1;
+        if (log_done < 0) log_done = getenv("SR_DVDLOG") != NULL;
+        if (log_done) rt_log("[dvdlog]   done: %X bytes at %08X (field %u)", g_di_dma.len, g_di_dma.addr, vi_field_count());
+    }
+}
+
 static void execute(void) {
     uint32_t cmd = g_di[DICMD0] >> 24;
     uint32_t len = g_di[DILEN];
@@ -62,6 +83,15 @@ static void execute(void) {
         g_di_dma.offset = off;
         g_di_dma.addr = g_di[DIMAR];
         g_di_dma.len = n;
+        g_di_dma.done = 0;
+        g_di_dma.start = (int64_t)rt_ticks() + 81000;  /* after a 2 ms seek */
+        static int log_reads = -1;  /* SR_DVDLOG=1: every disc read, by file */
+        if (log_reads < 0) log_reads = getenv("SR_DVDLOG") != NULL;
+        if (log_reads) {
+            uint32_t rel;
+            const char* name = disc_name_at(off, &rel);
+            rt_log("[dvdlog] %s +%X, %X bytes -> %08X (field %u)", name, rel, n, g_di[DIMAR], vi_field_count());
+        }
         break;
     }
     case 0x12: {  /* inquiry: drive revision info, 0x20 bytes */
@@ -88,7 +118,7 @@ static void execute(void) {
      * completion before that leaves the alarm to fire later as a drive timeout, and loading stops. */
     uint64_t bytes = cmd == 0xA8 ? len : 0;
     dbg_event(3, cmd == 0xA8 ? g_di[DICMD1] << 2 : g_di[DICMD0], len);
-    g_di_done_at = (int64_t)rt_ticks() + 81000 + (int64_t)(bytes * 40500000ull / (32ull << 20));
+    g_di_done_at = (int64_t)rt_ticks() + 81000 + (int64_t)(bytes * TICKS_PER_KB / 1024) + 1;
     cnd_signal(&g_di_cv);
 }
 
@@ -108,9 +138,7 @@ static int di_timer(void* arg) {
             g_late_n++;
             g_di_done_at = -1;
             if (g_di_dma.len) {
-                dma_from_disc(g_di_dma.offset, g_di_dma.addr, g_di_dma.len);
-                g_di[DIMAR] += g_di_dma.len;
-                g_di[DILEN] -= g_di_dma.len;
+                dma_piece(g_di_dma.len);
                 g_di_dma.len = 0;
             }
             dbg_event(4, 0, 0);
@@ -121,6 +149,16 @@ static int di_timer(void* arg) {
             if (raise) os_raise_interrupt(OS_INTERRUPT_PI_DI);
             mtx_lock(&g_di_lock);
             continue;
+        }
+        /* the pieces that have arrived by now; then sleep until the next one (or the completion) */
+        if (g_di_dma.len) {
+            int64_t t = (int64_t)rt_ticks() - g_di_dma.start;
+            uint32_t arrived = t <= 0 ? 0 : (uint32_t)((uint64_t)t * 1024 / TICKS_PER_KB) & ~(DMA_PIECE - 1);
+            if (arrived > g_di_dma.done) dma_piece(arrived < g_di_dma.len ? arrived : g_di_dma.len);
+            if (g_di_dma.done < g_di_dma.len) {
+                int64_t next = g_di_dma.start + (int64_t)(g_di_dma.done + DMA_PIECE) * TICKS_PER_KB / 1024 - (int64_t)rt_ticks();
+                if (next < left) left = next > 0 ? next : 1;
+            }
         }
         struct timespec ts;
         timespec_get(&ts, TIME_UTC);

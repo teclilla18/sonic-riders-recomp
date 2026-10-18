@@ -50,6 +50,23 @@ int disc_open(const char* path) {
 const uint8_t* disc_header(void) { return g_header; }
 const uint8_t* disc_fst(uint32_t* size) { *size = g_fst_size; return g_fst; }
 
+/* the file holding disc offset `off` (its name and the offset into it), for logs */
+const char* disc_name_at(uint64_t off, uint32_t* rel) {
+    uint32_t n = be32(g_fst + 8);
+    const char* names = (const char*)g_fst + n * 12;
+    for (uint32_t i = 1; i < n; i++) {
+        const uint8_t* e = g_fst + i * 12;
+        if (e[0]) continue;
+        uint32_t fo = be32(e + 4), fs = be32(e + 8);
+        if (off >= fo && off < (uint64_t)fo + fs) {
+            *rel = (uint32_t)(off - fo);
+            return names + (be32(e) & 0xFFFFFF);
+        }
+    }
+    *rel = 0;
+    return "?";
+}
+
 /* path like "/_Main.rel" or "dir/file" (case-insensitive, as DVDConvertPathToEntrynum) */
 int disc_find(const char* path, uint32_t* offset, uint32_t* size) {
     uint32_t n = be32(g_fst + 8);

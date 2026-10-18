@@ -16,6 +16,7 @@ const char* platform_settings_path(void);   /* settings.ini (settings.c) */
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
+void platform_sample_threads(void);  /* debugging: log where every other host thread is (desktop) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 void rt_thread_lower_priority(void);
 void game_mods_linked(void);  /* game_mods.c: _Main.rel is linked; apply the gameplay options */
@@ -43,6 +44,7 @@ int disc_open(const char* path);
 size_t disc_read(uint64_t offset, void* dst, size_t n);
 const uint8_t* disc_header(void);   /* first 0x440 bytes */
 int disc_find(const char* path, uint32_t* offset, uint32_t* size);  /* FST lookup, 1 if found */
+const char* disc_name_at(uint64_t off, uint32_t* rel);  /* the file at a disc offset (logs) */
 const uint8_t* disc_fst(uint32_t* size);
 
 /* loader.c */
@@ -116,6 +118,7 @@ typedef struct GcPad {
     uint8_t trig_l, trig_r;
 } GcPad;
 void input_get_pad(int chan, GcPad* out);
+int input_connected(int chan);  /* GameCube port 0-3 has a controller (port 0 always does) */
 void input_set_rumble(int chan, int motor);
 
 /* exi.c: EXI bus: memory card (slot A), IPL SRAM/RTC */

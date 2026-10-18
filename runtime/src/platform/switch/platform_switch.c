@@ -248,3 +248,5 @@ void profile_start(void) {
     rt_thread_start(prof_thread, NULL);
 }
 void profile_dump(void) {}
+
+void platform_sample_threads(void) {}  /* desktop debugging only */

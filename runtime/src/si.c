@@ -1,6 +1,7 @@
 /* Serial Interface (0xCC006400): the controller ports, modelled at the register level so the game's
- * own SI and PAD libraries (type detection, origin, polling, rumble) run recompiled. Port 1 holds a
- * standard controller fed by the host's input (input_get_pad); the other ports are empty.
+ * own SI and PAD libraries (type detection, origin, polling, rumble) run recompiled. Port 1 always
+ * holds a standard controller; ports 2-4 hold one while the host has a controller for that player
+ * (input_connected), so the game sees controllers plugged in and out. All are fed by input_get_pad.
  * Registers and the controller protocol: YAGCD "SI", Dolphin's SerialInterface / SI_DeviceGCController. */
 #include <string.h>
 
@@ -18,7 +19,7 @@ static uint32_t g_inl_latched[4];
 #define COMCSR_RDSTINT   0x10000000u
 #define COMCSR_RDSTINTMSK 0x08000000u
 
-static int connected(int ch) { return ch == 0; }
+static int connected(int ch) { return ch == 0 || input_connected(ch); }
 
 /* the controller's analog origin: neutral sticks, triggers released */
 static void origin(uint8_t* r) {

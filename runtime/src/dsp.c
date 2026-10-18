@@ -157,6 +157,10 @@ static void aram_dma(void) {
     uint32_t len = cnt & 0x7FFFFFE0;
     int to_mm = (cnt >> 31) & 1;
     if (mm + len > GUEST_RAM_SIZE) rt_fatal("ARAM DMA beyond main RAM (%08X+%X)", mm, len);
+    static int log_dma = -1;  /* SR_DVDLOG=1 also logs ARAM transfers */
+    if (log_dma < 0) log_dma = getenv("SR_DVDLOG") != NULL;
+    if (log_dma) rt_log("[aramlog] %s %X bytes: RAM %08X, ARAM %07X (field %u)", to_mm ? "to RAM" : "to ARAM", len,
+                        mm | 0x80000000u, ar, vi_field_count());
     uint64_t t0 = rt_ticks();
     for (uint32_t done = 0; done < len;) {  /* ARAM addresses wrap at its size */
         uint32_t a = (ar + done) % ARAM_SIZE, n = len - done;
