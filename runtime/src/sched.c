@@ -97,7 +97,15 @@ static void handoff(GThread* next) {
     }
     while (g_running != t_self) cnd_wait(&t_self->cv, &g_lock);
     mtx_unlock(&g_lock);
-    g_ppc_cur_fn = prof_fn;  /* this thread runs again: the time from the switch until here was the switch's */
+    /* this thread runs again. It returns through the scheduler into code that enters no new function
+     * for a while, so the profiler would keep charging that time to the scheduler's last call: charge
+     * it to "resumed thread" with the first return address outside the OS thread code instead */
+    (void)prof_fn;
+    uint32_t ret = 0;
+    for (int i = 0; i < 12 && t_self->bt[i]; i++)
+        if (t_self->bt[i] < 0x8000F000u || t_self->bt[i] >= 0x80012000u) { ret = t_self->bt[i]; break; }
+    g_ppc_cur_fn = PROF_RESUMED;
+    g_ppc_cur_lr = ret;
 }
 
 /* where this thread parks: the guest stack's back chain (frame word 0 = caller's r1, +4 = LR) */

@@ -98,6 +98,7 @@ void profile_dump(void);
 #define PROF_DRAW 0xF0000001u  /* gx_render draw(): vertex decode, state, texture lookups */
 #define PROF_PIPE 0xF0000002u  /* the GX FIFO: write-gather pipe stores and command parsing */
 #define PROF_SWITCH 0xF0000003u  /* handing the CPU to another guest thread (host thread switch) */
+#define PROF_RESUMED 0xF0000004u  /* a resumed guest thread, until it enters a function (lr = its caller) */
 void dbg_event(int kind, uint32_t a, uint32_t b);  /* hang-dump event ring (sched.c) */
 unsigned exi_card_file_writes(void);   /* memory card file writes so far (exi.c) */   /* the DVD drive's completion timer */
 uint32_t dsp_read(uint32_t ea, int size);

@@ -209,7 +209,7 @@ static void prof_report(void) {
             if (g_prof[i].count > best) { best = g_prof[i].count; bi = i; }
         if (!best) break;
         uint32_t fn = g_prof[bi].fn, lr = g_prof[bi].lr;
-        const char* tag = fn == PROF_IDLE ? " (idle)" : fn == PROF_DRAW ? " (draw processing)" : fn == PROF_PIPE ? " (GX FIFO)" : fn == PROF_SWITCH ? " (thread switch)" : "";
+        const char* tag = fn == PROF_IDLE ? " (idle)" : fn == PROF_DRAW ? " (draw processing)" : fn == PROF_PIPE ? " (GX FIFO)" : fn == PROF_SWITCH ? " (thread switch)" : fn == PROF_RESUMED ? " (resumed thread)" : "";
         if (*tag) rt_log("[profile]   %5.1f%%  %08X%s", 100.0 * best / n, fn, tag);
         else rt_log("[profile]   %5.1f%%  %08X  from %08X", 100.0 * best / n, fn, lr);
         g_prof[bi].count = 0;
