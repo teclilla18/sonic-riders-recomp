@@ -9,7 +9,7 @@
     "process_category": 0,
     "pool_partition": 0,
     "is_64_bit": true,
-    "address_space_type": 1,
+    "address_space_type": 3,
     "is_retail": true,
     "filesystem_access": {
         "permissions": "0xFFFFFFFFFFFFFFFF"
@@ -229,7 +229,7 @@
         },
         {
             "type": "application_type",
-            "value": 2
+            "value": 1
         },
         {
             "type": "min_kernel_version",
@@ -238,23 +238,6 @@
         {
             "type": "handle_table_size",
             "value": 512
-        },
-        {
-            "type": "debug_flags",
-            "value": {
-                "allow_debug": false,
-		"force_debug_prod": false,
-                "force_debug": true
-            }
-        },
-        {
-            "type": "map_region",
-            "value": [
-                {
-                    "region_type": 1,
-                    "is_ro": true
-                }
-            ]
         }
     ]
 }
