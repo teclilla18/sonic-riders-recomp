@@ -14,6 +14,7 @@
 
 #include "gx.h"
 #include "gx_render.h"
+#include "gx_shader_key.h"
 #include "gx_shaders_gl.h"  /* generated: tools/embed_shaders.py */
 #include "overlay.h"
 #include "runtime.h"
@@ -462,6 +463,14 @@ static void execute(GxFrame* f) {
                 cur_regs = c->a;
                 p_glBindBufferRange(GL_UNIFORM_BUFFER, 0, g_ubo, (GLintptr)(stride * c->a), sizeof(GxUniforms));
                 apply_state(cur);
+                /* SR_SHADER_KEYS=<file>: record the fragment-shader specialization keys (gx_shader_key.c) */
+                static const char* keys = (const char*)1;
+                if (keys == (const char*)1) keys = getenv("SR_SHADER_KEYS");
+                if (keys) {
+                    GxFragKey k;
+                    gx_frag_key(cur->bp, &k);
+                    gx_frag_key_record(&k, keys);
+                }
             }
             break;
         case GXC_DRAW:

@@ -100,6 +100,18 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("shaders", "%s tools/embed_shaders.py dksh $out %s/tools/bin/uam.exe %s/shaders" % (py, dkp, OUT),
                description="UAM $out")
     n.build(shader_h, "shaders", shader_src)
+    if args.target == "switch":
+        # specialized fragment shaders from the recorded keys (game-derived: build/shaderkeys/, not in git)
+        key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+        spec_h = OUT + "/gen/gx_spec_dksh.h"
+        n.rule("specshaders", "%s tools/gen_shaders.py $out %s/tools/bin/uam.exe %s/spec $in_keys" % (py, dkp, OUT),
+               description="SPEC $out")
+        n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
+                                        "runtime/shaders/gx_common.glsl"] + key_files,
+                variables={"in_keys": " ".join(key_files)})
+        shader_h = [shader_h, spec_h]
+    else:
+        shader_h = [shader_h]
 
     objs = []
     for src in gen_c:
@@ -108,11 +120,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     for src in rt_c:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cc", src, implicit=[GEN + "/funcs.h", shader_h], variables={"extra": "-O2 -Wall"})
+        n.build(o, "cc", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
         objs.append(o)
     for src in rt_cpp:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cxx", src, implicit=[GEN + "/funcs.h", shader_h], variables={"extra": "-O2 -Wall"})
+        n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
         objs.append(o)
     n.build(exe, "link", objs)
     if args.target == "switch":

@@ -39,11 +39,17 @@ vec4 sample_map(uint m, vec2 uv) {
   if (m == 4u) return texture(u_tex4, uv); if (m == 5u) return texture(u_tex5, uv);
   if (m == 6u) return texture(u_tex6, uv); return texture(u_tex7, uv);
 }
+// Control registers (what decides the shader's control flow) are read with CBP(): the uniform here;
+// in a specialized build (tools/gen_shaders.py, SPECIALIZED) a generated function of constants, so
+// the compiler folds the branches away. Register values (colors, refs, matrices) stay BP().
+#ifndef SPECIALIZED
+#define CBP(i) BP(i)
+#endif
 // No runtime indexing of vectors or local arrays below: uam (deko3d) miscompiles it or spills it
 // to scratch memory (see gx_common.glsl), so components and TEV inputs are picked with selects.
 float comp(vec4 v, uint c) { return c == 0u ? v.x : c == 1u ? v.y : c == 2u ? v.z : v.w; }
 vec4 swizzle(vec4 c, uint table) {
-  uint lo = BP(0xF6 + int(table) * 2), hi = BP(0xF7 + int(table) * 2);
+  uint lo = CBP(0xF6 + int(table) * 2), hi = CBP(0xF7 + int(table) * 2);
   return vec4(comp(c, bits(lo, 0, 2)), comp(c, bits(lo, 2, 2)), comp(c, bits(hi, 0, 2)), comp(c, bits(hi, 2, 2)));
 }
 float s11(uint v) { return float(int(v << 21u) >> 21) / 255.0; }
@@ -75,7 +81,7 @@ float si11(uint v) { return float(int(v << 21u) >> 21); }
 // indirect stage k (0-3): its texture (RAS1_IREF) at its texture coordinate scaled down by RAS1_SS,
 // as the 0-255 values of .abg (s, t, u)
 vec3 ind_lookup(int k) {
-  uint iref = BP(0x27), ss = BP(0x25 + k / 2);
+  uint iref = CBP(0x27), ss = CBP(0x25 + k / 2);
   uint m = bits(iref, 6 * k, 3), c = bits(iref, 6 * k + 3, 3);
   uint s = bits(ss, (k & 1) * 8, 4), t = bits(ss, (k & 1) * 8 + 4, 4);
   vec3 tc = coord(c);
@@ -117,27 +123,21 @@ float ainput(uint i, vec4 r0, vec4 r1, vec4 r2, vec4 r3, vec4 tex, vec4 ras, flo
   if (i < 4u) return reg(r0, r1, r2, r3, i).a;
   if (i == 4u) return tex.a; if (i == 5u) return ras.a; if (i == 6u) return ka; return 0.0;
 }
-void main() {
-  vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
+/* one TEV stage; s is a constant in a specialized build (the stages are called one by one) */
+void tev_stage(int s, inout vec4 r0, inout vec4 r1, inout vec4 r2, inout vec4 r3
 #if GX_INDIRECT
-  /* indirect texturing: the indirect stages' lookups, and the running coordinate for "add prev" */
-  int nind = int(bits(BP(0x00), 16, 3));
-  vec3 i0 = nind > 0 ? ind_lookup(0) : vec3(0.0), i1 = nind > 1 ? ind_lookup(1) : vec3(0.0);
-  vec3 i2 = nind > 2 ? ind_lookup(2) : vec3(0.0), i3 = nind > 3 ? ind_lookup(3) : vec3(0.0);
-  vec2 ind_prev = vec2(0.0);
+               , int nind, vec3 i0, vec3 i1, vec3 i2, vec3 i3, inout vec2 ind_prev
 #endif
-  int stages = int(bits(BP(0x00), 10, 4)) + 1;
-  for (int s = 0; s < 16; s++) {
-    if (s >= stages) break;
-    uint order = BP(0x28 + s / 2) >> uint((s & 1) * 12);
-    uint cenv = BP(0xC0 + 2 * s), aenv = BP(0xC1 + 2 * s);
+               ) {
+    uint order = CBP(0x28 + s / 2) >> uint((s & 1) * 12);
+    uint cenv = CBP(0xC0 + 2 * s), aenv = CBP(0xC1 + 2 * s);
     vec4 tex = vec4(0.0);
     if (bits(order, 6, 1) != 0u) {
       vec3 tc = coord(bits(order, 3, 3));
       uint map = bits(order, 0, 3);
       vec2 uv = tc.xy / (tc.z == 0.0 ? 1.0 : tc.z);
 #if GX_INDIRECT
-      uint icmd = BP(0x10 + s);
+      uint icmd = CBP(0x10 + s);
       if (nind > 0 && (bits(icmd, 9, 4) != 0u || bits(icmd, 13, 6) != 0u || bits(icmd, 20, 1) != 0u)) {
         vec2 size = map_size(map), t = uv * size;
         t = vec2(wrap_ind(t.x, bits(icmd, 13, 3)), wrap_ind(t.y, bits(icmd, 16, 3)));
@@ -152,7 +152,7 @@ void main() {
     uint ch = bits(order, 7, 3);
     vec4 ras = ch == 0u ? v_col0 : ch == 1u ? v_col1 : vec4(0.0);
     ras = swizzle(clamp(ras, 0.0, 1.0), bits(aenv, 0, 2));
-    uint ksel = BP(0xF6 + s / 2);
+    uint ksel = CBP(0xF6 + s / 2);
     vec3 kc = kcolor(bits(ksel, (s & 1) != 0 ? 14 : 4, 5));
     float ka = kalpha(bits(ksel, (s & 1) != 0 ? 19 : 9, 5));
     /* color */
@@ -201,20 +201,43 @@ void main() {
     uint cdst = bits(cenv, 22, 2), adst = bits(aenv, 22, 2);
     if (cdst == 0u) r0.rgb = cres; else if (cdst == 1u) r1.rgb = cres; else if (cdst == 2u) r2.rgb = cres; else r3.rgb = cres;
     if (adst == 0u) r0.a = ares; else if (adst == 1u) r1.a = ares; else if (adst == 2u) r2.a = ares; else r3.a = ares;
+}
+void main() {
+  vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
+#if GX_INDIRECT
+  /* indirect texturing: the indirect stages' lookups, and the running coordinate for "add prev" */
+  int nind = int(bits(CBP(0x00), 16, 3));
+  vec3 i0 = nind > 0 ? ind_lookup(0) : vec3(0.0), i1 = nind > 1 ? ind_lookup(1) : vec3(0.0);
+  vec3 i2 = nind > 2 ? ind_lookup(2) : vec3(0.0), i3 = nind > 3 ? ind_lookup(3) : vec3(0.0);
+  vec2 ind_prev = vec2(0.0);
+#endif
+#if GX_INDIRECT
+#define TEV_STAGE(n) tev_stage(n, r0, r1, r2, r3, nind, i0, i1, i2, i3, ind_prev)
+#else
+#define TEV_STAGE(n) tev_stage(n, r0, r1, r2, r3)
+#endif
+#ifdef SPECIALIZED
+  SPEC_STAGES  /* TEV_STAGE(0); TEV_STAGE(1); ... for this state's stage count */
+#else
+  int stages = int(bits(CBP(0x00), 10, 4)) + 1;
+  for (int s = 0; s < 16; s++) {
+    if (s >= stages) break;
+    TEV_STAGE(s);
   }
+#endif
   vec4 o = clamp(r0, 0.0, 1.0);
   /* alpha test */
-  uint ac = BP(0xF3);
+  uint ac = BP(0xF3), acc = CBP(0xF3);  /* refs (values) / compare functions and logic (control) */
   float a8 = q8(o.a);
-  bool t0 = acmp(a8, bits(ac, 16, 3), float(bits(ac, 0, 8))), t1 = acmp(a8, bits(ac, 19, 3), float(bits(ac, 8, 8)));
-  uint lg = bits(ac, 22, 2);
+  bool t0 = acmp(a8, bits(acc, 16, 3), float(bits(ac, 0, 8))), t1 = acmp(a8, bits(acc, 19, 3), float(bits(ac, 8, 8)));
+  uint lg = bits(acc, 22, 2);
   bool pass = lg == 0u ? (t0 && t1) : lg == 1u ? (t0 || t1) : lg == 2u ? (t0 != t1) : (t0 == t1);
   if (!pass) discard;
   /* blending uses the TEV alpha (second source); the "destination alpha" register only sets the
      alpha the EFB stores. (The backends read DSTALPHA as 1 when the EFB format has no alpha.) */
   o_blend = vec4(0.0, 0.0, 0.0, o.a);
   uint cm1 = BP(0x42);
-  if (bits(cm1, 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
+  if (bits(CBP(0x42), 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
   if (DEBUG_SHOW_ALPHA != 0) { o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0); o_blend = vec4(1.0); }  /* the TEV alpha as gray */
   o_color = o;
 }

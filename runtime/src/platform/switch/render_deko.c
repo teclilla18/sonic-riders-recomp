@@ -18,6 +18,8 @@
 #include "gx.h"
 #include "gx_render.h"
 #include "gx_shaders_dksh.h"  /* generated: tools/embed_shaders.py dksh */
+#include "gx_spec_dksh.h"     /* generated: tools/gen_shaders.py (specialized fragment shaders) */
+#include "gx_shader_key.h"
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
@@ -48,7 +50,30 @@ static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
-static int g_fsh_bound_ind;  /* the variant bound in this frame's command list (-1: none yet) */
+static const DkShader* g_fsh_bound;  /* the fragment shader bound in this frame's command list */
+static DkShader g_spec[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];  /* specialized fragment shaders */
+static int g_spec_on = 1;              /* SR_NOSPEC=1: the ubershader only */
+static unsigned long long g_spec_hits, g_spec_misses;  /* states, for the log */
+
+/* the fragment shader for a state: its specialized shader if the table has the key, else the
+ * ubershader (with indirect texturing only when the state uses it); a missing key is logged to the
+ * SD card for the next build's table */
+static const DkShader* frag_shader_for(const GxUniforms* u) {
+    int ind = ((u->bp[0x00] >> 16) & 7) != 0;
+    const DkShader* uber = ind ? &g_fsh_ind : &g_fsh;
+    if (!g_spec_on) return uber;
+    GxFragKey k;
+    gx_frag_key(u->bp, &k);
+    int lo = 0, hi = GX_SPEC_COUNT - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        if (k_spec_keys[mid] == k.hash) { g_spec_hits++; return &g_spec[mid]; }
+        if (k_spec_keys[mid] < k.hash) lo = mid + 1; else hi = mid - 1;
+    }
+    g_spec_misses++;
+    gx_frag_key_record(&k, "sdmc:/switch/sonicriders/shader_keys.txt");
+    return uber;
+}
 #define OVERLAY_SLOT 1                         /* image descriptor of the overlay image */
 static DkImage g_ov_image;
 static unsigned g_ov_version = ~0u;
@@ -233,7 +258,7 @@ static void dk_setup(void) {
     g_cmd = dkCmdBufCreate(&cm);
 
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
-                       sizeof k_overlay_frag_dksh + 5 * DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_overlay_frag_dksh + 5 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -241,6 +266,9 @@ static void dk_setup(void) {
     shader_load(&g_fsh_ind, k_gx_frag_ind_dksh, sizeof k_gx_frag_ind_dksh, &off);
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
+    for (int i = 0; i < GX_SPEC_COUNT; i++) shader_load(&g_spec[i], k_spec_blob + k_spec_off[i], k_spec_size[i], &off);
+    if (getenv("SR_NOSPEC")) g_spec_on = 0;
+    rt_log("[deko3d] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
 
     for (int i = 0; i < 2; i++) g_slots[i] = block(SLOT_SIZE, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
     g_images = block(IMAGE_POOL, DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image);
@@ -661,7 +689,7 @@ static void execute(GxFrame* f) {
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
     DkShader const* shaders[2] = {&g_vsh, &g_fsh};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
-    g_fsh_bound_ind = 0;
+    g_fsh_bound = &g_fsh;
     dkCmdBufBindImageDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc), MAX_IMAGES);
     dkCmdBufBindSamplerDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc) + MAX_IMAGES * sizeof(DkImageDescriptor), NUM_SAMPLERS);
     static const uint32_t offs[10] = {
@@ -713,12 +741,13 @@ static void execute(GxFrame* f) {
             dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 0, a, usize);
             dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 0, a, usize);
             apply_state(cur);
-            /* the fragment ubershader with indirect texturing only for draws that use it */
-            int ind = ((cur->bp[0x00] >> 16) & 7) != 0;
-            if (ind != g_fsh_bound_ind) {
-                DkShader const* fs[1] = {ind ? &g_fsh_ind : &g_fsh};
-                dkCmdBufBindShaders(g_cmd, DkStageFlag_Fragment, fs, 1);
-                g_fsh_bound_ind = ind;
+            {
+                const DkShader* fsh = frag_shader_for(cur);
+                if (fsh != g_fsh_bound) {
+                    DkShader const* fs[1] = {fsh};
+                    dkCmdBufBindShaders(g_cmd, DkStageFlag_Fragment, fs, 1);
+                    g_fsh_bound = fsh;
+                }
             }
             break;
         }
@@ -765,9 +794,11 @@ static void execute(GxFrame* f) {
         rt_log("[hitch] render thread: a frame took %.0f ms (%.0f ms waiting for the GPU), %u KB of texture uploads",
                armTicksToNs(busy) / 1e6, armTicksToNs(g_last_gpu) / 1e6, g_last_upload >> 10);
     if (++g_busy_frames == 120) {
-        rt_log("[deko3d] %.2f ms/frame on the render thread (%.2f waiting for the GPU), %llu KB/frame texture uploads",
+        rt_log("[deko3d] %.2f ms/frame on the render thread (%.2f waiting for the GPU), %llu KB/frame texture uploads; "
+               "specialized shaders for %llu of %llu states",
                armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,
-               (unsigned long long)(g_upload_bytes / 120 / 1024));
+               (unsigned long long)(g_upload_bytes / 120 / 1024), g_spec_hits, g_spec_hits + g_spec_misses);
+        g_spec_hits = g_spec_misses = 0;
         g_busy_ticks = g_gpu_ticks = g_upload_bytes = 0;
         g_busy_frames = 0;
     }
