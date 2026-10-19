@@ -485,8 +485,11 @@ static void execute(GxFrame* f) {
                 static int nseen;
                 int known = 0;
                 for (int k = 0; k < nseen; k++) known |= seen[k] == cur->bp[0];
-                if (!known && nseen < 64) {
-                    seen[nseen++] = cur->bp[0];
+                static int all = -1;  /* SR_GXDEBUG_ALL=1: every draw in full */
+                if (all < 0) all = getenv("SR_GXDEBUG_ALL") != NULL;
+                if (all) known = 0;
+                if (!known && (nseen < 64 || all)) {
+                    if (nseen < 64) seen[nseen++] = cur->bp[0];
                     for (int st = 0; st <= (int)((cur->bp[0] >> 10) & 15); st++)
                         rt_log("[gxdbg]   stage %d: order %03X cenv %06X aenv %06X ksel %06X", st,
                                (cur->bp[0x28 + st / 2] >> ((st & 1) * 12)) & 0xFFF, cur->bp[0xC0 + 2 * st], cur->bp[0xC1 + 2 * st],
@@ -535,10 +538,10 @@ static void execute(GxFrame* f) {
                         }
                         float ll = sqrtf(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]), nl = sqrtf(nv[0] * nv[0] + nv[1] * nv[1] + nv[2] * nv[2]);
                         rt_log("[gxdbg]   v%u: idx %d view pos %g %g %g | view normal %g %g %g | light vec %g %g %g | diffuse %g"
-                               " | col0 %.3f %.3f %.3f %.3f", vi,
+                               " | col0 %.3f %.3f %.3f %.3f | tex0 %g %g tmtx %g | mode0 %06X", vi,
                                idx, pv[0], pv[1], pv[2], nv[0], nv[1], nv[2], l[0], l[1], l[2],
                                (l[0] * nv[0] + l[1] * nv[1] + l[2] * nv[2]) / (ll * nl + 1e-9f), vx->col[0][0], vx->col[0][1],
-                               vx->col[0][2], vx->col[0][3]);
+                               vx->col[0][2], vx->col[0][3], vx->tex[0][0], vx->tex[0][1], vx->tmtx[0], cur->bp[0x80]);
                     }
                     rt_log("[gxdbg]   tev regs E0-E7 %06X %06X %06X %06X %06X %06X %06X %06X | konst %06X %06X | alpha test %06X",
                            cur->bp[0xE0], cur->bp[0xE1], cur->bp[0xE2], cur->bp[0xE3], cur->bp[0xE4], cur->bp[0xE5],

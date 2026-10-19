@@ -23,7 +23,7 @@ static mtx_t g_ids_lock;
 static once_flag g_ids_once = ONCE_FLAG_INIT;
 static void ids_init(void) { mtx_init(&g_ids_lock, mtx_plain); }
 
-typedef struct Entry { uint64_t key, hash, full; int id, valid; uint32_t frame; } Entry;
+typedef struct Entry { uint64_t key, hash, full; int id, valid, pal; uint32_t frame; } Entry;  /* pal: palette format (keyed by its palette) */
 #define CACHE_SIZE 8192
 static Entry g_cache[CACHE_SIZE];
 
@@ -267,13 +267,16 @@ int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h) {
 
 /* Cached textures the game has not drawn with for a while are released, so the backend's texture
  * memory holds roughly the working set (the Switch's image pool is fixed). */
-#define EVICT_AFTER 600  /* frames */
+#define EVICT_AFTER 600     /* frames */
+#define EVICT_PAL_AFTER 30  /* palette textures: an animated palette makes a new one every frame */
 void gx_texture_new_frame(void) {
     g_frame++;
-    if (g_frame % 64) return;
+    if (g_frame % 16) return;
+    int full = g_frame % 64 == 0;
     for (int i = 0; i < CACHE_SIZE; i++) {
         Entry* e = &g_cache[i];
-        if (e->valid && g_frame - e->frame > EVICT_AFTER) {
+        if (!e->valid || (!full && !e->pal)) continue;
+        if (g_frame - e->frame > (e->pal ? EVICT_PAL_AFTER : EVICT_AFTER)) {
             gx_frame_retire(e->id);
             e->valid = 0;
         }
@@ -306,7 +309,12 @@ int gx_texture_lookup(int map) {
         if (toff + tlut_bytes > sizeof g_tmem) return -1;
         tlut = g_tmem + toff;
     }
-    uint64_t key = (uint64_t)addr << 32 ^ (uint64_t)fmt << 28 ^ (uint64_t)w << 14 ^ h ^ ((uint64_t)tfmt << 62);
+    /* the palette is part of the identity: the game draws one texture with several palettes in a
+     * frame (UI pieces recoloured); keyed without it, the second draw got the first one's colours
+     * (the "already checked this frame" shortcut skipped the palette) */
+    uint64_t th = tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0;
+    uint64_t key = (uint64_t)addr << 32 ^ (uint64_t)fmt << 28 ^ (uint64_t)w << 14 ^ h ^ ((uint64_t)tfmt << 62) ^
+                   th * 0xD6E8FEB86659FD93ull;
     /* two-way set: slots i and i ^ 1 of a well-mixed index; a miss replaces the free or older one */
     uint64_t m = key * 0x9E3779B97F4A7C15ull;
     m = (m ^ (m >> 31)) * 0xBF58476D1CE4E5B9ull;
@@ -317,9 +325,8 @@ int gx_texture_lookup(int map) {
         ((e2->valid && e2->key == key) || (e->valid && (!e2->valid || e2->frame < e->frame))))
         e = e2;
     if (e->valid && e->key == key && e->frame == g_frame) return e->id;  /* already checked this frame */
-    /* changed? a sampled hash every frame, the full hash every 16th frame (staggered), the palette
-     * always: textures the game rewrites in part are noticed within 16 frames */
-    uint64_t th = tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0;
+    /* changed? a sampled hash every frame, the full hash every 16th frame (staggered): textures the
+     * game rewrites in part are noticed within 16 frames */
     uint64_t hsh = hash_sampled(src, size) ^ th;
     if (e->valid && e->key == key && e->hash == hsh) {
         if (((g_frame + (uint32_t)(key >> 5)) & 15) || (hash_bytes(src, size) ^ th) == e->full) {
@@ -341,6 +348,7 @@ int gx_texture_lookup(int map) {
     e->full = hash_bytes(src, size) ^ th;
     e->id = t->id;
     e->valid = 1;
+    e->pal = tlut != NULL;
     e->frame = g_frame;
     return t->id;
 }
