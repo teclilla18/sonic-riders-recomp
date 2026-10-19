@@ -282,6 +282,9 @@ static int g_gx_async = 1;
 static _Atomic uint64_t g_gp_busy;  /* ticks the GP thread spent parsing (draw processing included) */
 uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
 
+#define KICK_BYTES 32768u
+static size_t g_kicked_at;  /* ring head at the last wake check (game thread only) */
+static void ring_kick(void);
 static void ring_push(const uint8_t* b, size_t n) {
     size_t head = atomic_load_explicit(&g_ring_head, memory_order_relaxed);
     while (head + n - atomic_load_explicit(&g_ring_tail, memory_order_acquire) > RING_SIZE) {
@@ -301,7 +304,18 @@ static void ring_push(const uint8_t* b, size_t n) {
     memcpy(g_ring + off, b, first);
     memcpy(g_ring, b + first, n - first);
     atomic_store_explicit(&g_ring_head, head + n, memory_order_release);
-    if (atomic_load_explicit(&g_gp_sleeping, memory_order_acquire)) {
+    /* wake a sleeping GP thread only once a batch has built up: waking it per 32-byte burst cost the
+     * game thread thousands of futex calls per frame (~7 ms of a 3-4 player frame on the Switch).
+     * Sync points (ring_kick) and the GP thread's own short timed wait cover the rest. */
+    if (head + n - g_kicked_at >= KICK_BYTES) ring_kick();
+}
+
+/* wake the GP thread if it sleeps with work queued (sync points: the game is about to wait on it) */
+static void ring_kick(void) {
+    size_t head = atomic_load_explicit(&g_ring_head, memory_order_relaxed);
+    g_kicked_at = head;
+    if (atomic_load_explicit(&g_gp_sleeping, memory_order_acquire) &&
+        head != atomic_load_explicit(&g_ring_tail, memory_order_acquire)) {
         mtx_lock(&g_gp_lock);
         cnd_signal(&g_gp_cv);
         mtx_unlock(&g_gp_lock);
@@ -319,7 +333,14 @@ static int gp_thread(void* arg) {
         if (head == tail) {
             mtx_lock(&g_gp_lock);
             atomic_store(&g_gp_sleeping, 1);
-            while (atomic_load(&g_ring_head) == tail) cnd_wait(&g_gp_cv, &g_gp_lock);
+            /* a short timed wait: the producer wakes this thread only per batch and at sync points */
+            while (atomic_load(&g_ring_head) == tail) {
+                struct timespec ts;
+                timespec_get(&ts, TIME_UTC);
+                ts.tv_nsec += 500000;
+                if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+                cnd_timedwait(&g_gp_cv, &g_gp_lock, &ts);
+            }
             atomic_store(&g_gp_sleeping, 0);
             mtx_unlock(&g_gp_lock);
             continue;
@@ -356,16 +377,24 @@ static int g_wg_n;
 static void burst_out(const uint8_t* b, int size);
 
 static void pipe_flush(void) {
-    if (!g_wg_n) return;
-    int n = g_wg_n;
-    g_wg_n = 0;
-    burst_out(g_wg, n);
+    if (g_wg_n) {
+        int n = g_wg_n;
+        g_wg_n = 0;
+        burst_out(g_wg, n);
+    }
+    if (g_gx_async) ring_kick();
 }
 
 static void pipe_write(uint32_t v, int size) {
     g_pipe_stores++;
     g_pipe_bytes += (unsigned)size;
-    for (int k = 0; k < size; k++) g_wg[g_wg_n++] = (uint8_t)(v >> (8 * (size - 1 - k)));
+    if (size == 4) {  /* the common case: one big-endian word */
+        uint32_t be = __builtin_bswap32(v);
+        memcpy(g_wg + g_wg_n, &be, 4);
+        g_wg_n += 4;
+    } else {
+        for (int k = 0; k < size; k++) g_wg[g_wg_n++] = (uint8_t)(v >> (8 * (size - 1 - k)));
+    }
     if (g_wg_n >= 32) {  /* a full burst; a store crossing the boundary carries over */
         burst_out(g_wg, 32);
         g_wg_n -= 32;
