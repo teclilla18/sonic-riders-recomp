@@ -558,12 +558,15 @@ Each library gets its own `mw_version`. Steps:
 
 **Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
 
-**Open items, in order:**
-1. Hardware test 16: sideways single Joy-Cons after the fix; a 3-4 player race with the profiler on (env.txt) -> optimize the game thread for split screen. NSP forwarder if the user allows it.
-2. **Specialized shader cache** (GPU-bound slow sections; split screen doubles/quadruples draws).
-3. Menus/HUD discoloration on Switch (need a screenshot of a glitch; compare PC). Splash Canyon HUD panels blocky in hw13/shot_35178.
-4. Rainbow road in Splash Canyon renders clear (compare with Dolphin's Splash Canyon attract demo, scratchpad dolsc/ of the old session).
-5. C-stick look-back camera (camera block 0x81A05D74: eye +0x14, target +0x20; view matrix 0x81A0583C; find writers with SR_WATCH now).
-6. Later: Super Shadow; smaller: darker screen corners vs Dolphin, faint see-through billboards, EFB Z peeks return 0 (lens flare).
+**Open items, in order (updated 2026-10-19 morning):**
+1. **Hardware test 18** (build 319438E0 on the SD card): sound on the Switch (first time on hardware: audout, levels, crackle?), story mode both ways (watch the cutscenes / skip with START), a 3-4 player race with the profiler (env.txt SR_PROFILE=1 is on the card) -> read the new "[perf] game core:" line and the profile ("resumed thread" entries are now separate).
+2. **Multiplayer 30 fps:** game core ~50-58% idle-loop at 30 fps, GP thread 12-14 ms, render 6 ms, GPU 0: the critical path (game work + the GP's tail after the game's last flush + present) is just over 16.7 ms. Levers: draw processing cost on the GP thread (11.5 ms for 56K vertices on Switch), KICK_BYTES (32 KB) latency, GP thread priority on core 2.
+3. Specialized shader cache (1P GPU-bound sections: Egg Factory, Splash Canyon).
+4. Speed-blur screen effect much weaker than Dolphin's (see build/rainbow_cmp.png from scratch); attract demo diverges from Dolphin's (ring counts/positions differ: timing/RNG?).
+5. Story cutscene monitor ("these players, they're hot...", frame ~18000 on the story route): looks garbled (tiny text + noise lines); the profile textures themselves decode fine. Unverified against Dolphin.
+6. Menus/HUD discoloration on Switch (need a screenshot); Splash Canyon rainbow road (not located in the demo yet); pause dialog solid red.
+7. Smaller: darker screen corners vs Dolphin, faint see-through billboards, EFB Z peeks return 0 (lens flare), PC-only HUD garble.
+
+**Test routes (scratchpad, recreate if missing):** route1p.txt (race), route2p/route4p.txt (Free Race 2/4 players, SR_PADS), routestory.txt / routestory2.txt (story, A presses through cutscenes), routestory3.txt (story, START skips); mp.ps1 -Keys -Shots -Secs -Pads [-Watchdog] (sets SR_NOAUDIO=1, SR_MINIMIZED=1); loop4p.ps1; cmpadx.py + adx.py (ADX decode and correlation against a WAV).
 
 **Dolphin reference status:** installed and works for attract-mode demos (no input needed). Input movies (-m) do NOT take effect in 2609a here; if menu comparisons are needed, try a DSU (cemuhook UDP) fake controller with BackgroundInput.
