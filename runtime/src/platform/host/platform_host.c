@@ -9,6 +9,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <mmsystem.h>
 #else
 #include <dirent.h>
 #include <pthread.h>
@@ -84,6 +85,9 @@ void platform_sample_threads(void) {}
 void platform_init(void) {
 #ifdef _WIN32
     SetUnhandledExceptionFilter(crash_handler);
+    /* 1 ms timer resolution: the device threads sleep for fractions of a millisecond (the AI clock
+     * paces 5 ms audio frames); at the default 15.6 ms tick the audio ran at a third of its speed */
+    timeBeginPeriod(1);
 #endif
 }
 
@@ -114,6 +118,31 @@ const char* platform_disc_path(void) {
 
 const char* platform_save_path(void) { return "saves/card_a.raw"; }
 const char* platform_settings_path(void) { return "saves/settings.ini"; }
+
+/* a precise sleep: Windows' high-resolution waitable timer (Sleep and the C11 waits round up to the
+ * timer tick); elsewhere nanosleep */
+void platform_sleep_ns(uint64_t ns) {
+#ifdef _WIN32
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+    static __thread HANDLE timer;
+    if (!timer) timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    if (timer) {
+        LARGE_INTEGER due;
+        due.QuadPart = -(LONGLONG)(ns / 100);  /* relative, 100 ns units */
+        if (due.QuadPart == 0) due.QuadPart = -1;
+        if (SetWaitableTimer(timer, &due, 0, NULL, NULL, FALSE)) {
+            WaitForSingleObject(timer, INFINITE);
+            return;
+        }
+    }
+    Sleep((DWORD)(ns / 1000000));
+#else
+    struct timespec ts = {(time_t)(ns / 1000000000u), (long)(ns % 1000000000u)};
+    nanosleep(&ts, NULL);
+#endif
+}
 
 uint64_t platform_now_ns(void) {
 #ifdef _WIN32

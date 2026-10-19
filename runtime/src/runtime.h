@@ -15,6 +15,7 @@ const char* platform_save_path(void);       /* memory card image for slot A */
 const char* platform_settings_path(void);   /* settings.ini (settings.c) */
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
+void platform_sleep_ns(uint64_t ns);  /* a precise sleep (sub-millisecond) */
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
 void platform_sample_threads(void);  /* debugging: log where every other host thread is (desktop) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
@@ -131,6 +132,7 @@ void ax_process_command_list(uint32_t addr, uint32_t size);
 void audio_submit(uint32_t addr, uint32_t bytes);
 void platform_audio_push(const int16_t* lr, unsigned frames);  /* 32 kHz stereo (left, right) to the host device */
 unsigned long long ax_list_count(void);
+void audio_frame(const int16_t* lr, unsigned frames);  /* a mixed AX frame (32 kHz, left/right) for the host */
 
 #ifdef __cplusplus
 }

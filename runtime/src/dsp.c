@@ -120,8 +120,7 @@ static int ai_thread(void* arg) {
     uint64_t next = rt_ticks();
     for (;;) {
         if (!atomic_load(&g_ai_dma_on)) {
-            struct timespec ts = {0, 1000000};
-            thrd_sleep(&ts, NULL);
+            platform_sleep_ns(1000000);
             next = rt_ticks();
             continue;
         }
@@ -131,8 +130,7 @@ static int ai_thread(void* arg) {
         for (;;) {
             int64_t left = (int64_t)(next - rt_ticks());
             if (left <= 0) break;
-            struct timespec ts = {0, (long)(left * 2000 / 81)};
-            thrd_sleep(&ts, NULL);
+            platform_sleep_ns((uint64_t)left * 2000 / 81);
         }
         audio_submit(g_ai_start, bytes);
         mtx_lock(&g_lock);

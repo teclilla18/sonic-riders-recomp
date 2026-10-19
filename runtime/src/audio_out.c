@@ -32,18 +32,12 @@ static void wav_header(FILE* f, uint32_t data_bytes) {
     fseek(f, 0, SEEK_END);
 }
 
-void audio_submit(uint32_t addr, uint32_t bytes) {
-    static int enabled = -1;  /* with the mixer (ax.c): SR_AUDIO=1 */
-    if (enabled < 0) enabled = getenv("SR_AUDIO") != NULL;
-    if (!enabled) return;
-    static int16_t buf[2 * 4096];
-    uint32_t frames = bytes / 4;
-    if (frames > 4096) frames = 4096;
-    for (uint32_t i = 0; i < frames; i++) {
-        buf[2 * i + 1] = (int16_t)ld16(addr + 4 * i);      /* right */
-        buf[2 * i + 0] = (int16_t)ld16(addr + 4 * i + 2);  /* left */
-    }
-    platform_audio_push(buf, frames);
+/* the AI DMA played a block: the host output takes the frames from the mixer instead (audio_frame) */
+void audio_submit(uint32_t addr, uint32_t bytes) { (void)addr; (void)bytes; }
+
+/* one mixed AX frame, 32 kHz stereo (left, right) */
+void audio_frame(const int16_t* lr, unsigned frames) {
+    platform_audio_push(lr, frames);
     if (!g_wav_init) {
         g_wav_init = 1;
         const char* p = getenv("SR_WAVOUT");
@@ -53,7 +47,7 @@ void audio_submit(uint32_t addr, uint32_t bytes) {
         }
     }
     if (g_wav) {
-        fwrite(buf, 4, frames, g_wav);
+        fwrite(lr, 4, frames, g_wav);
         g_wav_bytes += frames * 4;
         if ((g_wav_bytes & 0x3FFFF) < frames * 4) {  /* keep the header current (~every 2 s) */
             wav_header(g_wav, g_wav_bytes);

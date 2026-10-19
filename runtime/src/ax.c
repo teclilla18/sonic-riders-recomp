@@ -13,6 +13,7 @@
  * Formats and behaviour follow Dolphin's DSP HLE (AX.cpp, AXVoice.h, DSPAccelerator.cpp). The
  * polyphase resampler needs the DSP's coefficient ROM, which is not available; like Dolphin without
  * it, linear interpolation is used. */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -303,10 +304,18 @@ static void compressor(uint16_t threshold, uint16_t frames, uint32_t table) {
 
 static void output(uint32_t surround_addr, uint32_t lr_addr) {
     upload(surround_addr, g_buf[MAIN_S]);
-    for (int i = 0; i < FRAME; i++) {  /* interleaved right, left */
-        st16(lr_addr + 4 * i, (uint16_t)clamp16(g_buf[MAIN_R][i]));
-        st16(lr_addr + 4 * i + 2, (uint16_t)clamp16(g_buf[MAIN_L][i]));
+    int16_t host[FRAME * 2];
+    for (int i = 0; i < FRAME; i++) {  /* main RAM: interleaved right, left (what the AI DMA plays) */
+        int16_t l = clamp16(g_buf[MAIN_L][i]), r = clamp16(g_buf[MAIN_R][i]);
+        st16(lr_addr + 4 * i, (uint16_t)r);
+        st16(lr_addr + 4 * i + 2, (uint16_t)l);
+        host[2 * i] = l;
+        host[2 * i + 1] = r;
     }
+    /* the host plays each mixed frame once, in order: taking it from the AI DMA address instead
+     * repeated or skipped frames whenever the game's AI interrupt handler (which sets the next
+     * address) ran late relative to the host's audio clock */
+    audio_frame(host, FRAME);
 }
 
 void ax_process_command_list(uint32_t addr, uint32_t size) {
@@ -318,6 +327,15 @@ void ax_process_command_list(uint32_t addr, uint32_t size) {
         if (enabled) rt_log("[ax] mixer on (SR_AUDIO)");
     }
     if (!enabled) return;
+    {   /* SR_ARAMDUMP=<file>: ARAM 0-64 KB once, at the 3000th list (debugging) */
+        static int done;
+        const char* d = getenv("SR_ARAMDUMP");
+        if (d && !done && g_lists == 3000) {
+            done = 1;
+            FILE* f = fopen(d, "wb");
+            if (f) { fwrite(aram_ptr(0), 1, 0x10000, f); fclose(f); rt_log("[ax] ARAM dumped to %s", d); }
+        }
+    }
     uint32_t pc = addr, pb_addr = 0;
     int guard = 0;
 #define W() (pc += 2, ld16(pc - 2))

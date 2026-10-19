@@ -1,7 +1,7 @@
 /* Switch audio output: audout (48 kHz stereo PCM16). The game's 32 kHz is resampled 2:3 with linear
  * interpolation. Blocks of 10 ms go through a ring of buffers; when none has been released (the
  * output is behind), the block is dropped instead of waiting, so the AI clock (dsp.c, its own thread)
- * keeps the game's pace. Called on that AI thread only. */
+ * keeps the game's pace. Called with each mixed AX frame (ax.c, on the game thread). */
 #include <malloc.h>
 #include <string.h>
 #include <switch.h>
