@@ -320,11 +320,13 @@ static void output(uint32_t surround_addr, uint32_t lr_addr) {
 
 void ax_process_command_list(uint32_t addr, uint32_t size) {
     if (g_lists++ == 0) rt_log("[ax] first command list at %08X (%u words)", addr, size);
-    /* the mixer is still being verified: off unless SR_AUDIO=1 (the lists are then only counted) */
+    /* SR_AUDIO=0 turns the mixer off (the lists are then only counted). Note that the game needs it:
+     * story cutscenes wait for their voices to end (a voice the DSP never stops never ends). */
     static int enabled = -1;
     if (enabled < 0) {
-        enabled = getenv("SR_AUDIO") != NULL;
-        if (enabled) rt_log("[ax] mixer on (SR_AUDIO)");
+        const char* a = getenv("SR_AUDIO");
+        enabled = !(a && a[0] == '0');
+        if (!enabled) rt_log("[ax] mixer off (SR_AUDIO=0)");
     }
     if (!enabled) return;
     {   /* SR_ARAMDUMP=<file>: ARAM 0-64 KB once, at the 3000th list (debugging) */
