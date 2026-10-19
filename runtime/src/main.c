@@ -61,6 +61,9 @@ static int watch_thread(void* arg) {
         if (v != last && (g_watch_leave ? last == g_watch_val : v == g_watch_val)) {
             platform_sample_threads();
             rt_log("[watch] %08X changed %08X -> %08X", g_watch_addr, last, v);
+            for (uint32_t a = (g_watch_addr & ~31u) - 0x40; a < (g_watch_addr & ~31u) + 0x60; a += 32)
+                rt_log("[watch]   %08X: %08X %08X %08X %08X %08X %08X %08X %08X", a, mem_r32(a), mem_r32(a + 4), mem_r32(a + 8),
+                       mem_r32(a + 12), mem_r32(a + 16), mem_r32(a + 20), mem_r32(a + 24), mem_r32(a + 28));
             cpu_dump_trace();
             sched_dump();
             fflush(stderr);

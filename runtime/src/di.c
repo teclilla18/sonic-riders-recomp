@@ -28,7 +28,9 @@ static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress com
  * completion it decompressed stale memory, and 4-player races crashed loading the "1M" stage pack. */
 #define DMA_PIECE 0x4000u
 static struct { uint64_t offset; uint32_t addr, len, done; int64_t start; } g_di_dma;
-#define TICKS_PER_KB (40500000ll * 1024 / (32ll << 20))  /* the transfer at 32 MB/s */
+/* the transfer rate (SR_DVD_MBPS, MB/s); ticks per KB at 40.5 MHz */
+static int64_t g_ticks_per_kb = 40500000ll * 1024 / (32ll << 20);
+#define TICKS_PER_KB g_ticks_per_kb
 static uint64_t g_late_sum, g_late_max, g_late_n;  /* completion lateness, for [perf] (under g_di_lock) */
 void di_late_stats(uint64_t* avg, uint64_t* max, uint64_t* n) {
     mtx_lock(&g_di_lock);
@@ -151,7 +153,9 @@ static int di_timer(void* arg) {
             continue;
         }
         /* the pieces that have arrived by now; then sleep until the next one (or the completion) */
-        if (g_di_dma.len) {
+        static int at_end = -1;  /* SR_DVD_ATEND=1 (test): the old model, data only at completion */
+        if (at_end < 0) at_end = getenv("SR_DVD_ATEND") != NULL;
+        if (g_di_dma.len && !at_end) {
             int64_t t = (int64_t)rt_ticks() - g_di_dma.start;
             uint32_t arrived = t <= 0 ? 0 : (uint32_t)((uint64_t)t * 1024 / TICKS_PER_KB) & ~(DMA_PIECE - 1);
             if (arrived > g_di_dma.done) dma_piece(arrived < g_di_dma.len ? arrived : g_di_dma.len);
@@ -172,6 +176,11 @@ static int di_timer(void* arg) {
 }
 
 void di_init(void) {
+    const char* r = getenv("SR_DVD_MBPS");
+    if (r && atoi(r) > 0) {
+        g_ticks_per_kb = 40500000ll * 1024 / ((int64_t)atoi(r) << 20);
+        rt_log("[di] transfer rate %d MB/s", atoi(r));
+    }
     mtx_init(&g_di_lock, mtx_plain);
     cnd_init(&g_di_cv);
     rt_thread_start(di_timer, NULL);

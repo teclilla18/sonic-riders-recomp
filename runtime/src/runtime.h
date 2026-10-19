@@ -129,6 +129,7 @@ void exi_write(uint32_t ea, uint32_t v, int size);
 /* ax.c: AX microcode stand-in and host audio output */
 void ax_process_command_list(uint32_t addr, uint32_t size);
 void audio_submit(uint32_t addr, uint32_t bytes);
+void platform_audio_push(const int16_t* lr, unsigned frames);  /* 32 kHz stereo (left, right) to the host device */
 unsigned long long ax_list_count(void);
 
 #ifdef __cplusplus

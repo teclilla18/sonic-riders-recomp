@@ -124,6 +124,13 @@ void ppc_mod_run(Cpu* c);
         if (__builtin_expect(g_core_preempt[0], 0)) ppc_preempt(c);           \
     } while (0)
 
+/* the same, in a function that keeps the stack pointer in a local (leaflocal.py): the interrupt
+ * handlers run just below the current r1, so the struct must have it */
+#define PPC_LOOP_R1(sp) do { \
+        __asm__ __volatile__("" ::: "memory"); \
+        if (__builtin_expect(g_core_preempt[0], 0)) { c->r[1] = (sp); ppc_preempt(c); } \
+    } while (0)
+
 /* ---- memory ---- */
 /* device accesses (runtime/src/mmio.c): hardware registers, the GX FIFO pipe, the EFB */
 uint32_t mmio_read(uint32_t ea, int size);

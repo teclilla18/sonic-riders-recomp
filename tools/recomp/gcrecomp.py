@@ -322,6 +322,10 @@ class GcRecompiler:
                 body = [(a, w, s) for (a, w, _), s in zip(body, stmts)]
                 out += ["    %s" % p for p in prologue]
                 self.nonleaf_count += 1
+        # a function that keeps r1 in a local: an interrupt delivered at a loop back-edge must see the
+        # current stack pointer (its frame may already be below the struct's stale r1)
+        if any("r1 = c->r[1]" in p for p in out[2:]):
+            body = [(a, w, s.replace("PPC_LOOP();", "PPC_LOOP_R1(r1);")) for a, w, s in body]
         for a, w, s in body:
             if a in self.labels:
                 out.append("L_%08X: ;" % a)

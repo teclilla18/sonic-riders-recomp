@@ -199,7 +199,11 @@ static _Thread_local int t_in_irq;
  * interrupted frame (the struct's r1 may lag behind a leaf function's frame: keep a margin) */
 static void make_irq_cpu(Cpu* ic, const Cpu* c) {
     *ic = *c;
-    ic->r[1] = (c->r[1] - 0x1000) & ~0xFu;
+    /* the handlers' frames go just below the interrupted code's stack pointer, as on the hardware;
+     * the old 4 KB gap ran them off the bottom of small thread stacks (CRI's loader threads have
+     * 4 KB) and corrupted the memory below: story mode's loading-screen text table. Code that keeps
+     * r1 in a local hands it over at interrupt checks (PPC_LOOP_R1). */
+    ic->r[1] = (c->r[1] - 0x100) & ~0xFu;
     ic->msr = c->msr & ~MSR_EE;
 }
 
