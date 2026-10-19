@@ -281,6 +281,10 @@ static cnd_t g_gp_cv, g_space_cv;
 static int g_gx_async = 1;
 static _Atomic uint64_t g_gp_busy;  /* ticks the GP thread spent parsing (draw processing included) */
 uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
+/* FIFO bytes written but not yet processed by the GP thread (0 in synchronous mode) */
+size_t gx_gp_backlog(void) {
+    return atomic_load_explicit(&g_ring_head, memory_order_relaxed) - atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
+}
 
 #define KICK_BYTES 32768u
 static size_t g_kicked_at;  /* ring head at the last wake check (game thread only) */
@@ -430,7 +434,9 @@ static void burst_out(const uint8_t* b, int size) {
 }
 
 /* ---- register blocks ---- */
+unsigned g_cp_reads, g_pe_reads;  /* [perf]: polling of GP status by the game */
 uint32_t gx_cp_read(uint32_t off, int size) {
+    g_cp_reads++;
     pipe_flush();
     off &= 0x7F;
     if (off == 0x00) return 0x000C;  /* SR: GP read idle + command idle */
@@ -445,6 +451,7 @@ void gx_cp_write(uint32_t off, uint32_t v, int size) {
 }
 
 uint32_t gx_pe_read(uint32_t off, int size) {
+    g_pe_reads++;
     pipe_flush();  /* a game polling draw sync tokens waits for commands still in the gather buffer */
     off &= 0xFF;
     mtx_lock(&g_pe_lock);

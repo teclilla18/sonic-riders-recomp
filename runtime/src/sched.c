@@ -261,7 +261,28 @@ void sched_stats(uint64_t* idle, uint64_t* late_avg, uint64_t* late_max) {
     *late_max = atomic_exchange(&g_dec_late_max, 0);
 }
 
+/* idle accounting for [perf]: time with no ready guest thread, and the part of it while the GP thread
+ * still had queued FIFO data (the game waiting for the GP) */
+static uint64_t g_spin_last, g_spin_idle, g_spin_idle_gp;
+size_t gx_gp_backlog(void);
+void sched_idle_split(uint64_t* idle, uint64_t* waiting_gp) {
+    *idle = g_spin_idle; *waiting_gp = g_spin_idle_gp;
+    g_spin_idle = g_spin_idle_gp = 0;
+}
+
 void sched_interrupts_enabled(Cpu* c) {
+    {
+        uint64_t now = rt_ticks();
+        if (ld32(OS_RUNQUEUE_BITS) == 0) {
+            if (g_spin_last && now - g_spin_last < 40500) {  /* consecutive idle checks (< 1 ms apart) */
+                g_spin_idle += now - g_spin_last;
+                if (gx_gp_backlog()) g_spin_idle_gp += now - g_spin_last;
+            }
+            g_spin_last = now;
+        } else {
+            g_spin_last = 0;
+        }
+    }
     os_irq_retry();
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
@@ -280,6 +301,9 @@ void sched_interrupts_enabled(Cpu* c) {
         }
         mtx_unlock(&g_irq_lock);
         uint64_t d = rt_ticks() - t_idle;
+        g_spin_idle += d;
+        if (gx_gp_backlog()) g_spin_idle_gp += d;
+        g_spin_last = 0;
         g_idle_ticks += d;
         g_idle_total += d;
         g_ppc_cur_fn = prof_prev;

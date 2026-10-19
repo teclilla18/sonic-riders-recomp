@@ -459,6 +459,15 @@ static void efb_copy(uint32_t v) {
                        g_tex_ticks * ms, g_wait_ticks * ms, (di_read_ticks() - disc0) * ms, idle * ms, late_avg * ms * 120,
                        late_max * ms * 120);
                 {
+                    void sched_idle_split(uint64_t* idle, uint64_t* waiting_gp);
+                    uint64_t sidle, sgp;
+                    sched_idle_split(&sidle, &sgp);
+                    extern unsigned g_cp_reads, g_pe_reads;
+                    rt_log("[perf]   game core: no ready thread %.2f ms/frame, of it with GP work queued %.2f; CP reads %u, PE reads %u per frame",
+                           sidle * ms, sgp * ms, g_cp_reads / 120, g_pe_reads / 120);
+                    g_cp_reads = g_pe_reads = 0;
+                }
+                {
                     /* SR_PEEK=ADDR,LEN (hex): dump guest memory with each [perf] block (debugging) */
                     static int peek_init;
                     static uint32_t peek_addr, peek_len;

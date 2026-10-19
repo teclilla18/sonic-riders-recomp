@@ -55,13 +55,16 @@ _Static_assert(sizeof(PB) == 98 * 2, "PB layout");
 
 #define HILO(n) ((uint32_t)p->n##_hi << 16 | p->n##_lo)
 
+/* PBs live in main RAM: whole-block copies with a byte swap per word */
 static void read_pb(uint32_t addr, PB* pb) {
     uint16_t* w = (uint16_t*)pb;
-    for (unsigned i = 0; i < PB_WORDS; i++) w[i] = ld16(addr + 2 * i);
+    memcpy(w, ppc_ptr(addr), sizeof(PB));
+    for (unsigned i = 0; i < PB_WORDS; i++) w[i] = __builtin_bswap16(w[i]);
 }
 static void write_pb(uint32_t addr, const PB* pb) {
-    const uint16_t* w = (const uint16_t*)pb;
-    for (unsigned i = 0; i < PB_WORDS; i++) st16(addr + 2 * i, w[i]);
+    uint16_t w[PB_WORDS];
+    for (unsigned i = 0; i < PB_WORDS; i++) w[i] = __builtin_bswap16(((const uint16_t*)pb)[i]);
+    memcpy(ppc_ptr(addr), w, sizeof(PB));
 }
 
 /* ---- mixing buffers: 5 ms of 32 kHz ---- */
@@ -243,8 +246,9 @@ static void process_pb_list(uint32_t addr) {
     if (g_axlog < 0) g_axlog = getenv("SR_AXLOG") != NULL;
     int dump = g_axlog && g_lists % 400 == 1;
     while (addr && guard++ < 256) {
-        PB pb;
+        PB pb, orig;
         read_pb(addr, &pb);
+        orig = pb;
         if (dump && pb.running == 1)
             rt_log("[axv] pb %08X fmt %04X src %u ratio %04X.%04X loop %u stream %u cur %08X end %08X loopaddr %08X "
                    "mc %04X vol %d gain %04X ps %02X main %04X/%04X lpf %u", addr, pb.sample_format, pb.src_type,
@@ -252,15 +256,22 @@ static void process_pb_list(uint32_t addr) {
                    (uint32_t)pb.end_hi << 16 | pb.end_lo, (uint32_t)pb.loop_hi << 16 | pb.loop_lo, pb.mixer_control,
                    pb.vol_env, pb.gain, pb.pred_scale, pb.main_l.volume, pb.main_r.volume, pb.lpf_on);
         uint16_t upd[64];
-        uint32_t ua = (uint32_t)pb.upd_hi << 16 | pb.upd_lo;
-        for (int i = 0; i < 64; i++) upd[i] = ua ? ld16(ua + 2 * i) : 0;
+        int any_upd = pb.num_updates[0] | pb.num_updates[1] | pb.num_updates[2] | pb.num_updates[3] | pb.num_updates[4];
+        if (any_upd) {
+            uint32_t ua = (uint32_t)pb.upd_hi << 16 | pb.upd_lo;
+            for (int i = 0; i < 64; i++) upd[i] = ua ? ld16(ua + 2 * i) : 0;
+        }
+        if (!any_upd && pb.running != 1) {  /* a stopped voice with no updates: nothing to do */
+            addr = (uint32_t)pb.next_hi << 16 | pb.next_lo;
+            continue;
+        }
         for (int ms = 0; ms < 5; ms++) {
-            apply_updates(&pb, ms, upd);
+            if (any_upd) apply_updates(&pb, ms, upd);
             int32_t* bufs[NBUF];
             for (int b = 0; b < NBUF; b++) bufs[b] = g_buf[b] + ms * 32;
             process_voice(&pb, bufs, 32);
         }
-        write_pb(addr, &pb);
+        if (memcmp(&pb, &orig, sizeof pb)) write_pb(addr, &pb);
         addr = (uint32_t)pb.next_hi << 16 | pb.next_lo;
     }
 }
@@ -331,7 +342,8 @@ void ax_process_command_list(uint32_t addr, uint32_t size) {
     if (!enabled) return;
     {   /* SR_ARAMDUMP=<file>: ARAM 0-64 KB once, at the 3000th list (debugging) */
         static int done;
-        const char* d = getenv("SR_ARAMDUMP");
+        static const char* d = (const char*)1;
+        if (d == (const char*)1) d = getenv("SR_ARAMDUMP");
         if (d && !done && g_lists == 3000) {
             done = 1;
             FILE* f = fopen(d, "wb");
