@@ -4,6 +4,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 ## ▶ RESUME HERE (read first in a new session)
 
+Local-only details (machine paths, the test console's SD card, hardware-test logistics) are in `NOTES.local.md`, which is gitignored. Read it too when it exists.
+
 **Latest state and next steps: "STATE 2026-10-18" at the end of this file.** The text below is the history.
 
 **Goal (changed 2026-10-15):** play Sonic Riders natively on a modded Switch via **static recompilation**, as SwitchWakerHD does for Wind Waker HD:
@@ -92,7 +94,7 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 - **Build:** `tools/gen_shaders.py` emits straight-line GLSL per key (the gx.frag logic with every select resolved at generation time), compiles each with uam, and embeds a sorted key → dksh table. The GL backend can use the same generated GLSL to check equivalence against the ubershader on PC.
 - **Runtime:** look up the key per state; on a miss use the ubershader and record the key for the next build.
 
-**Hardware test 4/5 analysis** (logs copied to `build/switch/hw5/`):
+**Hardware test 4/5 analysis** (logs kept locally):
 - **~20 fps is GPU-bound.** Render-thread frames take ~50 ms, of which ~46 ms is waiting for the GPU, with 0 KB of uploads. That's at 2x internal resolution (1280x1056) with the big ubershader on every pixel.
   - Answer so far: a Resolution menu option (1x default, 1.5x, 2x; `settings.resolution`). It renders into the top-left of the 2x-sized EFB, so it needs no reallocation.
   - If 1x is still slow, the next step is ahead-of-time specialized shaders: collect TEV configs, generate GLSL, compile with uam into a shipped cache, and keep the ubershader as the fallback. The user asked for this approach ("one-time cache built in advance", as in SwitchWakerHD).
@@ -152,7 +154,7 @@ A matching decomp is **not** the goal. The Phase 2/3 decomp-toolkit matching pla
 
 **Testing without hardware: Eden v0.1.1** (`build/ext/eden-v0.1.1/app`, gitignored; portable `user/` folder)
 - **Use v0.1.1.** v0.2.1 aborts in `dkDeviceCreate`, even with devkitPro's stock `deko_basic` sample.
-- Keys: Eden needs the user's own console keys in its `user/keys/` folder. Never commit them; `*.keys` is gitignored and blocked by the pre-commit hook.
+- Keys: Eden needs the user's own console keys in its portable `user/keys/` folder. Never commit them: `*.keys` is gitignored and refused by the guard (tools/check_no_game_data.py).
 - SD card: `user/sdmc/switch/sonicriders/` holds the NRO, an ISO copy, saves and the log.
 - Run: `eden-cli.exe "user\sdmc\switch\sonicriders\sonicriders.nro"`. Don't start it minimized: rendering stalls. The user is fine with the window being visible.
 - Eden has no process handle for homebrew, so guest memory uses the `svcMapMemory` fallback there.
@@ -230,7 +232,7 @@ build/host/sonicriders.exe "baserom/Sonic Riders (USA) (En,Ja,Fr,De,Es,It).iso"
 ```
 After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-data guard).
 
-**GitHub:** https://github.com/teclilla18/sonic-riders-recomp (**private**). gh CLI: `gh`, logged in as teclilla18.
+**GitHub:** https://github.com/teclilla18/sonic-riders-recomp (public). Push at the end of every work session, after `python tools/check_no_game_data.py` passes.
 - **Push at the end of every work session.**
 - Before pushing, check `git status --ignored`: no ISO, DOL, REL, assets, disassembly, recompiled output or dtk symbol files.
 - If anything questionable would be included, stop and ask the user.
@@ -281,7 +283,7 @@ Matching: 804 confident matches (≥0x24 bytes, exact size). Smaller matches are
 ## Phase 1 — Recon (2026-10-15)
 
 ### Backup inventory
-The backup dir contained exactly one file. The original was moved to `<backups>\` on 2026-10-15 at the user's request (same-drive rename; SHA-1 re-verified afterwards; read-only attribute set). Working copy: `baserom/` (gitignored).
+The backup dir contained exactly one file. The original was moved to a local backup folder on 2026-10-15 at the user's request (same-drive rename; SHA-1 re-verified afterwards; read-only attribute set). Working copy: `baserom/` (gitignored).
 
 | File | Size (bytes) | Format |
 |---|---|---|
@@ -554,7 +556,6 @@ Each library gets its own `mw_version`. Steps:
 - Eden is muted now (user/config/sdl2-config.ini volume 0, muted; .bak kept) so tests never play sound.
 
 ## STATE 2026-10-18 - for the next session
-**On the user's SD card:** build 550B62CF (story fix + sound on; sonicriders.backup.nro = an older build), env.txt with SR_PROFILE=1, SonicRiders.nsp (forwarder; icon = the user's chosen Sonic Riders cover, sharpened, build/nsp/cover_soft.png; never commit the art).
 
 **Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
 

@@ -87,3 +87,6 @@ saves/
 *.nca
 *.nsp
 *.xci
+
+# Local-only notes (machine paths, test console SD card, personal logistics)
+NOTES.local.md

@@ -1,0 +1,22 @@
+# Fails if anything game-derived or private is in the repository: game files, disassembly,
+# recompiled code, builds, keys, logs, screenshots, personal paths (tools/check_no_game_data.py).
+name: no game data
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Current tree
+        run: python tools/check_no_game_data.py
+      - name: Every commit
+        run: python tools/check_no_game_data.py --history
