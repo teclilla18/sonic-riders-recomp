@@ -4,6 +4,8 @@
 
 - Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
   changed finishes in seconds.
+- Faster vertex decoding on the GP thread (about 40% less decode time, identical results): a step
+  towards 60 fps in 3-4 player races.
 - Quieter recompiler output: one summary line; details (unhandled data words, FPSCR notes) go to
   `build/gen/report.txt`.
 

@@ -40,6 +40,34 @@ static uint16_t g_pe_mmio[0x80];
 #define PE_TOKEN   (g_pe_mmio[0x0E >> 1])
 static mtx_t g_pe_lock;  /* PE status and token: the GP thread sets them, the CPU reads and clears */
 
+/* SR_GPTL=<VI field>: a timeline of game/GP synchronisation for a few frames from that field (debugging
+ * the multiplayer frame rate): game thread idle begin/end, PE finish/token raised, queued bytes */
+size_t gx_gp_backlog(void);
+static struct { uint64_t t; uint32_t field; char type; uint32_t a, b; } g_tl[4096];
+static atomic_int g_tl_n;
+static uint32_t g_tl_from;
+static int g_tl_on = -1;
+void gx_tl(char type, uint32_t a) {
+    if (g_tl_on < 0) {
+        const char* e = getenv("SR_GPTL");
+        g_tl_from = e ? (uint32_t)strtoul(e, NULL, 0) : 0;
+        g_tl_on = e != NULL;
+    }
+    if (!g_tl_on) return;
+    uint32_t f = vi_field_count();
+    if (f < g_tl_from) return;
+    int i = atomic_fetch_add(&g_tl_n, 1);
+    if (i < 4096) {
+        g_tl[i].t = rt_ticks(); g_tl[i].field = f; g_tl[i].type = type; g_tl[i].a = a; g_tl[i].b = (uint32_t)gx_gp_backlog();
+    } else if (i == 4096) {
+        uint64_t t0 = g_tl[0].t;
+        rt_log("[gptl] timeline from field %u (us since first event; type: I idle begin, i idle end, F PE finish, T token, V retrace; a; queued bytes)", g_tl_from);
+        for (int k = 0; k < 4096; k++)
+            rt_log("[gptl] %8.1f f%u %c %u q%u", (g_tl[k].t - t0) / 40.5, g_tl[k].field, g_tl[k].type, g_tl[k].a, g_tl[k].b);
+        g_tl_on = 0;
+    }
+}
+
 /* ---- command parser ---- */
 static uint8_t* g_pend;
 static size_t g_pend_len, g_pend_cap;
@@ -96,6 +124,7 @@ int gx_vertex_size(int vat) {
 
 static void pe_finish(void) {
     mtx_lock(&g_pe_lock);
+    gx_tl('F', 0);
     PE_INTRSR |= 0x8;  /* finish status */
     int irq = (PE_INTRSR & 0x2) != 0;
     mtx_unlock(&g_pe_lock);
@@ -104,6 +133,7 @@ static void pe_finish(void) {
 
 static void pe_token(uint16_t token, int irq) {
     mtx_lock(&g_pe_lock);
+    gx_tl('T', token | (unsigned)irq << 16);
     PE_TOKEN = token;
     int raise = 0;
     if (irq) {
@@ -331,6 +361,9 @@ static int gp_thread(void* arg) {
     rt_thread_pin(2);
     rt_thread_lower_priority();
     profile_register_thread();
+    const char* slow = getenv("SR_GPSLOW");
+    double gp_slow = slow ? atof(slow) : 1.0;
+    if (gp_slow > 1.0) rt_log("[gx] SR_GPSLOW: the GP thread takes %.1fx as long", gp_slow);
     for (;;) {
         size_t tail = atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
         size_t head = atomic_load_explicit(&g_ring_head, memory_order_acquire);
@@ -354,6 +387,10 @@ static int gp_thread(void* arg) {
         if (n > 65536) n = 65536;
         uint64_t t0 = rt_ticks();
         gp_feed(g_ring + off, n);
+        if (gp_slow > 1.0) {  /* SR_GPSLOW: emulate a slower CPU (the Switch) on the PC */
+            uint64_t until = t0 + (uint64_t)((rt_ticks() - t0) * gp_slow);
+            while (rt_ticks() < until) {}
+        }
         atomic_fetch_add_explicit(&g_gp_busy, rt_ticks() - t0, memory_order_relaxed);
         atomic_store_explicit(&g_ring_tail, tail + n, memory_order_release);
         if (head + 65536 - (tail + n) > RING_SIZE) {  /* the producer may be waiting for space */

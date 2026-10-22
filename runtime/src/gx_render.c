@@ -39,6 +39,8 @@ static uint64_t g_wait_ticks, g_tex_ticks;
 static uint64_t g_wait_total, g_tex_total;  /* never reset ([hitch] deltas) */
 static unsigned long long g_verts_total;  /* vertices emitted (after primitive expansion) */
 static uint64_t g_draw_total;              /* time in gx_draw (decode, state, lookups) */
+static uint64_t g_decode_ticks, g_state_ticks;  /* parts of it: vertex decode, state snapshots ([perf]) */
+static unsigned g_state_pushes;
 static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using unimplemented features */
 static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
 static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
@@ -241,6 +243,146 @@ static void decode_planned(const uint8_t** pp, const DecodePlan* pl, GxVertex* v
     *pp = p;
 }
 
+/* ---- fast vertex decoding ----
+ * The same results as decode_planned (bit for bit; SR_DECODECHECK=1 runs both and compares), with
+ * the per-component format switches resolved once per draw: each attribute gets a reader for its
+ * format and component count, colours convert through tables, and only the texture coordinates a
+ * draw has are decoded. */
+typedef void (*CompRd)(const uint8_t* q, float scale, float* o);
+#define RD_FN(name, n, expr)                                                     \
+    static void name(const uint8_t* q, float scale, float* o) {                 \
+        (void)scale;                                                             \
+        for (int k = 0; k < n; k++) o[k] = expr;                                 \
+    }
+RD_FN(rd_u8_1, 1, (float)q[k] * scale)
+RD_FN(rd_u8_2, 2, (float)q[k] * scale)
+RD_FN(rd_u8_3, 3, (float)q[k] * scale)
+RD_FN(rd_s8_1, 1, (float)(int8_t)q[k] * scale)
+RD_FN(rd_s8_2, 2, (float)(int8_t)q[k] * scale)
+RD_FN(rd_s8_3, 3, (float)(int8_t)q[k] * scale)
+RD_FN(rd_u16_1, 1, (float)rd16(q + 2 * k) * scale)
+RD_FN(rd_u16_2, 2, (float)rd16(q + 2 * k) * scale)
+RD_FN(rd_u16_3, 3, (float)rd16(q + 2 * k) * scale)
+RD_FN(rd_s16_1, 1, (float)(int16_t)rd16(q + 2 * k) * scale)
+RD_FN(rd_s16_2, 2, (float)(int16_t)rd16(q + 2 * k) * scale)
+RD_FN(rd_s16_3, 3, (float)(int16_t)rd16(q + 2 * k) * scale)
+static inline float rdf(const uint8_t* q) { uint32_t u = rd32(q); float f; memcpy(&f, &u, 4); return f; }
+RD_FN(rd_f_1, 1, rdf(q + 4 * k))
+RD_FN(rd_f_2, 2, rdf(q + 4 * k))
+RD_FN(rd_f_3, 3, rdf(q + 4 * k))
+static const CompRd k_rd[5][4] = {{NULL, rd_u8_1, rd_u8_2, rd_u8_3},     {NULL, rd_s8_1, rd_s8_2, rd_s8_3},
+                                  {NULL, rd_u16_1, rd_u16_2, rd_u16_3},  {NULL, rd_s16_1, rd_s16_2, rd_s16_3},
+                                  {NULL, rd_f_1, rd_f_2, rd_f_3}};  /* formats 4-7 read as float, as comp() does */
+static CompRd rd_for(int fmt, int n) { return k_rd[fmt > 4 ? 4 : fmt][n]; }
+
+/* colour channel tables: exactly color()'s integer expansion followed by / 255.0f */
+static float g_lut4[16], g_lut5[32], g_lut6[64], g_lut8[256];
+static void col_luts(void) {
+    for (int i = 0; i < 16; i++) g_lut4[i] = (float)(uint32_t)(i * 17) / 255.0f;
+    for (int i = 0; i < 32; i++) g_lut5[i] = (float)(uint32_t)(i * 255 / 31) / 255.0f;
+    for (int i = 0; i < 64; i++) g_lut6[i] = (float)(uint32_t)(i * 255 / 63) / 255.0f;
+    for (int i = 0; i < 256; i++) g_lut8[i] = (float)(uint32_t)i / 255.0f;
+}
+typedef void (*ColRd)(const uint8_t* p, float* o);
+static void col_565(const uint8_t* p, float* o) {
+    uint16_t v = rd16(p);
+    o[0] = g_lut5[v >> 11]; o[1] = g_lut6[(v >> 5) & 63]; o[2] = g_lut5[v & 31]; o[3] = 1.0f;
+}
+static void col_888(const uint8_t* p, float* o) { o[0] = g_lut8[p[0]]; o[1] = g_lut8[p[1]]; o[2] = g_lut8[p[2]]; o[3] = 1.0f; }
+static void col_4444(const uint8_t* p, float* o) {
+    uint16_t v = rd16(p);
+    o[0] = g_lut4[v >> 12]; o[1] = g_lut4[(v >> 8) & 15]; o[2] = g_lut4[(v >> 4) & 15]; o[3] = g_lut4[v & 15];
+}
+static void col_6666(const uint8_t* p, float* o) {
+    uint32_t v = (uint32_t)p[0] << 16 | p[1] << 8 | p[2];
+    o[0] = g_lut6[(v >> 18) & 63]; o[1] = g_lut6[(v >> 12) & 63]; o[2] = g_lut6[(v >> 6) & 63]; o[3] = g_lut6[v & 63];
+}
+static void col_8888(const uint8_t* p, float* o) { o[0] = g_lut8[p[0]]; o[1] = g_lut8[p[1]]; o[2] = g_lut8[p[2]]; o[3] = g_lut8[p[3]]; }
+static const ColRd k_col[8] = {col_565, col_888, col_888, col_4444, col_6666, col_8888, col_8888, col_8888};
+
+typedef struct FastAttr { int type, adv; float scale; uint32_t base, stride; CompRd rd; } FastAttr;
+typedef struct FastPlan {
+    float pnmtx, tmtx[8];
+    int pnmtx_direct, any_tmtx_direct, tmtx_direct[8];
+    FastAttr pos, nrm, tex[8];
+    int ntex, texi[8];  /* the texture coordinates present, in order */
+    int col_type[2], col_adv[2];
+    uint32_t col_base[2], col_stride[2];
+    ColRd col[2];
+    int nrm_skip;       /* bytes after the normal: NBT direct data or extra indices */
+} FastPlan;
+
+static void fast_attr(FastAttr* f, const DAttr* d, int n) {
+    f->type = d->type; f->scale = d->scale; f->base = d->base; f->stride = d->stride;
+    f->rd = rd_for(d->fmt, n);
+    f->adv = d->type == 1 ? n * k_csize[d->fmt] : d->type == 2 ? 1 : 2;  /* direct data, or the index */
+}
+
+static void fast_plan_init(FastPlan* fp, const DecodePlan* pl) {
+    static int luts;
+    if (!luts) { col_luts(); luts = 1; }
+    fp->pnmtx = pl->pnmtx;
+    fp->pnmtx_direct = pl->pnmtx_direct;
+    fp->any_tmtx_direct = 0;
+    for (int i = 0; i < 8; i++) {
+        fp->tmtx[i] = pl->tmtx[i];
+        fp->tmtx_direct[i] = pl->tmtx_direct[i];
+        fp->any_tmtx_direct |= pl->tmtx_direct[i];
+    }
+    fast_attr(&fp->pos, &pl->pos, pl->pos.n);
+    fast_attr(&fp->nrm, &pl->nrm, 3);
+    if (pl->nrm.type == 1) fp->nrm.adv = pl->nrm_direct_size;
+    fp->nrm_skip = pl->nrm.type >= 2 ? pl->nrm_idx_extra : 0;
+    for (int c = 0; c < 2; c++) {
+        fp->col_type[c] = pl->col[c].type;
+        fp->col_base[c] = pl->col[c].base;
+        fp->col_stride[c] = pl->col[c].stride;
+        fp->col[c] = k_col[pl->col[c].fmt & 7];
+        fp->col_adv[c] = pl->col[c].type == 1 ? k_colsize[pl->col[c].fmt] : pl->col[c].type == 2 ? 1 : 2;
+    }
+    fp->ntex = 0;
+    for (int i = 0; i < 8; i++) {
+        fast_attr(&fp->tex[i], &pl->tex[i], pl->tex[i].n);
+        if (pl->tex[i].type) fp->texi[fp->ntex++] = i;
+    }
+}
+
+/* the attribute's data: in the stream (direct) or in its array (indexed); p moves past it */
+static inline const uint8_t* fattr(const uint8_t** pp, int type, int adv, uint32_t base, uint32_t stride) {
+    const uint8_t* p = *pp;
+    *pp = p + adv;
+    if (type == 1) return p;
+    uint32_t idx = type == 2 ? p[0] : rd16(p);
+    return mem_phys(base + idx * stride);
+}
+
+static void decode_fast(const uint8_t** pp, const FastPlan* fp, GxVertex* v) {
+    const uint8_t* p = *pp;
+    v->pos[3] = fp->pnmtx_direct ? (float)*p++ : fp->pnmtx;
+    if (fp->any_tmtx_direct) {
+        for (int i = 0; i < 8; i++) v->tmtx[i] = fp->tmtx_direct[i] ? (float)*p++ : fp->tmtx[i];
+    } else {
+        memcpy(v->tmtx, fp->tmtx, sizeof v->tmtx);
+    }
+    v->pos[0] = v->pos[1] = v->pos[2] = 0.0f;
+    if (fp->pos.type) fp->pos.rd(fattr(&p, fp->pos.type, fp->pos.adv, fp->pos.base, fp->pos.stride), fp->pos.scale, v->pos);
+    v->nrm[0] = v->nrm[1] = v->nrm[2] = v->nrm[3] = 0.0f;
+    if (fp->nrm.type) {
+        fp->nrm.rd(fattr(&p, fp->nrm.type, fp->nrm.adv, fp->nrm.base, fp->nrm.stride), fp->nrm.scale, v->nrm);
+        p += fp->nrm_skip;
+    }
+    for (int c = 0; c < 2; c++) {
+        if (!fp->col_type[c]) { v->col[c][0] = v->col[c][1] = v->col[c][2] = v->col[c][3] = 1.0f; continue; }
+        fp->col[c](fattr(&p, fp->col_type[c], fp->col_adv[c], fp->col_base[c], fp->col_stride[c]), v->col[c]);
+    }
+    memset(v->tex, 0, sizeof v->tex);
+    for (int j = 0; j < fp->ntex; j++) {
+        const FastAttr* d = &fp->tex[fp->texi[j]];
+        d->rd(fattr(&p, d->type, d->adv, d->base, d->stride), d->scale, v->tex[fp->texi[j]]);
+    }
+    *pp = p;
+}
+
 /* the texture bound to `map` for this draw (timed for [perf] and [hitch]) */
 static void lookup_map(GxCmd* c, int map) {
     uint64_t t = rt_ticks();
@@ -264,7 +406,12 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
 }
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices) {
     if (!count) return;
-    if (g_state_dirty) push_state();
+    if (g_state_dirty) {
+        uint64_t ts = rt_ticks();
+        push_state();
+        g_state_ticks += rt_ticks() - ts;
+        g_state_pushes++;
+    }
     GxFrame* f = frame();
     /* decode each vertex once into the frame; quads, strips and fans become index lists */
     uint32_t out_n, kind;
@@ -281,7 +428,33 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     const uint8_t* p = vertices;
     DecodePlan plan;
     plan_init(&plan, vat);
-    for (uint32_t i = 0; i < count; i++) decode_planned(&p, &plan, &f->verts[f->nverts + i]);
+    FastPlan fplan;
+    fast_plan_init(&fplan, &plan);
+    static int check = -1;
+    if (check < 0) check = getenv("SR_DECODECHECK") != NULL;
+    uint64_t td = rt_ticks();
+    if (!check) {
+        for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
+    } else {  /* SR_DECODECHECK: the reference decoder too, compared bit for bit */
+        static unsigned long long checked, bad;
+        const uint8_t* q = vertices;
+        for (uint32_t i = 0; i < count; i++) {
+            GxVertex ref;
+            decode_planned(&q, &plan, &ref);
+            decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
+            checked++;
+            if (memcmp(&ref, &f->verts[f->nverts + i], sizeof ref) || p != q) {
+                if (bad++ < 10)
+                    rt_log("[decodecheck] mismatch: vat %d vcd %08X %08X vat %08X %08X %08X, vertex %u (stream %+d)", vat,
+                           g_gx.cp[0x50], g_gx.cp[0x60], g_gx.cp[0x70 + vat], g_gx.cp[0x80 + vat], g_gx.cp[0x90 + vat], i,
+                           (int)(p - q));
+                p = q;
+            }
+        }
+        if ((checked & ~0xFFFFFull) != ((checked - count) & ~0xFFFFFull))
+            rt_log("[decodecheck] %llu vertices compared, %llu mismatches", checked, bad);
+    }
+    g_decode_ticks += rt_ticks() - td;
     f->idx = grow(f->idx, &f->cap_idx, f->nidx + out_n, sizeof(uint32_t));
     uint32_t* o = f->idx + f->nidx;
     const uint32_t v0 = f->nverts;
@@ -451,6 +624,10 @@ static void efb_copy(uint32_t v) {
                 verts0 = g_verts_total;
                 st0 = g_pipe_stores;
                 by0 = g_pipe_bytes;
+                rt_log("[perf]   draw processing parts: vertex decode %.2f ms/frame, state snapshots %.2f ms/frame (%u/frame)",
+                       g_decode_ticks * 1000.0 / 40500000.0 / 120, g_state_ticks * 1000.0 / 40500000.0 / 120, g_state_pushes / 120);
+                g_decode_ticks = g_state_ticks = 0;
+                g_state_pushes = 0;
                 rt_log("[perf]   EFB copies to textures/frame %.1f, from depth %.1f, target format codes seen %04X",
                        g_feat_copies / 120.0, g_feat_copy_z / 120.0, g_feat_copy_fmts);
                 g_feat_ind = g_feat_fog = g_feat_ztex = g_feat_copies = g_feat_copy_z = 0;

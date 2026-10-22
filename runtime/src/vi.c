@@ -66,6 +66,7 @@ static int vi_thread(void* arg) {
         }
         g_field_start = next;
         g_fields++;
+        { void gx_tl(char type, uint32_t a); gx_tl('V', g_fields); }
         /* DI0: the retrace interrupt VIInit configures (enable bit 0x1000, status bit 0x8000) */
         if (g_vi[0x30 >> 1] & 0x1000) {
             g_vi[0x30 >> 1] |= 0x8000;

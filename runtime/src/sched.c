@@ -298,6 +298,8 @@ void sched_interrupts_enabled(Cpu* c) {
         uint32_t prof_prev = g_ppc_cur_fn;
         g_ppc_cur_fn = PROF_IDLE;
         gx_pipe_idle();
+        void gx_tl(char type, uint32_t a);
+        gx_tl('I', 0);
         uint64_t t_idle = rt_ticks();
         mtx_lock(&g_irq_lock);
         if (!g_core_preempt[0]) {
@@ -309,6 +311,7 @@ void sched_interrupts_enabled(Cpu* c) {
         }
         mtx_unlock(&g_irq_lock);
         uint64_t d = rt_ticks() - t_idle;
+        gx_tl('i', (uint32_t)(d * 1000 / 40500));
         g_spin_idle += d;
         if (gx_gp_backlog()) g_spin_idle_gp += d;
         g_spin_last = 0;
