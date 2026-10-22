@@ -88,10 +88,16 @@ gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
 def cmd_path(p, program=False):
     """A path for a build command: relative to the repository when it can be (no spaces from the
     folders above it), backslashes for a program, quoted if it still has spaces."""
+    # the shorter of the absolute and relative forms that has no spaces: Windows resolves a relative
+    # path against the build folder before shortening it, so a deep install folder plus many ".."
+    # went over the 260-character limit ("CreateProcess: The filename or extension is too long")
+    a = os.path.abspath(p)
     try:
-        p = os.path.relpath(p, ROOT)
+        r = os.path.relpath(p, ROOT)
     except ValueError:  # another drive
-        p = os.path.abspath(p)
+        r = a
+    spaceless = [x for x in (a, r) if " " not in x]
+    p = min(spaceless, key=len) if spaceless else r
     p = os.path.normpath(p) if program else p.replace("\\", "/")
     return '"%s"' % p if " " in p else p
 

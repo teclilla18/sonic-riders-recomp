@@ -13,6 +13,7 @@
 #else
 #include <dirent.h>
 #include <pthread.h>
+#include <sys/stat.h>
 #endif
 
 #ifdef _WIN32
@@ -92,6 +93,13 @@ void platform_init(void) {
         rename("sonicriders.log", "sonicriders.prev.log");
         freopen("sonicriders.log", "w", stderr);
     }
+#endif
+#ifdef _WIN32
+    /* the memory card and settings.ini live in saves\ (a fresh install has none yet: without it
+     * saving failed silently) */
+    CreateDirectoryA("saves", NULL);
+#else
+    mkdir("saves", 0777);
 #endif
     /* stderr is the log: buffer it (rt_log flushes about once a second, or every line with
      * SR_LOGSYNC); an unbuffered stderr wrote each piece of a line separately */
