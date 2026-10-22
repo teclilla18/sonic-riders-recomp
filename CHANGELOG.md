@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 (2026-10-22)
+
+### New: play on Windows PC
+- A separate **PC download** (`SonicRiders-PC-Setup`): builds a native Windows version from your own
+  disc image, no emulator. The Switch download is now `SonicRiders-Switch-Setup`.
+- The PC version is a normal windowed program (no console window; its log is `sonicriders.log` in the
+  install folder), with vsync, borderless fullscreen (F11 / Alt+Enter, or the settings menu), a
+  "Sonic Riders" shortcut in the install folder and optionally on the desktop.
+
+### Fixes and improvements
 
 - Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
   changed finishes in seconds.

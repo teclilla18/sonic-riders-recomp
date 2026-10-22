@@ -87,7 +87,11 @@ int overlay_input(unsigned held) {
     if (step) {
         switch (g_sel) {
         case ITEM_SCREEN: g_settings.screen = (g_settings.screen + SCREEN_MODES + step) % SCREEN_MODES; settings_apply(); break;
+#ifdef __SWITCH__
         case ITEM_RES: g_settings.resolution = (g_settings.resolution + RES_MODES + step) % RES_MODES; settings_apply(); break;
+#else  /* the PC renders at 2x always: this row is the fullscreen switch there */
+        case ITEM_RES: g_settings.fullscreen = !g_settings.fullscreen; settings_apply(); break;
+#endif
         case ITEM_FPS: g_settings.show_fps = !g_settings.show_fps; settings_apply(); break;
         case ITEM_EMERALD: g_settings.chaos_emerald = !g_settings.chaos_emerald; settings_apply(); break;
         case ITEM_PADS:
@@ -157,7 +161,11 @@ static void redraw(void) {
     text(x0 + 16, y0 + 14, "SONIC RIDERS - SETTINGS", rgba(80, 160, 255, 255));
     char lines[ITEMS][64];
     snprintf(lines[ITEM_SCREEN], 64, "Screen:  < %s >", settings_screen_name(g_settings.screen));
+#ifdef __SWITCH__
     snprintf(lines[ITEM_RES], 64, "Resolution:  < %s >", settings_resolution_name(g_settings.resolution));
+#else
+    snprintf(lines[ITEM_RES], 64, "Fullscreen (F11):  < %s >", g_settings.fullscreen ? "On" : "Off");
+#endif
     snprintf(lines[ITEM_FPS], 64, "FPS counter:  < %s >", g_settings.show_fps ? "On" : "Off");
     snprintf(lines[ITEM_EMERALD], 64, "Unlock Chaos Emerald gear:  < %s >", g_settings.chaos_emerald ? "On" : "Off");
     int pads = 0;

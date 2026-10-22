@@ -627,6 +627,27 @@ void render_submit(GxFrame* f) {
 
 int render_poll_quit(void) { return g_quit; }
 
+/* window events: closing, and the fullscreen toggle (F11 or Alt+Enter; also the settings menu) */
+static void handle_event(const SDL_Event* e) {
+    if (e->type == SDL_QUIT) g_quit = 1;
+    if (e->type == SDL_KEYDOWN && !e->key.repeat &&
+        (e->key.keysym.scancode == SDL_SCANCODE_F11 ||
+         (e->key.keysym.scancode == SDL_SCANCODE_RETURN && (e->key.keysym.mod & KMOD_ALT)))) {
+        g_settings.fullscreen = !g_settings.fullscreen;
+        settings_apply();
+    }
+}
+
+/* the window follows g_settings.fullscreen (changed by a key or the menu); the cursor hides in it */
+static void sync_fullscreen(void) {
+    static int applied = -1;
+    if (g_settings.fullscreen == applied || getenv("SR_MINIMIZED")) return;
+    applied = g_settings.fullscreen;
+    SDL_SetWindowFullscreen(g_win, applied ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    SDL_ShowCursor(applied ? SDL_DISABLE : SDL_ENABLE);
+    rt_log("[gl] %s", applied ? "fullscreen" : "windowed");
+}
+
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
@@ -641,7 +662,11 @@ static int render_thread(void* arg) {
                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
         if (!SDL_GL_CreateContext(g_win)) rt_fatal("SDL_GL_CreateContext: %s", SDL_GetError());
-        SDL_GL_SetSwapInterval(0);
+        /* vsync, so frames line up with the display (no tearing); test runs (minimized) and
+         * SR_NOVSYNC=1 present at once */
+        int vsync = !minimized && !getenv("SR_NOVSYNC");
+        SDL_GL_SetSwapInterval(vsync);
+        rt_log("[gl] vsync %s", vsync ? "on" : "off");
         gl_setup();
     }
     for (;;) {
@@ -650,8 +675,8 @@ static int render_thread(void* arg) {
             mtx_unlock(&g_lock);
             if (!g_headless) {
                 SDL_Event e;
-                while (SDL_PollEvent(&e))
-                    if (e.type == SDL_QUIT) g_quit = 1;
+                while (SDL_PollEvent(&e)) handle_event(&e);
+                sync_fullscreen();
                 input_pump();
             }
             mtx_lock(&g_lock);
@@ -669,8 +694,8 @@ static int render_thread(void* arg) {
             for (uint32_t i = 0; i < f->nretired; i++) gx_texture_free(f->retired[i]);
         } else {
             SDL_Event e;
-            while (SDL_PollEvent(&e))
-                if (e.type == SDL_QUIT) g_quit = 1;
+            while (SDL_PollEvent(&e)) handle_event(&e);
+            sync_fullscreen();
             input_pump();
             const char* dbg = getenv("SR_GXDEBUG");
             g_debug_frame = dbg && (unsigned)atoi(dbg) == g_presented + 1;

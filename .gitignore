@@ -100,3 +100,8 @@ VERSION
 
 # Claude Code per-user settings
 .claude/settings.local.json
+
+# PC version files created by the setup / the game
+Sonic Riders.lnk
+sonicriders.log
+sonicriders.prev.log

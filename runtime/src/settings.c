@@ -41,6 +41,7 @@ void settings_load(void) {
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
             else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
             else if (!strcmp(line, "chaos_emerald")) g_settings.chaos_emerald = v != 0;
+            else if (!strcmp(line, "fullscreen")) g_settings.fullscreen = v != 0;
         }
         fclose(f);
     }
@@ -58,7 +59,7 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\n", g_settings.screen, g_settings.show_fps,
-            g_settings.resolution, g_settings.chaos_emerald);
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\n", g_settings.screen,
+            g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen);
     fclose(f);
 }

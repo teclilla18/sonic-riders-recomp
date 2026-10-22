@@ -122,7 +122,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             hostinc = "%s -Iruntime/include/compat -I%s/include/SDL2 -DSDL_MAIN_HANDLED -D_WIN32_WINNT=0x0A00" % (inc, sdl)
             n.variable("cflags", "-std=gnu11 -g " + hostinc)
             n.variable("cxxflags", "-std=c++20 -g " + hostinc)
-            n.variable("ldflags", "-g -L%s/lib -lSDL2 -lopengl32 -lwinmm -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
+            # a windowed program (no console window); the log goes to sonicriders.log then (platform_host.c)
+            n.variable("ldflags", "-g -L%s/lib -lSDL2 -lopengl32 -lwinmm -Wl,--subsystem,windows -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/bin/SDL2.dll"
         else:
             sdl = args.sdl or pick_sdl(lambda d: os.path.isdir(os.path.join(d, "lib", "x64")))

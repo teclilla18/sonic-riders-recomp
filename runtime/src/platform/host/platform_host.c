@@ -83,6 +83,16 @@ void platform_sample_threads(void) {}
 #endif
 
 void platform_init(void) {
+#ifdef _WIN32
+    /* started as a normal windowed program (no console, stderr not redirected): the log goes to
+     * sonicriders.log next to the game, the previous one kept as sonicriders.prev.log (as on the Switch) */
+    HANDLE eh = GetStdHandle(STD_ERROR_HANDLE);
+    if (eh == NULL || eh == INVALID_HANDLE_VALUE || GetFileType(eh) == FILE_TYPE_UNKNOWN) {
+        remove("sonicriders.prev.log");
+        rename("sonicriders.log", "sonicriders.prev.log");
+        freopen("sonicriders.log", "w", stderr);
+    }
+#endif
     /* stderr is the log: buffer it (rt_log flushes about once a second, or every line with
      * SR_LOGSYNC); an unbuffered stderr wrote each piece of a line separately */
     static char logbuf[64 * 1024];

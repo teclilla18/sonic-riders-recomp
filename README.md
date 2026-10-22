@@ -1,34 +1,48 @@
-# Sonic Riders native port (Switch homebrew, work in progress)
+# Sonic Riders native port (Nintendo Switch and Windows PC, work in progress)
 
 > [!IMPORTANT]
-> **Your Switch needs to be overclocked for this to run well.** All testing so far was done at
+> **On the Switch, an overclock is needed for this to run well.** All Switch testing so far was done at
 > **CPU 1785 MHz / GPU 1152 MHz / memory 2133 MHz** (OLED model). At stock clocks the game runs
 > poorly (slow motion, low frame rate). Overclock at your own risk; see [What you need](#what-you-need).
+> The PC version ran at a steady 60 fps on the test PC (RTX 3060), 4 players included.
 
-An unofficial port of **Sonic Riders** (GameCube, USA) that runs natively on a modded Nintendo
-Switch, built with **static recompilation**:
+An unofficial port of **Sonic Riders** (GameCube, USA) that runs **natively**, with no emulator, on a
+modded **Nintendo Switch** or on a **Windows PC**. It is built with **static recompilation**:
 
 - the game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of time, on your PC;
 - the GameCube hardware (graphics, disc, audio DSP, memory card, controllers) is reimplemented natively;
-- graphics are drawn with deko3d on the Switch (OpenGL 3.3 in the PC test build).
+- graphics are drawn with deko3d on the Switch and OpenGL 3.3 on the PC.
 
 The approach follows [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
 [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp), whose PowerPC→C translator
 this project forks.
 
+## Choose your version
+
+Each [release](../../releases/latest) has one download per platform. Both build the game on your
+Windows PC from **your own** disc image; neither contains any game files.
+
+| I want to play on... | Download | Then follow |
+|---|---|---|
+| a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](#install-on-switch) |
+| my **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](#install-on-pc) |
+
+(Ignore the "Source code" links GitHub adds at the bottom of every release.)
+
 ## Updating to a new version
 
 Fixes come out as new releases. To update an existing install:
 
-1. Download the new `SonicRidersSetup-<version>.zip` from the [latest release](../../releases/latest)
-   and extract it to a **new** folder.
-2. Put your Switch's SD card in the PC and run `SonicRidersSetup.bat` from the new folder. Pick the
-   same disc image, choose **1** (Switch), and pick your SD card.
+1. Download the new zip for your platform from the [latest release](../../releases/latest) and extract it
+   to a **new** folder.
+2. Run its installer (`Install Sonic Riders (Switch).bat` or `Install Sonic Riders (PC).bat`) with the
+   same disc image (and, for the Switch, the same SD card).
 3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
-   minutes). It replaces `sonicriders.nro` and skips copying the disc image, since it's already there.
+   minutes).
 
-Your saves (`saves/`) and settings (`settings.ini`) on the SD card are kept. You can delete the old
-release folder afterwards.
+Your saves and settings are kept: on the Switch they're on the SD card, which the update doesn't touch.
+On PC they're in the old install folder: copy its `saves` folder into the new one, then delete the old
+folder.
 
 To get a notification when a new version comes out, click **Watch** at the top of the GitHub page,
 then **Custom** → **Releases**. What changed in each version is in the [CHANGELOG](CHANGELOG.md).
@@ -46,37 +60,45 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 
 ## What you need
 
-- **A Nintendo Switch running custom firmware** (Atmosphère) with the Homebrew Menu, and an SD card
-  with about 2 GB free.
-- **An overclock** (see the note at the top). Tested at CPU 1785 / GPU 1152 / memory 2133 MHz on an
-  OLED, set with an overclocking homebrew such as sys-clk. Overclock at your own risk and within your
-  console's limits.
+**For both versions:**
+
 - **Your own copy of Sonic Riders (USA)** dumped to a disc image: game ID `GXEE8P`, revision 0, a clean
   1:1 `.iso` (1,459,978,240 bytes, SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`, the Redump
   dump "Sonic Riders (USA) (En,Ja,Fr,De,Es,It)"). You can dump your disc with a Wii and CleanRip.
   RVZ/GCZ/CISO images must be converted back to a full ISO first (Dolphin: right-click the game,
   Convert File, format ISO). The European and Japanese versions are not supported.
-- **A Windows 10 (version 1803 or newer) or Windows 11 PC**, 64-bit, with an internet connection and
-  about 4 GB of free disk space. The PC does the conversion; nothing is downloaded from the game.
+- **A Windows 10 (version 1803 or newer) or Windows 11 PC**, 64-bit, with an internet connection the
+  first time and about 4 GB of free disk space. The PC does the conversion; nothing is downloaded from
+  the game.
 
-## Install (playing on your Switch)
+**For the Switch:**
 
-1. **Download** `SonicRidersSetup-<version>.zip` from the [latest release](../../releases/latest).
-   (Not the "Source code" links GitHub adds at the bottom.)
-2. **Extract** the whole zip to a folder, for example `C:\SonicRiders`. Don't run it from inside the
-   zip.
+- **A Nintendo Switch running custom firmware** (Atmosphère) with the Homebrew Menu, and an SD card
+  with about 2 GB free.
+- **An overclock** (see the note at the top). Tested at CPU 1785 / GPU 1152 / memory 2133 MHz on an
+  OLED, set with an overclocking homebrew such as sys-clk. Overclock at your own risk and within your
+  console's limits.
+
+**For the PC:**
+
+- A graphics card with **OpenGL 3.3** (any from the last ten years). Tested on an NVIDIA RTX 3060.
+- A game controller is recommended (Xbox-style, through SDL; up to 4 for multiplayer). Keyboard works too.
+
+## Install on Switch
+
+1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../releases/latest).
+2. **Extract** the whole zip to a folder, for example `C:\SonicRiders`. Don't run it from inside the zip.
 3. **Put your Switch's SD card in the PC** (or connect the Switch over USB with a tool that shows the
    SD card as a drive).
-4. **Double-click `SonicRidersSetup.bat`.** If Windows shows "Windows protected your PC", click
-   *More info* → *Run anyway* (the script is not signed). Then answer its questions:
+4. **Double-click `Install Sonic Riders (Switch).bat`.** If Windows shows "Windows protected your PC",
+   click *More info* → *Run anyway* (the script is not signed). Then answer its questions:
    - pick your disc image in the file window; the setup checks that it is the right one;
-   - choose **1** (Switch);
    - say **y** to copy to the SD card and pick the SD card's top folder (the one containing
      `atmosphere` and `switch`);
    - say **y** to copy your disc image to the SD card (needed once; skipped automatically later).
-5. **Wait.** The first run downloads the build tools (about 300 MB, 1.3 GB unpacked, kept for next time) and converts the
-   game: 10–30 minutes. It ends with "Done". If something fails, the message says why, and the whole
-   log is in `setup.log`.
+5. **Wait.** The first run downloads the build tools (about 300 MB, 1.3 GB unpacked, kept for next
+   time) and converts the game: 10–30 minutes. It ends with "Done". If something fails, the message
+   says why, and the whole log is in `setup.log`.
 6. **Eject the SD card safely** and put it back in the Switch.
 7. **Start it in full-memory mode:** hold **R** while starting any installed game until the Homebrew
    Menu opens, then choose **Sonic Riders**. Opening the Homebrew Menu from the Album does not give the
@@ -85,7 +107,31 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 Hold **−** (Minus) in the game for the settings menu (widescreen, resolution, FPS counter, controllers).
 Your saves and settings stay on the SD card in `switch/sonicriders/`.
 
-**Updating to a new version:** see [Updating to a new version](#updating-to-a-new-version) above.
+## Install on PC
+
+1. **Download** `SonicRiders-PC-Setup-<version>.zip` from the [latest release](../../releases/latest).
+2. **Extract** the whole zip to a folder **you'll keep**, for example `C:\Games\SonicRiders`. The game,
+   your saves and your settings live in that folder.
+3. **Double-click `Install Sonic Riders (PC).bat`.** If Windows shows "Windows protected your PC",
+   click *More info* → *Run anyway*. Pick your disc image, and say **y** if you want a desktop shortcut.
+4. **Wait.** The first run downloads the build tools (a few hundred MB, kept for next time) and builds
+   the game: 10–30 minutes. It ends with "Done".
+5. **Play:** start **Sonic Riders** with the shortcut in the folder (or on your desktop).
+
+| On PC | Keyboard | Controller |
+|---|---|---|
+| Move | Arrow keys | Left stick |
+| A / B / X / Y | X / Z / S / A | A / B / X / Y |
+| START | Enter | Start / Menu |
+| L / R | Q / W | Left / right trigger |
+| Z | E | Right shoulder |
+| C-stick | I J K L | Right stick |
+| D-pad | T F G H | D-pad |
+| Settings menu | F1 | Back / View |
+| Fullscreen | F11 or Alt+Enter | (settings menu) |
+
+More controllers join as players 2–4. The game's log is `sonicriders.log` in the install folder (attach
+it to bug reports).
 
 ### If something goes wrong
 
@@ -94,17 +140,19 @@ Your saves and settings stay on the SD card in `switch/sonicriders/`.
 | "does not match the known-good dump" | Your image is not the clean USA rev 0 dump (trimmed, compressed or modified). Re-dump or convert to a full ISO. |
 | "game ID is ..." | Only the USA release (GXEE8P) works. |
 | A download fails | Check your internet connection or firewall and run the setup again; finished downloads are kept. |
-| Black screen or crash at start on the Switch | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |
-| Slow motion / low frame rate | Check your overclock (see What you need). |
-| Anything else | Open a [bug report](../../issues/new/choose) with `sonicriders.log` and `sonicriders.prev.log` from `switch/sonicriders/` on the SD card. |
+| Switch: black screen or crash at start | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |
+| Switch: slow motion / low frame rate | Check your overclock (see What you need). |
+| PC: the game doesn't start | Check `sonicriders.log` in the install folder; update your graphics driver (OpenGL 3.3 is needed). |
+| PC: no sound | Check Windows' default playback device; the game uses it. |
+| Anything else | Open a [bug report](../../issues/new/choose) with the log (Switch: `sonicriders.log` and `sonicriders.prev.log` from `switch/sonicriders/` on the SD card; PC: the same files in the install folder). |
 
 ### What the setup does
 
-It checks your image's hash; downloads a pinned toolchain (Python, ninja, decomp-toolkit, devkitPro's
-devkitA64/libnx/deko3d, and for the PC build llvm-mingw + SDL2; every file is checked against a SHA-256
-in `setup/toolchain.json`) into `%LOCALAPPDATA%\SonicRidersSetup\tools`; extracts `main.dol` and
-`_Main.rel` from your image; analyses and recompiles them into C; builds; and copies the result to the
-SD card. No administrator rights are needed.
+It checks your image's hash; downloads a pinned toolchain (Python, ninja, decomp-toolkit, and either
+devkitPro's devkitA64/libnx/deko3d for the Switch or llvm-mingw + SDL2 for the PC; every file is
+checked against a SHA-256 in `setup/toolchain.json`) into `%LOCALAPPDATA%\SonicRidersSetup\tools`;
+extracts `main.dol` and `_Main.rel` from your image; analyses and recompiles them into C; builds; and
+(Switch) copies the result to the SD card. No administrator rights are needed.
 
 The SD card ends up with:
 
@@ -117,16 +165,18 @@ sdmc:/switch/sonicriders/
     sonicriders.log             log of the last run (sonicriders.prev.log: the one before)
 ```
 
-**Optional home-screen icon:** `tools/nsp/` builds a small forwarder NSP that starts the `.nro` from
-the home menu. It needs your own console keys and is for users who already know how to install NSPs;
-see `tools/nsp/build_nsp.ps1`.
+The PC install folder ends up with `Sonic Riders.lnk` (the shortcut), `build\host-mingw\sonicriders.exe`
+(the game), `baserom\` (a link to your disc image), `saves\` (memory card and settings) and
+`sonicriders.log`.
 
-**PC test build:** choose 2 or 3 in the setup to also get a Windows build (OpenGL 3.3), started with
-`Play on PC.bat`. It is a development tool; the Switch is the target.
+**Optional home-screen icon (Switch):** `tools/nsp/` builds a small forwarder NSP that starts the `.nro`
+from the home menu. It needs your own console keys and is for users who already know how to install
+NSPs; see `tools/nsp/build_nsp.ps1`.
 
 ## Building from source
 
-The setup tool *is* the build: `SonicRidersSetup.bat` works the same from a `git clone`. For
+The setup tool *is* the build: `SonicRidersSetup.bat` (it asks Switch or PC) works the same from a
+`git clone`. For
 non-interactive use:
 
 ```
@@ -179,20 +229,21 @@ The full list is in NOTES.md.
 
 ## Status
 
-Playable from boot to races, story mode and up to 4-player Free Race, with sound. The figures below
-are with the overclock above; **at stock clocks performance is poor** (making that playable is an open
-goal). Known issues:
+Playable from boot to races, story mode and up to 4-player Free Race, with sound, on the Switch and
+on PC. Switch figures are with the overclock above; **at stock clocks performance is poor** (making
+that playable is an open goal). The PC version ran at 60 fps on the test PC, 4 players included. Known issues:
 
 - **3–4 player races run at 30 fps** on the Switch (1–2 players: mostly 60).
 - Some stages (Egg Factory, Splash Canyon) drop below 60 fps in busy sections (GPU-bound). Specialized
   shaders built ahead of time help, but only for graphics states your own console has recorded, and
   a fresh build has none: after playing, copy `sdmc:/switch/sonicriders/shader_keys.txt` into
   `build\shaderkeys\` and run the setup again.
-- The speed-blur screen effect is weaker than on GameCube; screen corners are darker; a few
-  billboards are slightly see-through; some menu/HUD colours differ.
+- Characters look flatter and darker than on GameCube (lighting); the speed-blur screen effect is
+  weaker; screen corners are darker; a few billboards are slightly see-through.
+- Some menu/HUD colours may still differ (the main cause, a palette address bug behind the rainbow
+  trick-rank letters, is fixed in v0.2.0; reports of what's left are welcome).
 - The story-mode cutscene monitor looks garbled.
 - A rare hang on a "Now Loading" screen (much less frequent since disc reads were reworked).
-- The PC test build garbles a few race HUD elements.
 
 See the CHANGELOG for what changed and NOTES.md for the details.
 
@@ -251,7 +302,7 @@ own licenses (see Credits).
   [deko3d](https://github.com/devkitPro/deko3d): the Switch toolchain and graphics API.
 - [nx-hbloader](https://github.com/switchbrew/nx-hbloader) (ISC) and
   [hacBrewPack](https://github.com/The-4n/hacBrewPack): the optional forwarder NSP.
-- [SDL2](https://www.libsdl.org/) and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw): the PC test build.
+- [SDL2](https://www.libsdl.org/) and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw): the PC version.
 - [stb_easy_font](https://github.com/nothings/stb) (public domain / MIT): the settings menu's text.
 - gamemasterplc's 16:9 Gecko code: the idea behind the widescreen option.
 

@@ -14,6 +14,7 @@ Parameters (all optional; asked for when missing):
   -Sd PATH           the SD card (drive or folder) to install to; files go to <Sd>\switch\sonicriders\
   -NoSd              build only, do not copy to an SD card
   -CopyIso yes|no    also copy the disc image to the SD card (the Switch build needs it there once)
+  -DesktopShortcut yes|no   PC: also put a "Sonic Riders" shortcut on the desktop
   -ToolsDir PATH     where the downloaded toolchain is kept (default %LOCALAPPDATA%\SonicRidersSetup\tools)
   -Yes               no questions: use the defaults (needs -Iso and -Target; -Sd or -NoSd)
 
@@ -26,6 +27,7 @@ param(
     [string]$Sd,
     [switch]$NoSd,
     [ValidateSet("", "yes", "no")][string]$CopyIso = "",
+    [ValidateSet("", "yes", "no")][string]$DesktopShortcut = "",
     [string]$ToolsDir,
     [switch]$Yes
 )
@@ -128,8 +130,8 @@ Log "Disc image OK: Sonic Riders (USA), GXEE8P revision 0." "Green"
 
 Step "2/7  What to build"
 if (-not $Target) {
-    Log "  1) Switch homebrew (.nro) - the main build"
-    Log "  2) PC test build (Windows, OpenGL) - for testing and development"
+    Log "  1) Nintendo Switch (homebrew .nro, copied to your SD card)"
+    Log "  2) Windows PC (play natively on this PC, no emulator)"
     Log "  3) Both"
     $c = Ask "Choose 1, 2 or 3" "1"
     switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } default { Fail "Unknown choice '$c'." } }
@@ -303,7 +305,7 @@ Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml",
 # the build recompiles the code to C (configure.py the first time, ninja when its inputs change)
 
 Step "6/7  Recompiling and building (a few minutes)"
-$builtNro = $null; $builtExe = $null
+$builtNro = $null; $builtExe = $null  # (set when built)
 if ($doSwitch) {
     Run "configure (Switch)" $python @("configure.py", "--target", "switch", "--devkitpro", $dkp) @{ DEVKITPRO = $dkp }
     Run "build the Switch homebrew (this takes a while)" $ninja @() @{ DEVKITPRO = $dkp }
@@ -322,8 +324,7 @@ if ($doPc) {
         try { New-Item -ItemType HardLink -Path $isoDest -Target $Iso | Out-Null; Log "Linked the disc image into baserom\." }
         catch { Log "Copying the disc image into baserom\ ..."; Copy-Item -LiteralPath $Iso $isoDest }
     }
-    Set-Content -Path (Join-Path $Root "Play on PC.bat") -Encoding ascii -Value "@echo off`r`ncd /d `"%~dp0`"`r`nstart `"`" build\host-mingw\sonicriders.exe`r`n"
-    Log "PC build: $builtExe (start it with 'Play on PC.bat')" "Green"
+    Log "PC build: $builtExe" "Green"
 }
 
 # ---------------------------------------------------------------- install
@@ -346,12 +347,36 @@ if ($sdDir) {
         Log "Disc image on the SD card verified." "Green"
     }
     Log ""
-    Log "Done. Eject the SD card safely, put it in the Switch, open the Homebrew Menu (album, or hold R" "Green"
-    Log "while starting a game for full memory) and start 'Sonic Riders'." "Green"
+    Log "Done. Eject the SD card safely, put it in the Switch, hold R while starting any game to open the" "Green"
+    Log "Homebrew Menu with full memory, and start 'Sonic Riders'." "Green"
 } elseif ($builtNro) {
-    Log "Done. Copy build\switch\sonicriders.nro and your disc image to sdmc:/switch/sonicriders/ on the SD card." "Green"
-} else {
-    Log "Done." "Green"
+    Log "Switch: copy build\switch\sonicriders.nro and your disc image to sdmc:/switch/sonicriders/ on the SD card." "Green"
 }
+if ($builtExe) {
+    # shortcuts start the game in this folder (its disc image link, saves\ and settings live here)
+    $old = Join-Path $Root "Play on PC.bat"
+    if (Test-Path $old) { Remove-Item $old -Force }
+    function New-Shortcut([string]$path) {
+        $ws = New-Object -ComObject WScript.Shell
+        $lnk = $ws.CreateShortcut($path)
+        $lnk.TargetPath = $builtExe
+        $lnk.WorkingDirectory = $Root
+        $lnk.Description = "Sonic Riders (native PC port)"
+        $lnk.Save()
+    }
+    $here = Join-Path $Root "Sonic Riders.lnk"
+    try { New-Shortcut $here; Log "Created the shortcut 'Sonic Riders' in this folder." } catch { Log "Could not create a shortcut ($($_.Exception.Message)); start build\host-mingw\sonicriders.exe from this folder instead." "Yellow" }
+    if (-not $DesktopShortcut) { $DesktopShortcut = (Ask "Put a 'Sonic Riders' shortcut on your desktop? (y/n)" "y") -replace "^[yY].*", "yes" -replace "^[nN].*", "no" }
+    if ($DesktopShortcut -eq "yes") {
+        try { New-Shortcut (Join-Path ([Environment]::GetFolderPath("Desktop")) "Sonic Riders.lnk"); Log "Created the desktop shortcut." } catch { Log "Could not create the desktop shortcut." "Yellow" }
+    }
+    Log ""
+    Log "PC: start the game with the 'Sonic Riders' shortcut. Keep this folder: the game, your disc image" "Green"
+    Log "link and your saves (saves\) live here." "Green"
+    Log "Keyboard: arrows = move, X = A, Z = B, S = X, A = Y, Enter = START, Q/W = L/R, E = Z." "Green"
+    Log "A game controller works too. F1 (or the controller's Back/View button) opens the settings menu;" "Green"
+    Log "F11 or Alt+Enter switches fullscreen." "Green"
+}
+if (-not $sdDir -and -not $builtNro -and -not $builtExe) { Log "Done." "Green" }
 Log "Log: $LogFile"
 exit 0
