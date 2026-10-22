@@ -416,10 +416,13 @@ class GcRecompiler:
                 len(self.untabled_switches), "".join(" %08X" % a for a in self.untabled_switches[:40])))
             f.write("CR writers rewritten: %d\nleaf functions in locals: %d\nnon-leaf in locals: %d\n" % (
                 self.cr_stats[0], self.leaf_count, self.nonleaf_count))
-            f.write("unhandled instruction kinds:\n")
+            f.write("unhandled instruction kinds (op=0: zero/data words inside function ranges, never run):\n")
             for k, v in self.unhandled.most_common():
                 f.write("  %6d  %s\n" % (v, k))
-        print(open(os.path.join(outdir, "report.txt")).read())
+            for note in ppc2c.REPORT_NOTES:
+                f.write("note: %s\n" % note)
+        print("recompiled %d functions into %d files (details: %s)" % (
+            len(self.sorted_entries), nfiles, os.path.join(outdir, "report.txt").replace("\\", "/")))
 
 
 if __name__ == "__main__":

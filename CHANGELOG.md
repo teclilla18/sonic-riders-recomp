@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
+  changed finishes in seconds.
+- Quieter recompiler output: one summary line; details (unhandled data words, FPSCR notes) go to
+  `build/gen/report.txt`.
+
 ## v0.1.0 (2026-10-22)
 
 First public version. Everything below is built from the user's own disc image; no game data is

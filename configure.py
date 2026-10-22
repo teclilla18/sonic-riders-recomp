@@ -41,7 +41,7 @@ gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
 if not gen_c:
     # the list of generated files is needed to write build.ninja: recompile once now
     import subprocess
-    print("build/gen is empty: recompiling first")
+    print("build/gen is empty: recompiling first", flush=True)
     subprocess.check_call([sys.executable, "tools/recomp/gcrecomp.py", "config/GXEE8P", "baserom", GEN], cwd=ROOT)
     gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
 gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/table.c"]
@@ -159,7 +159,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
            description="CXX $in")
     n.rule("link", "$cxx $in -o $out $ldflags", description="LINK $out")
     n.rule("recomp", "%s tools/recomp/gcrecomp.py config/GXEE8P baserom %s" % (py, GEN),
-           description="RECOMP", restat=True, pool="console")
+           description="RECOMP", restat=True, pool="console",
+           generator=True)  # no ninja log yet (first build) must not mean "recompile again": mtimes decide
 
     recomp_inputs = ["tools/recomp/gcrecomp.py", "tools/recomp/ppc2c.py", "tools/recomp/crlive.py",
                      "tools/recomp/leaflocal.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",

@@ -559,11 +559,15 @@ def translate63(w, d, a, b, cc):
 _fpcc_warned = set()
 
 
+# notes for build/gen/report.txt (gcrecomp writes them; the console stays quiet)
+REPORT_NOTES = []
+
+
 def _fpcc_reader(name, w):
     """fcmpu/fcmpo do not keep FPSCR's FPCC field (ppc.h cr_set_f): a game that reads it needs that back"""
     if w not in _fpcc_warned:
         _fpcc_warned.add(w)
-        sys.stderr.write("warning: %s (%08X) reads FPSCR, whose FPCC field the FP compares do not update (ppc.h cr_set_f)\n" % (name, w))
+        REPORT_NOTES.append("%s (%08X) reads FPSCR, whose FPCC field the FP compares do not update (ppc.h cr_set_f)" % (name, w))
 
 
 def translate4(w, d, a, b, cc):

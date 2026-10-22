@@ -298,11 +298,11 @@ $baserom = Join-Path $Root "baserom"
 New-Item -ItemType Directory -Force -Path $baserom | Out-Null
 Run "extract main.dol and _Main.rel" $python @("-I", "tools\extract_iso.py", $Iso, "baserom", "--no-verify-iso")
 
-Step "5/7  Analysing and recompiling the game code (a few minutes)"
+Step "5/7  Analysing the game code"
 Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P")
-Run "recompile to C" $python @("tools\recomp\gcrecomp.py", "config/GXEE8P", "baserom", "build/gen")
+# the build recompiles the code to C (configure.py the first time, ninja when its inputs change)
 
-Step "6/7  Building"
+Step "6/7  Recompiling and building (a few minutes)"
 $builtNro = $null; $builtExe = $null
 if ($doSwitch) {
     Run "configure (Switch)" $python @("configure.py", "--target", "switch", "--devkitpro", $dkp) @{ DEVKITPRO = $dkp }
