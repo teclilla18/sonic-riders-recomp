@@ -1,0 +1,62 @@
+name: Bug report
+description: Something does not work, looks wrong, or runs slowly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach game files**: no disc image, builds (.nro/.exe/.nsp), saves, extracted files or keys.
+        Issues containing them are deleted. Logs and screenshots are fine.
+  - type: input
+    id: build
+    attributes:
+      label: Version / build
+      description: Release version or git commit (the first lines of sonicriders.log show the build).
+      placeholder: v0.1.0, or commit 8bf41dd
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where does it happen?
+      options:
+        - Switch (hardware)
+        - Switch emulator
+        - PC test build
+        - Setup tool (building)
+    validations:
+      required: true
+  - type: input
+    id: console
+    attributes:
+      label: Console and firmware
+      description: Model, system firmware, Atmosphère version, and CPU/GPU/memory clocks (overclocked or stock). Skip for the PC build.
+      placeholder: OLED, 20.1.0, Atmosphère 1.9.0, CPU 1785 / GPU 1152 / MEM 2133
+  - type: input
+    id: mode
+    attributes:
+      label: Game mode and stage
+      placeholder: Free Race, 2 players, Splash Canyon
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Story mode, Babylon chapter
+        2. Skip the first cutscene with START
+        3. ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Attach sonicriders.log and sonicriders.prev.log from sdmc:/switch/sonicriders/ (or setup.log for
+        setup problems). For visual problems, add a screenshot (settings menu, "Save screenshot").
+    validations:
+      required: true

@@ -83,8 +83,11 @@ static int game_thread(void* arg) {
     rt_fatal("the game's entry point returned");
 }
 
+extern const char g_build_version[]; /* build/<target>/gen/version.c, written by configure.py */
+
 int main(int argc, char** argv) {
     platform_init();
+    rt_log("[build] %s", g_build_version);
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
     settings_load();

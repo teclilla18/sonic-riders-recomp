@@ -22,9 +22,14 @@ static int g_on = -1;
 static uintptr_t g_base, g_size;
 static struct { uint32_t off, count; } g_hist[BUCKETS];
 static volatile LONG64 g_samples;
+static int g_outside;  /* SR_PROFILE=2 */
 
 static int profiling(void) {
-    if (g_on < 0) g_on = getenv("SR_PROFILE") != NULL;
+    if (g_on < 0) {
+        const char* e = getenv("SR_PROFILE");
+        g_on = e != NULL;
+        g_outside = e && atoi(e) == 2;
+    }
     return g_on;
 }
 
@@ -59,12 +64,34 @@ static DWORD WINAPI sampler(LPVOID arg) {
             HANDLE h = g_threads[i];
             if (SuspendThread(h) == (DWORD)-1) continue;
             CONTEXT ctx;
-            ctx.ContextFlags = CONTEXT_CONTROL;
+            ctx.ContextFlags = CONTEXT_FULL;
             if (GetThreadContext(h, &ctx)) {
                 uintptr_t ip = (uintptr_t)ctx.Rip;
-                if (ip >= g_base && ip < g_base + g_size) {  /* running in the executable, not blocked in Windows */
+                if (ip >= g_base && ip < g_base + g_size) {  /* running in the executable */
                     add((uint32_t)(ip - g_base));
                     InterlockedIncrement64(&g_samples);
+                } else if (g_outside) {
+                    /* SR_PROFILE=2: time in Windows/C-library DLLs goes to the first executable frame
+                     * that called it (tagged with the top bit), found by unwinding the stack */
+                    for (int depth = 0; depth < 48; depth++) {
+                        DWORD64 img;
+                        PRUNTIME_FUNCTION fe = RtlLookupFunctionEntry(ctx.Rip, &img, NULL);
+                        if (!fe) {  /* leaf function: the return address is at [rsp] */
+                            ctx.Rip = *(DWORD64*)ctx.Rsp;
+                            ctx.Rsp += 8;
+                        } else {
+                            void* hd;
+                            DWORD64 est;
+                            RtlVirtualUnwind(UNW_FLAG_NHANDLER, img, ctx.Rip, fe, &ctx, &hd, &est, NULL);
+                        }
+                        ip = (uintptr_t)ctx.Rip;
+                        if (!ip) break;
+                        if (ip >= g_base && ip < g_base + g_size) {
+                            add((uint32_t)(ip - g_base) | 0x80000000u);
+                            InterlockedIncrement64(&g_samples);
+                            break;
+                        }
+                    }
                 }
             }
             ResumeThread(h);

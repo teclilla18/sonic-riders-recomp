@@ -83,11 +83,22 @@ void platform_sample_threads(void) {}
 #endif
 
 void platform_init(void) {
+    /* stderr is the log: buffer it (rt_log flushes about once a second, or every line with
+     * SR_LOGSYNC); an unbuffered stderr wrote each piece of a line separately */
+    static char logbuf[64 * 1024];
+    setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);
 #ifdef _WIN32
     SetUnhandledExceptionFilter(crash_handler);
     /* 1 ms timer resolution: the device threads sleep for fractions of a millisecond (the AI clock
      * paces 5 ms audio frames); at the default 15.6 ms tick the audio ran at a third of its speed */
     timeBeginPeriod(1);
+    /* Windows 11 ignores that request while the process has no visible window (minimized test runs)
+     * unless the process opts out of timer-resolution throttling */
+    PROCESS_POWER_THROTTLING_STATE pt = {0};
+    pt.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    pt.ControlMask = 0x4;  /* PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION */
+    pt.StateMask = 0;
+    SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &pt, sizeof pt);
 #endif
 }
 

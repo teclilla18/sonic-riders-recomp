@@ -1,0 +1,4 @@
+# Windows scripts need CRLF line endings when checked out
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

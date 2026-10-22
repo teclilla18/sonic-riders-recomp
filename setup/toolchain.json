@@ -1,0 +1,60 @@
+{
+  "_comment": "Everything the setup tool downloads, pinned by SHA-256 (checked before use; a mismatch stops the setup). devkitPro packages: the hashes are the ones in devkitPro's signed package databases (dkp-libs.db, dkp-windows.db). GitHub assets: the digests GitHub publishes for the release asset. Nothing here is game data.",
+  "python": {
+    "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+    "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+    "kind": "zip",
+    "dir": "python"
+  },
+  "ninja": {
+    "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-win.zip",
+    "sha256": "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65",
+    "kind": "zip",
+    "dir": "ninja"
+  },
+  "dtk": {
+    "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-windows-x86_64.exe",
+    "sha256": "6a693e95aa4d30acccc673343302a4abdfa3146bd0fb15cb1a2bce924cbc782a",
+    "kind": "file",
+    "dir": "dtk",
+    "name": "dtk.exe"
+  },
+  "devkitpro": {
+    "_comment": "Switch toolchain: devkitA64 (gcc, binutils, newlib, rules), libnx, deko3d, uam (shader compiler), switch-tools (elf2nro, nacptool). Extracted from the pacman packages' opt/devkitpro/ folder; no installer, no admin rights.",
+    "dir": "devkitpro",
+    "user_agent": "pacman/6.1.0 (MINGW64_NT-10.0 x86_64) libalpm/14.0.0",
+    "packages": [
+      { "url": "https://pkg.devkitpro.org/packages/windows/x86_64/devkita64-gcc-16.1.0-1-x86_64.pkg.tar.zst",
+        "sha256": "4ccf7ee6f3d85248f3b58708e44aa3e9f777479ff90cd4409a95862752e85400" },
+      { "url": "https://pkg.devkitpro.org/packages/windows/x86_64/devkita64-binutils-2.46.0-1-x86_64.pkg.tar.zst",
+        "sha256": "c516a70a31521b61e18759669c6f5c6718796a6cbb0b3c1c023a2ac418f79988" },
+      { "url": "https://pkg.devkitpro.org/packages/devkita64-newlib-4.6.0.20260123-4-any.pkg.tar.zst",
+        "sha256": "fc97ba1009a94b68f8714c3cc548ef697ca82687b72fe0c05a7ca3df81beb53e" },
+      { "url": "https://pkg.devkitpro.org/packages/devkita64-rules-1.1.1-1-any.pkg.tar.zst",
+        "sha256": "2649cf7827243447070073acc2aa2fee152a0592fc30e827ceed803c565a1ede" },
+      { "url": "https://pkg.devkitpro.org/packages/libnx-4.12.0-1-any.pkg.tar.zst",
+        "sha256": "c6950bdf8e4b872ece492225368c03e633776329548a7494f91aa1e8f239cd8a" },
+      { "url": "https://pkg.devkitpro.org/packages/deko3d-0.5.0-1-any.pkg.tar.zst",
+        "sha256": "d4281a573246c2e658c0a2619b78099d4016ad72d6210a1e13473a546e7f9ac3" },
+      { "url": "https://pkg.devkitpro.org/packages/windows/x86_64/uam-1.1.0-2-x86_64.pkg.tar.xz",
+        "sha256": "7765523b9912fd454bcbb1ccfb90d3569b7099d1bcb3ce5997bf31bd1d7c6858" },
+      { "url": "https://pkg.devkitpro.org/packages/windows/x86_64/switch-tools-1.13.1-1-x86_64.pkg.tar.zst",
+        "sha256": "c9c5fc60e3dd2f82d7c6592611bd37cc610d150ef4fa75fe09ce329df998084d" }
+    ]
+  },
+  "llvm_mingw": {
+    "_comment": "PC test build only: clang for Windows with its own headers and libraries (no Visual Studio needed).",
+    "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-x86_64.zip",
+    "sha256": "317492c456aa27ee607a5919f1d2d38dcdc1112516a24d0bf4b00d078f52d17a",
+    "kind": "zip",
+    "dir": "llvm-mingw",
+    "strip": "llvm-mingw-20261006-ucrt-x86_64"
+  },
+  "sdl2": {
+    "_comment": "PC test build only: window, OpenGL context, input and audio.",
+    "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-devel-2.32.10-mingw.zip",
+    "sha256": "f15cff5fca62ec9381a016ef1d42a95c638cd72d2f226ba5781c76fe43dbd1ac",
+    "kind": "zip",
+    "dir": "sdl2"
+  }
+}

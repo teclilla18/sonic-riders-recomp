@@ -90,3 +90,10 @@ saves/
 
 # Local-only notes (machine paths, test console SD card, personal logistics)
 NOTES.local.md
+
+# Setup tool outputs (built from the user's own disc image)
+setup.log
+Play on PC.bat
+config/*/_Main/symbols.txt
+config/*/_Main/splits.txt
+VERSION

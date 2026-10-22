@@ -1,0 +1,15 @@
+name: Feature request
+description: An idea or improvement for the port.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why, and how would it work?
+      description: For enhancements that change gameplay or visuals, say whether it should be optional.

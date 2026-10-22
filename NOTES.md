@@ -222,6 +222,8 @@ The whole OS scheduler, alarms, mutexes and message queues run recompiled, which
 - `tools/showfn.py ADDR|NAME`: print a function's disassembly from dtk's output.
 - `build/run.ps1 <seconds>` (local helper, not committed): rebuild + run + summarize.
 
+**Setup tool and releases (2026-10-22):** `SonicRidersSetup.bat` → `setup/setup.ps1` builds everything from the user's disc image with a SHA-256-pinned toolchain (`setup/toolchain.json`; downloads through Windows' `curl.exe`, since devkitPro's server refuses .NET's web client even with the pacman user agent). PC builds from it use llvm-mingw (`configure.py --toolchain mingw`, output `build/host-mingw/`). `tools/make_release.py --version X` zips the files tracked at HEAD (guard-checked) plus a `VERSION` file; the port logs `[build] <version or git describe>` first (`build/<target>/gen/version.c`, written by configure.py). Hardware performance so far is with an overclock (CPU 1785 / GPU 1152 / MEM 2133); stock clocks run poorly.
+
 **How to build/run (host, Windows):**
 ```
 build/tools/dtk.exe dol split config/GXEE8P/config.yml build/GXEE8P   # once (analysis; writes config/GXEE8P/*symbols.txt)
