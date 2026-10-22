@@ -97,3 +97,6 @@ Play on PC.bat
 config/*/_Main/symbols.txt
 config/*/_Main/splits.txt
 VERSION
+
+# Claude Code per-user settings
+.claude/settings.local.json

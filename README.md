@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Your Switch needs to be overclocked for this to run well.** All testing so far was done at
 > **CPU 1785 MHz / GPU 1152 MHz / memory 2133 MHz** (OLED model). At stock clocks the game runs
-> poorly (slow motion, low frame rate). Overclock at your own risk; see [Requirements](#requirements).
+> poorly (slow motion, low frame rate). Overclock at your own risk; see [What you need](#what-you-need).
 
 An unofficial port of **Sonic Riders** (GameCube, USA) that runs natively on a modded Nintendo
 Switch, built with **static recompilation**:
@@ -27,25 +27,68 @@ this project forks.
 - Builds made with this project contain recompiled game code. **Never share your built `.nro`, `.exe`
   or `.nsp`, or your disc image.** Issues and pull requests that contain game files are deleted.
 
-## Install
+## What you need
 
-1. Download the latest release zip from the [Releases](../../releases) page and extract it to a
-   folder (a path without special characters works best).
-2. Double-click **`SonicRidersSetup.bat`**. It asks for:
-   - your disc image: **Sonic Riders (USA)**, game ID `GXEE8P`, revision 0, a clean 1:1 `.iso`
-     (Redump "Sonic Riders (USA) (En,Ja,Fr,De,Es,It)", SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`).
-     RVZ/GCZ/CISO images must be converted back to ISO with Dolphin first;
-   - what to build: the Switch homebrew, a PC test build, or both;
-   - your Switch's SD card (optional), where it copies the build and, once, your disc image.
-3. On the Switch, start the Homebrew Menu **in title mode** (hold R while starting any installed game)
-   and open **Sonic Riders**. Applet mode (the Album) has much less memory and is not supported.
+- **A Nintendo Switch running custom firmware** (Atmosphère) with the Homebrew Menu, and an SD card
+  with about 2 GB free.
+- **An overclock** (see the note at the top). Tested at CPU 1785 / GPU 1152 / memory 2133 MHz on an
+  OLED, set with an overclocking homebrew such as sys-clk. Overclock at your own risk and within your
+  console's limits.
+- **Your own copy of Sonic Riders (USA)** dumped to a disc image: game ID `GXEE8P`, revision 0, a clean
+  1:1 `.iso` (1,459,978,240 bytes, SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`, the Redump
+  dump "Sonic Riders (USA) (En,Ja,Fr,De,Es,It)"). You can dump your disc with a Wii and CleanRip.
+  RVZ/GCZ/CISO images must be converted back to a full ISO first (Dolphin: right-click the game,
+  Convert File, format ISO). The European and Japanese versions are not supported.
+- **A Windows 10 (version 1803 or newer) or Windows 11 PC**, 64-bit, with an internet connection and
+  about 4 GB of free disk space. The PC does the conversion; nothing is downloaded from the game.
 
-What the setup does: checks your image's hash; downloads a pinned toolchain (Python, ninja,
-decomp-toolkit, devkitPro's devkitA64/libnx/deko3d, and for the PC build llvm-mingw + SDL2; every file
-is checked against a SHA-256 in `setup/toolchain.json`) into `%LOCALAPPDATA%\SonicRidersSetup\tools`;
-extracts `main.dol` and `_Main.rel` from your image; analyses and recompiles them; builds; and copies
-the result to the SD card. No administrator rights are needed. Everything is logged to `setup.log`.
-Expect about 4 GB of disk space and 10–30 minutes the first time.
+## Install (playing on your Switch)
+
+1. **Download** `SonicRidersSetup-<version>.zip` from the [latest release](../../releases/latest).
+   (Not the "Source code" links GitHub adds at the bottom.)
+2. **Extract** the whole zip to a folder, for example `C:\SonicRiders`. Don't run it from inside the
+   zip.
+3. **Put your Switch's SD card in the PC** (or connect the Switch over USB with a tool that shows the
+   SD card as a drive).
+4. **Double-click `SonicRidersSetup.bat`.** If Windows shows "Windows protected your PC", click
+   *More info* → *Run anyway* (the script is not signed). Then answer its questions:
+   - pick your disc image in the file window; the setup checks that it is the right one;
+   - choose **1** (Switch);
+   - say **y** to copy to the SD card and pick the SD card's top folder (the one containing
+     `atmosphere` and `switch`);
+   - say **y** to copy your disc image to the SD card (needed once; skipped automatically later).
+5. **Wait.** The first run downloads the build tools (about 300 MB, 1.3 GB unpacked, kept for next time) and converts the
+   game: 10–30 minutes. It ends with "Done". If something fails, the message says why, and the whole
+   log is in `setup.log`.
+6. **Eject the SD card safely** and put it back in the Switch.
+7. **Start it in full-memory mode:** hold **R** while starting any installed game until the Homebrew
+   Menu opens, then choose **Sonic Riders**. Opening the Homebrew Menu from the Album does not give the
+   game enough memory.
+
+Hold **−** (Minus) in the game for the settings menu (widescreen, resolution, FPS counter, controllers).
+Your saves and settings stay on the SD card in `switch/sonicriders/`.
+
+**Updating to a new version:** download and extract the new release, run `SonicRidersSetup.bat` again
+with the same disc image and SD card. Saves are kept.
+
+### If something goes wrong
+
+| Problem | What to do |
+|---|---|
+| "does not match the known-good dump" | Your image is not the clean USA rev 0 dump (trimmed, compressed or modified). Re-dump or convert to a full ISO. |
+| "game ID is ..." | Only the USA release (GXEE8P) works. |
+| A download fails | Check your internet connection or firewall and run the setup again; finished downloads are kept. |
+| Black screen or crash at start on the Switch | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |
+| Slow motion / low frame rate | Check your overclock (see What you need). |
+| Anything else | Open a [bug report](../../issues/new/choose) with `sonicriders.log` and `sonicriders.prev.log` from `switch/sonicriders/` on the SD card. |
+
+### What the setup does
+
+It checks your image's hash; downloads a pinned toolchain (Python, ninja, decomp-toolkit, devkitPro's
+devkitA64/libnx/deko3d, and for the PC build llvm-mingw + SDL2; every file is checked against a SHA-256
+in `setup/toolchain.json`) into `%LOCALAPPDATA%\SonicRidersSetup\tools`; extracts `main.dol` and
+`_Main.rel` from your image; analyses and recompiles them into C; builds; and copies the result to the
+SD card. No administrator rights are needed.
 
 The SD card ends up with:
 
@@ -62,16 +105,8 @@ sdmc:/switch/sonicriders/
 the home menu. It needs your own console keys and is for users who already know how to install NSPs;
 see `tools/nsp/build_nsp.ps1`.
 
-## Requirements
-
-- **Switch:** a console running custom firmware (Atmosphère) with the Homebrew Menu; the disc image
-  (1.4 GB) on its SD card.
-- **An overclock is currently needed for good performance.** All testing so far was on an OLED
-  overclocked to CPU 1785 MHz / GPU 1152 MHz / memory 2133 MHz (e.g. with sys-clk); at stock clocks
-  the game runs much slower. Overclock at your own risk and within your console's limits.
-- **PC (for building):** 64-bit Windows 10 (1803 or newer) or 11, an internet connection for the first
-  run, about 4 GB free.
-- **PC test build:** a GPU with OpenGL 3.3. This build is a development tool; the Switch is the target.
+**PC test build:** choose 2 or 3 in the setup to also get a Windows build (OpenGL 3.3), started with
+`Play on PC.bat`. It is a development tool; the Switch is the target.
 
 ## Building from source
 
@@ -144,6 +179,13 @@ goal). Known issues:
 - The PC test build garbles a few race HUD elements.
 
 See the CHANGELOG for what changed and NOTES.md for the details.
+
+## Contributing
+
+Help is welcome from players and developers alike: test on your Switch and report bugs, write code, or
+point a coding agent such as **Claude Code** at an open issue (the repository includes a
+[CLAUDE.md](CLAUDE.md) with the rules and test workflow agents need). Start with
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [help wanted](../../issues?q=is%3Aopen+label%3A%22help+wanted%22) issues.
 
 ## Reporting bugs
 

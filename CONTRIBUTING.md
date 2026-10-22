@@ -1,6 +1,39 @@
 # Contributing
 
-Thanks for helping. Bug reports from real hardware are as valuable as code.
+Thanks for helping. There are three ways in, and all of them matter:
+
+1. **Play and report.** Bug reports from real hardware are as valuable as code: what happened, where,
+   your clocks, and the log files (use the bug report form). Comparisons with real GameCube or Dolphin
+   footage help with visual bugs.
+2. **Write code yourself.** C (runtime, hardware models), Python (recompiler, tools), GLSL (renderer).
+   See "How the project works" below.
+3. **Contribute with a coding agent such as Claude Code.** You don't need to know the codebase; you
+   need a Windows PC, your own disc image, and some tokens to spend. See the next section.
+
+Issues labelled [`help wanted`](../../issues?q=is%3Aopen+label%3A%22help+wanted%22) are good places
+to start; each one has the context an agent or a person needs.
+
+## Contributing with Claude Code (or another coding agent)
+
+1. Fork the repository on GitHub and clone your fork.
+2. Build once so the agent can test: `SonicRidersSetup.bat` with your disc image, choosing **3**
+   (Switch + PC). The PC build is how the agent checks its work.
+3. Enable the game-data guard: `git config core.hooksPath tools/git-hooks`.
+4. Start Claude Code in the repository folder. It reads [CLAUDE.md](CLAUDE.md) automatically: the hard
+   rules (no game data, no personal details), how to build and test, and where the design notes are.
+5. Give it one issue, for example:
+   > Read CLAUDE.md and the parts of NOTES.md about this area, then work on issue #<number>. Reproduce it on
+   > the PC build first (screenshots with SR_SCREENSHOT, scripted input with SR_INPUT), fix it, verify
+   > the fix the same way, add what you found to NOTES.md, and commit.
+6. **Review what it did before opening a pull request**: read the diff, run the PC build yourself, and
+   check that it didn't add files from `build/` or `baserom/` (the guard should refuse them anyway).
+   Say in the pull request that an agent wrote it and what you tested; if you could test on a Switch,
+   say how it ran (with your clocks).
+
+Agents work best on well-scoped problems with a visible result: a rendering difference with a
+screenshot, a crash with a log, a performance hotspot with `[perf]`/`SR_PROFILE` numbers. Large
+open-ended requests ("make it faster") tend to burn tokens without a result; ask for an investigation
+written into NOTES.md first, then a fix.
 
 ## The one hard rule: no game data
 

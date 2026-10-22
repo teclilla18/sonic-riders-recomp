@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 (unreleased)
+## v0.1.0 (2026-10-22)
 
 First public version. Everything below is built from the user's own disc image; no game data is
 distributed.
