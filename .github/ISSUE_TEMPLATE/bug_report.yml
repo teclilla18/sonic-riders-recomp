@@ -56,7 +56,17 @@ body:
     attributes:
       label: Logs
       description: |
-        Attach sonicriders.log and sonicriders.prev.log from sdmc:/switch/sonicriders/ (or setup.log for
-        setup problems). For visual problems, add a screenshot (settings menu, "Save screenshot").
+        Attach sonicriders.log and sonicriders.prev.log from switch/sonicriders/ on the SD card (or
+        setup.log for setup problems). Copy them soon after the problem: each start of the game moves
+        the last log to sonicriders.prev.log and deletes the older one.
     validations:
       required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: |
+        For anything visual. In the game: hold − (Minus), choose "Save screenshot (A)", press A. The
+        picture is saved as shot_<number>.bmp in switch/sonicriders/ on the SD card. GitHub doesn't take
+        .bmp files: open it in Paint and save as PNG (or zip it), then drag it here. A picture of how it
+        should look (GameCube or Dolphin) helps too.

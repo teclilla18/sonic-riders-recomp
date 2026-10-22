@@ -189,9 +189,33 @@ point a coding agent such as **Claude Code** at an open issue (the repository in
 
 ## Reporting bugs
 
-Open an issue with the bug template. Attach `sonicriders.log` and `sonicriders.prev.log` from
-`sdmc:/switch/sonicriders/` (they contain no game data), and a screenshot from the settings menu's
-"Save screenshot" if it is visual. Never attach your disc image, saves, builds or keys.
+Open an issue with the [bug report form](../../issues/new/choose). The more of these it has, the
+faster it gets fixed:
+
+1. **What happened and where:** game mode, stage, character, number of players, and what you did just
+   before.
+2. **Your clocks** (overclocked or stock) and console model.
+3. **The logs:** `sonicriders.log` (this run) and `sonicriders.prev.log` (the run before) from
+   `switch/sonicriders/` on the SD card. If the game crashed or froze, copy them soon: each start
+   moves the last log to `sonicriders.prev.log` and deletes the older one. They contain no game data.
+4. **A screenshot** for anything visual (wrong colours, missing or see-through objects, garbled text).
+
+### Taking a screenshot for a bug report
+
+1. When the problem is on screen, **hold − (Minus)** for half a second to open the settings menu.
+2. Choose **Save screenshot (A)** with the D-pad and press **A**. The menu closes and the next game
+   frame is saved, without the menu in it. (The Switch's own screenshot button often doesn't work for
+   homebrew.)
+3. Take as many as you need; each one is a new file. Then put the SD card in your PC. The pictures are
+   in `switch/sonicriders/`, named `shot_<number>.bmp` (the number is the frame, which also helps
+   match the picture to the log).
+4. GitHub doesn't accept `.bmp` files: open the picture in Paint and *Save as* PNG, or put the `.bmp`
+   files in a zip. Then drag them into the bug report.
+
+It helps to say what it *should* look like: a photo or video of the same spot on a GameCube, or a
+Dolphin screenshot.
+
+Never attach your disc image, saves, builds (`.nro`) or keys.
 
 ## License
 

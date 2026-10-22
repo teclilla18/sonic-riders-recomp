@@ -3,8 +3,10 @@
 Thanks for helping. There are three ways in, and all of them matter:
 
 1. **Play and report.** Bug reports from real hardware are as valuable as code: what happened, where,
-   your clocks, and the log files (use the bug report form). Comparisons with real GameCube or Dolphin
-   footage help with visual bugs.
+   your clocks, and the log files (use the bug report form). For visual bugs, take a screenshot with
+   the in-game settings menu (hold −, "Save screenshot"; see
+   [Taking a screenshot](README.md#taking-a-screenshot-for-a-bug-report)); comparisons with real
+   GameCube or Dolphin footage help too.
 2. **Write code yourself.** C (runtime, hardware models), Python (recompiler, tools), GLSL (renderer).
    See "How the project works" below.
 3. **Contribute with a coding agent such as Claude Code.** You don't need to know the codebase; you
