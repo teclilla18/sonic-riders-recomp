@@ -4,6 +4,9 @@
 
 - Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
   changed finishes in seconds.
+- Fixed the rainbow-coloured trick rank letters (and other UI textures with the wrong palette):
+  palette addresses are now masked to physical memory like the hardware does.
+- Palettes are captured when the game loads them, not later on the graphics thread.
 - Faster vertex decoding on the GP thread (about 40% less decode time, identical results): a step
   towards 60 fps in 3-4 player races.
 - Quieter recompiler output: one summary line; details (unhandled data words, FPSCR notes) go to

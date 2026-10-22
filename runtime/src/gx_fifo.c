@@ -222,10 +222,13 @@ static void call_display_list(uint32_t addr, uint32_t size, int depth) {
 /* at depth 0: the bytes the incomplete command at the end of the buffer needs in total (0: unknown),
  * so the write-gather pipe does not re-parse it on every store until it is complete */
 static size_t g_parse_need;
+static int g_parse_depth;  /* parse(): 0 = the immediate stream, more inside display lists */
 
 static size_t parse(const uint8_t* p, size_t len, int depth) {
     size_t i = 0;
     if (depth == 0) g_parse_need = 0;
+    int saved_depth = g_parse_depth;
+    g_parse_depth = depth;
     while (i < len) {
         uint8_t cmd = p[i];
         size_t left = len - i;
@@ -284,6 +287,7 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
             rt_log("[gx] unknown FIFO command %02X (depth %d); skipping a byte", cmd, depth);
         i++;
     }
+    g_parse_depth = saved_depth;
     return i;
 }
 
@@ -402,6 +406,77 @@ static int gp_thread(void* arg) {
     return 0;
 }
 
+/* ---- palette (TLUT) snapshots ----
+ * A TLUT load (BP 0x64 source address, BP 0x65 TMEM address + size) copies the palette from RAM when
+ * the GP processes it. The real GP does that within microseconds of the store; our GP thread can be
+ * most of a frame behind, and by then the game may have rewritten that RAM (garbled UI colours,
+ * worst on the Switch). So the game thread copies the palette at the moment it issues the load (the
+ * SDK's GXLoadTlut writes BP registers as a 1-byte 0x61 store and a 4-byte store) and the GP thread
+ * uses that copy for the matching immediate-mode load. Each copy carries the register values, so a
+ * mismatch falls back to reading RAM. */
+#define TLUT_SNAPS 4096
+#define TLUT_DATA (4u << 20)
+typedef struct { uint32_t v64, v65, off, len, end; } TlutSnap;  /* end: data-ring position after it */
+static TlutSnap g_tsnap[TLUT_SNAPS];
+static uint8_t* g_tdata;
+static _Atomic uint32_t g_tsnap_head, g_tsnap_tail;  /* entries written / consumed, ever */
+static uint32_t g_tdata_head;                         /* data bytes written, ever (game thread) */
+static _Atomic uint32_t g_tdata_tail;                 /* data bytes released, ever (GP thread) */
+static int g_prev_bp_prefix;                          /* the previous pipe store was the 1-byte 0x61 */
+static uint32_t g_store_v64;                          /* the last BP 0x64 value stored by the game */
+unsigned long long g_tsnap_used, g_tsnap_missed;      /* [perf] */
+
+static void tlut_snapshot(uint32_t v65) {
+    uint32_t src = ((g_store_v64 & 0xFFFFFF) << 5) & GX_PHYS_MASK, tmem = (v65 & 0x3FF) << 9, len = ((v65 >> 10) & 0x7FF) * 32;
+    if (tmem + len > 0x100000) len = tmem < 0x100000 ? 0x100000 - tmem : 0;  /* gx_texture.c's TMEM */
+    if (src + len > GUEST_RAM_SIZE || len > TLUT_DATA / 4) len = 0;
+    uint32_t off = g_tdata_head % TLUT_DATA, skip = off + len > TLUT_DATA ? TLUT_DATA - off : 0;  /* no wrap inside one */
+    /* wait for room: the GP thread is a whole ring behind (keeps the pairing in order) */
+    while (atomic_load_explicit(&g_tsnap_head, memory_order_relaxed) - atomic_load_explicit(&g_tsnap_tail, memory_order_acquire) >= TLUT_SNAPS ||
+           g_tdata_head + skip + len - atomic_load_explicit(&g_tdata_tail, memory_order_acquire) > TLUT_DATA)
+        ring_kick();
+    g_tdata_head += skip;
+    off = g_tdata_head % TLUT_DATA;
+    uint32_t h = atomic_load_explicit(&g_tsnap_head, memory_order_relaxed);
+    TlutSnap* sn = &g_tsnap[h % TLUT_SNAPS];
+    sn->v64 = g_store_v64; sn->v65 = v65; sn->off = off; sn->len = len;
+    if (len) memcpy(g_tdata + off, mem_phys(src), len);
+    g_tdata_head += len;
+    sn->end = g_tdata_head;
+    atomic_store_explicit(&g_tsnap_head, h + 1, memory_order_release);
+}
+
+/* the game thread's view of each pipe store (before it is gathered into bursts) */
+static void tlut_watch(uint32_t v, int size) {
+    if (size == 1) { g_prev_bp_prefix = (v & 0xFF) == 0x61; return; }
+    if (size == 4 && g_prev_bp_prefix) {
+        uint32_t reg = v >> 24;
+        if (reg == 0x64) g_store_v64 = v;
+        else if (reg == 0x65 && (CP_CR & 0x11) == 0x11) tlut_snapshot(v);  /* immediate mode only: not recorded into a display list */
+    }
+    g_prev_bp_prefix = 0;
+}
+
+/* GP thread, BP 0x65 from the immediate stream: copy the palette the game had when it issued the
+ * load into dst; returns 0 (read RAM instead) when there is no matching copy */
+int gx_tlut_snapshot_copy(uint32_t v64, uint32_t v65, uint8_t* dst, uint32_t len) {
+    if (!g_tdata || g_parse_depth) return 0;
+    uint32_t t = atomic_load_explicit(&g_tsnap_tail, memory_order_relaxed);
+    uint32_t h = atomic_load_explicit(&g_tsnap_head, memory_order_acquire);
+    /* the next copy, or one of the next few (skipping stores that only looked like a TLUT load) */
+    for (uint32_t k = 0; k < 4 && t + k != h; k++) {
+        const TlutSnap* sn = &g_tsnap[(t + k) % TLUT_SNAPS];
+        if (((sn->v65 ^ v65) & 0xFFFFFF) || ((sn->v64 ^ v64) & 0xFFFFFF)) continue;  /* bp[] keeps 24 bits */
+        memcpy(dst, g_tdata + sn->off, len < sn->len ? len : sn->len);
+        atomic_store_explicit(&g_tdata_tail, sn->end, memory_order_release);
+        atomic_store_explicit(&g_tsnap_tail, t + k + 1, memory_order_release);
+        g_tsnap_used++;
+        return 1;
+    }
+    g_tsnap_missed++;
+    return 0;
+}
+
 /* ---- write-gather pipe ---- */
 static void pipe_write(uint32_t v, int size);
 void gx_pipe_write(uint32_t v, int size) {
@@ -427,6 +502,7 @@ static void pipe_flush(void) {
 }
 
 static void pipe_write(uint32_t v, int size) {
+    if (g_tdata) tlut_watch(v, size);
     g_pipe_stores++;
     g_pipe_bytes += (unsigned)size;
     if (size == 4) {  /* the common case: one big-endian word */
@@ -546,6 +622,7 @@ void gx_init(void) {
         rt_log("[gx] SR_GX_SYNC: the FIFO is parsed on the game thread");
         return;
     }
+    if (!getenv("SR_NOTLUTSNAP")) g_tdata = malloc(TLUT_DATA);  /* SR_NOTLUTSNAP=1: read palettes late, as before */
     g_ring = malloc(RING_SIZE);
     if (!g_ring) rt_fatal("cannot allocate the GP ring");
     mtx_init(&g_gp_lock, mtx_plain);

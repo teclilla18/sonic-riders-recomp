@@ -235,11 +235,16 @@ static void decode(uint8_t* out, const uint8_t* src, int fmt, uint32_t w, uint32
         }
 }
 
+static uint32_t g_last_tlut_src[0x400];  /* per TMEM TLUT slot: the RAM address last loaded there */
 /* BP 0x64/0x65: copy a TLUT from RAM into TMEM */
 void gx_texture_load_tlut(void) {
-    uint32_t src = (g_gx.bp[0x64] & 0xFFFFFF) << 5;
+    uint32_t src = ((g_gx.bp[0x64] & 0xFFFFFF) << 5) & GX_PHYS_MASK;
     uint32_t tmem = (g_gx.bp[0x65] & 0x3FF) << 9, count = ((g_gx.bp[0x65] >> 10) & 0x7FF) * 32;
     if (tmem + count > sizeof g_tmem) count = (uint32_t)sizeof g_tmem - tmem;
+    g_last_tlut_src[(tmem >> 9) & 0x3FF] = src;  /* for SR_TEXWATCH */
+    /* the palette as it was when the game issued the load (gx_fifo.c), else RAM now */
+    int gx_tlut_snapshot_copy(uint32_t v64, uint32_t v65, uint8_t* dst, uint32_t len);
+    if (gx_tlut_snapshot_copy(g_gx.bp[0x64], g_gx.bp[0x65], g_tmem + tmem, count)) return;
     if (src + count <= GUEST_RAM_SIZE) memcpy(g_tmem + tmem, mem_phys(src), count);
 }
 
@@ -289,7 +294,7 @@ int gx_texture_lookup(int map) {
     uint32_t img0 = g_gx.bp[(hi ? 0xA8 : 0x88) + i], img3 = g_gx.bp[(hi ? 0xB4 : 0x94) + i];
     uint32_t tlutr = g_gx.bp[(hi ? 0xB8 : 0x98) + i];
     uint32_t w = (img0 & 0x3FF) + 1, h = ((img0 >> 10) & 0x3FF) + 1, fmt = (img0 >> 20) & 15;
-    uint32_t addr = (img3 & 0xFFFFFF) << 5;
+    uint32_t addr = ((img3 & 0xFFFFFF) << 5) & GX_PHYS_MASK;
     for (int k = 0; k < g_ncopies; k++)  /* render-to-texture result at this address */
         if (g_copies[k].addr == addr && g_copies[k].w == w && g_copies[k].h == h) return g_copies[k].id;
     uint32_t size = gx_texture_size((int)fmt, w, h);
@@ -313,6 +318,19 @@ int gx_texture_lookup(int map) {
      * frame (UI pieces recoloured); keyed without it, the second draw got the first one's colours
      * (the "already checked this frame" shortcut skipped the palette) */
     uint64_t th = tlut ? hash_bytes(tlut, tlut_bytes) * 31 : 0;
+    {   /* SR_TEXWATCH=<hex address>: log the palette used each time that texture is looked up (debugging) */
+        static int on = -1;
+        static uint32_t wa;
+        static int n;
+        if (on < 0) { const char* e = getenv("SR_TEXWATCH"); on = e != NULL; wa = e ? (uint32_t)strtoul(e, NULL, 16) : 0; }
+        if (on && addr == wa && tlut && n < 60) {
+            n++;
+            uint32_t toff = (tlutr & 0x3FF);
+            rt_log("[texwatch] %08X field %u: tlut slot %03X loaded from %08X; entries %04X %04X %04X %04X %04X %04X %04X %04X ... [128] %04X [255] %04X",
+                   addr, vi_field_count(), toff, g_last_tlut_src[toff], be16(tlut), be16(tlut + 2), be16(tlut + 4), be16(tlut + 6),
+                   be16(tlut + 8), be16(tlut + 10), be16(tlut + 12), be16(tlut + 14), be16(tlut + 256), be16(tlut + 510));
+        }
+    }
     uint64_t key = (uint64_t)addr << 32 ^ (uint64_t)fmt << 28 ^ (uint64_t)w << 14 ^ h ^ ((uint64_t)tfmt << 62) ^
                    th * 0xD6E8FEB86659FD93ull;
     /* two-way set: slots i and i ^ 1 of a well-mixed index; a miss replaces the free or older one */

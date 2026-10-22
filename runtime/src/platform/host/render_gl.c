@@ -486,6 +486,37 @@ static void execute(GxFrame* f) {
                         n += snprintf(t + n, sizeof t - n, " t%d=%d(%ux%u%s)", m, c->tex[m], gt ? gt->width : 0,
                                       gt ? gt->height : 0, gt && gt->is_copy ? " copy" : "");
                     }
+                {   /* SR_GLTEXDUMP=<hex address>: write what the GL texture of map 0 holds when a draw samples
+                     * that texture address (build/gltex_<id>.tga) */
+                    const char* gd = getenv("SR_GLTEXDUMP");
+                    static int done;
+                    uint32_t want_addr = gd ? (uint32_t)strtoul(gd, NULL, 16) : 0;
+                    int want = c->tex[0];
+                    if (!done && gd && ((cur->bp[0x94] & 0xFFFFFF) << 5) == want_addr && want >= 0 && want < g_gltex_cap && g_gltex[want]) {
+                        done = 1;
+                        GLint w = 0, h = 0;
+                        glBindTexture(GL_TEXTURE_2D, g_gltex[want]);
+                        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+                        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+                        uint8_t* px = malloc((size_t)w * h * 4);
+                        glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, px);
+                        char path[64];
+                        snprintf(path, sizeof path, "build/gltex_%d.tga", want);
+                        FILE* tf = fopen(path, "wb");
+                        if (tf) {
+                            uint8_t hdr[18] = {0, 0, 2};
+                            hdr[12] = (uint8_t)w; hdr[13] = (uint8_t)(w >> 8); hdr[14] = (uint8_t)h; hdr[15] = (uint8_t)(h >> 8);
+                            hdr[16] = 32; hdr[17] = 0x28;
+                            fwrite(hdr, 1, 18, tf);
+                            fwrite(px, 1, (size_t)w * h * 4, tf);
+                            fclose(tf);
+                        }
+                        GxTexture* gt = gx_texture_get(want);
+                        rt_log("[gxdbg] GL texture %d is %dx%d (GxTexture %ux%u gen %u, GL gen %u)", want, w, h, gt ? gt->width : 0,
+                               gt ? gt->height : 0, gt ? gt->gen : 0, g_gltex_gen[want]);
+                        free(px);
+                    }
+                }
                 rt_log("[gxdbg] draw prim %u verts %u stages %u genmode %06X ind %u%s | z %06X blend %06X dstalpha %06X pe %06X",
                        c->prim, c->b, ((cur->bp[0] >> 10) & 15) + 1, cur->bp[0], (cur->bp[0] >> 16) & 7, t, cur->bp[0x40],
                        cur->bp[0x41], cur->bp[0x42], cur->bp[0x43]);

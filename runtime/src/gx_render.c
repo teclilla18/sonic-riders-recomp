@@ -520,7 +520,7 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
 static void efb_copy(uint32_t v) {
     uint32_t tl = g_gx.bp[0x49], wh = g_gx.bp[0x4A];
     uint32_t x = tl & 0x3FF, y = (tl >> 10) & 0x3FF, w = (wh & 0x3FF) + 1, h = ((wh >> 10) & 0x3FF) + 1;
-    uint32_t dest = (g_gx.bp[0x4B] & 0xFFFFFF) << 5;
+    uint32_t dest = ((g_gx.bp[0x4B] & 0xFFFFFF) << 5) & GX_PHYS_MASK;
     int to_xfb = (v >> 14) & 1, clear = (v >> 11) & 1, half = (v >> 9) & 1;
     if (!to_xfb) {  /* render-to-texture copies, for the [perf] line: from depth, and target formats */
         g_feat_copies++;
@@ -624,6 +624,13 @@ static void efb_copy(uint32_t v) {
                 verts0 = g_verts_total;
                 st0 = g_pipe_stores;
                 by0 = g_pipe_bytes;
+                {
+                    extern unsigned long long g_tsnap_used, g_tsnap_missed;
+                    static unsigned long long u0, m0;
+                    rt_log("[perf]   palette loads/frame: from the game-time copy %.1f, read late from RAM %.1f",
+                           (g_tsnap_used - u0) / 120.0, (g_tsnap_missed - m0) / 120.0);
+                    u0 = g_tsnap_used; m0 = g_tsnap_missed;
+                }
                 rt_log("[perf]   draw processing parts: vertex decode %.2f ms/frame, state snapshots %.2f ms/frame (%u/frame)",
                        g_decode_ticks * 1000.0 / 40500000.0 / 120, g_state_ticks * 1000.0 / 40500000.0 / 120, g_state_pushes / 120);
                 g_decode_ticks = g_state_ticks = 0;
