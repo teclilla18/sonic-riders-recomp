@@ -16,6 +16,23 @@ The approach follows [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD)
 [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp), whose PowerPC→C translator
 this project forks.
 
+## Updating to a new version
+
+Fixes come out as new releases. To update an existing install:
+
+1. Download the new `SonicRidersSetup-<version>.zip` from the [latest release](../../releases/latest)
+   and extract it to a **new** folder.
+2. Put your Switch's SD card in the PC and run `SonicRidersSetup.bat` from the new folder. Pick the
+   same disc image, choose **1** (Switch), and pick your SD card.
+3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
+   minutes). It replaces `sonicriders.nro` and skips copying the disc image, since it's already there.
+
+Your saves (`saves/`) and settings (`settings.ini`) on the SD card are kept. You can delete the old
+release folder afterwards.
+
+To get a notification when a new version comes out, click **Watch** at the top of the GitHub page,
+then **Custom** → **Releases**. What changed in each version is in the [CHANGELOG](CHANGELOG.md).
+
 ## Legal notice
 
 - This is a fan project. It is **not affiliated with, endorsed or sponsored by SEGA or Nintendo**.
@@ -68,8 +85,7 @@ this project forks.
 Hold **−** (Minus) in the game for the settings menu (widescreen, resolution, FPS counter, controllers).
 Your saves and settings stay on the SD card in `switch/sonicriders/`.
 
-**Updating to a new version:** download and extract the new release, run `SonicRidersSetup.bat` again
-with the same disc image and SD card. Saves are kept.
+**Updating to a new version:** see [Updating to a new version](#updating-to-a-new-version) above.
 
 ### If something goes wrong
 
