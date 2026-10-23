@@ -240,8 +240,6 @@ that playable is an open goal). The PC version ran at 60 fps on the test PC, 4 p
   `build\shaderkeys\` and run the setup again.
 - Characters look flatter and darker than on GameCube (lighting); the speed-blur screen effect is
   weaker; screen corners are darker; a few billboards are slightly see-through.
-- Some menu/HUD colours may still differ (the main cause, a palette address bug behind the rainbow
-  trick-rank letters, is fixed in v0.2.0; reports of what's left are welcome).
 - The story-mode cutscene monitor looks garbled.
 - A rare hang on a "Now Loading" screen (much less frequent since disc reads were reworked).
 

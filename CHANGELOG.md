@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.1 (2026-10-23)
+
+- **PC keyboard controls changed:** WASD moves, J / K / L / I = A / B / X / Y, U / O / P = L / R / Z,
+  Enter = START, arrow keys = C-stick, T / F / G / H = D-pad. The settings menu (F1) also takes
+  WASD, J (accept) and K (back).
+- The v0.2.0 palette fix is now confirmed on Switch hardware: trick rank letters, track select
+  previews, the results screen, the pause and end-of-race menus all have the right colours, the white
+  boxes around results icons are gone, and the 4-player UI no longer flickers.
+
 ## v0.2.0 (2026-10-22)
 
 ### New: play on Windows PC
@@ -10,9 +19,6 @@
   "Sonic Riders" shortcut in the install folder and optionally on the desktop.
 
 ### Fixes and improvements
-
-- PC keyboard controls changed: WASD moves, J / K / L / I = A / B / X / Y, U / O = L / R, P = Z,
-  arrow keys = C-stick. The settings menu also takes WASD, J (accept) and K (back).
 
 - Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
   changed finishes in seconds.
