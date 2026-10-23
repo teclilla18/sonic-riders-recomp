@@ -12,6 +12,7 @@
 #include <SDL.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -38,10 +39,13 @@ static void unpack(uint64_t v, GcPad* p) {
 }
 
 /* ---- scripted input ---- */
-typedef struct { uint32_t field; uint16_t mask; int press, port; } Step;
+typedef struct { uint32_t field; uint16_t mask; int press, port, axis, value; } Step;  /* axis 1/2: SX=/SY= */
 static Step g_script[1024];
 static int g_nscript;
 static uint16_t g_script_held[PORTS];
+static int g_script_stick[PORTS][2];  /* scripted main-stick offsets from centre (SX=, SY=) */
+
+unsigned long long gx_frames_presented(void);
 
 static uint16_t button_mask(const char* n) {
     static const struct { const char* name; uint16_t m; } t[] = {
@@ -63,7 +67,8 @@ static void parse_script(const char* s) {
         int press = 1, port = 0;
         if (*name == '-') { press = 0; name++; }
         if (name[0] >= '1' && name[0] <= '4' && name[1] == '.') { port = name[0] - '1'; name += 2; }
-        g_script[g_nscript++] = (Step){(uint32_t)atoi(tok), button_mask(name), press, port};
+        int axis = (name[0] == 'S' && (name[1] == 'X' || name[1] == 'Y') && name[2] == '=') ? 1 + (name[1] == 'Y') : 0;
+        g_script[g_nscript++] = (Step){(uint32_t)atoi(tok), axis ? 0 : button_mask(name), press, port, axis, axis ? atoi(name + 3) : 0};
     }
     rt_log("[input] scripted input: %d steps", g_nscript);
 }
@@ -71,6 +76,22 @@ static void parse_script(const char* s) {
 static uint8_t axis8(int v, int range) {  /* SDL axis -> GameCube 0x80 +- range */
     int r = 0x80 + v * range / 32767;
     return (uint8_t)(r < 1 ? 1 : r > 255 ? 255 : r);
+}
+
+/* an SDL stick -> GameCube stick (0x80 +- 100), leaving the keyboard's value alone while centred.
+ * Round dead zone of 25% of the throw, and the rest rescaled to start from zero: the game's menus
+ * move the cursor from about 20 of 100 and repeat fast while it is held, so with the old 12% square
+ * dead zone (which jumped straight to 12) a light touch on a loose pad stick raced through menus.
+ * A full push still gives the full range. */
+#define STICK_DEAD 0.25
+static void stick8(int x, int y, uint8_t* ox, uint8_t* oy) {
+    double fx = x / 32767.0, fy = -y / 32767.0, m = sqrt(fx * fx + fy * fy);
+    if (m <= STICK_DEAD) return;
+    double s = (m - STICK_DEAD) / (1.0 - STICK_DEAD);
+    if (s > 1.0) s = 1.0;
+    s *= 100.0 / m;
+    *ox = axis8((int)lround(fx * s * 32767.0 / 100.0), 100);
+    *oy = axis8((int)lround(fy * s * 32767.0 / 100.0), 100);
 }
 
 void input_init(void) {
@@ -93,8 +114,8 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 static void read_gamepad(SDL_GameController* c, int port, GcPad* p) {
     int lx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTX), ly = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTY);
     int rx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTX), ry = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTY);
-    if (abs(lx) > 4000 || abs(ly) > 4000) { p->stick_x = axis8(lx, 100); p->stick_y = axis8(-ly, 100); }
-    if (abs(rx) > 4000 || abs(ry) > 4000) { p->c_x = axis8(rx, 100); p->c_y = axis8(-ry, 100); }
+    stick8(lx, ly, &p->stick_x, &p->stick_y);
+    stick8(rx, ry, &p->c_x, &p->c_y);
     int tl = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERLEFT), tr = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
     if (tl > 1000) { p->trig_l = (uint8_t)(tl * 255 / 32767); if (tl > 29000) p->buttons |= B_L; }
     if (tr > 1000) { p->trig_r = (uint8_t)(tr * 255 / 32767); if (tr > 29000) p->buttons |= B_R; }
@@ -227,13 +248,19 @@ void input_get_pad(int chan, GcPad* out) {
         static int next;
         while (next < g_nscript && g_script[next].field <= f) {
             uint16_t* held = &g_script_held[g_script[next].port];
-            if (g_script[next].press) *held |= g_script[next].mask;
+            rt_log("[input] script step at field %u = presented frame %llu", g_script[next].field, gx_frames_presented());
+            if (g_script[next].axis) g_script_stick[g_script[next].port][g_script[next].axis - 1] = g_script[next].value;
+            else if (g_script[next].press) *held |= g_script[next].mask;
             else *held &= (uint16_t)~g_script[next].mask;
             next++;
         }
     }
     unpack(atomic_load(&g_pad[chan]), out);
     out->buttons |= g_script_held[chan];
+    if (g_script_stick[chan][0] || g_script_stick[chan][1]) {
+        out->stick_x = (uint8_t)(0x80 + g_script_stick[chan][0]);
+        out->stick_y = (uint8_t)(0x80 + g_script_stick[chan][1]);
+    }
 }
 
 void input_set_rumble(int chan, int motor) {

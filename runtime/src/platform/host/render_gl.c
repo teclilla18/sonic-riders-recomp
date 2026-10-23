@@ -88,7 +88,7 @@ static GxFrame* g_pending;
 static volatile int g_quit;
 static int g_headless;
 static int g_shot_at;
-static int g_shot_list[32], g_nshots;
+static int g_shot_list[512 + 32], g_nshots;  /* SR_SCREENSHOT list (up to 512), + SR_SKIPSCAN's 32 */
 /* SR_SKIPSCAN=FRAME,STEP: from presented frame FRAME on, frame FRAME+k leaves out draws k*STEP up to
  * (k+1)*STEP and is saved as a screenshot (finding the draws behind a visual problem; debugging) */
 static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
@@ -771,7 +771,7 @@ void render_start(void) {
     g_headless = h && *h == '1';
     const char* s = getenv("SR_SCREENSHOT");
     g_shot_at = s ? atoi(s) : 0;
-    for (const char* q = s; q && *q && g_nshots < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
+    for (const char* q = s; q && *q && g_nshots < 512; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
         g_shot_list[g_nshots++] = atoi(q);
     const char* scan = getenv("SR_SKIPSCAN");
     if (scan && sscanf(scan, "%d,%d", &g_scan_at, &g_scan_step) == 2 && g_scan_at > 0 && g_scan_step > 0) {
