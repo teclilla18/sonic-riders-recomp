@@ -136,7 +136,7 @@ Your saves and settings stay on the SD card in `switch/sonicriders/`.
 | Z | P | Right shoulder |
 | C-stick | Arrow keys | Right stick |
 | D-pad | T F G H | D-pad |
-| Settings menu | F1 | Back / View |
+| Settings menu | hold F1 | hold Back / View |
 | Fullscreen | F11 or Alt+Enter | (settings menu) |
 
 More controllers join as players 2–4. The game's log is `sonicriders.log` in the install folder (attach
@@ -222,8 +222,8 @@ Design notes, findings and the current work log are in [NOTES.md](NOTES.md).
 | Z | R | P | Right shoulder |
 | D-pad | D-pad | T F G H | D-pad |
 
-- **Settings menu:** hold **−** (Minus) for half a second on the Switch; F1 or the gamepad's Back
-  button on PC. Items: Screen (4:3 / 16:9 widescreen / 16:9 stretched), Resolution (1x / 1.5x / 2x),
+- **Settings menu:** hold **−** (Minus) for half a second on the Switch; hold F1 or the
+  gamepad's Back button on PC the same way. Items: Screen (4:3 / 16:9 widescreen / 16:9 stretched), Resolution (1x / 1.5x / 2x),
   FPS counter, Unlock Chaos Emerald gear, Controllers (pair or split Joy-Cons), Save screenshot.
 - **Up to 4 players:** connect more controllers; each player joins at Player Entry with their own
   controller. A **single Joy-Con held sideways** works as one controller (SL/SR = L/R, stick click = Z,

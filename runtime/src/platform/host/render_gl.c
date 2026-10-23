@@ -492,7 +492,9 @@ static void execute(GxFrame* f) {
                     static int done;
                     uint32_t want_addr = gd ? (uint32_t)strtoul(gd, NULL, 16) : 0;
                     int want = c->tex[0];
-                    if (!done && gd && ((cur->bp[0x94] & 0xFFFFFF) << 5) == want_addr && want >= 0 && want < g_gltex_cap && g_gltex[want]) {
+                    if (gd && ((cur->bp[0x95] & 0xFFFFFF) << 5) == want_addr) want = c->tex[1];  /* or map 1 */
+                    else if (gd && ((cur->bp[0x94] & 0xFFFFFF) << 5) != want_addr) want = -1;
+                    if (!done && gd && want >= 0 && want < g_gltex_cap && g_gltex[want]) {
                         done = 1;
                         GLint w = 0, h = 0;
                         glBindTexture(GL_TEXTURE_2D, g_gltex[want]);
@@ -552,8 +554,50 @@ static void execute(GxFrame* f) {
                         rt_log("[gxdbg]   light %d: color %08X cosatt %g %g %g distatt %g %g %g pos %g %g %g dir %g %g %g", li,
                                lraw[3], lv[4], lv[5], lv[6], lv[7], lv[8], lv[9], lv[10], lv[11], lv[12], lv[13], lv[14], lv[15]);
                     }
+                    rt_log("[gxdbg]   texgen %08X %08X %08X %08X | post %08X %08X | dualtex %u", cur->xfr[0x40], cur->xfr[0x41],
+                           cur->xfr[0x42], cur->xfr[0x43], cur->xfr[0x50], cur->xfr[0x51], cur->xfr[0x12] & 1);
                     for (uint32_t vi = 0; vi < 3 && vi < c->b; vi++) {
                         const GxVertex* vx = &f->verts[f->idx[c->a + vi]];
+                        /* texcoord 1 as the vertex shader computes it (regular texgen only) */
+                        uint32_t info1 = cur->xfr[0x41];
+                        if (((info1 >> 4) & 7) == 0) {
+                            uint32_t src = (info1 >> 7) & 31;
+                            float s[4] = {0, 0, 1, 1};
+                            if (src == 0) memcpy(s, vx->pos, 12);
+                            else if (src <= 4) memcpy(s, vx->nrm, 12);
+                            else { s[0] = vx->tex[src - 5][0]; s[1] = vx->tex[src - 5][1]; }
+                            s[3] = 1.0f;
+                            if (!((info1 >> 2) & 1)) s[2] = 1.0f;
+                            float tm[12];
+                            int base = (int)vx->tmtx[1] * 4;
+                            for (int w = 0; w < 12; w++) {
+                                uint32_t xi = (uint32_t)base + (uint32_t)w;
+                                uint32_t raw = f->xchunks[(size_t)curx->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                                memcpy(&tm[w], &raw, 4);
+                            }
+                            float o[3];
+                            for (int r = 0; r < 3; r++) o[r] = tm[r * 4] * s[0] + tm[r * 4 + 1] * s[1] + tm[r * 4 + 2] * s[2] + tm[r * 4 + 3] * s[3];
+                            rt_log("[gxdbg]   v%u tc1: src %u in %g %g %g | tmtx %g rows %g %g %g %g / %g %g %g %g / %g %g %g %g | out %g %g %g",
+                                   vi, src, s[0], s[1], s[2], vx->tmtx[1], tm[0], tm[1], tm[2], tm[3], tm[4], tm[5], tm[6], tm[7],
+                                   tm[8], tm[9], tm[10], tm[11], o[0], o[1], o[2]);
+                            if (cur->xfr[0x12] & 1) {
+                                uint32_t post = cur->xfr[0x51];
+                                if ((post >> 8) & 1) {
+                                    float l = sqrtf(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]) + 1e-12f;
+                                    for (int r = 0; r < 3; r++) o[r] /= l;
+                                }
+                                for (int w = 0; w < 12; w++) {
+                                    uint32_t xi = 0x500 + (post & 63) * 4 + (uint32_t)w;
+                                    uint32_t raw = f->xchunks[(size_t)curx->xtab[xi >> 6] * GX_XFM_CHUNK + (xi & 63)];
+                                    memcpy(&tm[w], &raw, 4);
+                                }
+                                float q[3];
+                                for (int r = 0; r < 3; r++) q[r] = tm[r * 4] * o[0] + tm[r * 4 + 1] * o[1] + tm[r * 4 + 2] * o[2] + tm[r * 4 + 3];
+                                rt_log("[gxdbg]   v%u tc1 post rows %g %g %g %g / %g %g %g %g / %g %g %g %g | final %g %g %g", vi,
+                                       tm[0], tm[1], tm[2], tm[3], tm[4], tm[5], tm[6], tm[7], tm[8], tm[9], tm[10], tm[11],
+                                       q[0], q[1], q[2]);
+                            }
+                        }
                         int idx = (int)vx->pos[3];
                         float nm[9];
                         for (int w = 0; w < 9; w++) {
@@ -652,6 +696,8 @@ static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
     if (!g_headless) {
+        if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0)
+            rt_fatal("SDL_InitSubSystem: %s", SDL_GetError());
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -735,7 +781,10 @@ void render_start(void) {
     } else {
         g_scan_at = 0;
     }
-    if (!g_headless && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0)
+    /* video and controllers start on the render thread (render_thread), which pumps the window
+     * messages: on Windows SDL's controller input arrives as messages to the thread that started
+     * it, so starting it here left controllers detected but always idle */
+    if (!g_headless && SDL_Init(SDL_INIT_AUDIO) != 0)
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();
     rt_thread_start(render_thread, NULL);

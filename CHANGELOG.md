@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **PC: game controllers work now.** Controllers were detected but none of their buttons or sticks
+  reached the game (only the keyboard worked). Analog triggers work too.
+- The settings menu opens when F1 (or the controller's Back/View button) is **held** for half a
+  second; the docs said "press".
+- The PC log records the first controller button presses, to help with bug reports.
+
 ## v0.2.2 (2026-10-23)
 
 - **Setup fix:** on some PCs the setup stopped with `Error opening archive: Can't initialize filter;

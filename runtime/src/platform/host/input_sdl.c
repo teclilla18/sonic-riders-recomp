@@ -192,6 +192,21 @@ void input_pump(void) {
         for (size_t i = 0; i < sizeof om / sizeof om[0]; i++)
             if (SDL_GameControllerGetButton(g_ctl[0], om[i].b)) ov |= om[i].m;
     }
+    /* the first input changes go to the log (bug reports: does a controller/F1 reach the game?) */
+    static int logged;
+    static uint16_t prev_btn[PORTS];
+    static unsigned prev_ov;
+    for (int i = 0; i < PORTS && logged < 40; i++)
+        if (g_ctl[i] && pads[i].buttons != prev_btn[i]) {
+            rt_log("[input] port %d buttons %04X stick %02X %02X", i + 1, pads[i].buttons, pads[i].stick_x, pads[i].stick_y);
+            prev_btn[i] = pads[i].buttons;
+            logged++;
+        }
+    if ((ov & OV_MENU) != (prev_ov & OV_MENU) && logged < 40) {
+        rt_log("[input] menu button (F1 / Back) %s", ov & OV_MENU ? "down" : "up");
+        logged++;
+    }
+    prev_ov = ov;
     int menu = overlay_input(ov);
     (void)overlay_take_controllers_request();  /* nothing to set up on the desktop */
     for (int i = 0; i < PORTS; i++) {

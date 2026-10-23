@@ -81,7 +81,7 @@ def readme_first(flavor, version):
             "Controls: a game controller works (Xbox-style; up to 4 players with more controllers).",
             "Keyboard: WASD = move, J = A, K = B, L = X, I = Y, Enter = START, U / O = L / R, P = Z,",
             "arrow keys = C-stick, T F G H = D-pad.",
-            "F1 (or the controller's Back/View button) = settings menu. F11 or Alt+Enter = fullscreen.",
+            "Hold F1 (or the controller's Back/View button) = settings menu. F11 or Alt+Enter = fullscreen.",
         ]
     tail = [
         "",
