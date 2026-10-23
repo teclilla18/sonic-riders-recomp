@@ -373,7 +373,7 @@ if ($builtExe) {
     Log ""
     Log "PC: start the game with the 'Sonic Riders' shortcut. Keep this folder: the game, your disc image" "Green"
     Log "link and your saves (saves\) live here." "Green"
-    Log "Keyboard: arrows = move, X = A, Z = B, S = X, A = Y, Enter = START, Q/W = L/R, E = Z." "Green"
+    Log "Keyboard: WASD = move, J = A, K = B, L = X, I = Y, Enter = START, U/O = L/R, P = Z." "Green"
     Log "A game controller works too. F1 (or the controller's Back/View button) opens the settings menu;" "Green"
     Log "F11 or Alt+Enter switches fullscreen." "Green"
 }

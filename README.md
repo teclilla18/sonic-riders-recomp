@@ -120,12 +120,12 @@ Your saves and settings stay on the SD card in `switch/sonicriders/`.
 
 | On PC | Keyboard | Controller |
 |---|---|---|
-| Move | Arrow keys | Left stick |
-| A / B / X / Y | X / Z / S / A | A / B / X / Y |
+| Move | W A S D | Left stick |
+| A / B / X / Y | J / K / L / I | A / B / X / Y |
 | START | Enter | Start / Menu |
-| L / R | Q / W | Left / right trigger |
-| Z | E | Right shoulder |
-| C-stick | I J K L | Right stick |
+| L / R | U / O | Left / right trigger |
+| Z | P | Right shoulder |
+| C-stick | Arrow keys | Right stick |
 | D-pad | T F G H | D-pad |
 | Settings menu | F1 | Back / View |
 | Fullscreen | F11 or Alt+Enter | (settings menu) |
@@ -204,12 +204,12 @@ Design notes, findings and the current work log are in [NOTES.md](NOTES.md).
 
 | GameCube | Switch (Pro Controller, Joy-Con pair, handheld) | PC keyboard | PC gamepad |
 |---|---|---|---|
-| Control stick | Left stick | Arrow keys | Left stick |
-| C-stick | Right stick | I J K L | Right stick |
-| A / B / X / Y | A / B / X / Y | X / Z / S / A | A / B / X / Y |
+| Control stick | Left stick | W A S D | Left stick |
+| C-stick | Right stick | Arrow keys | Right stick |
+| A / B / X / Y | A / B / X / Y | J / K / L / I | A / B / X / Y |
 | START | + | Enter | Start |
-| L / R | ZL / ZR | Q / W | Left / right trigger |
-| Z | R | E | Right shoulder |
+| L / R | ZL / ZR | U / O | Left / right trigger |
+| Z | R | P | Right shoulder |
 | D-pad | D-pad | T F G H | D-pad |
 
 - **Settings menu:** hold **−** (Minus) for half a second on the Switch; F1 or the gamepad's Back

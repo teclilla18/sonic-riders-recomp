@@ -11,6 +11,9 @@
 
 ### Fixes and improvements
 
+- PC keyboard controls changed: WASD moves, J / K / L / I = A / B / X / Y, U / O = L / R, P = Z,
+  arrow keys = C-stick. The settings menu also takes WASD, J (accept) and K (back).
+
 - Setup: the game code is recompiled once per run, not twice; re-running the setup with nothing
   changed finishes in seconds.
 - Fixed the rainbow-coloured trick rank letters (and other UI textures with the wrong palette):

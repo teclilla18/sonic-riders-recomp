@@ -77,8 +77,8 @@ def readme_first(flavor, version):
             '3. Start the game with the "Sonic Riders" shortcut (in the folder, and on your desktop if you said yes).',
             "",
             "Controls: a game controller works (Xbox-style; up to 4 players with more controllers).",
-            "Keyboard: arrows = move, X = A, Z = B, S = X, A = Y, Enter = START, Q / W = L / R, E = Z,",
-            "I J K L = C-stick, T F G H = D-pad.",
+            "Keyboard: WASD = move, J = A, K = B, L = X, I = Y, Enter = START, U / O = L / R, P = Z,",
+            "arrow keys = C-stick, T F G H = D-pad.",
             "F1 (or the controller's Back/View button) = settings menu. F11 or Alt+Enter = fullscreen.",
         ]
     tail = [

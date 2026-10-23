@@ -145,20 +145,22 @@ void input_pump(void) {
     GcPad p = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     const Uint8* k = SDL_GetKeyboardState(NULL);
     if (k) {
-        int sx = (k[SDL_SCANCODE_RIGHT] ? 1 : 0) - (k[SDL_SCANCODE_LEFT] ? 1 : 0);
-        int sy = (k[SDL_SCANCODE_UP] ? 1 : 0) - (k[SDL_SCANCODE_DOWN] ? 1 : 0);
-        int cx = (k[SDL_SCANCODE_L] ? 1 : 0) - (k[SDL_SCANCODE_J] ? 1 : 0);
-        int cy = (k[SDL_SCANCODE_I] ? 1 : 0) - (k[SDL_SCANCODE_K] ? 1 : 0);
+        /* keyboard: WASD stick, arrows C-stick, J/K/L/I = A/B/X/Y, U/O/P = L/R/Z, Enter START,
+         * T/G/F/H the D-pad */
+        int sx = (k[SDL_SCANCODE_D] ? 1 : 0) - (k[SDL_SCANCODE_A] ? 1 : 0);
+        int sy = (k[SDL_SCANCODE_W] ? 1 : 0) - (k[SDL_SCANCODE_S] ? 1 : 0);
+        int cx = (k[SDL_SCANCODE_RIGHT] ? 1 : 0) - (k[SDL_SCANCODE_LEFT] ? 1 : 0);
+        int cy = (k[SDL_SCANCODE_UP] ? 1 : 0) - (k[SDL_SCANCODE_DOWN] ? 1 : 0);
         p.stick_x = (uint8_t)(0x80 + sx * 100); p.stick_y = (uint8_t)(0x80 + sy * 100);
         p.c_x = (uint8_t)(0x80 + cx * 100); p.c_y = (uint8_t)(0x80 + cy * 100);
-        if (k[SDL_SCANCODE_X]) p.buttons |= B_A;
-        if (k[SDL_SCANCODE_Z]) p.buttons |= B_B;
-        if (k[SDL_SCANCODE_S]) p.buttons |= B_X;
-        if (k[SDL_SCANCODE_A]) p.buttons |= B_Y;
+        if (k[SDL_SCANCODE_J]) p.buttons |= B_A;
+        if (k[SDL_SCANCODE_K]) p.buttons |= B_B;
+        if (k[SDL_SCANCODE_L]) p.buttons |= B_X;
+        if (k[SDL_SCANCODE_I]) p.buttons |= B_Y;
         if (k[SDL_SCANCODE_RETURN]) p.buttons |= B_START;
-        if (k[SDL_SCANCODE_E]) p.buttons |= B_Z;
-        if (k[SDL_SCANCODE_Q]) { p.buttons |= B_L; p.trig_l = 0xFF; }
-        if (k[SDL_SCANCODE_W]) { p.buttons |= B_R; p.trig_r = 0xFF; }
+        if (k[SDL_SCANCODE_P]) p.buttons |= B_Z;
+        if (k[SDL_SCANCODE_U]) { p.buttons |= B_L; p.trig_l = 0xFF; }
+        if (k[SDL_SCANCODE_O]) { p.buttons |= B_R; p.trig_r = 0xFF; }
         if (k[SDL_SCANCODE_T]) p.buttons |= B_UP;
         if (k[SDL_SCANCODE_G]) p.buttons |= B_DOWN;
         if (k[SDL_SCANCODE_F]) p.buttons |= B_LEFT;
@@ -174,12 +176,12 @@ void input_pump(void) {
     unsigned ov = 0;
     if (k) {
         if (k[SDL_SCANCODE_F1]) ov |= OV_MENU;
-        if (k[SDL_SCANCODE_UP]) ov |= OV_UP;
-        if (k[SDL_SCANCODE_DOWN]) ov |= OV_DOWN;
-        if (k[SDL_SCANCODE_LEFT]) ov |= OV_LEFT;
-        if (k[SDL_SCANCODE_RIGHT]) ov |= OV_RIGHT;
-        if (k[SDL_SCANCODE_RETURN] || k[SDL_SCANCODE_X]) ov |= OV_ACCEPT;
-        if (k[SDL_SCANCODE_ESCAPE] || k[SDL_SCANCODE_Z]) ov |= OV_BACK;
+        if (k[SDL_SCANCODE_UP] || k[SDL_SCANCODE_W]) ov |= OV_UP;
+        if (k[SDL_SCANCODE_DOWN] || k[SDL_SCANCODE_S]) ov |= OV_DOWN;
+        if (k[SDL_SCANCODE_LEFT] || k[SDL_SCANCODE_A]) ov |= OV_LEFT;
+        if (k[SDL_SCANCODE_RIGHT] || k[SDL_SCANCODE_D]) ov |= OV_RIGHT;
+        if (k[SDL_SCANCODE_RETURN] || k[SDL_SCANCODE_J]) ov |= OV_ACCEPT;
+        if (k[SDL_SCANCODE_ESCAPE] || k[SDL_SCANCODE_K]) ov |= OV_BACK;
     }
     if (g_ctl[0]) {
         static const struct { SDL_GameControllerButton b; unsigned m; } om[] = {
