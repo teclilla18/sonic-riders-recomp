@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- PC: the settings menu no longer shows the "Controllers" row; it only did something on the
+  Switch (PC controllers are picked up automatically).
+
+
 ## v0.2.3 (2026-10-23)
 
 - **PC: game controllers work now.** Controllers were detected but none of their buttons or sticks

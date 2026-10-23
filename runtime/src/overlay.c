@@ -16,7 +16,12 @@
 #define HOLD_TICKS (40500000ull / 2)  /* Minus held this long opens the menu (0.5 s) */
 #define TEXT_SCALE 2
 
+/* the controllers row opens the system's controller screen: Switch only (PC pads just work) */
+#ifdef __SWITCH__
 enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_PADS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+#else
+enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+#endif
 static int g_shot_request, g_pads_request;
 
 int overlay_take_controllers_request(void) {
@@ -94,12 +99,14 @@ int overlay_input(unsigned held) {
 #endif
         case ITEM_FPS: g_settings.show_fps = !g_settings.show_fps; settings_apply(); break;
         case ITEM_EMERALD: g_settings.chaos_emerald = !g_settings.chaos_emerald; settings_apply(); break;
+#ifdef __SWITCH__
         case ITEM_PADS:
             if (pressed & OV_ACCEPT) {
                 close_menu();
                 g_pads_request = 1;
             }
             break;
+#endif
         case ITEM_SHOT:
             if (pressed & OV_ACCEPT) {
                 close_menu();
@@ -155,7 +162,7 @@ static void redraw(void) {
         text(8, 8, t, rgba(255, 255, 255, 255));
     }
     if (!g_open) return;
-    const int w = 520, h = 302, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
+    const int w = 520, h = 64 + ITEMS * 34, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
     fill(x0, y0, x0 + w, y0 + h, rgba(10, 16, 40, 225));
     fill(x0, y0, x0 + w, y0 + 3, rgba(80, 160, 255, 255));
     text(x0 + 16, y0 + 14, "SONIC RIDERS - SETTINGS", rgba(80, 160, 255, 255));
@@ -168,9 +175,11 @@ static void redraw(void) {
 #endif
     snprintf(lines[ITEM_FPS], 64, "FPS counter:  < %s >", g_settings.show_fps ? "On" : "Off");
     snprintf(lines[ITEM_EMERALD], 64, "Unlock Chaos Emerald gear:  < %s >", g_settings.chaos_emerald ? "On" : "Off");
+#ifdef __SWITCH__
     int pads = 0;
     for (int c = 0; c < 4; c++) pads += c == 0 || input_connected(c);
     snprintf(lines[ITEM_PADS], 64, "Controllers: %d connected (A: set up)", pads);
+#endif
     snprintf(lines[ITEM_SHOT], 64, "Save screenshot (A)");
     snprintf(lines[ITEM_CLOSE], 64, "Close");
     for (int i = 0; i < ITEMS; i++) {

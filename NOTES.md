@@ -580,6 +580,9 @@ Each library gets its own `mw_version`. Steps:
 - Specialized shaders are not the cause of the UI colour bugs: hw21 (SR_NOSPEC=1) looked the same.
 - Not verified yet: the track-select preview box (the PC route moves on before it shows), the results screen / pause menu colours, the white box around results icons; the 4P UI flicker. Check on hardware with this build.
 
+### 2026-10-23: PC menu controllers row removed; Switch sleep-mode freeze (user report)
+- **PC settings menu:** the "Controllers: N connected (A: set up)" row is Switch-only now (it opened the system controller applet; on PC it did nothing). Menu box height follows the item count.
+
 ## STATE 2026-10-18 - for the next session
 
 **Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
