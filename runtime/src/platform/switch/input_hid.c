@@ -177,6 +177,16 @@ void input_pump(void) {
         if (i == 0) ov = o;
         if (i > 0) atomic_store(&g_connected[i], padIsConnected(&g_pad[i]) ? 1 : 0);
     }
+    /* after the console wakes (or the game gets focus back): the first button press goes to the log,
+     * which tells a dead controller apart from a frozen picture (platform_switch.c sets the flag) */
+    extern _Atomic int g_switch_log_input;
+    if (atomic_load(&g_switch_log_input))
+        for (int i = 0; i < PLAYERS; i++)
+            if (p[i].buttons) {
+                rt_log("[input] first buttons after wake/focus: player %d %04X", i + 1, p[i].buttons);
+                atomic_store(&g_switch_log_input, 0);
+                break;
+            }
     /* the settings menu (overlay.h) is driven by player 1; while it is open every port is neutral */
     int menu = overlay_input(ov);
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));

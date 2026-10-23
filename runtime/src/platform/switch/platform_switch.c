@@ -12,6 +12,7 @@
  * svcMapProcessCodeMemory, available when the Homebrew Menu runs in title mode (hold R while
  * starting a game); otherwise svcMapMemory into the stack region is used. */
 #include <dirent.h>
+#include <stdatomic.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,7 @@ int timespec_get(struct timespec* ts, int base) {
  * focus -> where every thread is (once per stall). It also logs a jump of the tick counter (which
  * shows whether the counter runs on while the console sleeps). */
 static AppletHookCookie g_hook;
+_Atomic int g_switch_log_input;  /* input_hid.c logs the next button press */
 static void applet_hook(AppletHookType type, void* param) {
     (void)param;
     static uint64_t last;
@@ -44,6 +46,8 @@ static void applet_hook(AppletHookType type, void* param) {
     rt_log("[applet] %s; focus %d, %.1f s since the previous message", type < 8 ? names[type] : "?",
            (int)appletGetFocusState(), last ? armTicksToNs(now - last) / 1e9 : 0.0);
     last = now;
+    if (type == AppletHookType_OnResume || (type == AppletHookType_OnFocusState && appletGetFocusState() == AppletFocusState_InFocus))
+        g_switch_log_input = 1;
     fflush(stderr);  /* rare; the log must hold it if the game hangs right after */
 }
 
