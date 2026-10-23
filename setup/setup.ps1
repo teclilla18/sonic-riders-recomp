@@ -94,8 +94,9 @@ if (-not [Environment]::Is64BitOperatingSystem) { Fail "64-bit Windows is requir
 if (-not (Test-Path "$Root\configure.py") -or -not (Test-Path "$Root\tools\recomp\gcrecomp.py")) {
     Fail "This does not look like the complete release folder (configure.py / tools are missing)." "Extract the whole zip first, then run SonicRidersSetup.bat from inside it."
 }
-$tarExe = Join-Path $env:SystemRoot "System32\tar.exe"
-if (-not (Test-Path $tarExe)) { Fail "Windows' tar.exe was not found (Windows 10 version 1803 or newer is needed)." }
+# the downloaded Python must not pick up a Python installed on this PC (its settings or packages)
+foreach ($v in "PYTHONHOME", "PYTHONPATH", "PYTHONSTARTUP") { [Environment]::SetEnvironmentVariable($v, $null) }
+$env:PYTHONNOUSERSITE = "1"
 $curlExe = Join-Path $env:SystemRoot "System32\curl.exe"
 
 # ---------------------------------------------------------------- choices
@@ -227,10 +228,26 @@ function Download([string]$url, [string]$sha256, [string]$userAgent = "") {
     return $file
 }
 
+# Archives are unpacked without Windows' tar.exe: on many Windows versions it cannot read .tar.xz or
+# .tar.zst and looks for xz.exe/zstd.exe on PATH instead. The Python zip is unpacked with .NET, the
+# rest with tools\setup_extract.py on that Python (zstandard wheel for the .zst packages).
+$python = $null; $zstdDir = $null
 function Extract([string]$archive, [string]$dest) {
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    & $tarExe -xf $archive -C $dest
-    if ($LASTEXITCODE -ne 0) { Fail "Could not extract $archive" }
+    if (-not $python) {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        try { [IO.Compression.ZipFile]::ExtractToDirectory($archive, $dest) }
+        catch { Fail "Could not extract $archive ($($_.Exception.Message))" }
+        return
+    }
+    $xargs = @("-I", (Join-Path $Root "tools\setup_extract.py"), $archive, $dest)
+    if ($zstdDir) { $xargs += @("--zstd-dir", $zstdDir) }
+    $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    $out = (& $python @xargs 2>&1 | ForEach-Object { "$_" }) -join "`n"
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $old
+    if ($out) { Add-Content -Path $LogFile -Value $out -Encoding utf8 }
+    if ($code -ne 0) { Fail "Could not extract $archive (exit code $code): $out" }
 }
 
 # a tool folder is complete when its marker holds the hash it was made from
@@ -261,6 +278,7 @@ $pyDir = Ensure-Tool $tc.python
 # the embeddable Python ignores the script's folder for imports while python*._pth exists
 Get-ChildItem $pyDir -Filter "python*._pth" | Remove-Item -Force
 $python = Join-Path $pyDir "python.exe"
+$zstdDir = Ensure-Tool $tc.zstandard
 $ninja = Join-Path (Ensure-Tool $tc.ninja) "ninja.exe"
 $dtk = Join-Path (Ensure-Tool $tc.dtk) "dtk.exe"
 Log "Python, ninja and decomp-toolkit ready."

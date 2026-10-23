@@ -6,6 +6,13 @@
     "kind": "zip",
     "dir": "python"
   },
+  "zstandard": {
+    "_comment": "Python zstd module: tools/setup_extract.py unpacks the devkitPro .tar.zst packages with it (Windows' tar.exe cannot on many Windows versions). Hash: the one PyPI publishes for this wheel.",
+    "url": "https://files.pythonhosted.org/packages/79/3b/fa54d9015f945330510cb5d0b0501e8253c127cca7ebe8ba46a965df18c5/zstandard-0.25.0-cp312-cp312-win_amd64.whl",
+    "sha256": "ffef5a74088f1e09947aecf91011136665152e0b4b359c42be3373897fb39b01",
+    "kind": "zip",
+    "dir": "zstandard"
+  },
   "ninja": {
     "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-win.zip",
     "sha256": "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65",
