@@ -49,6 +49,9 @@ def readme_first(flavor, version):
         "This download contains NO game files. You need your own Sonic Riders (USA) disc image:",
         "GXEE8P, revision 0, a clean full .iso (1,459,978,240 bytes). The setup checks it.",
         "",
+        "The setup runs on a 64-bit Windows 10 (version 1803 or newer) or Windows 11 PC, with about 4 GB",
+        "free and internet the first time. Nothing else to install: it downloads its own build tools.",
+        "",
     ]
     if flavor == "switch":
         body = [
@@ -67,8 +70,7 @@ def readme_first(flavor, version):
         body = [
             "PLAY ON WINDOWS (no emulator: the game runs natively)",
             "",
-            "Needs: 64-bit Windows 10 (1803+) or 11, a graphics card with OpenGL 3.3, about 4 GB free,",
-            "and an internet connection the first time (the build tools are downloaded once).",
+            "Needs: a graphics card with OpenGL 3.3.",
             "",
             "1. Extract this whole zip to a folder you'll keep (for example C:\\Games\\SonicRiders).",
             "   The game, your saves and settings live in that folder.",
