@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.3 (2026-10-23)
 
 - **PC: game controllers work now.** Controllers were detected but none of their buttons or sticks
   reached the game (only the keyboard worked). Analog triggers work too.
