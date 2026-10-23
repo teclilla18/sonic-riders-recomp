@@ -9,8 +9,10 @@
   ramp after it, and a full push still steers fully.
 - Switch: **sleep mode works.** Putting the console to sleep during the game and waking it used to
   leave the game frozen; it now carries on where it was (confirmed on hardware).
-- Faster multiplayer (work in progress): the game's audio is now mixed on its own thread, as the
-  GameCube's audio chip does, which takes some work off the core the game runs on.
+- **Faster multiplayer on the Switch:** the game's audio is now mixed on its own thread, as the
+  GameCube's audio chip does (it took about 2 ms of every frame from the game). Busy parts of 3-player
+  Metal City went from about 37 to 53 fps. The graphics command path also no longer makes two CPU
+  cores fight over the same memory.
 
 ## v0.2.3 (2026-10-23)
 

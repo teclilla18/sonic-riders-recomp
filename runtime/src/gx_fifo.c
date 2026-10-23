@@ -68,9 +68,29 @@ void gx_tl(char type, uint32_t a) {
     }
 }
 
+/* ---- the GP thread's own variables, written for every batch it parses, kept on cache lines of their
+ * own: next to the game thread's write-gather state (written on every pipe store), they moved a
+ * cache line between the two cores on every 32-byte burst. ---- */
+static struct {
+    _Alignas(64) _Atomic size_t ring_tail;  /* ring bytes consumed, ever */
+    _Atomic uint64_t gp_busy;               /* ticks spent parsing (draw processing included) */
+    atomic_int gp_sleeping;
+    uint8_t* pend;                          /* bytes of the command being parsed */
+    size_t pend_len, pend_cap;
+    size_t need, parse_need;                /* see gp_feed / parse */
+    int parse_depth;
+} g_gpside;
+#define g_ring_tail g_gpside.ring_tail
+#define g_gp_busy g_gpside.gp_busy
+#define g_gp_sleeping g_gpside.gp_sleeping
+#define g_pend g_gpside.pend
+#define g_pend_len g_gpside.pend_len
+#define g_pend_cap g_gpside.pend_cap
+#define g_need g_gpside.need
+#define g_parse_need g_gpside.parse_need
+#define g_parse_depth g_gpside.parse_depth
+
 /* ---- command parser ---- */
-static uint8_t* g_pend;
-static size_t g_pend_len, g_pend_cap;
 
 static void pend_push(const uint8_t* p, size_t n) {
     if (g_pend_len + n > g_pend_cap) {
@@ -221,8 +241,7 @@ static void call_display_list(uint32_t addr, uint32_t size, int depth) {
 /* Parse complete commands from p[0..len); returns the bytes consumed (a partial command stays). */
 /* at depth 0: the bytes the incomplete command at the end of the buffer needs in total (0: unknown),
  * so the write-gather pipe does not re-parse it on every store until it is complete */
-static size_t g_parse_need;
-static int g_parse_depth;  /* parse(): 0 = the immediate stream, more inside display lists */
+/* g_parse_need; g_parse_depth: 0 = the immediate stream, more inside display lists (g_gpside) */
 
 static size_t parse(const uint8_t* p, size_t len, int depth) {
     size_t i = 0;
@@ -291,7 +310,7 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
     return i;
 }
 
-static size_t g_need;  /* pending bytes needed before parsing again (the incomplete command's size) */
+/* g_need (g_gpside): pending bytes needed before parsing again (the incomplete command's size) */
 unsigned long long g_pipe_stores, g_pipe_bytes;  /* for the [perf] line */
 
 static void gp_feed(const uint8_t* p, size_t n) {
@@ -308,12 +327,11 @@ static void gp_feed(const uint8_t* p, size_t n) {
 /* ---- the GP thread: a single-producer (game thread), single-consumer ring of pipe bytes ---- */
 #define RING_SIZE (16u << 20)
 static uint8_t* g_ring;
-static _Atomic size_t g_ring_head, g_ring_tail;  /* bytes written / consumed, ever */
-static atomic_int g_gp_sleeping;
+static _Atomic size_t g_ring_head;  /* bytes written, ever (consumed: g_ring_tail, in g_gpside) */
+static size_t g_tail_seen;          /* the game thread's last look at g_ring_tail */
 static mtx_t g_gp_lock;
 static cnd_t g_gp_cv, g_space_cv;
 static int g_gx_async = 1;
-static _Atomic uint64_t g_gp_busy;  /* ticks the GP thread spent parsing (draw processing included) */
 uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
 /* FIFO bytes written but not yet processed by the GP thread (0 in synchronous mode) */
 size_t gx_gp_backlog(void) {
@@ -325,7 +343,9 @@ static size_t g_kicked_at;  /* ring head at the last wake check (game thread onl
 static void ring_kick(void);
 static void ring_push(const uint8_t* b, size_t n) {
     size_t head = atomic_load_explicit(&g_ring_head, memory_order_relaxed);
-    while (head + n - atomic_load_explicit(&g_ring_tail, memory_order_acquire) > RING_SIZE) {
+    /* the GP thread's position is read only when the ring looks full from the last look */
+    if (head + n - g_tail_seen > RING_SIZE) g_tail_seen = atomic_load_explicit(&g_ring_tail, memory_order_acquire);
+    while (head + n - g_tail_seen > RING_SIZE) {
         /* full: the GP is a whole ring behind; wait for it */
         mtx_lock(&g_gp_lock);
         cnd_signal(&g_gp_cv);
@@ -337,6 +357,7 @@ static void ring_push(const uint8_t* b, size_t n) {
             cnd_timedwait(&g_space_cv, &g_gp_lock, &ts);
         }
         mtx_unlock(&g_gp_lock);
+        g_tail_seen = atomic_load_explicit(&g_ring_tail, memory_order_acquire);
     }
     size_t off = head & (RING_SIZE - 1), first = n < RING_SIZE - off ? n : RING_SIZE - off;
     memcpy(g_ring + off, b, first);
@@ -539,7 +560,6 @@ static void burst_out(const uint8_t* b, int size) {
             }
         }
     }
-    g_gx.fifo_bytes += (unsigned)size;
     if ((CP_CR & 0x11) == 0x11) {  /* GP read enable + linked: immediate mode */
         if (g_gx_async) ring_push(b, (size_t)size);
         else gp_feed(b, (size_t)size);
