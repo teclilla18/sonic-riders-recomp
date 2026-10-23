@@ -212,6 +212,17 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
         n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
         objs.append(o)
+    # optional program icon (PC, llvm-mingw): build/icon.ico if present. It lives in build/ (never
+    # committed); the setup or the user puts it there.
+    icon = "build/icon.ico"
+    if args.target == "host" and args.toolchain == "mingw" and os.path.isfile(os.path.join(ROOT, icon)):
+        rc = OUT + "/gen/icon.rc"
+        with open(os.path.join(ROOT, rc), "w", encoding="utf-8") as f:
+            f.write('1 ICON "%s"\n' % os.path.abspath(os.path.join(ROOT, icon)).replace("\\", "/"))
+        n.rule("rc", "%s -O coff -i $in -o $out" % cmd_path(os.path.join(lm, "bin", "x86_64-w64-mingw32-windres.exe"), program=True),
+               description="RC $out")
+        n.build(OUT + "/obj/icon.res.o", "rc", rc, implicit=[icon])
+        objs.append(OUT + "/obj/icon.res.o")
     n.build(exe, "link", objs)
     if args.target == "switch":
         n.rule("nacp", "%s/tools/bin/nacptool.exe --create \"Sonic Riders\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,

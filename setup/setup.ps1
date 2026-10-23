@@ -324,6 +324,16 @@ Step "4/7  Extracting the game code from your disc image"
 $baserom = Join-Path $Root "baserom"
 New-Item -ItemType Directory -Force -Path $baserom | Out-Null
 Run "extract main.dol and _Main.rel" $python @("-I", "tools\extract_iso.py", $Iso, "baserom", "--no-verify-iso")
+if ($doPc) {
+    # the PC program's icon: the game's own save icon, from your disc (configure.py builds it in)
+    New-Item -ItemType Directory -Force -Path (Join-Path $Root "build") | Out-Null
+    $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    $out = (& $python -I (Join-Path $Root "tools\make_icon.py") (Join-Path $baserom "_Main.rel") (Join-Path $Root "build\icon.ico") 2>&1 | ForEach-Object { "$_" }) -join " "
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $old
+    Write-LogFile "  $out"
+    if ($code -ne 0) { Log "Could not make the program icon ($out); the game works without it." "Yellow" }
+}
 
 Step "5/7  Analysing the game code"
 Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P")
