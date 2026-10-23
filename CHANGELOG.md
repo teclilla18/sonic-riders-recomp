@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.4 (2026-10-23)
 
 - PC: the settings menu no longer shows the "Controllers" row; it only did something on the
   Switch (PC controllers are picked up automatically).
@@ -11,8 +11,9 @@
   leave the game frozen; it now carries on where it was (confirmed on hardware).
 - **Faster multiplayer on the Switch:** the game's audio is now mixed on its own thread, as the
   GameCube's audio chip does (it took about 2 ms of every frame from the game). Busy parts of 3-player
-  Metal City went from about 37 to 53 fps. The graphics command path also no longer makes two CPU
-  cores fight over the same memory.
+  Metal City went from about 37 to around 50 fps (mostly 60 elsewhere). The graphics command path
+  also no longer makes two CPU cores fight over the same memory (a small gain). 4 players not
+  measured yet.
 
 ## v0.2.3 (2026-10-23)
 

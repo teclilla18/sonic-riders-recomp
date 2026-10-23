@@ -224,7 +224,7 @@ Design notes, findings and the current work log are in [NOTES.md](NOTES.md).
 
 - **Settings menu:** hold **−** (Minus) for half a second on the Switch; hold F1 or the
   gamepad's Back button on PC the same way. Items: Screen (4:3 / 16:9 widescreen / 16:9 stretched), Resolution (1x / 1.5x / 2x),
-  FPS counter, Unlock Chaos Emerald gear, Controllers (pair or split Joy-Cons), Save screenshot.
+  FPS counter, Unlock Chaos Emerald gear, Controllers (Switch only: pair or split Joy-Cons), Save screenshot.
 - **Up to 4 players:** connect more controllers; each player joins at Player Entry with their own
   controller. A **single Joy-Con held sideways** works as one controller (SL/SR = L/R, stick click = Z,
   +/− = START; hold it for the settings menu). On PC, extra gamepads become players 2–4.
@@ -243,7 +243,9 @@ Playable from boot to races, story mode and up to 4-player Free Race, with sound
 on PC. Switch figures are with the overclock above; **at stock clocks performance is poor** (making
 that playable is an open goal). The PC version ran at 60 fps on the test PC, 4 players included. Known issues:
 
-- **3–4 player races run at 30 fps** on the Switch (1–2 players: mostly 60).
+- **Multiplayer on the Switch:** 3-player races run mostly at 60 fps and dip to about 40–50 in the
+  busiest moments (countdown, some stretches of track); 4 players were 30 fps before v0.2.4 and have
+  not been measured since (1–2 players: mostly 60).
 - Some stages (Egg Factory, Splash Canyon) drop below 60 fps in busy sections (GPU-bound). Specialized
   shaders built ahead of time help, but only for graphics states your own console has recorded, and
   a fresh build has none: after playing, copy `sdmc:/switch/sonicriders/shader_keys.txt` into
