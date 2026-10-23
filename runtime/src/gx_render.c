@@ -677,12 +677,16 @@ static void efb_copy(uint32_t v) {
                 }
                 {
                     void dsp_aram_stats(uint64_t*, uint64_t*);
+                    void dsp_ax_stats(uint64_t*);
+                    uint64_t axt;
+                    dsp_ax_stats(&axt);
                     void di_late_stats(uint64_t*, uint64_t*, uint64_t*);
                     uint64_t ab, at, da, dm, dn;
                     dsp_aram_stats(&ab, &at);
                     di_late_stats(&da, &dm, &dn);
-                    rt_log("[perf]   devices: ARAM DMA %llu KB in %.1f ms (game thread); %llu disc completions, late avg %.2f max %.2f ms",
-                           (unsigned long long)(ab >> 10), at * ms * 120, (unsigned long long)dn, da * ms * 120, dm * ms * 120);
+                    rt_log("[perf]   devices: ARAM DMA %llu KB in %.1f ms (game thread); %llu disc completions, late avg %.2f max %.2f ms; "
+                           "audio mixing %.2f ms/frame",
+                           (unsigned long long)(ab >> 10), at * ms * 120, (unsigned long long)dn, da * ms * 120, dm * ms * 120, axt * ms);
                 }
             }
             t0 = t;

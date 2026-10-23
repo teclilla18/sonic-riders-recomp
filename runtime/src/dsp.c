@@ -3,7 +3,9 @@
  *  - DSP control/status register, the two mailboxes and the DSP's interrupt.
  *  - DSP "HLE": the ROM's boot handshake (0x8071FEED, then the task's boot parameters) and a stand-in
  *    for the AX microcode: it takes each command list (0xBABE0000|size, address), processes it
- *    (ax.c) and yields (DSP_YIELD), as the real microcode does at the end of a frame.
+ *    (ax.c) and yields (DSP_YIELD), as the real microcode does at the end of a frame. The lists are
+ *    mixed on a worker thread, in parallel with the game as on the real DSP (the game learns the
+ *    frame is done from the DSP interrupt); SR_DSP_SYNC=1 mixes on the game thread instead.
  *  - ARAM (16 MiB host buffer) and its DMA engine, raising the ARAM interrupt when done.
  *  - AI DMA (registers in the DSP block): while enabled, a host thread "plays" the buffer and raises
  *    the AI-DMA interrupt every block (5 ms frames at 32 kHz for AX), which drives AX's frame loop.
@@ -74,6 +76,65 @@ static void pop_mail(void) {
 #define DSP_INIT  0xDCD10000u
 #define DSP_YIELD 0xDCD10002u
 
+/* ---- the mixing worker: the game thread queues each command list and goes on; the worker mixes it
+ * (ax.c) and then yields. Mixed on the game thread (inside its AI interrupt, ~3.3 times a frame),
+ * the lists cost the game core 5-7% of a 3-4 player race on the Switch, where the slow parts miss
+ * the 16.7 ms frame by about that much. ---- */
+static mtx_t g_ax_lock;
+static cnd_t g_ax_cv;
+#define AXQ 8
+static struct { uint32_t addr, size; unsigned gen; } g_axq[AXQ];
+static unsigned g_axq_head, g_axq_tail;  /* taken / queued, ever (g_ax_lock) */
+static unsigned g_dsp_gen;               /* bumped by a DSP reset: a list queued before it does not yield */
+static int g_ax_sync;                    /* SR_DSP_SYNC=1 */
+static _Atomic uint64_t g_ax_ticks;      /* time spent mixing, for [perf] */
+
+void dsp_ax_stats(uint64_t* ticks) { *ticks = atomic_exchange(&g_ax_ticks, 0); }
+
+static void ax_mix(uint32_t addr, uint32_t size) {
+    uint64_t t = rt_ticks();
+    ax_process_command_list(addr, size);
+    atomic_fetch_add(&g_ax_ticks, rt_ticks() - t);
+}
+
+static int ax_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(1);  /* the Switch's render-thread core (the game has core 0, the GP thread core 2) */
+    for (;;) {
+        mtx_lock(&g_ax_lock);
+        while (g_axq_head == g_axq_tail) cnd_wait(&g_ax_cv, &g_ax_lock);
+        uint32_t addr = g_axq[g_axq_head % AXQ].addr, size = g_axq[g_axq_head % AXQ].size;
+        unsigned gen = g_axq[g_axq_head % AXQ].gen;
+        mtx_unlock(&g_ax_lock);
+        ax_mix(addr, size);
+        mtx_lock(&g_ax_lock);
+        g_axq_head++;
+        cnd_broadcast(&g_ax_cv);
+        mtx_unlock(&g_ax_lock);
+        mtx_lock(&g_lock);
+        if (gen == g_dsp_gen && g_state == DSP_AX) push_mail(DSP_YIELD, 1);
+        mtx_unlock(&g_lock);
+    }
+    return 0;
+}
+
+/* called with g_lock held */
+static void ax_queue(uint32_t addr, uint32_t size) {
+    if (g_ax_sync) {
+        ax_mix(addr, size);
+        push_mail(DSP_YIELD, 1);
+        return;
+    }
+    mtx_lock(&g_ax_lock);  /* the worker never waits for g_lock while holding g_ax_lock */
+    while (g_axq_tail - g_axq_head >= AXQ) cnd_wait(&g_ax_cv, &g_ax_lock);
+    g_axq[g_axq_tail % AXQ].addr = addr;
+    g_axq[g_axq_tail % AXQ].size = size;
+    g_axq[g_axq_tail % AXQ].gen = g_dsp_gen;
+    g_axq_tail++;
+    cnd_broadcast(&g_ax_cv);
+    mtx_unlock(&g_ax_lock);
+}
+
 static void dsp_mail_from_cpu(uint32_t mail) {
     if (g_state == DSP_ROM) {  /* task boot parameters: 5 (command, value) pairs */
         g_boot[g_boot_step++] = mail;
@@ -91,8 +152,7 @@ static void dsp_mail_from_cpu(uint32_t mail) {
     if (g_state != DSP_AX) return;
     if (g_cmdlist_next) {
         g_cmdlist_next = 0;
-        ax_process_command_list(mail, g_cmdlist_size);
-        push_mail(DSP_YIELD, 1);
+        ax_queue(mail, g_cmdlist_size);
         return;
     }
     if ((mail & 0xFFFF0000u) == 0xBABE0000u) {
@@ -236,6 +296,7 @@ static void write16(uint32_t off, uint32_t v) {
         g_csr = (uint16_t)((g_csr & CSR_INTS & ~v) | (v & ~CSR_INTS & ~CSR_RES));
         if (v & CSR_RES) {  /* reset: the DSP ROM starts over */
             g_state = DSP_OFF;
+            g_dsp_gen++;
             g_out_head = g_out_tail = 0;
         }
         if ((old & CSR_HALT) && !(v & CSR_HALT) && g_state == DSP_OFF) {  /* unhalted: the ROM boots */
@@ -318,4 +379,10 @@ void dsp_init(void) {
     if (!g_aram) rt_fatal("cannot allocate ARAM");
     g_csr = CSR_HALT;
     rt_thread_start(ai_thread, NULL);
+    mtx_init(&g_ax_lock, mtx_plain);
+    cnd_init(&g_ax_cv);
+    const char* sync = getenv("SR_DSP_SYNC");
+    g_ax_sync = sync && sync[0] == '1';
+    if (g_ax_sync) rt_log("[dsp] SR_DSP_SYNC: audio mixed on the game thread");
+    else rt_thread_start(ax_thread, NULL);
 }

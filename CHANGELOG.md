@@ -7,9 +7,10 @@
 - PC: controller sticks are much less touchy in menus. A light touch on an Xbox-style stick used
   to send the cursor racing through menus; the stick now has a round dead zone (25%) and a smooth
   ramp after it, and a full push still steers fully.
-- Switch: work on the freeze after sleep mode. The game now keeps its clocks in step after the
-  console wakes, and the log records sleep/wake events and where the game is stuck if it stops
-  drawing. Not confirmed on hardware yet.
+- Switch: **sleep mode works.** Putting the console to sleep during the game and waking it used to
+  leave the game frozen; it now carries on where it was (confirmed on hardware).
+- Faster multiplayer (work in progress): the game's audio is now mixed on its own thread, as the
+  GameCube's audio chip does, which takes some work off the core the game runs on.
 
 ## v0.2.3 (2026-10-23)
 
