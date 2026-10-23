@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Characters have their shine back (#11).** Characters looked flat and dark blue because their
+  specular highlights were never drawn (a light at position 0,0,0 made the lighting maths divide by
+  zero). Sonic's quills and the other characters now get the light-blue highlights the GameCube shows.
+
 ## v0.2.4 (2026-10-23)
 
 - PC: the settings menu no longer shows the "Controllers" row; it only did something on the

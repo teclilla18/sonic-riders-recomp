@@ -140,6 +140,8 @@ static void gl_setup(void) {
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_xfm"), XFM_UNIT);
     /* SR_SHOWALPHA: every pixel shows the TEV alpha as gray (debugging see-through surfaces) */
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_show_alpha"), getenv("SR_SHOWALPHA") != NULL);
+    /* SR_TEVDEBUG: 1 = lit colour 0 only, 2 = stage 1's texture sample only, 3 = stage 0 only, 6 = stage 1 coordinates as colour, 7 = old specular direction, 8 = lit colour 1 only, cycle[:a,b..] = by frame (debugging) */
+    p_glUniform1i(p_glGetUniformLocation(g_prog, "u_tev_debug"), getenv("SR_TEVDEBUG") ? atoi(getenv("SR_TEVDEBUG")) : 0);
     p_glGenBuffers(1, &g_xfm_buf);
     glGenTextures(1, &g_xfm_tex);
     glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &g_ubo_align);
@@ -414,6 +416,17 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 static void execute(GxFrame* f) {
     p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
     p_glUseProgram(g_prog);
+    {   /* SR_TEVDEBUG=cycle (modes 0-3) or cycle:a,b,...: one mode per frame, in turn (one moment several ways) */
+        static int ncyc = -1, cyc[8];
+        if (ncyc < 0) {
+            const char* t = getenv("SR_TEVDEBUG");
+            ncyc = 0;
+            if (t && !strcmp(t, "cycle")) for (; ncyc < 4; ncyc++) cyc[ncyc] = ncyc;
+            else if (t && !strncmp(t, "cycle:", 6))
+                for (const char* q = t + 6; q && *q && ncyc < 8; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) cyc[ncyc++] = atoi(q);
+        }
+        if (ncyc) p_glUniform1i(p_glGetUniformLocation(g_prog, "u_tev_debug"), cyc[(g_presented + 1) % (unsigned)ncyc]);
+    }
     p_glBindVertexArray(g_vao);
     p_glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
     p_glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)f->nverts * sizeof(GxVertex), f->verts, GL_STREAM_DRAW);

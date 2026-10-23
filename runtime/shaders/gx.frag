@@ -198,6 +198,12 @@ void tev_stage(int s, inout vec4 r0, inout vec4 r1, inout vec4 r2, inout vec4 r3
       ares = ad + (t ? ac : 0.0);
     }
     ares = bits(aenv, 19, 1) != 0u ? clamp(ares, 0.0, 1.0) : clamp(ares, -1024.0 / 255.0, 1023.0 / 255.0);
+    /* debugging (PC, SR_TEVDEBUG): 2 = stage 1's texture sample as the colour */
+    if (DEBUG_TEV == 2 && s == 1) cres = tex.rgb;
+    if (DEBUG_TEV == 6 && s == 1 && bits(order, 6, 1) != 0u) {  /* stage 1's coordinates: u, v, out of range */
+      vec3 tc6 = coord(bits(order, 3, 3)); vec2 uv6 = tc6.xy / (tc6.z == 0.0 ? 1.0 : tc6.z);
+      cres = vec3(clamp(uv6, 0.0, 1.0), any(lessThan(uv6, vec2(0.0))) || any(greaterThan(uv6, vec2(1.0))) ? 1.0 : 0.0);
+    }
     uint cdst = bits(cenv, 22, 2), adst = bits(aenv, 22, 2);
     if (cdst == 0u) r0.rgb = cres; else if (cdst == 1u) r1.rgb = cres; else if (cdst == 2u) r2.rgb = cres; else r3.rgb = cres;
     if (adst == 0u) r0.a = ares; else if (adst == 1u) r1.a = ares; else if (adst == 2u) r2.a = ares; else r3.a = ares;
@@ -220,6 +226,7 @@ void main() {
   SPEC_STAGES  /* TEV_STAGE(0); TEV_STAGE(1); ... for this state's stage count */
 #else
   int stages = int(bits(CBP(0x00), 10, 4)) + 1;
+  if (DEBUG_TEV == 3) stages = 1;  /* debugging: stage 0's result only */
   for (int s = 0; s < 16; s++) {
     if (s >= stages) break;
     TEV_STAGE(s);
@@ -238,6 +245,8 @@ void main() {
   o_blend = vec4(0.0, 0.0, 0.0, o.a);
   uint cm1 = BP(0x42);
   if (bits(CBP(0x42), 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
+  if (DEBUG_TEV == 8 && bits(XR(0x0F), 1, 1) != 0u) { o = vec4(clamp(v_col1.rgb, 0.0, 1.0), 1.0); o_blend = vec4(1.0); }  /* debugging: lit colour 1, where it is lit */
+  if (DEBUG_TEV == 1) { o = vec4(clamp(v_col0.rgb, 0.0, 1.0), 1.0); o_blend = vec4(1.0); }  /* debugging: lit colour 0 */
   if (DEBUG_SHOW_ALPHA != 0) { o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0); o_blend = vec4(1.0); }  /* the TEV alpha as gray */
   o_color = o;
 }

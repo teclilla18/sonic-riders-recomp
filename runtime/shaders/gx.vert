@@ -38,7 +38,9 @@ vec3 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb, bool alpha) {
       float c = max(0.0, dot(l, ld));
       att = max(0.0, ca.x + ca.y * c + ca.z * c * c) / max(1e-6, da.x + da.y * d + da.z * d2);
     } else if (atten) {
-      l = normalize(lp);
+      /* specular: the light's direction from the vertex, as Dolphin. normalize(lp) alone was NaN for the
+         usual specular light at (0, 0, 0) and the term vanished: characters had no highlights (#11) */
+      l = DEBUG_TEV == 7 ? normalize(lp) : normalize(lp - pos);  /* 7: the old way (debugging) */
       float c = dot(n, l) >= 0.0 ? max(0.0, dot(n, ld)) : 0.0;
       att = max(0.0, ca.x + ca.y * c + ca.z * c * c) / max(1e-6, da.x + da.y * c + da.z * c * c);
     } else {
