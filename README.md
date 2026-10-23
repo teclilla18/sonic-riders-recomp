@@ -6,6 +6,15 @@
 > poorly (slow motion, low frame rate). Overclock at your own risk; see [What you need](#what-you-need).
 > The PC version ran at a steady 60 fps on the test PC (RTX 3060), 4 players included.
 
+**Requirements at a glance** (details in [What you need](#what-you-need)):
+
+- **Windows 10 (version 1803 or newer) or Windows 11, 64-bit**, for both versions: the setup builds
+  the game on your PC. Nothing else to install: the setup downloads its own tools (no Python, Visual
+  Studio, devkitPro or 7-Zip needed), about 4 GB of free disk space, internet the first time.
+- **Your own Sonic Riders (USA) disc image**, `GXEE8P` revision 0, a full 1.4 GB `.iso`.
+- **Switch:** custom firmware (Atmosphère) with the Homebrew Menu, and an overclock (see above).
+- **PC:** a graphics card with OpenGL 3.3.
+
 An unofficial port of **Sonic Riders** (GameCube, USA) that runs **natively**, with no emulator, on a
 modded **Nintendo Switch** or on a **Windows PC**. It is built with **static recompilation**:
 
@@ -140,6 +149,7 @@ it to bug reports).
 | "does not match the known-good dump" | Your image is not the clean USA rev 0 dump (trimmed, compressed or modified). Re-dump or convert to a full ISO. |
 | "game ID is ..." | Only the USA release (GXEE8P) works. |
 | A download fails | Check your internet connection or firewall and run the setup again; finished downloads are kept. |
+| `Error opening archive: Can't initialize filter; unable to run program "xz -d -qq"` | Fixed in v0.2.2: download the latest release and run its installer. |
 | Switch: black screen or crash at start | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |
 | Switch: slow motion / low frame rate | Check your overclock (see What you need). |
 | PC: the game doesn't start | Check `sonicriders.log` in the install folder; update your graphics driver (OpenGL 3.3 is needed). |

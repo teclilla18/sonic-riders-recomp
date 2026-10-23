@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.2 (2026-10-23)
+
+- **Setup fix:** on some PCs the setup stopped with `Error opening archive: Can't initialize filter;
+  unable to run program "xz -d -qq"`. Windows' built-in `tar` can't unpack some of the downloaded
+  tools on many Windows versions; the setup now unpacks them itself and needs no other programs.
+- README: the minimum Windows version and requirements are now at the top.
+
 ## v0.2.1 (2026-10-23)
 
 - **PC keyboard controls changed:** WASD moves, J / K / L / I = A / B / X / Y, U / O / P = L / R / Z,

@@ -43,9 +43,16 @@ $SdSub = "switch\sonicriders"
 
 # ---------------------------------------------------------------- logging, errors
 "" | Out-File -FilePath $LogFile -Encoding utf8
+# A log line must never stop the setup: another program (an antivirus scan, a log viewer) can hold
+# setup.log open for a moment, and a failed write used to end the setup with no message.
+function Write-LogFile([string]$text) {
+    for ($i = 0; $i -lt 20; $i++) {
+        try { [IO.File]::AppendAllText($LogFile, $text + "`r`n", [Text.Encoding]::UTF8); return } catch { Start-Sleep -Milliseconds 100 }
+    }
+}
 function Log([string]$msg, [string]$color = "") {
     $line = "[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $msg
-    Add-Content -Path $LogFile -Value $line -Encoding utf8
+    Write-LogFile $line
     if ($color) { Write-Host $msg -ForegroundColor $color } else { Write-Host $msg }
 }
 function Step([string]$msg) { Log ""; Log "== $msg" "Cyan" }
@@ -66,7 +73,7 @@ function Ask([string]$question, [string]$default) {
 # Run a program, show and log its output, stop on failure
 function Run([string]$what, [string]$exe, [string[]]$arguments, [hashtable]$envVars = @{}) {
     Log "> $what"
-    Add-Content -Path $LogFile -Value ("  " + $exe + " " + ($arguments -join " ")) -Encoding utf8
+    Write-LogFile ("  " + $exe + " " + ($arguments -join " "))
     $saved = @{}
     foreach ($k in $envVars.Keys) { $saved[$k] = [Environment]::GetEnvironmentVariable($k); [Environment]::SetEnvironmentVariable($k, $envVars[$k]) }
     $old = $ErrorActionPreference
@@ -75,7 +82,7 @@ function Run([string]$what, [string]$exe, [string[]]$arguments, [hashtable]$envV
         Push-Location $Root
         & $exe @arguments 2>&1 | ForEach-Object {
             $l = "$_"
-            Add-Content -Path $LogFile -Value ("  " + $l) -Encoding utf8
+            Write-LogFile ("  " + $l)
             Write-Host "  $l"
         }
         $code = $LASTEXITCODE
@@ -246,7 +253,7 @@ function Extract([string]$archive, [string]$dest) {
     $out = (& $python @xargs 2>&1 | ForEach-Object { "$_" }) -join "`n"
     $code = $LASTEXITCODE
     $ErrorActionPreference = $old
-    if ($out) { Add-Content -Path $LogFile -Value $out -Encoding utf8 }
+    if ($out) { Write-LogFile $out }
     if ($code -ne 0) { Fail "Could not extract $archive (exit code $code): $out" }
 }
 
