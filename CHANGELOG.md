@@ -7,6 +7,8 @@
 - The settings menu opens when F1 (or the controller's Back/View button) is **held** for half a
   second; the docs said "press".
 - The PC log records the first controller button presses, to help with bug reports.
+- **PC: the program has an icon** (Sonic, the game's own save icon), made from your disc during
+  setup, for the program, its shortcuts, the window and the taskbar.
 
 ## v0.2.2 (2026-10-23)
 
