@@ -127,6 +127,11 @@ static int ai_thread(void* arg) {
         uint32_t bytes = g_ai_blocks * 32;
         /* 32 kHz, 16-bit stereo: 128000 bytes/s = 40500000 ticks per 128000 bytes */
         next += (uint64_t)bytes * 40500000 / 128000;
+        if ((int64_t)(rt_ticks() - next) > 40500000 / 2) {  /* half a second behind (sleep): resync */
+            rt_log("[dsp] audio clock %.1f s behind (sleep or suspension): resynchronized",
+                   (double)(rt_ticks() - next) / 40500000.0);
+            next = rt_ticks();
+        }
         for (;;) {
             int64_t left = (int64_t)(next - rt_ticks());
             if (left <= 0) break;

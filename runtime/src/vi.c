@@ -57,6 +57,13 @@ static int vi_thread(void* arg) {
     g_field_start = rt_ticks();
     for (;;) {
         uint64_t next = g_field_start + TICKS_PER_FIELD;
+        /* far behind (the console slept, or the process was held): carry on from now instead of
+         * replaying every missed retrace */
+        if ((int64_t)(rt_ticks() - next) > (int64_t)(TICKS_PER_FIELD * 30)) {
+            rt_log("[vi] retrace clock %.1f s behind (sleep or suspension): resynchronized",
+                   (double)(rt_ticks() - next) / 40500000.0);
+            next = rt_ticks();
+        }
         for (;;) {
             int64_t left = (int64_t)(next - rt_ticks());
             if (left <= 0) break;

@@ -30,7 +30,25 @@ int timespec_get(struct timespec* ts, int base) {
     return base;
 }
 
+/* Sleep mode, HOME menu: the system's applet messages are logged (with how far the CPU tick counter
+ * moved since the last one), and a monitor reports a stall: no new frame for 5 s while the game has
+ * focus -> where every thread is (once per stall). It also logs a jump of the tick counter (which
+ * shows whether the counter runs on while the console sleeps). */
+static AppletHookCookie g_hook;
+static void applet_hook(AppletHookType type, void* param) {
+    (void)param;
+    static uint64_t last;
+    uint64_t now = armGetSystemTick();
+    static const char* const names[] = {"focus state", "operation mode", "performance mode", "exit request",
+                                        "resume (after sleep)", "capture button", "screenshot", "request to display"};
+    rt_log("[applet] %s; focus %d, %.1f s since the previous message", type < 8 ? names[type] : "?",
+           (int)appletGetFocusState(), last ? armTicksToNs(now - last) / 1e9 : 0.0);
+    last = now;
+    fflush(stderr);  /* rare; the log must hold it if the game hangs right after */
+}
+
 void platform_init(void) {
+    appletHook(&g_hook, applet_hook, NULL);  /* before the render thread runs appletMainLoop */
     mkdir(BASE_DIR, 0777);
     mkdir(BASE_DIR "/saves", 0777);
     /* the previous session's log is kept (a relaunch would otherwise erase it) */
@@ -242,8 +260,44 @@ static int prof_thread(void* arg) {
     return 0;
 }
 
+void sched_dump(void);
+void mmio_dump(void);
+unsigned long long gx_frames_presented(void);
+static int stall_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(2);
+    unsigned long long last_frames = gx_frames_presented();
+    unsigned still = 0;
+    int reported = 0;
+    uint64_t prev = armGetSystemTick();
+    for (;;) {
+        svcSleepThread(1000000000);
+        uint64_t now = armGetSystemTick();
+        double gap = armTicksToNs(now - prev) / 1e9;
+        if (gap > 3.0) rt_log("[clock] the tick counter moved %.1f s during a 1 s wait (sleep or suspension)", gap);
+        prev = now;
+        unsigned long long f = gx_frames_presented();
+        if (f != last_frames || appletGetFocusState() != AppletFocusState_InFocus) {
+            if (reported && f != last_frames) rt_log("[stall] frames again after %u s", still);
+            last_frames = f;
+            still = 0;
+            reported = 0;
+            continue;
+        }
+        if (++still == 5 && !reported) {
+            reported = 1;
+            rt_log("[stall] no new frame for 5 s with focus (frame %llu, retrace %u): state follows", f, vi_field_count());
+            mmio_dump();
+            sched_dump();
+            fflush(stderr);
+        }
+    }
+    return 0;
+}
+
 void profile_register_thread(void) {}
 void profile_start(void) {
+    rt_thread_start(stall_thread, NULL);
     if (!getenv("SR_PROFILE")) return;
     rt_log("[profile] sampling the game core every 1 ms (SR_PROFILE); reports every 10 s");
     rt_thread_start(prof_thread, NULL);

@@ -4,7 +4,9 @@
 
 - PC: the settings menu no longer shows the "Controllers" row; it only did something on the
   Switch (PC controllers are picked up automatically).
-
+- Switch: work on the freeze after sleep mode. The game now keeps its clocks in step after the
+  console wakes, and the log records sleep/wake events and where the game is stuck if it stops
+  drawing. Not confirmed on hardware yet.
 
 ## v0.2.3 (2026-10-23)
 

@@ -580,7 +580,10 @@ Each library gets its own `mw_version`. Steps:
 - Specialized shaders are not the cause of the UI colour bugs: hw21 (SR_NOSPEC=1) looked the same.
 - Not verified yet: the track-select preview box (the PC route moves on before it shows), the results screen / pause menu colours, the white box around results icons; the 4P UI flicker. Check on hardware with this build.
 
-### 2026-10-23: PC menu controllers row removed; Switch sleep-mode freeze (user report)
+### 2026-10-23: Switch sleep-mode freeze (user report), PC menu controllers row removed
+- **User report:** putting the Switch to sleep while the game runs leaves it frozen after waking. Cause not found yet (no hardware log). [uncertain] suspects: the CPU tick counter (our only clock: `platform_now_ns` = armGetSystemTick) jumping by the sleep length, so the VI retrace thread and the AI audio clock thread each try to replay every missed retrace / audio block; or a host wait (render thread in appletMainLoop / deko3d, game thread waiting for a free frame) that never returns after resume.
+- Changes (Switch, untested on hardware): the VI thread resyncs when more than 30 fields behind and the AI thread when more than 0.5 s behind (log `[vi]` / `[dsp] ... resynchronized`); applet messages are logged (`[applet]` focus / resume / operation mode, with seconds since the previous one, log flushed); a monitor thread logs `[clock]` when the tick counter moves over 3 s during a 1 s wait (answers whether it runs during sleep) and `[stall]` + mmio/sched dump (threads, render handoff, irq, DSP, DI) when no frame is presented for 5 s while the game has focus. Eden boot: no false `[stall]`.
+- Next: a hardware log of sleep -> wake. If `[stall]` shows the render thread stuck in deko3d or appletMainLoop, look there; if the clocks resynced and it runs, done.
 - **PC settings menu:** the "Controllers: N connected (A: set up)" row is Switch-only now (it opened the system controller applet; on PC it did nothing). Menu box height follows the item count.
 
 ## STATE 2026-10-18 - for the next session
