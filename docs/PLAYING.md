@@ -29,6 +29,7 @@ Hold **−** (Minus) for half a second on the Switch, or **F1** / the gamepad's 
 | FPS counter | Frame rate in the corner |
 | Unlock Chaos Emerald gear | Makes the Chaos Emerald gear available |
 | Controllers (Switch only) | The system's controller screen: pair or split Joy-Cons, change player order |
+| Mods | Turn installed mods on or off (applies on restart); see [Modding](MODDING.md) |
 | Save screenshot | Saves the next frame (see [Reporting bugs](REPORTING-BUGS.md#taking-a-screenshot)) |
 
 ## Multiplayer

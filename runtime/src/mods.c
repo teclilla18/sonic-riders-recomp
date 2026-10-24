@@ -86,8 +86,31 @@ static void scan_files(const char* host_dir, const char* disc_dir, int mod) {
 }
 
 /* ---- the mods folder: mods.ini order, each mod's mod.ini and files ---- */
-static char g_names[MAX_MODS][128];
+static char g_names[MAX_MODS][128], g_titles[MAX_MODS][128];
 static int g_on[MAX_MODS], g_nmods;
+static char g_base[256];
+
+static void write_order(void) {
+    char path[512];
+    snprintf(path, sizeof path, "%s/mods.ini", g_base);
+    FILE* w = fopen(path, "w");
+    if (!w) return;
+    fprintf(w, "# Sonic Riders mods, applied top to bottom: when two mods replace the same file, the\n"
+               "# lower one wins. Put a # in front of a mod to turn it off. Changes apply on the next start.\n");
+    for (int i = 0; i < g_nmods; i++) fprintf(w, "%s%s\n", g_on[i] ? "" : "# ", g_names[i]);
+    fclose(w);
+}
+
+/* the settings menu's Mods page (overlay.c): the list as mods.ini has it; changes apply on restart */
+int mods_count(void) { return g_nmods; }
+const char* mods_title(int i) { return i >= 0 && i < g_nmods ? (g_titles[i][0] ? g_titles[i] : g_names[i]) : ""; }
+int mods_enabled(int i) { return i >= 0 && i < g_nmods && g_on[i]; }
+void mods_set_enabled(int i, int on) {
+    if (i < 0 || i >= g_nmods || g_on[i] == !!on) return;
+    g_on[i] = !!on;
+    write_order();
+    rt_log("[mods] %s turned %s in the settings menu (applies on the next start)", g_names[i], on ? "on" : "off");
+}
 
 static void ini_value(const char* path, const char* key, char* out, size_t n) {
     out[0] = 0;
@@ -163,15 +186,7 @@ static void read_order(const char* base) {
         }
         closedir(d);
     }
-    if (added || !f) {
-        FILE* w = fopen(path, "w");
-        if (w) {
-            fprintf(w, "# Sonic Riders mods, applied top to bottom: when two mods replace the same file, the\n"
-                       "# lower one wins. Put a # in front of a mod to turn it off. Changes apply on the next start.\n");
-            for (int i = 0; i < g_nmods; i++) fprintf(w, "%s%s\n", g_on[i] ? "" : "# ", g_names[i]);
-            fclose(w);
-        }
-    }
+    if (added || !f) write_order();
 }
 
 /* ---- the rebuilt FST ---- */
@@ -263,6 +278,7 @@ void mods_build_fst(uint8_t** fst_io, uint32_t* size_io) {
     const char* base = platform_mods_dir();
     struct stat st;
     if (!base || stat(base, &st) != 0 || !S_ISDIR(st.st_mode)) return;
+    snprintf(g_base, sizeof g_base, "%s", base);
     read_order(base);
     for (int m = 0; m < g_nmods; m++) {
         char p[512], name[128], author[128], version[64];
@@ -270,6 +286,7 @@ void mods_build_fst(uint8_t** fst_io, uint32_t* size_io) {
         ini_value(p, "name", name, sizeof name);
         ini_value(p, "author", author, sizeof author);
         ini_value(p, "version", version, sizeof version);
+        snprintf(g_titles[m], sizeof g_titles[m], "%s", name);
         size_t before = g_nrepl;
         if (g_on[m]) {
             snprintf(p, sizeof p, "%s/%s/files", base, g_names[m]);

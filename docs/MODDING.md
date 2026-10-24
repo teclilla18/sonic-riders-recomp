@@ -45,6 +45,9 @@ SuperSonicSkin
 
 Here `SuperSonicSkin` is on and `TrackPackTest` is off. Changes apply the next time you start the game.
 
+You can also turn mods on and off in game: open the settings menu and choose **Mods** (it lists every
+mod with On/Off; the order is the order in `mods.ini`). Restart the game to apply the changes.
+
 **Did it work?** The game's log (`sonicriders.log`) lists every mod at the start, and each mod file
 the first time the game reads it:
 
@@ -138,7 +141,7 @@ character-swap example) and see what changes in game.
 | Step | What | Status |
 |---|---|---|
 | 1 | **File mods**: virtual disc, `mods.ini` load order, logging | Works on PC (next release) |
-| 2 | **Mods page in the settings menu**: turn mods on and off in game (applies on restart) | Planned |
+| 2 | **Mods page in the settings menu**: turn mods on and off in game (applies on restart) | Done (next release) |
 | 3 | **Stats**: gear and character stats by name in `mod.ini` (top speed, boost, air…), plus raw memory writes and simple Dolphin-style Gecko / Action Replay codes | Planned (the gear table is partly mapped already) |
 | 4 | **Tracks**: replacing a track's files works with step 1; adding *new* track slots needs research into how the game lists its tracks | Research |
 | 5 | **Code mods**: C hooks or a modified `main.dol` / `_Main.rel`, applied when the installer translates the game | Later |

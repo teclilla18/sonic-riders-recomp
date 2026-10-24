@@ -18,10 +18,18 @@
 
 /* the controllers row opens the system's controller screen: Switch only (PC pads just work) */
 #ifdef __SWITCH__
-enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_PADS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_PADS, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
 #else
-enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
 #endif
+/* the Mods page (mods.c): one row per installed mod, On/Off; then Back */
+int mods_count(void);
+const char* mods_title(int i);
+int mods_enabled(int i);
+void mods_set_enabled(int i, int on);
+#define MODS_ROWS 8                  /* visible at once; the list scrolls */
+static int g_page, g_msel, g_mtop;   /* page 1: Mods; its selection and first visible row */
+static int g_mods_changed;
 static int g_shot_request, g_pads_request;
 
 int overlay_take_controllers_request(void) {
@@ -55,9 +63,10 @@ static void close_menu(void) {
 
 int overlay_input(unsigned held) {
     static int tested;
-    if (!tested++ && getenv("SR_TEST_MENU")) {  /* debugging: start with the menu open */
+    if (!tested++ && getenv("SR_TEST_MENU")) {  /* debugging: start with the menu open (=mods: the Mods page) */
         g_open = 1;
         g_dirty = 1;
+        if (!strcmp(getenv("SR_TEST_MENU"), "mods")) g_page = 1;
     }
     unsigned pressed = held & ~g_prev;
     g_prev = held;
@@ -81,6 +90,22 @@ int overlay_input(unsigned held) {
             g_menu_since = 0;
         }
         return 0;
+    }
+    if (g_page == 1) {  /* the Mods page */
+        int n = mods_count(), rows = n + 1;  /* the mods, then Back */
+        if (pressed & OV_MENU) { g_page = 0; close_menu(); return 1; }
+        if (pressed & OV_BACK) { g_page = 0; g_dirty = 1; return 1; }
+        if (pressed & OV_UP) g_msel = (g_msel + rows - 1) % rows;
+        if (pressed & OV_DOWN) g_msel = (g_msel + 1) % rows;
+        if (g_msel < g_mtop) g_mtop = g_msel;
+        if (g_msel >= g_mtop + MODS_ROWS) g_mtop = g_msel - MODS_ROWS + 1;
+        if (g_msel == n && (pressed & OV_ACCEPT)) g_page = 0;
+        else if (g_msel < n && (pressed & (OV_LEFT | OV_RIGHT | OV_ACCEPT))) {
+            mods_set_enabled(g_msel, !mods_enabled(g_msel));
+            g_mods_changed = 1;
+        }
+        if (pressed) g_dirty = 1;
+        return 1;
     }
     if (pressed & (OV_BACK | OV_MENU)) {
         close_menu();
@@ -107,6 +132,9 @@ int overlay_input(unsigned held) {
             }
             break;
 #endif
+        case ITEM_MODS:
+            if (pressed & OV_ACCEPT) { g_page = 1; g_msel = 0; g_mtop = 0; }
+            break;
         case ITEM_SHOT:
             if (pressed & OV_ACCEPT) {
                 close_menu();
@@ -162,7 +190,29 @@ static void redraw(void) {
         text(8, 8, t, rgba(255, 255, 255, 255));
     }
     if (!g_open) return;
-    const int w = 520, h = 64 + ITEMS * 34, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
+    if (g_page == 1) {  /* the Mods page */
+        int n = mods_count(), rows = n + 1, shown = rows < MODS_ROWS ? rows : MODS_ROWS;
+        const int w = 560, h = 64 + 34 * (shown + 1) + 30, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
+        fill(x0, y0, x0 + w, y0 + h, rgba(10, 16, 40, 225));
+        fill(x0, y0, x0 + w, y0 + 3, rgba(80, 160, 255, 255));
+        text(x0 + 16, y0 + 14, "SONIC RIDERS - MODS", rgba(80, 160, 255, 255));
+        for (int r = 0; r < shown; r++) {
+            int i = g_mtop + r, y = y0 + 52 + r * 34;
+            char line[80];
+            if (i < n) snprintf(line, sizeof line, "%.34s  < %s >", mods_title(i), mods_enabled(i) ? "On" : "Off");
+            else snprintf(line, sizeof line, "Back");
+            if (i == g_msel) fill(x0 + 8, y - 6, x0 + w - 8, y + 24, rgba(40, 70, 140, 255));
+            text(x0 + 20, y, line, i == g_msel ? rgba(255, 230, 80, 255) : rgba(230, 230, 230, 255));
+        }
+        int ty = y0 + 52 + shown * 34 + 4;
+        if (!n) text(x0 + 20, ty, "No mods installed: see docs/MODDING.md", rgba(150, 160, 190, 255));
+        else if (g_mods_changed) text(x0 + 20, ty, "Restart the game to apply the changes", rgba(255, 160, 80, 255));
+        else text(x0 + 20, ty, "Mods load in this order (mods/mods.ini)", rgba(150, 160, 190, 255));
+        text(x0 + 16, y0 + h - 26, "D-Pad: choose    A: on / off    B: back", rgba(150, 160, 190, 255));
+        return;
+    }
+    const int row = ITEMS > 8 ? 32 : 34;  /* the Switch's longer list still fits the overlay's 360 lines */
+    const int w = 520, h = 64 + ITEMS * row, x0 = (OVERLAY_W - w) / 2, y0 = (OVERLAY_H - h) / 2;
     fill(x0, y0, x0 + w, y0 + h, rgba(10, 16, 40, 225));
     fill(x0, y0, x0 + w, y0 + 3, rgba(80, 160, 255, 255));
     text(x0 + 16, y0 + 14, "SONIC RIDERS - SETTINGS", rgba(80, 160, 255, 255));
@@ -180,10 +230,16 @@ static void redraw(void) {
     for (int c = 0; c < 4; c++) pads += c == 0 || input_connected(c);
     snprintf(lines[ITEM_PADS], 64, "Controllers: %d connected (A: set up)", pads);
 #endif
+    {
+        int on = 0;
+        for (int i = 0; i < mods_count(); i++) on += mods_enabled(i);
+        if (mods_count()) snprintf(lines[ITEM_MODS], 64, "Mods: %d of %d on (A: choose)", on, mods_count());
+        else snprintf(lines[ITEM_MODS], 64, "Mods: none installed");
+    }
     snprintf(lines[ITEM_SHOT], 64, "Save screenshot (A)");
     snprintf(lines[ITEM_CLOSE], 64, "Close");
     for (int i = 0; i < ITEMS; i++) {
-        int y = y0 + 52 + i * 34;
+        int y = y0 + 52 + i * row;
         if (i == g_sel) fill(x0 + 8, y - 6, x0 + w - 8, y + 24, rgba(40, 70, 140, 255));
         text(x0 + 20, y, lines[i], i == g_sel ? rgba(255, 230, 80, 255) : rgba(230, 230, 230, 255));
     }
