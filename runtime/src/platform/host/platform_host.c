@@ -147,6 +147,7 @@ const char* platform_disc_path(void) {
 
 const char* platform_save_path(void) { return "saves/card_a.raw"; }
 const char* platform_settings_path(void) { return "saves/settings.ini"; }
+const char* platform_mods_dir(void) { return "mods"; }  /* in the install folder */
 
 /* a precise sleep: Windows' high-resolution waitable timer (Sleep and the C11 waits round up to the
  * timer tick); elsewhere nanosleep */

@@ -97,6 +97,7 @@ const char* platform_disc_path(void) {
 
 const char* platform_save_path(void) { return BASE_DIR "/saves/card_a.raw"; }
 const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
+const char* platform_mods_dir(void) { return BASE_DIR "/mods"; }
 
 uint64_t platform_now_ns(void) { return armTicksToNs(armGetSystemTick()); }  /* the CPU's tick counter */
 void platform_sleep_ns(uint64_t ns) { svcSleepThread((s64)ns); }

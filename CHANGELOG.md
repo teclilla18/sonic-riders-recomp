@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **PC: file mods.** A `mods` folder next to the game replaces or adds the game's files (character
+  models, textures, music, stages) without touching your disc image; `mods/mods.ini` sets the order
+  and turns mods off. See [docs/MODDING.md](docs/MODDING.md). Stat mods and new tracks are planned.
+- The README is shorter; installation, playing, bug reports, building and modding have their own
+  pages in `docs/`.
 - **The picture is no longer dark and blue-tinted (#11), and the speed blur shows (#3).** The game's
   speed-blur effect draws the previous frame over the screen edges; the port fed it the wrong
   picture (old memory), which darkened and tinted the whole screen, characters included. Races now

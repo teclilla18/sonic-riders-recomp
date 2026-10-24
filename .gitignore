@@ -105,3 +105,6 @@ VERSION
 Sonic Riders.lnk
 sonicriders.log
 sonicriders.prev.log
+
+# local mods (contain files derived from the game)
+/mods/

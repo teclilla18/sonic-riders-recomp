@@ -22,7 +22,10 @@ static int name_eq(const char* a, const char* b, size_t n) {
     return 1;
 }
 
+uint64_t mods_base(void);
+size_t mods_read(uint64_t off, void* dst, size_t n);
 size_t disc_read(uint64_t offset, void* dst, size_t n) {
+    if (offset >= mods_base()) return mods_read(offset, dst, n);  /* a file from the mods folder */
 #ifdef _WIN32
     _fseeki64(g_disc, (long long)offset, SEEK_SET);
 #else
@@ -43,6 +46,8 @@ int disc_open(const char* path) {
     g_fst_size = be32(g_header + 0x428);
     g_fst = malloc(g_fst_size);
     disc_read(fst_off, g_fst, g_fst_size);
+    void mods_build_fst(uint8_t** fst, uint32_t* size);
+    mods_build_fst(&g_fst, &g_fst_size);  /* the mods folder (mods.c): a virtual disc */
     rt_log("[disc] %s: %.6s \"%s\", FST %u bytes", path, (const char*)g_header, (const char*)g_header + 0x20, g_fst_size);
     return 1;
 }
