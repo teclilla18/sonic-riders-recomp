@@ -142,7 +142,23 @@ int gx_vertex_size(int vat) {
     return size;
 }
 
+/* [perf] "draw done": how long after the game issued it (BP 0x45 stored into the pipe) the GP thread
+ * reached it. The game waits for it at the end of each frame (GXDrawDone), so this is the GP thread's
+ * share of the frame's critical path. */
+static _Atomic uint64_t g_dd_issued, g_dd_wait, g_dd_max, g_dd_n;
+void gx_drawdone_stats(uint64_t* total, uint64_t* max, uint64_t* n) {
+    *total = atomic_exchange(&g_dd_wait, 0); *max = atomic_exchange(&g_dd_max, 0); *n = atomic_exchange(&g_dd_n, 0);
+}
 static void pe_finish(void) {
+    {
+        uint64_t t0 = atomic_exchange(&g_dd_issued, 0);
+        if (t0) {
+            uint64_t d = rt_ticks() - t0;
+            atomic_fetch_add(&g_dd_wait, d);
+            atomic_fetch_add(&g_dd_n, 1);
+            if (d > atomic_load(&g_dd_max)) atomic_store(&g_dd_max, d);
+        }
+    }
     mtx_lock(&g_pe_lock);
     gx_tl('F', 0);
     PE_INTRSR |= 0x8;  /* finish status */
@@ -217,10 +233,14 @@ static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
 }
 
 /* LOAD_INDX_A..D: copy n words from an indexed array element into XF memory */
+/* SR_DFF (gx_dff.c): memory the GP reads, recorded with the frame */
+void gx_dff_memory(uint32_t addr, uint32_t size);
+extern int g_dff_active;
 static void load_indexed(int array, uint32_t v) {
     uint32_t index = v >> 16, n = ((v >> 12) & 0xF) + 1, addr = v & 0xFFF;
     uint32_t base = g_gx.cp[0xA0 + 12 + array] & 0x3FFFFFFF, stride = g_gx.cp[0xB0 + 12 + array] & 0xFF;
     uint32_t src = 0x80000000u | (base + index * stride);
+    if (g_dff_active) gx_dff_memory(src, n * 4);
     for (uint32_t i = 0; i < n && addr + i < 0x1000; i++) {
         uint32_t w = ld32(src + 4 * i);
         if (g_gx.xf_mem[addr + i] == w) continue;
@@ -234,6 +254,7 @@ static size_t parse(const uint8_t* p, size_t len, int depth);
 
 static void call_display_list(uint32_t addr, uint32_t size, int depth) {
     if (depth > 4 || size > 0x4000000) return;
+    if (g_dff_active) gx_dff_memory(addr, size);
     const uint8_t* p = mem_phys(addr & 0x03FFFFFF);
     parse(p, size, depth + 1);
 }
@@ -248,7 +269,11 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
     if (depth == 0) g_parse_need = 0;
     int saved_depth = g_parse_depth;
     g_parse_depth = depth;
+    void gx_dff_cmd(const uint8_t* p, size_t n);
+    size_t mark = 0;  /* SR_DFF: each whole command of the immediate stream is recorded after it ran */
     while (i < len) {
+        if (g_dff_active && depth == 0 && i > mark) gx_dff_cmd(p + mark, i - mark);
+        mark = i;
         uint8_t cmd = p[i];
         size_t left = len - i;
         if (cmd == 0x00) { i++; continue; }                             /* NOP */
@@ -306,6 +331,7 @@ static size_t parse(const uint8_t* p, size_t len, int depth) {
             rt_log("[gx] unknown FIFO command %02X (depth %d); skipping a byte", cmd, depth);
         i++;
     }
+    if (g_dff_active && depth == 0 && i > mark) gx_dff_cmd(p + mark, i - mark);
     g_parse_depth = saved_depth;
     return i;
 }
@@ -472,7 +498,8 @@ static void tlut_watch(uint32_t v, int size) {
     if (size == 1) { g_prev_bp_prefix = (v & 0xFF) == 0x61; return; }
     if (size == 4 && g_prev_bp_prefix) {
         uint32_t reg = v >> 24;
-        if (reg == 0x64) g_store_v64 = v;
+        if (reg == 0x45 && (CP_CR & 0x11) == 0x11) atomic_store(&g_dd_issued, rt_ticks());  /* draw done, for [perf] */
+        else if (reg == 0x64) g_store_v64 = v;
         else if (reg == 0x65 && (CP_CR & 0x11) == 0x11) tlut_snapshot(v);  /* immediate mode only: not recorded into a display list */
     }
     g_prev_bp_prefix = 0;
@@ -634,7 +661,11 @@ int gx_async(void) { return g_gx_async; }
 /* the game thread has nothing to run (sched.c): what it wrote reaches the GP now */
 void gx_pipe_idle(void) { pipe_flush(); }
 
+/* the CPU FIFO's bounds (PI FIFO base / end, physical): gx_dff.c */
+void gx_pi_fifo_range(uint32_t* base, uint32_t* end) { *base = g_pi_base & 0x03FFFFFF; *end = g_pi_end & 0x03FFFFFF; }
+void gx_dff_init(void);
 void gx_init(void) {
+    gx_dff_init();
     g_gx.bp_mask = 0xFFFFFF;
     mtx_init(&g_pe_lock, mtx_plain);
     if (getenv("SR_GX_SYNC")) {

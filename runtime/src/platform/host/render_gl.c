@@ -92,6 +92,9 @@ static int g_shot_list[512 + 32], g_nshots;  /* SR_SCREENSHOT list (up to 512), 
 /* SR_SKIPSCAN=FRAME,STEP: from presented frame FRAME on, frame FRAME+k leaves out draws k*STEP up to
  * (k+1)*STEP and is saved as a screenshot (finding the draws behind a visual problem; debugging) */
 static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
+/* SR_SKIPSAME=N,STEP (debugging): frame N is drawn again once per block of STEP draws, without that
+ * block, each saved as build/same_N_<block>.png: which draws make a difference, on one exact frame */
+static int g_same_at, g_same_step, g_same_k = -1;
 static unsigned g_presented;
 
 static GLuint compile(GLenum type, const char* src) {
@@ -140,7 +143,7 @@ static void gl_setup(void) {
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_xfm"), XFM_UNIT);
     /* SR_SHOWALPHA: every pixel shows the TEV alpha as gray (debugging see-through surfaces) */
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_show_alpha"), getenv("SR_SHOWALPHA") != NULL);
-    /* SR_TEVDEBUG: 1 = lit colour 0 only, 2 = stage 1's texture sample only, 3 = stage 0 only, 6 = stage 1 coordinates as colour, 7 = old specular direction, 8 = lit colour 1 only, cycle[:a,b..] = by frame (debugging) */
+    /* SR_TEVDEBUG: 1 = lit colour 0 only, 2 = stage 1's texture sample only, 3 = stage 0 only, 6 = stage 1 coordinates as colour, 7 = old specular direction, 8 = lit colour 1 only, 9 = no fog, 10 = fog amount, 11 = fog inputs (depth, B, A), cycle[:a,b..] = by frame (debugging) */
     p_glUniform1i(p_glGetUniformLocation(g_prog, "u_tev_debug"), getenv("SR_TEVDEBUG") ? atoi(getenv("SR_TEVDEBUG")) : 0);
     p_glGenBuffers(1, &g_xfm_buf);
     glGenTextures(1, &g_xfm_tex);
@@ -358,6 +361,17 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
             draw_overlay(ww, wh);
+            if (g_same_k >= 0) {  /* SR_SKIPSAME: a repeat of this frame; saved, not counted */
+                uint8_t* px = malloc((size_t)ww * wh * 4);
+                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
+                glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
+                for (size_t k = 3; k < (size_t)ww * wh * 4; k += 4) px[k] = 255;
+                char path[64];
+                snprintf(path, sizeof path, "build/same_%u_%02d.png", g_presented + 1, g_same_k);
+                save_png(path, ww, wh, px);
+                free(px);
+                goto presented;
+            }
             g_presented++;
             int menu_shot = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
             int listed = 0;
@@ -381,6 +395,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 p_glBlitFramebuffer(0, 0, ww, wh, 0, 0, ww, wh, GL_COLOR_BUFFER_BIT, GL_NEAREST);
             }
             SDL_GL_SwapWindow(g_win);
+        presented:;
         }
     } else if ((int)c->copy[8] >= 0) {  /* to a texture: render-to-texture */
         GxTexture* t = gx_texture_get((int)c->copy[8]);
@@ -465,6 +480,7 @@ static void execute(GxFrame* f) {
     int scan_k = g_scan_at ? (int)g_presented + 1 - g_scan_at : -1;
     int scanning = scan_k >= 0 && scan_k < 32;
     uint32_t draw_no = 0, skip_lo = scanning ? (uint32_t)(scan_k * g_scan_step) : 0, skip_hi = skip_lo + (uint32_t)g_scan_step;
+    if (g_same_k >= 0) { scanning = 1; skip_lo = (uint32_t)(g_same_k * g_same_step); skip_hi = skip_lo + (uint32_t)g_same_step; }
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
@@ -643,6 +659,9 @@ static void execute(GxFrame* f) {
                     rt_log("[gxdbg]   tev regs E0-E7 %06X %06X %06X %06X %06X %06X %06X %06X | konst %06X %06X | alpha test %06X",
                            cur->bp[0xE0], cur->bp[0xE1], cur->bp[0xE2], cur->bp[0xE3], cur->bp[0xE4], cur->bp[0xE5],
                            cur->bp[0xE6], cur->bp[0xE7], cur->konst[0], cur->konst[1], cur->bp[0xF3]);
+                    rt_log("[gxdbg]   fog EE %06X EF %06X F0 %06X F1 %06X F2 %06X range E8 %06X | proj P4 %g P5 %g zscale %g zoff %g",
+                           cur->bp[0xEE], cur->bp[0xEF], cur->bp[0xF0], cur->bp[0xF1], cur->bp[0xF2], cur->bp[0xE8],
+                           f32(cur->xfr[0x24]), f32(cur->xfr[0x25]), f32(cur->xfr[0x1C]), f32(cur->xfr[0x1F]));
                 }
             }
             bind_textures(c, cur);
@@ -653,6 +672,23 @@ static void execute(GxFrame* f) {
             if (cur) efb_copy(c, cur);
             if (cur) apply_state(cur);
             break;
+        case GXC_TEXBLIT: {  /* an EFB copy into the top left of a larger copy texture (gx_render.h) */
+            static GLuint read_fbo;
+            GLuint s = gl_texture((int)c->copy[0]), d = gl_texture((int)c->copy[1]);
+            if (!s || !d) break;
+            if (!read_fbo) p_glGenFramebuffers(1, &read_fbo);
+            p_glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
+            p_glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s, 0);
+            p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_copy_fbo);
+            p_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, d, 0);
+            glDisable(GL_SCISSOR_TEST);
+            glColorMask(1, 1, 1, 1);
+            GLint bw = (GLint)(c->copy[2] * EFB_SCALE), bh = (GLint)(c->copy[3] * EFB_SCALE);
+            p_glBlitFramebuffer(0, 0, bw, bh, 0, 0, bw, bh, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+            if (cur) apply_state(cur);
+            break;
+        }
         default: break;
         }
     }
@@ -758,6 +794,13 @@ static int render_thread(void* arg) {
             input_pump();
             const char* dbg = getenv("SR_GXDEBUG");
             g_debug_frame = dbg && (unsigned)atoi(dbg) == g_presented + 1;
+            if (g_same_at && g_presented + 1 == (unsigned)g_same_at) {
+                uint32_t nd = 0;
+                for (uint32_t i = 0; i < f->ncmds; i++) nd += f->cmds[i].type == GXC_DRAW;
+                rt_log("[gl] SR_SKIPSAME: frame %d, %u draws, %u blocks of %d", g_same_at, nd, (nd + g_same_step - 1) / g_same_step, g_same_step);
+                for (g_same_k = 0; g_same_k * g_same_step < (int)nd && g_same_k < 100; g_same_k++) execute(f);
+                g_same_k = -1;
+            }
             execute(f);
             g_debug_frame = 0;
         }
@@ -786,6 +829,11 @@ void render_start(void) {
     g_shot_at = s ? atoi(s) : 0;
     for (const char* q = s; q && *q && g_nshots < 512; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
         g_shot_list[g_nshots++] = atoi(q);
+    const char* same = getenv("SR_SKIPSAME");
+    if (same && sscanf(same, "%d,%d", &g_same_at, &g_same_step) == 2 && g_same_step > 0) {
+        g_shot_list[g_nshots++] = g_same_at;  /* the frame as drawn, for comparison */
+        rt_log("[gl] SR_SKIPSAME: frame %d drawn again without each block of %d draws", g_same_at, g_same_step);
+    }
     const char* scan = getenv("SR_SKIPSCAN");
     if (scan && sscanf(scan, "%d,%d", &g_scan_at, &g_scan_step) == 2 && g_scan_at > 0 && g_scan_step > 0) {
         g_nshots = 0;

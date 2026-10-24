@@ -431,7 +431,8 @@ static void bind_textures(const GxCmd* c, const GxUniforms* u) {
 static int g_fb_slot = -1;
 
 /* Self-captures for hardware testing (off unless SR_SHOTS=1, e.g. in env.txt): presented frames
- * k_shots[] are saved to the SD card as shot_<frame>.bmp; each causes a visible hitch. */
+ * k_shots[] (or the frames listed in SR_SHOTS=a,b,c) are saved to the SD card as shot_<frame>.bmp;
+ * each causes a visible hitch. */
 static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500, 6000, 7200};
 static unsigned g_presented;
 static DkMemBlock g_shot_mem;
@@ -440,10 +441,18 @@ static unsigned g_shot_pending;  /* frame number captured into g_shot_mem by thi
 static void shot_request(DkImageView const* fv) {
     unsigned n = ++g_presented;
     static int on = -1;
-    if (on < 0) on = getenv("SR_SHOTS") != NULL;
+    static unsigned list[32], nlist;  /* SR_SHOTS=a,b,c: those frames instead of k_shots */
+    if (on < 0) {
+        const char* e = getenv("SR_SHOTS");
+        on = e != NULL;
+        for (const char* q = e; q && *q && nlist < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
+            if (atoi(q) > 1) list[nlist++] = (unsigned)atoi(q);
+    }
     int want = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
     if (!on && !want) return;
-    if (on)
+    if (on && nlist)
+        for (unsigned i = 0; i < nlist; i++) want |= list[i] == n;
+    else if (on)
         for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
     if (!want) return;
     if (!g_shot_mem) g_shot_mem = block(FB_W * FB_H * 4, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
@@ -765,6 +774,27 @@ static void execute(GxFrame* f) {
                 apply_state(cur);
             }
             break;
+        case GXC_TEXBLIT: {  /* an EFB copy into the top left of a larger copy texture (gx_render.h) */
+            int sid = (int)c->copy[0], did = (int)c->copy[1];
+            tex_prepare(sid);
+            tex_prepare(did);
+            DkTex* s = tex_slot(sid);
+            DkTex* d = tex_slot(did);
+            if (!s->live || !d->live) break;
+            uint32_t bw = SC(c->copy[2]), bh = SC(c->copy[3]);
+            if (bw > s->w) bw = s->w;
+            if (bh > s->h) bh = s->h;
+            if (bw > d->w) bw = d->w;
+            if (bh > d->h) bh = d->h;
+            DkImageView sv, dv;
+            dkImageViewDefaults(&sv, &s->image);
+            dkImageViewDefaults(&dv, &d->image);
+            DkImageRect r = {0, 0, 0, bw, bh, 1};
+            dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);
+            dkCmdBufBlitImage(g_cmd, &sv, &r, &dv, &r, 0, 0);
+            dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image);
+            break;
+        }
         default: break;
         }
     }

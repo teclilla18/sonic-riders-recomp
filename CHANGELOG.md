@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The picture is no longer dark and blue-tinted (#11), and the speed blur shows (#3).** The game's
+  speed-blur effect draws the previous frame over the screen edges; the port fed it the wrong
+  picture (old memory), which darkened and tinted the whole screen, characters included. Races now
+  look like they do on a GameCube.
+- **Distance fog** is drawn (it was missing in every race).
 - **Characters have their shine back (#11).** Characters looked flat and dark blue because their
   specular highlights were never drawn (a light at position 0,0,0 made the lighting maths divide by
   zero). Sonic's quills and the other characters now get the light-blue highlights the GameCube shows.

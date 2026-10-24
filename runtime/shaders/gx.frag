@@ -47,6 +47,8 @@ vec4 sample_map(uint m, vec2 uv) {
 #endif
 // No runtime indexing of vectors or local arrays below: uam (deko3d) miscompiles it or spills it
 // to scratch memory (see gx_common.glsl), so components and TEV inputs are picked with selects.
+/* a GX 20-bit float (11-bit mantissa, 8-bit exponent, sign at bit 19), as the fog registers hold them */
+float gx_float(uint v) { return uintBitsToFloat((bits(v, 19, 1) << 31) | (bits(v, 11, 8) << 23) | (bits(v, 0, 11) << 12)); }
 float comp(vec4 v, uint c) { return c == 0u ? v.x : c == 1u ? v.y : c == 2u ? v.z : v.w; }
 vec4 swizzle(vec4 c, uint table) {
   uint lo = CBP(0xF6 + int(table) * 2), hi = CBP(0xF7 + int(table) * 2);
@@ -240,6 +242,29 @@ void main() {
   uint lg = bits(acc, 22, 2);
   bool pass = lg == 0u ? (t0 && t1) : lg == 1u ? (t0 || t1) : lg == 2u ? (t0 != t1) : (t0 == t1);
   if (!pass) discard;
+  /* fog (BP 0xEE-0xF2), as Dolphin's pixel shader (WriteFog): the EFB depth turned into eye distance
+     (perspective: A / (B_mag - (z >> B_shift)); orthographic: A * z), minus C, through the selected
+     curve, then a blend toward the fog colour. Read with BP(): a run-time branch in every variant.
+     The range adjustment (BP 0xE8-0xED, wider fog towards the screen sides) is not done. */
+  uint f3 = BP(0xF1), fsel = bits(f3, 21, 3);
+  if (fsel != 0u && DEBUG_TEV != 9) {  /* 9: fog off (debugging) */
+    float fa = gx_float(BP(0xEE)), fc = gx_float(f3);
+    uint zi = uint(clamp(gl_FragCoord.z, 0.0, 1.0) * 16777215.0 + 0.5);
+    float ze = bits(f3, 20, 1) == 0u
+      ? fa * 16777216.0 / float(int(bits(BP(0xEF), 0, 24)) - int(zi >> bits(BP(0xF0), 0, 5)))
+      : fa * float(zi) / 16777216.0;
+    float fog = clamp(ze - fc, 0.0, 1.0);
+    if (fsel == 4u) fog = 1.0 - exp2(-8.0 * fog);
+    else if (fsel == 5u) fog = 1.0 - exp2(-8.0 * fog * fog);
+    else if (fsel == 6u) fog = exp2(-8.0 * (1.0 - fog));
+    else if (fsel == 7u) { float r = 1.0 - fog; fog = exp2(-8.0 * r * r); }
+    float ifog = floor(fog * 256.0 + 0.5);
+    uint fcol = BP(0xF2);
+    vec3 fogc = vec3(float(bits(fcol, 16, 8)), float(bits(fcol, 8, 8)), float(bits(fcol, 0, 8)));
+    o.rgb = floor((floor(o.rgb * 255.0 + 0.5) * (256.0 - ifog) + fogc * ifog) / 256.0) / 255.0;
+    if (DEBUG_TEV == 11) o.rgb = vec3(clamp((gl_FragCoord.z - 0.9) * 10.0, 0.0, 1.0), float(bits(BP(0xEF), 0, 24)) / 8388608.0, fa * 5000.0);
+    if (DEBUG_TEV == 10) o.rgb = vec3(fog, gl_FragCoord.z > 0.999 ? 1.0 : 0.0, ze > 1.0 ? 1.0 : 0.0);  /* debugging: fog amount */
+  }
   /* blending uses the TEV alpha (second source); the "destination alpha" register only sets the
      alpha the EFB stores. (The backends read DSTALPHA as 1 when the EFB format has no alpha.) */
   o_blend = vec4(0.0, 0.0, 0.0, o.a);

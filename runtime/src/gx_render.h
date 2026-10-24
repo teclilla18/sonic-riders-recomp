@@ -41,7 +41,10 @@ typedef struct GxXTab {
     uint32_t xtab[32];        /* GX_XFM_CHUNKS used */
 } GxXTab;
 
-enum { GXC_STATE, GXC_DRAW, GXC_COPY, GXC_PRESENT };
+/* GXC_TEXBLIT: copy[0] source texture (an EFB copy), copy[1] destination (an EFB-copy texture of the size
+ * the game samples it at), copy[2]/copy[3] the source's size in EFB pixels: into the destination's top
+ * left corner (gx_texture.c gx_texture_lookup) */
+enum { GXC_STATE, GXC_DRAW, GXC_COPY, GXC_PRESENT, GXC_TEXBLIT };
 enum { GXP_TRIANGLES, GXP_LINES, GXP_POINTS };
 
 typedef struct GxCmd {

@@ -12,6 +12,7 @@
 #include "runtime.h"
 
 static uint8_t g_tmem[0x100000];  /* 1 MiB: TLUTs are loaded into the upper half */
+const uint8_t* gx_tmem(void) { return g_tmem; }  /* gx_dff.c */
 
 #define MAX_TEX 65536
 static GxTexture* g_tex[MAX_TEX];
@@ -29,8 +30,24 @@ static Entry g_cache[CACHE_SIZE];
 
 /* EFB copy targets by destination address */
 #define MAX_COPIES 256
-static struct { uint32_t addr, w, h; int id; } g_copies[MAX_COPIES];
+static struct { uint32_t addr, w, h, seq; int id; } g_copies[MAX_COPIES];
 static int g_ncopies;
+/* A copy sampled as a larger texture at its address (the game copies 320x240 into a 512-pixel-wide
+ * layout and samples 512x256, the speed-blur overlays): a texture of the sampled size holding the
+ * copy in its top left corner, refreshed by a GXC_TEXBLIT before a draw when the copy changed. Before,
+ * the lookup missed (sizes compared exactly) and decoded stale RAM there: dark screen edges and a
+ * darker, bluer picture overall (#11). */
+#define MAX_PADDED 32
+static struct { uint32_t addr, w, h, seq; int id, src; } g_padded[MAX_PADDED];
+static int g_npadded;
+static struct { int src, dst; uint32_t w, h; } g_blits[8];
+static int g_nblits;
+int gx_texture_take_blit(int* src, int* dst, uint32_t* w, uint32_t* h) {
+    if (!g_nblits) return 0;
+    g_nblits--;
+    *src = g_blits[g_nblits].src; *dst = g_blits[g_nblits].dst; *w = g_blits[g_nblits].w; *h = g_blits[g_nblits].h;
+    return 1;
+}
 
 static uint32_t g_frame;
 
@@ -245,6 +262,7 @@ void gx_texture_load_tlut(void) {
     /* the palette as it was when the game issued the load (gx_fifo.c), else RAM now */
     int gx_tlut_snapshot_copy(uint32_t v64, uint32_t v65, uint8_t* dst, uint32_t len);
     if (gx_tlut_snapshot_copy(g_gx.bp[0x64], g_gx.bp[0x65], g_tmem + tmem, count)) return;
+    { extern int g_dff_active; void gx_dff_memory(uint32_t, uint32_t); if (g_dff_active) gx_dff_memory(src, count); }
     if (src + count <= GUEST_RAM_SIZE) memcpy(g_tmem + tmem, mem_phys(src), count);
 }
 
@@ -264,7 +282,10 @@ void gx_texture_set_copy(uint32_t addr, uint32_t w, uint32_t h, int id) {
 /* the EFB copy target texture for (addr, w, h), creating it if needed */
 int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h) {
     for (int i = 0; i < g_ncopies; i++)
-        if (g_copies[i].addr == addr && g_copies[i].w == w && g_copies[i].h == h) return g_copies[i].id;
+        if (g_copies[i].addr == addr && g_copies[i].w == w && g_copies[i].h == h) {
+            g_copies[i].seq++;  /* new contents */
+            return g_copies[i].id;
+        }
     GxTexture* t = new_texture(w, h, 1);
     gx_texture_set_copy(addr, w, h, t->id);
     return t->id;
@@ -295,8 +316,29 @@ int gx_texture_lookup(int map) {
     uint32_t tlutr = g_gx.bp[(hi ? 0xB8 : 0x98) + i];
     uint32_t w = (img0 & 0x3FF) + 1, h = ((img0 >> 10) & 0x3FF) + 1, fmt = (img0 >> 20) & 15;
     uint32_t addr = ((img3 & 0xFFFFFF) << 5) & GX_PHYS_MASK;
-    for (int k = 0; k < g_ncopies; k++)  /* render-to-texture result at this address */
-        if (g_copies[k].addr == addr && g_copies[k].w == w && g_copies[k].h == h) return g_copies[k].id;
+    for (int k = 0; k < g_ncopies; k++) {  /* render-to-texture result at this address */
+        if (g_copies[k].addr != addr) continue;
+        if (g_copies[k].w == w && g_copies[k].h == h) return g_copies[k].id;
+        if (g_copies[k].w > w || g_copies[k].h > h) continue;
+        /* sampled larger than the copy: the padded texture, refreshed when the copy changed */
+        int p = 0;
+        while (p < g_npadded && !(g_padded[p].addr == addr && g_padded[p].w == w && g_padded[p].h == h)) p++;
+        if (p == g_npadded) {
+            if (g_npadded == MAX_PADDED) break;
+            GxTexture* t = new_texture(w, h, 1);
+            g_padded[p].addr = addr; g_padded[p].w = w; g_padded[p].h = h; g_padded[p].id = t->id;
+            g_padded[p].src = -1;
+            g_npadded++;
+        }
+        if ((g_padded[p].src != g_copies[k].id || g_padded[p].seq != g_copies[k].seq) && g_nblits < 8) {
+            g_blits[g_nblits].src = g_copies[k].id; g_blits[g_nblits].dst = g_padded[p].id;
+            g_blits[g_nblits].w = g_copies[k].w; g_blits[g_nblits].h = g_copies[k].h;
+            g_nblits++;
+            g_padded[p].src = g_copies[k].id;
+            g_padded[p].seq = g_copies[k].seq;
+        }
+        return g_padded[p].id;
+    }
     uint32_t size = gx_texture_size((int)fmt, w, h);
     if (!size || addr + size > GUEST_RAM_SIZE) {
         static int logged;

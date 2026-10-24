@@ -483,27 +483,39 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
         break;
     }
     /* unimplemented features in use, for the [perf] line: indirect stages (genmode bits 16-18),
-     * fog (BP 0xEE bits 21-23), Z textures (BP 0xF4 bits 2-3) */
+     * fog (BP 0xF1 bits 21-23, the fog type), Z textures (BP 0xF4 bits 2-3) */
     if ((g_gx.bp[0x00] >> 16) & 7) g_feat_ind++;
-    if ((g_gx.bp[0xEE] >> 21) & 7) g_feat_fog++;
+    if ((g_gx.bp[0xF1] >> 21) & 7) g_feat_fog++;
     if ((g_gx.bp[0xF4] >> 2) & 3) g_feat_ztex++;
-    GxCmd* c = push_cmd(GXC_DRAW);
-    c->prim = (uint8_t)kind;
-    c->a = f->nidx;
-    c->b = k;
-    /* textures used by the enabled TEV stages */
-    for (int i = 0; i < 8; i++) c->tex[i] = -1;
+    /* textures used by the enabled TEV stages, looked up first: a lookup may queue a texture blit,
+     * which must come before the draw */
+    GxCmd tc;
+    for (int i = 0; i < 8; i++) tc.tex[i] = -1;
     int stages = (int)((g_gx.bp[0x00] >> 10) & 15) + 1;
     for (int s = 0; s < stages; s++) {
         uint32_t order = g_gx.bp[0x28 + s / 2] >> ((s & 1) ? 12 : 0);
         int map = (int)(order & 7);
-        if ((order >> 6) & 1 && c->tex[map] < 0) lookup_map(c, map);
+        if ((order >> 6) & 1 && tc.tex[map] < 0) lookup_map(&tc, map);
     }
     /* the indirect stages' textures (RAS1_IREF) */
-    for (int k = 0; k < (int)((g_gx.bp[0x00] >> 16) & 7) && k < 4; k++) {
-        int map = (int)((g_gx.bp[0x27] >> (6 * k)) & 7);
-        if (c->tex[map] < 0) lookup_map(c, map);
+    for (int n = 0; n < (int)((g_gx.bp[0x00] >> 16) & 7) && n < 4; n++) {
+        int map = (int)((g_gx.bp[0x27] >> (6 * n)) & 7);
+        if (tc.tex[map] < 0) lookup_map(&tc, map);
     }
+    {
+        int bs, bd;
+        uint32_t bw, bh;
+        int gx_texture_take_blit(int* src, int* dst, uint32_t* w, uint32_t* h);
+        while (gx_texture_take_blit(&bs, &bd, &bw, &bh)) {
+            GxCmd* b = push_cmd(GXC_TEXBLIT);
+            b->copy[0] = (uint32_t)bs; b->copy[1] = (uint32_t)bd; b->copy[2] = bw; b->copy[3] = bh;
+        }
+    }
+    GxCmd* c = push_cmd(GXC_DRAW);
+    c->prim = (uint8_t)kind;
+    c->a = f->nidx;
+    c->b = k;
+    memcpy(c->tex, tc.tex, sizeof c->tex);
     f->nverts += count;
     f->nidx += k;
     g_verts_total += count;
@@ -556,6 +568,7 @@ static void efb_copy(uint32_t v) {
         { uint64_t d = rt_ticks() - ts; g_wait_ticks += d; g_wait_total += d; }
         g_frame = NULL;
         g_frames++;
+        { void gx_dff_frame_end(unsigned frames); gx_dff_frame_end((unsigned)g_frames); }
         /* [hitch]: a presented frame that took over 50 ms, and what the game thread spent it on */
         {
             static uint64_t last, tex0, wait0, disc_t0, draw0, idle0;
@@ -649,6 +662,11 @@ static void efb_copy(uint32_t v) {
                     extern unsigned g_cp_reads, g_pe_reads;
                     rt_log("[perf]   game core: no ready thread %.2f ms/frame, of it with GP work queued %.2f; CP reads %u, PE reads %u per frame",
                            sidle * ms, sgp * ms, g_cp_reads / 120, g_pe_reads / 120);
+                    void gx_drawdone_stats(uint64_t*, uint64_t*, uint64_t*);
+                    uint64_t ddt, ddm, ddn;
+                    gx_drawdone_stats(&ddt, &ddm, &ddn);
+                    rt_log("[perf]   draw done reached by the GP thread %.2f ms after the game issued it (avg of %llu, max %.2f)",
+                           ddn ? ddt * 1000.0 / 40500000.0 / ddn : 0.0, (unsigned long long)ddn, ddm * 1000.0 / 40500000.0);
                     g_cp_reads = g_pe_reads = 0;
                 }
                 {
