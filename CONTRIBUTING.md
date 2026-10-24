@@ -5,7 +5,7 @@ Thanks for helping. There are three ways in, and all of them matter:
 1. **Play and report.** Bug reports from real hardware are as valuable as code: what happened, where,
    your clocks, and the log files (use the bug report form). For visual bugs, take a screenshot with
    the in-game settings menu (hold −, "Save screenshot"; see
-   [Taking a screenshot](README.md#taking-a-screenshot-for-a-bug-report)); comparisons with real
+   [Taking a screenshot](docs/REPORTING-BUGS.md#taking-a-screenshot)); comparisons with real
    GameCube or Dolphin footage help too.
 2. **Write code yourself.** C (runtime, hardware models), Python (recompiler, tools), GLSL (renderer).
    See "How the project works" below.
@@ -60,7 +60,7 @@ fine, say so in the pull request rather than working around it.
 
 ## Getting set up
 
-Follow "Building from source" in the README: `SonicRidersSetup.bat` (or `setup\setup.ps1`) builds
+Follow [Building from source](docs/BUILDING.md): `SonicRidersSetup.bat` (or `setup\setup.ps1`) builds
 everything from your own disc image. For day-to-day work the PC build (`-Target pc`) is the fastest
 loop; the Switch build needs hardware or a Switch emulator to test.
 
