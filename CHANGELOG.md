@@ -5,7 +5,9 @@
 - **PC: file mods.** A `mods` folder next to the game replaces or adds the game's files (character
   models, textures, music, stages) without touching your disc image; `mods/mods.ini` sets the order
   and turns mods off; the settings menu has a **Mods** page to turn them on and off. See
-  [docs/MODDING.md](docs/MODDING.md). Stat mods and new tracks are planned.
+  [docs/MODDING.md](docs/MODDING.md).
+- **PC: stat mods.** A mod's `mod.ini` can change Extreme Gear stats by name (`[gear.HighBooster]`
+  `level1_boost_speed_kmh = 260`), write memory, and run simple Gecko codes. New tracks are planned.
 - The README is shorter; installation, playing, bug reports, building and modding have their own
   pages in `docs/`.
 - **The picture is no longer dark and blue-tinted (#11), and the speed blur shows (#3).** The game's

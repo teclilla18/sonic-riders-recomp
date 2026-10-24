@@ -103,6 +103,8 @@ static void write_order(void) {
 
 /* the settings menu's Mods page (overlay.c): the list as mods.ini has it; changes apply on restart */
 int mods_count(void) { return g_nmods; }
+const char* mods_folder(int i) { return i >= 0 && i < g_nmods ? g_names[i] : ""; }  /* mods_data.c */
+const char* mods_base_dir(void) { return g_base; }
 const char* mods_title(int i) { return i >= 0 && i < g_nmods ? (g_titles[i][0] ? g_titles[i] : g_names[i]) : ""; }
 int mods_enabled(int i) { return i >= 0 && i < g_nmods && g_on[i]; }
 void mods_set_enabled(int i, int on) {

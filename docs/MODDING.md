@@ -4,14 +4,15 @@
 
 > [!NOTE]
 > Modding is new and in development. **File mods** (replacing or adding the game's files, such as
-> character models, textures, music and stages) work in the PC version now (not yet in a release:
-> build from source or wait for the next version). Stat changes, new track slots and code mods are
-> planned; see [Roadmap](#roadmap). The Switch version reads the same `mods` folder from the SD card
+> character models, textures, music and stages) and **stat mods** (Extreme Gear stats, memory writes,
+> simple Gecko codes) work in the PC version now (not yet in a release: build from source or wait for
+> the next version). New track slots and code mods are planned; see [Roadmap](#roadmap). The Switch version reads the same `mods` folder from the SD card
 > but hasn't been tested yet.
 
 - [How mods work](#how-mods-work)
 - [Installing a mod](#installing-a-mod)
 - [Making a file mod](#making-a-file-mod)
+- [Changing stats](#changing-stats)
 - [What's on the disc](#whats-on-the-disc)
 - [Sharing mods](#sharing-mods)
 - [Roadmap](#roadmap)
@@ -111,6 +112,73 @@ python tools/disc_files.py extract "<your image>.iso" sonic "PS*"
 Then rename each `PSnn` / `PSnnM` file to `PTnn` / `PTnnM` and put them in `mods/SonicAsTails/files/`.
 (This is the test used during development: in a 4-player race, player 2 picked Tails and rode as Sonic.)
 
+## Changing stats
+
+Stat changes go in the mod's `mod.ini`, under sections of their own. A mod can have stats, files, or
+both. They are applied when the game starts (Gecko codes every frame), in load order: when two mods
+change the same value, the lower one in `mods.ini` wins. `;` starts a comment.
+
+### Extreme Gear stats
+
+One section per gear, by name or number (0–40): `[gear.HighBooster]` or `[gear.1]`.
+
+```ini
+[gear.HighBooster]
+additive_speed_kmh = 15        ; top speed bonus, km/h as shown in game
+level1_boost_speed_kmh = 260   ; boost speed at level 1 (level2_ / level3_ for the others)
+level1_max_air = 120000
+stat_dash = 2                  ; the stat bars on the gear select screen
+```
+
+Gear names: Default, HighBooster, AutoSlider, PowerfulGear, Fastest, TurboStar, SpeedBalancer,
+BlueStarII, Access, Beginner, Accelerator, TrapGear, LightBoard, SlideBooster, Legend, MagicCarpet,
+AirBroom, Hovercraft, ChaosEmerald, Faster, Gambler, PowerGear, OpaOpa, TheCrazy, Berserker, ERider,
+AirTank, HeavyBike, Destroyer, Omnipotence, CoverS, CoverF, CoverP, HangOn, SuperHangOn, Darkness,
+Grinder, AdvantageS, AdvantageF, AdvantageP, Cannonball.
+
+| Field | Type | |
+|---|---|---|
+| `who_can_select` | bit mask (hex) | which characters may ride it |
+| `gear_type`, `gear_model` | number | |
+| `acceleration` | decimal | |
+| `additive_speed` / `additive_speed_kmh` | decimal | top speed bonus (raw / km/h) |
+| `offroad_speed`, `speed_handling_multiplier`, `weight` | decimal | |
+| `extra_types` | bit mask | |
+| `turn_speed_loss`, `turn_low_speed_multiplier`, `turn_acceleration`, `turn_max_radius` | decimal | |
+| `drift_max_turn_radius`, `drift_momentum`, `drift_min_radius`, `drift_acceleration` | decimal | |
+| `drift_boost_frames` | number | |
+| `air_gain_trick`, `air_gain_shortcut`, `air_gain_autorotate`, `jump_air_multiplier` | decimal | air gained |
+| `special_flags` | bit mask | |
+| `stat_dash`, `stat_limit`, `stat_power`, `stat_cornering` | −128..127 | the bars on the select screen |
+| `levelN_max_air`, `levelN_passive_air_drain`, `levelN_drift_air_cost`, `levelN_boost_cost`, `levelN_tornado_cost` | number | N = 1, 2, 3 |
+| `levelN_drift_dash_speed` / `…_kmh`, `levelN_boost_speed` / `…_kmh` | decimal | |
+
+The field names and layout come from the Sonic Riders PC modding community's research
+([Sewer56.SonicRiders](https://github.com/Sewer56/Sewer56.SonicRiders)); the GameCube table has the
+same layout. What each field does in practice is best found by trying.
+
+### Memory writes and Gecko codes
+
+For anything not mapped yet: write values to memory (hex), using the **original GameCube addresses**
+(the same ones Dolphin cheat codes use; the port moves addresses inside `_Main.rel` to where it keeps
+the module). The value's digit count sets the size: 2 = byte, 4 = halfword, 8 = word.
+
+```ini
+[memory]
+805E6348 = 00030D40
+
+[gecko]
+045E6178 00030D40
+```
+
+`[gecko]` takes Gecko / Action Replay code lines and applies them every frame, like a Gecko handler.
+Only the simple write codes are supported for now: `00` (byte), `02` (halfword), `04` (word), with
+`01`/`03`/`05` for addresses above `0x81000000`. Others (conditions, code injection) are skipped
+with a note in the log.
+
+**Did it work?** The log shows `[mods] MyMod: 3 data changes, 1 Gecko codes`, and names any unknown
+gear, field or section.
+
 ## What's on the disc
 
 All 1,669 files sit in the disc's root folder. What is known so far; corrections and additions are
@@ -142,7 +210,7 @@ character-swap example) and see what changes in game.
 |---|---|---|
 | 1 | **File mods**: virtual disc, `mods.ini` load order, logging | Works on PC (next release) |
 | 2 | **Mods page in the settings menu**: turn mods on and off in game (applies on restart) | Done (next release) |
-| 3 | **Stats**: gear and character stats by name in `mod.ini` (top speed, boost, air…), plus raw memory writes and simple Dolphin-style Gecko / Action Replay codes | Planned (the gear table is partly mapped already) |
+| 3 | **Stats**: Extreme Gear stats by name in `mod.ini`, raw memory writes, simple Gecko / Action Replay write codes | Done (next release). Next: character stats, more Gecko code types |
 | 4 | **Tracks**: replacing a track's files works with step 1; adding *new* track slots needs research into how the game lists its tracks | Research |
 | 5 | **Code mods**: C hooks or a modified `main.dol` / `_Main.rel`, applied when the installer translates the game | Later |
 | 6 | Switch: the same `mods` folder on the SD card, tested on hardware | After step 2 |
