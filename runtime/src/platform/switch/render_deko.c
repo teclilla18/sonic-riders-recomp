@@ -350,28 +350,44 @@ static void dk_setup(void) {
 /* ---- per-draw state ---- */
 static float f32(uint32_t u) { float f; memcpy(&f, &u, 4); return f; }
 
+/* the fixed-function state last emitted by apply_state: draws mostly change only uniforms, so state
+ * that is unchanged is not emitted again (render-thread CPU and GPU command processing). Anything
+ * else that binds state (frame start, EFB copies, the overlay) clears g_st_valid. */
+static struct {
+    DkViewport vp;
+    DkScissor sc;
+    DkDepthStencilState ds;
+    DkColorState cs;
+    DkBlendState bs;
+    DkColorWriteState cw;
+    DkRasterizerState rs;
+} g_st;
+static int g_st_valid;
+#define ST_CHANGED(field, val) (!g_st_valid || memcmp(&g_st.field, &(val), sizeof(val)) != 0 ? (g_st.field = (val), 1) : 0)
+
 static void apply_state(const GxUniforms* u) {
     float xs = f32(u->xfr[0x1A]), ys = f32(u->xfr[0x1B]), xo = f32(u->xfr[0x1D]), yo = f32(u->xfr[0x1E]);
     int sox = (int)(u->bp[0x59] & 0x3FF) * 2, soy = (int)((u->bp[0x59] >> 10) & 0x3FF) * 2;
     float ax = xs < 0 ? -xs : xs, ay = ys < 0 ? -ys : ys;
     DkViewport vp = {(xo - ax - (float)sox) * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_s, 2 * ay * g_s, 0.0f, 1.0f};
-    dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
+    if (ST_CHANGED(vp, vp)) dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
     int x0 = (int)((u->bp[0x20] >> 12) & 0x7FF) - sox, y0 = (int)(u->bp[0x20] & 0x7FF) - soy;
     int x1 = (int)((u->bp[0x21] >> 12) & 0x7FF) - sox + 1, y1 = (int)(u->bp[0x21] & 0x7FF) - soy + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     DkScissor sc = {SC(x0), SC(y0), SC(x1 > x0 ? x1 - x0 : 0), SC(y1 > y0 ? y1 - y0 : 0)};
-    dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
+    if (ST_CHANGED(sc, sc)) dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
 
     static const DkCompareOp zf[8] = {DkCompareOp_Never, DkCompareOp_Less, DkCompareOp_Equal, DkCompareOp_Lequal,
                                       DkCompareOp_Greater, DkCompareOp_NotEqual, DkCompareOp_Gequal, DkCompareOp_Always};
     uint32_t z = u->bp[0x40];
     DkDepthStencilState ds;
+    memset(&ds, 0, sizeof ds);  /* padding too: the struct is compared with memcmp */
     dkDepthStencilStateDefaults(&ds);
     ds.depthTestEnable = z & 1;
     ds.depthWriteEnable = (z >> 4) & 1;
     ds.depthCompareOp = zf[(z >> 1) & 7];
-    dkCmdBufBindDepthStencilState(g_cmd, &ds);
+    if (ST_CHANGED(ds, ds)) dkCmdBufBindDepthStencilState(g_cmd, &ds);
 
     uint32_t cm = u->bp[0x41];
     /* source alpha = the shader's second output (the TEV alpha; the first carries the stored alpha,
@@ -385,10 +401,12 @@ static void apply_state(const GxUniforms* u) {
                                  DkBlendFactor_Src1Alpha, DkBlendFactor_InvSrc1Alpha, da, ida};
     int const_alpha = (u->bp[0x42] >> 8) & 1;
     DkColorState cs;
+    memset(&cs, 0, sizeof cs);
     dkColorStateDefaults(&cs);
     dkColorStateSetBlendEnable(&cs, 0, cm & 1);
-    dkCmdBufBindColorState(g_cmd, &cs);
+    if (ST_CHANGED(cs, cs)) dkCmdBufBindColorState(g_cmd, &cs);
     DkBlendState bs;
+    memset(&bs, 0, sizeof bs);
     dkBlendStateDefaults(&bs);
     if ((cm >> 11) & 1) {
         dkBlendStateSetOps(&bs, DkBlendOp_RevSub, DkBlendOp_RevSub);
@@ -398,18 +416,21 @@ static void apply_state(const GxUniforms* u) {
         DkBlendFactor s = sf[(cm >> 8) & 7], d = df[(cm >> 5) & 7];
         dkBlendStateSetFactors(&bs, s, d, const_alpha ? DkBlendFactor_One : s, const_alpha ? DkBlendFactor_Zero : d);
     }
-    dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
+    if (ST_CHANGED(bs, bs)) dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
     DkColorWriteState cw;
+    memset(&cw, 0, sizeof cw);
     dkColorWriteStateDefaults(&cw);
     dkColorWriteStateSetMask(&cw, 0, ((cm >> 3) & 1 ? DkColorMask_RGB : 0) | ((cm >> 4) & 1 ? DkColorMask_A : 0));
-    dkCmdBufBindColorWriteState(g_cmd, &cw);
+    if (ST_CHANGED(cw, cw)) dkCmdBufBindColorWriteState(g_cmd, &cw);
 
     DkRasterizerState rs;
+    memset(&rs, 0, sizeof rs);
     dkRasterizerStateDefaults(&rs);
     uint32_t cull = (u->bp[0x00] >> 14) & 3;
     rs.cullMode = cull == 0 ? DkFace_None : cull == 1 ? DkFace_Back : cull == 2 ? DkFace_Front : DkFace_FrontAndBack;
     rs.frontFace = DkFrontFace_CW;  /* GX front faces are clockwise on screen (upper-left origin, no flip here) */
-    dkCmdBufBindRasterizerState(g_cmd, &rs);
+    if (ST_CHANGED(rs, rs)) dkCmdBufBindRasterizerState(g_cmd, &rs);
+    g_st_valid = 1;
 }
 
 static void bind_textures(const GxCmd* c, const GxUniforms* u) {
@@ -511,6 +532,7 @@ static void shot_write(void) {
 }
 
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
+    g_st_valid = 0;  /* binds state of its own */
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
     DkImageRect src = {SC(x), SC(y), 0, SC(w), SC(h), 1};
     dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
@@ -581,6 +603,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 
 /* the settings menu / FPS counter (overlay.h) over the presented picture */
 static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
+    g_st_valid = 0;
     unsigned version;
     const uint8_t* img = overlay_image(&version);
     if (!img) return;
@@ -653,6 +676,7 @@ static void slot_reclaim(unsigned slot) {
 }
 
 static void execute(GxFrame* f) {
+    g_st_valid = 0;  /* a new command list */
     uint64_t t_start = armGetSystemTick();
     g_s = settings_internal_scale();
     g_last_upload = 0;
@@ -735,13 +759,16 @@ static void execute(GxFrame* f) {
                               f->nunis, f->nxtabs);
     }
     const GxUniforms* cur = NULL;
-    uint32_t cur_regs = ~0u;
+    uint32_t cur_regs = ~0u, cur_xtab = ~0u;
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE: {
             if (!ubo_ok) { cur = NULL; break; }
-            dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
+            if (c->b != cur_xtab) {
+                cur_xtab = c->b;
+                dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
+            }
             if (c->a == cur_regs) break;
             cur_regs = c->a;
             cur = &f->unis[c->a];

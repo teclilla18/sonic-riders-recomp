@@ -21,6 +21,7 @@ void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a larg
 void platform_sample_threads(void);  /* debugging: log where every other host thread is (desktop) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
 void rt_thread_lower_priority(void);
+void rt_thread_raise_priority(void);  /* one step above the other threads: short, deadline-bound work (the audio mixer) */
 void game_mods_linked(void);  /* game_mods.c: _Main.rel is linked; apply the gameplay options */
 void game_mods_apply(void);   /* after a settings change */
 void game_mods_frame(void);   /* once a presented frame (gx_render.c) */  /* below the device threads sharing its core (Switch); no-op elsewhere */

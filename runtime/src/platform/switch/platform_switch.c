@@ -179,6 +179,15 @@ void rt_thread_lower_priority(void) {
     if (R_FAILED(rc)) rt_log("[switch] svcSetThreadPriority(%d) failed (0x%X)", prio + 1, rc);
 }
 
+/* one step above: preempts the render thread on its core whenever it wakes (the audio mixer must
+ * finish each 5 ms frame in time; the render thread can run for a whole video frame) */
+void rt_thread_raise_priority(void) {
+    s32 prio = 0x2C;
+    svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+    Result rc = svcSetThreadPriority(CUR_THREAD_HANDLE, (u32)prio - 1);
+    if (R_FAILED(rc)) rt_log("[switch] svcSetThreadPriority(%d) failed (0x%X)", prio - 1, rc);
+}
+
 void rt_thread_pin(int core) {
     Result rc = svcSetThreadCoreMask(CUR_THREAD_HANDLE, core, 1u << core);
     if (R_FAILED(rc)) rt_log("[switch] svcSetThreadCoreMask(%d) failed (0x%X)", core, rc);

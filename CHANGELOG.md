@@ -12,6 +12,8 @@
 - **Faster game code** on both platforms (most on the Switch): the translated game code is about
   30% smaller on the Switch and does less work per instruction (ideas from SwitchWakerHD); the intro
   movie's video decoding is much cheaper. Pictures are unchanged.
+- Switch: fixed crackling sound in busy races at stock clocks (the sound mixer now gets the CPU before
+  the renderer; not yet confirmed on hardware). Slightly less work per frame for the renderer.
 - Switch: in handheld mode the GPU uses Nintendo's own 384 MHz setting for games instead of the
   system's 307 MHz (not an overclock; docked is unchanged).
 - **PC: file mods.** A `mods` folder next to the game replaces or adds the game's files (character

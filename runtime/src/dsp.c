@@ -83,13 +83,21 @@ static void pop_mail(void) {
 static mtx_t g_ax_lock;
 static cnd_t g_ax_cv;
 #define AXQ 8
-static struct { uint32_t addr, size; unsigned gen; } g_axq[AXQ];
+static struct { uint32_t addr, size; unsigned gen; uint64_t t; } g_axq[AXQ];
 static unsigned g_axq_head, g_axq_tail;  /* taken / queued, ever (g_ax_lock) */
 static unsigned g_dsp_gen;               /* bumped by a DSP reset: a list queued before it does not yield */
 static int g_ax_sync;                    /* SR_DSP_SYNC=1 */
 static _Atomic uint64_t g_ax_ticks;      /* time spent mixing, for [perf] */
 
 void dsp_ax_stats(uint64_t* ticks) { *ticks = atomic_exchange(&g_ax_ticks, 0); }
+/* command lists the worker started more than one 5 ms audio frame after the game sent them (the game
+ * then drops audio frames: crackling), and the longest such wait, since the last call */
+static _Atomic unsigned g_ax_late;
+static _Atomic uint64_t g_ax_wait_max;
+void dsp_ax_late_stats(unsigned* late, uint64_t* wait_max) {
+    *late = atomic_exchange(&g_ax_late, 0);
+    *wait_max = atomic_exchange(&g_ax_wait_max, 0);
+}
 
 static void ax_mix(uint32_t addr, uint32_t size) {
     uint64_t t = rt_ticks();
@@ -100,12 +108,19 @@ static void ax_mix(uint32_t addr, uint32_t size) {
 static int ax_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);  /* the Switch's render-thread core (the game has core 0, the GP thread core 2) */
+    /* above the render thread: Horizon does not time-slice equal priorities, and a render frame (30+ ms
+     * at stock clocks) kept mixes waiting past their 5 ms deadline (hardware test 27: ~10% of audio
+     * frames dropped in races, crackling) */
+    rt_thread_raise_priority();
     for (;;) {
         mtx_lock(&g_ax_lock);
         while (g_axq_head == g_axq_tail) cnd_wait(&g_ax_cv, &g_ax_lock);
         uint32_t addr = g_axq[g_axq_head % AXQ].addr, size = g_axq[g_axq_head % AXQ].size;
         unsigned gen = g_axq[g_axq_head % AXQ].gen;
+        uint64_t wait = rt_ticks() - g_axq[g_axq_head % AXQ].t;
         mtx_unlock(&g_ax_lock);
+        if (wait > 40500000ull / 200) atomic_fetch_add(&g_ax_late, 1);
+        if (wait > atomic_load(&g_ax_wait_max)) atomic_store(&g_ax_wait_max, wait);
         ax_mix(addr, size);
         mtx_lock(&g_ax_lock);
         g_axq_head++;
@@ -130,6 +145,7 @@ static void ax_queue(uint32_t addr, uint32_t size) {
     g_axq[g_axq_tail % AXQ].addr = addr;
     g_axq[g_axq_tail % AXQ].size = size;
     g_axq[g_axq_tail % AXQ].gen = g_dsp_gen;
+    g_axq[g_axq_tail % AXQ].t = rt_ticks();
     g_axq_tail++;
     cnd_broadcast(&g_ax_cv);
     mtx_unlock(&g_ax_lock);
