@@ -18,3 +18,7 @@
 80003540 memcpy
 80003458 memset
 8003A354 memmove
+
+# --- Frame rate modes (runtime/src/frame_pacing.c): the frame end drives the game's own 30 fps mode
+8000610C frame_end          # end of a game loop iteration: retrace wait, EFB -> XFB copy, present
+80017038 vi_wait_retrace    # VIWaitForRetrace: skipped when a late frame presents at once (Auto)

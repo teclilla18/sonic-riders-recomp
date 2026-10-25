@@ -2,7 +2,9 @@
  * code and the runtime: SR_PROFILE=1 samples the instruction pointer of every thread that runs guest
  * code (registered by sched.c / main.c) about every millisecond; profile_dump() (the watchdog, or
  * exit) writes build/profile.txt as "offset-in-executable count" lines, which tools/profile_report.py
- * maps to functions with the linker map (build/host/sonicriders.map). Other platforms: no-ops. */
+ * maps to functions with the linker map (build/host/sonicriders.map). SR_PROFILE_WINDOW=FROM,TO samples
+ * only between those VI fields (e.g. one race); SR_PROFILE_OUT=path writes there instead (parallel
+ * runs). Other platforms: no-ops. */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,12 +25,15 @@ static uintptr_t g_base, g_size;
 static struct { uint32_t off, count; } g_hist[BUCKETS];
 static volatile LONG64 g_samples;
 static int g_outside;  /* SR_PROFILE=2 */
+static uint32_t g_win_from, g_win_to = 0xFFFFFFFFu;  /* SR_PROFILE_WINDOW (VI fields) */
 
 static int profiling(void) {
     if (g_on < 0) {
         const char* e = getenv("SR_PROFILE");
         g_on = e != NULL;
         g_outside = e && atoi(e) == 2;
+        const char* w = getenv("SR_PROFILE_WINDOW");
+        if (w) sscanf(w, "%u,%u", &g_win_from, &g_win_to);
     }
     return g_on;
 }
@@ -59,6 +64,8 @@ static DWORD WINAPI sampler(LPVOID arg) {
     timeBeginPeriod(1);
     for (;;) {
         Sleep(1);
+        uint32_t field = vi_field_count();
+        if (field < g_win_from || field >= g_win_to) continue;
         LONG n = g_nthreads < MAX_THREADS ? g_nthreads : MAX_THREADS;
         for (LONG i = 0; i < n; i++) {
             HANDLE h = g_threads[i];
@@ -113,12 +120,14 @@ void profile_start(void) {
 
 void profile_dump(void) {
     if (!profiling()) return;
-    FILE* f = fopen("build/profile.txt", "w");
+    const char* out = getenv("SR_PROFILE_OUT");
+    if (!out) out = "build/profile.txt";
+    FILE* f = fopen(out, "w");
     if (!f) return;
     for (uint32_t k = 0; k < BUCKETS; k++)
         if (g_hist[k].count) fprintf(f, "%X %u\n", g_hist[k].off, g_hist[k].count);
     fclose(f);
-    rt_log("[profile] %lld samples written to build/profile.txt (tools/profile_report.py)", (long long)g_samples);
+    rt_log("[profile] %lld samples written to %s (tools/profile_report.py)", (long long)g_samples, out);
 }
 #else
 void profile_register_thread(void) {}

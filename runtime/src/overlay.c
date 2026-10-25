@@ -18,9 +18,9 @@
 
 /* the controllers row opens the system's controller screen: Switch only (PC pads just work) */
 #ifdef __SWITCH__
-enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_PADS, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_RATE, ITEM_FPS, ITEM_EMERALD, ITEM_PADS, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
 #else
-enum { ITEM_SCREEN, ITEM_RES, ITEM_FPS, ITEM_EMERALD, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
+enum { ITEM_SCREEN, ITEM_RES, ITEM_RATE, ITEM_FPS, ITEM_EMERALD, ITEM_MODS, ITEM_SHOT, ITEM_CLOSE, ITEMS };
 #endif
 /* the Mods page (mods.c): one row per installed mod, On/Off; then Back */
 int mods_count(void);
@@ -122,6 +122,7 @@ int overlay_input(unsigned held) {
 #else  /* the PC renders at 2x always: this row is the fullscreen switch there */
         case ITEM_RES: g_settings.fullscreen = !g_settings.fullscreen; settings_apply(); break;
 #endif
+        case ITEM_RATE: g_settings.framerate = (g_settings.framerate + FR_MODES + step) % FR_MODES; settings_apply(); break;
         case ITEM_FPS: g_settings.show_fps = !g_settings.show_fps; settings_apply(); break;
         case ITEM_EMERALD: g_settings.chaos_emerald = !g_settings.chaos_emerald; settings_apply(); break;
 #ifdef __SWITCH__
@@ -223,6 +224,7 @@ static void redraw(void) {
 #else
     snprintf(lines[ITEM_RES], 64, "Fullscreen (F11):  < %s >", g_settings.fullscreen ? "On" : "Off");
 #endif
+    snprintf(lines[ITEM_RATE], 64, "Frame rate:  < %s >", settings_framerate_name(g_settings.framerate));
     snprintf(lines[ITEM_FPS], 64, "FPS counter:  < %s >", g_settings.show_fps ? "On" : "Off");
     snprintf(lines[ITEM_EMERALD], 64, "Unlock Chaos Emerald gear:  < %s >", g_settings.chaos_emerald ? "On" : "Off");
 #ifdef __SWITCH__

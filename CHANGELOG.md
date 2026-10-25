@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **No more slow motion when the game is busy.** New setting **Frame rate**: *Auto (keep speed)*,
+  the default, draws 60 fps while it can and, when a frame takes too long, leaves out drawing a
+  frame instead of slowing the whole game down, so races always run at their real speed (the game
+  keeps 60 steps a second; you see fewer frames, e.g. 35-55 fps, instead of 30 fps in slow motion).
+  *30 fps (full speed)* uses Sonic Riders' own unused 30 fps mode: a steady 30 fps at full speed.
+  *60 fps (original)* behaves as before. Aimed at playing on a Switch without an overclock (not yet
+  tested on hardware).
 - **PC: file mods.** A `mods` folder next to the game replaces or adds the game's files (character
   models, textures, music, stages) without touching your disc image; `mods/mods.ini` sets the order
   and turns mods off; the settings menu has a **Mods** page to turn them on and off. See

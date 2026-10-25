@@ -3,7 +3,8 @@
 
 usage: profile_report.py [profile.txt] [linker map] [--top N]
 
-The map is lld-link's /MAP output (build/host/sonicriders.map). Recompiled game functions are named
+The map is lld-link's /MAP output (build/host/sonicriders.map) or the llvm-mingw build's
+lld map (build/host-mingw/sonicriders.map). Recompiled game functions are named
 f_<guest address>; everything else is the runtime. Prints the hottest functions, and the share of
 time in recompiled code versus runtime helpers.
 """
@@ -23,8 +24,14 @@ for line in open(mapf, errors="replace"):  # MSVC-style map: " 0001:00000cd0  f_
     m = re.match(r"\s*[0-9a-fA-F]{4}:[0-9a-fA-F]{8}\s+(\S+)\s+([0-9a-fA-F]{16})\s", line)
     if m:
         syms.append((int(m.group(2), 16), m.group(1)))
-syms.sort()
 image_base = 0x140000000  # "Preferred load address"; profile offsets are relative to the actual base
+if not syms:  # lld's ELF-style map (llvm-mingw build): "0000f050 00000000     0                 f_8000610C" (RVAs)
+    image_base = 0
+    for line in open(mapf, errors="replace"):
+        m = re.match(r"([0-9a-fA-F]{8,16}) [0-9a-fA-F]{8,16} +\d+ {9,}(\S+)$", line)
+        if m:
+            syms.append((int(m.group(1), 16), m.group(2)))
+syms.sort()
 addrs = [a for a, _ in syms]
 
 counts = {}

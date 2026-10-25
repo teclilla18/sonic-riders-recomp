@@ -26,6 +26,7 @@ Hold **−** (Minus) for half a second on the Switch, or **F1** / the gamepad's 
 |---|---|
 | Screen | 4:3, 16:9 widescreen, or 16:9 stretched |
 | Resolution (Switch) / Fullscreen (PC) | 1x / 1.5x / 2x on the Switch; windowed or fullscreen on PC |
+| Frame rate | **Auto** (default): 60 fps when possible; when the game is busy it draws fewer frames but keeps its real speed. **30 fps**: a steady 30 at full speed (the game's own mode). **60 fps (original)**: slows down when busy, as before |
 | FPS counter | Frame rate in the corner |
 | Unlock Chaos Emerald gear | Makes the Chaos Emerald gear available |
 | Controllers (Switch only) | The system's controller screen: pair or split Joy-Cons, change player order |

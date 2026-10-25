@@ -387,7 +387,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 snprintf(path, sizeof path, "build/shot_%u.png", menu_shot ? g_presented : (unsigned)g_shot_at);
                 save_png(path, ww, wh, px);
                 free(px);
-                rt_log("[gl] screenshot %s", path);
+                rt_log("[gl] screenshot %s (VI field %u)", path, vi_field_count());
             }
             if (!(SDL_GetWindowFlags(g_win) & SDL_WINDOW_MINIMIZED)) {
                 p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);

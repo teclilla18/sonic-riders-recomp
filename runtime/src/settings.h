@@ -13,7 +13,10 @@ typedef struct Settings {
     int resolution;  /* RES_*: internal resolution of the Switch renderer (the PC build keeps 2x) */
     int chaos_emerald;  /* the Chaos Emerald gear (Super Sonic) is unlocked; nothing else is (gx_render.c) */
     int fullscreen;     /* PC: borderless fullscreen window (F11 / Alt+Enter, or the menu); unused on the Switch */
+    int framerate;      /* FR_*: what happens when a frame takes longer than a 60 Hz retrace (frame_pacing.c) */
 } Settings;
+
+enum { FR_60, FR_AUTO, FR_30, FR_MODES };
 
 enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };
 
@@ -25,6 +28,7 @@ void settings_apply(void);  /* after a change: applies and saves */
 float settings_display_aspect(void);  /* of the presented picture: 4/3 or 16/9 */
 const char* settings_screen_name(int mode);
 const char* settings_resolution_name(int res);
+const char* settings_framerate_name(int mode);
 float settings_internal_scale(void);  /* 1, 1.5 or 2 */
 
 #ifdef __cplusplus
