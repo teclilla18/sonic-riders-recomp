@@ -28,6 +28,7 @@ ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
+ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -152,6 +153,10 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         if " " in dkp:
             sys.exit("the devkitPro folder must not contain spaces (libnx's switch.specs reads $DEVKITPRO): %s" % dkp)
         arch = "-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE"
+        if not args.no_base_reg:
+            # the guest memory base stays in x28 (runtime/include/ppc.h): nothing we compile may use it
+            arch += " -ffixed-x28 -DPPC_FIXED_X28"
+            gen_flags += " -DPPC_GEN_CODE -DPPC_BASE_X28"
         n.variable("cc", dkp + "/devkitA64/bin/aarch64-none-elf-gcc")
         n.variable("cxx", dkp + "/devkitA64/bin/aarch64-none-elf-g++")
         n.variable("cflags", "-std=gnu11 -g %s %s -D__SWITCH__ -I%s/libnx/include -ffunction-sections" % (arch, inc, dkp))
@@ -170,8 +175,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
            generator=True)  # no ninja log yet (first build) must not mean "recompile again": mtimes decide
 
     recomp_inputs = ["tools/recomp/gcrecomp.py", "tools/recomp/ppc2c.py", "tools/recomp/crlive.py",
-                     "tools/recomp/leaflocal.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",
-                     "config/GXEE8P/_Main/symbols.txt"] + [p for p in ("config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt")
+                     "tools/recomp/leaflocal.py", "tools/recomp/singleflow.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",
+                     "config/GXEE8P/_Main/symbols.txt"] + [p for p in ("config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt", "config/GXEE8P/hot_functions.txt")
                                                            if os.path.exists(os.path.join(ROOT, p))]
     n.build(gen_c + [GEN + "/funcs.h"], "recomp", recomp_inputs)
 

@@ -78,6 +78,7 @@ static int game_thread(void* arg) {
     rt_thread_pin(0);
     profile_register_thread();
     sched_enter_boot_thread();
+    ppc_enter_guest_thread();  /* the Switch's generated code reads the memory base from x28 */
     g_main_cpu.pc = g_recomp_entry_point;
     ppc_dispatch(&g_main_cpu);
     rt_fatal("the game's entry point returned");

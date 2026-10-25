@@ -19,7 +19,17 @@ extern "C" {
  * An effective address becomes physical with ea & 0x3FFFFFFF, which folds both RAM mirrors.
  * 0xC8000000-0xCFFFFFFF (EFB, hardware registers, the GX write-gather pipe at 0xCC008000) never
  * reaches the window: loads and stores there go to the runtime's device code (mmio.c). */
-#if defined(__SWITCH__) && defined(__aarch64__) && !defined(__cplusplus)
+#if defined(__SWITCH__) && defined(__aarch64__) && !defined(__cplusplus) && defined(PPC_GEN_CODE) && defined(PPC_BASE_X28)
+extern uint8_t* ppc_mem_base_var;
+/* Switch, generated code (configure.py): the base lives in x28 for the whole life of every guest
+ * thread (as SwitchWakerHD's -DWWHD_SWITCH_BASE_REG), instead of an adrp+ldr in every basic block that
+ * touches guest memory. Everything this project compiles for the Switch is built with -ffixed-x28,
+ * libnx/newlib/deko3d keep x28 (callee-saved), and ppc_enter_guest_thread() sets it where guest
+ * threads start (main.c game_thread, sched.c thread_main), which never return. The runtime's own
+ * code keeps the explicit load below (its device threads never set x28). */
+register uint8_t* ppc_base_x28 __asm__("x28");
+#define PPC_MEM_BASE (ppc_base_x28)
+#elif defined(__SWITCH__) && defined(__aarch64__) && !defined(__cplusplus)
 extern uint8_t* ppc_mem_base_var;
 /* Horizon places the window at start-up; the asm read keeps the base in a register across guest
  * stores instead of reloading the global after each one (as upstream's Switch fork). */
@@ -175,6 +185,25 @@ static inline PPC_ALWAYS_INLINE void st64(uint32_t ea, uint64_t v) {
     v = __builtin_bswap64(v); memcpy(ppc_ptr(ea), &v, 8);
 }
 
+/* the same without the device test, for addresses based on r1 (stack) or r13 (small data), which are
+ * always RAM (ppc2c.py ram_suffix) */
+static inline PPC_ALWAYS_INLINE uint8_t ld8r(uint32_t ea) { return *ppc_ptr(ea); }
+static inline PPC_ALWAYS_INLINE uint16_t ld16r(uint32_t ea) { uint16_t v; memcpy(&v, ppc_ptr(ea), 2); return __builtin_bswap16(v); }
+static inline PPC_ALWAYS_INLINE uint32_t ld32r(uint32_t ea) { uint32_t v; memcpy(&v, ppc_ptr(ea), 4); return __builtin_bswap32(v); }
+static inline PPC_ALWAYS_INLINE uint64_t ld64r(uint32_t ea) { uint64_t v; memcpy(&v, ppc_ptr(ea), 8); return __builtin_bswap64(v); }
+static inline PPC_ALWAYS_INLINE void st8r(uint32_t ea, uint8_t v) { *ppc_ptr(ea) = v; }
+static inline PPC_ALWAYS_INLINE void st16r(uint32_t ea, uint16_t v) { v = __builtin_bswap16(v); memcpy(ppc_ptr(ea), &v, 2); }
+static inline PPC_ALWAYS_INLINE void st32r(uint32_t ea, uint32_t v) { v = __builtin_bswap32(v); memcpy(ppc_ptr(ea), &v, 4); }
+static inline PPC_ALWAYS_INLINE void st64r(uint32_t ea, uint64_t v) { v = __builtin_bswap64(v); memcpy(ppc_ptr(ea), &v, 8); }
+
+/* where a guest thread starts (main.c, sched.c): the Switch's generated code finds the base in x28 */
+static inline void ppc_enter_guest_thread(void) {
+#if defined(__SWITCH__) && defined(__aarch64__) && defined(PPC_FIXED_X28)
+    extern uint8_t* ppc_mem_base_var;
+    __asm__ __volatile__("mov x28, %0" ::"r"(ppc_mem_base_var));
+#endif
+}
+
 /* ---- bit casts ---- */
 static inline double u64_as_f64(uint64_t u) { double d; memcpy(&d, &u, 8); return d; }
 static inline uint64_t f64_as_u64(double d) { uint64_t u; memcpy(&u, &d, 8); return u; }
@@ -217,6 +246,10 @@ static inline PPC_ALWAYS_INLINE double ldf32(uint32_t ea) { return (double)u32_a
 static inline PPC_ALWAYS_INLINE double ldf64(uint32_t ea) { return u64_as_f64(ld64(ea)); }
 static inline PPC_ALWAYS_INLINE void stf32(uint32_t ea, double d) { st32(ea, f32_as_u32((float)snan_chk64(d, ea, 1))); }
 static inline PPC_ALWAYS_INLINE void stf64(uint32_t ea, double d) { st64(ea, f64_as_u64(d)); }
+static inline PPC_ALWAYS_INLINE double ldf32r(uint32_t ea) { return (double)u32_as_f32(snan_chk32(ld32r(ea), ea, 0)); }
+static inline PPC_ALWAYS_INLINE double ldf64r(uint32_t ea) { return u64_as_f64(ld64r(ea)); }
+static inline PPC_ALWAYS_INLINE void stf32r(uint32_t ea, double d) { st32r(ea, f32_as_u32((float)snan_chk64(d, ea, 1))); }
+static inline PPC_ALWAYS_INLINE void stf64r(uint32_t ea, double d) { st64r(ea, f64_as_u64(d)); }
 
 /* ---- integer helpers ---- */
 static inline uint32_t rotl32(uint32_t v, uint32_t sh) { sh &= 31; return sh ? (v << sh) | (v >> (32 - sh)) : v; }
@@ -308,6 +341,13 @@ static inline double round25(double d) {
     return u64_as_f64(v);
 }
 static inline double to_single(double d) { return (double)(float)d; }
+/* checking build of the single-precision tracking (RECOMP_SINGLE_CHECK=1, tools/recomp/singleflow.py):
+ * an operand the recompiler left without round25 must be single precision already */
+void ppc_single_report(uint32_t addr, double v);
+static inline double ppc_single_chk(double v, uint32_t addr) {
+    if (__builtin_expect(f64_as_u64(round25(v)) != f64_as_u64(v), 0)) ppc_single_report(addr, v);
+    return v;
+}
 
 /* fcmpu / fcmpo. IEEE comparisons with a NaN are false, so lt/gt/eq need no NaN test; un is the
  * fourth outcome. FPSCR's FPCC field (which fcmp also sets) is not kept: only mffs and mcrfs read
@@ -440,12 +480,60 @@ static __attribute__((noinline)) void psq_store_slow_l(Cpu* c, double v0, double
 #ifndef PPC_GQR_STATIC_FLOAT
 #define PPC_GQR_STATIC_FLOAT 0
 #endif
+/* quantized formats in RAM, inline: only the ~24 sites whose GQR the game writes reach these, and
+ * Sofdec's video decoder (the intro FMV) runs them for every pixel. One device test per pair, the
+ * element size known from the type; device addresses go to the generic code. Same values as
+ * psq_dequant / psq_quant. */
+static inline __attribute__((always_inline)) int psq_load_q(double* p0, double* p1, uint32_t ea, int w, uint32_t g) {
+    uint32_t type = (g >> 16) & 7;
+    if (__builtin_expect(PPC_IS_MMIO(ea), 0)) return 0;
+    float s = psq_pow2(-((int32_t)(g << 2) >> 26));  /* scale: GQR bits 24-29, signed */
+    const uint8_t* p = ppc_ptr(ea);
+    uint16_t h0, h1;
+    switch (type) {
+    case 4: *p0 = (float)p[0] * s; if (w) *p1 = 1.0; else *p1 = (float)p[1] * s; return 1;
+    case 6: *p0 = (float)(int8_t)p[0] * s; if (w) *p1 = 1.0; else *p1 = (float)(int8_t)p[1] * s; return 1;
+    case 5:
+    case 7:
+        memcpy(&h0, p, 2);
+        h0 = __builtin_bswap16(h0);
+        *p0 = (type == 5 ? (float)h0 : (float)(int16_t)h0) * s;
+        if (w) *p1 = 1.0;
+        else {
+            memcpy(&h1, p + 2, 2);
+            h1 = __builtin_bswap16(h1);
+            *p1 = (type == 5 ? (float)h1 : (float)(int16_t)h1) * s;
+        }
+        return 1;
+    }
+    return 0;
+}
+static inline __attribute__((always_inline)) int psq_store_q(double v0, double v1, uint32_t ea, int w, uint32_t g) {
+    uint32_t type = g & 7;
+    if (__builtin_expect(PPC_IS_MMIO(ea) || type < 4, 0)) return 0;
+    uint32_t scale = (g >> 8) & 0x3F;
+    uint8_t* p = ppc_ptr(ea);
+    uint32_t d0 = psq_quant((float)v0, type, scale);
+    if (type == 4 || type == 6) {
+        p[0] = (uint8_t)d0;
+        if (!w) p[1] = (uint8_t)psq_quant((float)v1, type, scale);
+    } else {
+        uint16_t h = __builtin_bswap16((uint16_t)d0);
+        memcpy(p, &h, 2);
+        if (!w) {
+            h = __builtin_bswap16((uint16_t)psq_quant((float)v1, type, scale));
+            memcpy(p + 2, &h, 2);
+        }
+    }
+    return 1;
+}
 static inline __attribute__((always_inline)) void psq_load_l(Cpu* c, double* p0, double* p1, uint32_t ea, int w, int i) {
     if (((PPC_GQR_STATIC_FLOAT >> i) & 1) || __builtin_expect(((c->gqr[i] >> 16) & 7) < 4, 1)) {
         *p0 = u32_as_f32(snan_chk32(ld32(ea), ea, 2));
         *p1 = w ? 1.0 : (double)u32_as_f32(snan_chk32(ld32(ea + 4), ea + 4, 2));
         return;
     }
+    if (psq_load_q(p0, p1, ea, w, c->gqr[i])) return;
     psq_load_slow_l(c, p0, p1, ea, w, i);
 }
 static inline __attribute__((always_inline)) void psq_store_l(Cpu* c, double v0, double v1, uint32_t ea, int w, int i) {
@@ -454,6 +542,7 @@ static inline __attribute__((always_inline)) void psq_store_l(Cpu* c, double v0,
         if (!w) st32(ea + 4, f32_as_u32((float)snan_chk64(v1, ea + 4, 3)));
         return;
     }
+    if (psq_store_q(v0, v1, ea, w, c->gqr[i])) return;
     psq_store_slow_l(c, v0, v1, ea, w, i);
 }
 static inline __attribute__((always_inline)) void psq_load(Cpu* c, int fd, uint32_t ea, int w, int i) {

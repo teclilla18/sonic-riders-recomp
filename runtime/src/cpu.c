@@ -84,3 +84,15 @@ void cpu_init(Cpu* c) {
     c->msr = 0x00002032;  /* FP, IR, DR set; EE clear (as at boot) */
     g_t0 = host_ns();
 }
+
+/* the single-precision tracking's checking build (ppc.h ppc_single_chk): log the first reports */
+void ppc_single_report(uint32_t addr, double v) {
+    static int n;
+    if (n < 50) {
+        n++;
+        uint64_t b;
+        memcpy(&b, &v, 8);
+        rt_log("[recomp] operand at %08X is not single precision (%016llX): singleflow.py is wrong here", addr,
+               (unsigned long long)b);
+    }
+}

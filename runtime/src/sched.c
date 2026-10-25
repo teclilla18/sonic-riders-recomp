@@ -72,6 +72,7 @@ static int thread_main(void* arg) {
     mtx_unlock(&g_lock);
     t_self = g;
     Cpu* c = &g->cpu;
+    ppc_enter_guest_thread();  /* the Switch's generated code reads the memory base from x28 */
     load_cpu_from_context(c, g->ctx);
     uint32_t ret_to = c->lr;  /* OSCreateThread sets lr = OSExitThread */
     rt_log("[thread] start guest thread %08X at %08X (stack %08X, prio %d)", g->ctx, c->pc, c->r[1],

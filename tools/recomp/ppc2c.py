@@ -68,6 +68,17 @@ def rc(w, dst_expr):
     return " cr0_rc(c, %s);" % dst_expr if w & 1 else ""
 
 
+# Loads and stores based on the stack pointer (r1) or the small-data base (r13, set once at start-up)
+# can never reach the device range 0xC8000000-0xCFFFFFFF: they use the ld32r/st32r/... forms of ppc.h,
+# which skip the MMIO test. r2 is left out: the exception vectors use it as a scratch register.
+# RECOMP_STACKRAM=0 turns this off.
+STACKRAM = os.environ.get("RECOMP_STACKRAM", "1") != "0"
+
+
+def ram_suffix(a):
+    return "r" if STACKRAM and a in (1, 13) else ""
+
+
 def translate(addr, w, ctx):
     """Return C source for the instruction word `w` at `addr`."""
     op = w >> 26
@@ -189,6 +200,7 @@ def translate(addr, w, ctx):
     if op in ld or op in (33, 35, 41, 43):
         upd = op in (33, 35, 41, 43)
         fn, cast = ld[op - 1 if upd else op]
+        fn += ram_suffix(a)
         if upd:
             return "{ uint32_t ea = %s + 0x%08Xu; %s = %s%s(ea); %s = ea; }" % (
                 R(a), simm & 0xFFFFFFFF, R(d), cast, fn, R(a))
@@ -196,27 +208,28 @@ def translate(addr, w, ctx):
     st = {36: "st32", 38: "st8", 44: "st16"}
     if op in st or op in (37, 39, 45):
         upd = op in (37, 39, 45)
-        fn = st[op - 1 if upd else op]
+        fn = st[op - 1 if upd else op] + ram_suffix(a)
         if upd:
             return "{ uint32_t ea = %s + 0x%08Xu; %s(ea, %s); %s = ea; }" % (R(a), simm & 0xFFFFFFFF, fn, R(d), R(a))
         return "%s(%s + 0x%08Xu, %s);" % (fn, ra0(a), simm & 0xFFFFFFFF, R(d))
     if op == 46:  # lmw
         return "{ uint32_t ea = %s + 0x%08Xu; %s }" % (
-            ra0(a), simm & 0xFFFFFFFF, " ".join("%s = ld32(ea + %d);" % (R(r), 4 * (r - d)) for r in range(d, 32)))
+            ra0(a), simm & 0xFFFFFFFF, " ".join("%s = ld32%s(ea + %d);" % (R(r), ram_suffix(a), 4 * (r - d)) for r in range(d, 32)))
     if op == 47:  # stmw
         return "{ uint32_t ea = %s + 0x%08Xu; %s }" % (
-            ra0(a), simm & 0xFFFFFFFF, " ".join("st32(ea + %d, %s);" % (4 * (r - d), R(r)) for r in range(d, 32)))
+            ra0(a), simm & 0xFFFFFFFF, " ".join("st32%s(ea + %d, %s);" % (ram_suffix(a), 4 * (r - d), R(r)) for r in range(d, 32)))
 
     # --- FP load/store D-form ---
     if op in (48, 49, 50, 51):  # lfs lfsu lfd lfdu
         upd = op in (49, 51)
         single = op in (48, 49)
         base = R(a) if upd else ra0(a)
-        load = ("{ double v = ldf32(ea); %s = v; %s = v; }" % (F0(d), F1(d))) if single else ("%s = ldf64(ea);" % F0(d))
+        sfx = ram_suffix(a)
+        load = ("{ double v = ldf32%s(ea); %s = v; %s = v; }" % (sfx, F0(d), F1(d))) if single else ("%s = ldf64%s(ea);" % (F0(d), sfx))
         return "{ uint32_t ea = %s + 0x%08Xu; %s%s }" % (base, simm & 0xFFFFFFFF, load, " %s = ea;" % R(a) if upd else "")
     if op in (52, 53, 54, 55):  # stfs stfsu stfd stfdu
         upd = op in (53, 55)
-        fn = "stf32" if op in (52, 53) else "stf64"
+        fn = ("stf32" if op in (52, 53) else "stf64") + ram_suffix(a)
         base = R(a) if upd else ra0(a)
         return "{ uint32_t ea = %s + 0x%08Xu; %s(ea, %s);%s }" % (
             base, simm & 0xFFFFFFFF, fn, F0(d), " %s = ea;" % R(a) if upd else "")

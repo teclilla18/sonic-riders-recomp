@@ -40,12 +40,14 @@ from ppc2c import translate, Unhandled  # noqa: E402
 import ppc2c  # noqa: E402
 import crlive  # noqa: E402
 import leaflocal  # noqa: E402
+import singleflow  # noqa: E402
 
 CRLIVE = ppc2c.pass_on("WWHD_RECOMP_CRLIVE")
 CR_CHECK = os.environ.get("WWHD_RECOMP_CR_CHECK", "0") == "1"
 LEAF = ppc2c.pass_on("WWHD_RECOMP_LEAF")
 NONLEAF = ppc2c.pass_on("WWHD_RECOMP_NONLEAF")
 GQR_STATIC = ppc2c.pass_on("WWHD_RECOMP_GQR")
+HOT = os.environ.get("RECOMP_HOT", "1") != "0"
 
 # Where the REL module lives in guest memory: just above the 24 MiB of MEM1 (the runtime backs a few
 # extra MiB there; development hardware had 48 MiB at these addresses). The game still loads and
@@ -107,6 +109,7 @@ class Image:
 
 class GcRecompiler:
     def __init__(self, config_dir, baserom):
+        self.config_dir = config_dir
         self.dol = Dol(os.path.join(baserom, "main.dol"))
         self.rel = Rel(os.path.join(baserom, "_Main.rel"))
         rel_img, self.rel_addrs, self.rel_bss, self.rel_relocs = self.rel.link(REL_BASE)
@@ -165,6 +168,7 @@ class GcRecompiler:
 
     def _load_dtk(self, path, rel):
         self.pending_jts = getattr(self, "pending_jts", [])
+        self.trk_ranges = getattr(self, "trk_ranges", [])
         for s in read_symbols(path):
             # hand-written routines that set callee-saved registers on purpose: the FPR restore
             # routine (and its _restfpr_N entry labels) for the epilogue that calls it, register
@@ -175,6 +179,9 @@ class GcRecompiler:
                 leaflocal.NO_ABI.update({"f_%08X" % a for a in range(base, base + size, 4)})
             if s["type"] == "function" and s["section"] in ("init", "text"):
                 self.entries.add(self._addr(s, rel))
+                if s["name"].startswith("TRK"):  # the MetroTRK debugger stub: never runs here
+                    base = self._addr(s, rel)
+                    self.trk_ranges.append((base, base + (s["size"] or 4)))
             elif s["type"] == "object" and s["size"] >= 4 and s["size"] % 4 == 0 and \
                     s["section"] in ("data", "rodata") and s["addr"] % 4 == 0:
                 # candidate: dtk names only some switch tables jumptable_* (others keep names from
@@ -303,6 +310,15 @@ class GcRecompiler:
             body = [(a, w, crlive.rewrite(s, fields[i], live_after[i], CR_CHECK, a)) for i, (a, w, s) in enumerate(body)]
             self.cr_stats[0] += sum(1 for f in fields if f is not None)
         del jts
+        if singleflow.ENABLED and not plain:
+            def call_keeps(a, w):
+                t = branch_target(a, w & ~1)  # the call's target (branch_target skips linking branches)
+                return (t is not None and t in self.entries and t not in self.hooks
+                        and "f_%08X" % t not in leaflocal.NO_ABI)
+            body, seen, done = singleflow.analyze_and_rewrite(body, self.cur_start, self.cur_end, branch_target,
+                                                              call_keeps, self.patches)
+            self.single_stats[0] += seen
+            self.single_stats[1] += done
         fname = "f_%08X_orig" % start if hooked else "f_%08X" % start
         out = []
         if hooked:
@@ -339,6 +355,12 @@ class GcRecompiler:
         return "\n".join(out), len(body)
 
     def static_float_gqrs(self):
+        """GQRs that always hold 0 (plain floats): no mtspr writes anything else to them. Writes that
+        do not count: a value set by `li rS, 0` just before (the OS's start-up clear), writes inside
+        natively replaced functions (OSLoadContext) and in the MetroTRK debugger stub (never runs).
+        Threads' contexts start with GQRs cleared, and OSLoadContext only restores saved values."""
+        hooked = [(a, self.func_end(a)) for a in self.hooks]
+        skip = hooked + self.trk_ranges
         written = set()
         for lo, hi, data in self.img.regions:
             for i in range(0, hi - lo, 4):
@@ -346,6 +368,18 @@ class GcRecompiler:
                 if w >> 26 == 31 and (w >> 1) & 0x3FF == 467:
                     spr = ((w >> 16) & 31) | (((w >> 11) & 31) << 5)
                     if 912 <= spr <= 919 or 896 <= spr <= 903:
+                        a = lo + i
+                        if any(s0 <= a < s1 for s0, s1 in skip):
+                            continue
+                        rs = (w >> 21) & 31
+                        j = i - 4
+                        while j >= 0:  # back over the run of mtspr before it
+                            p = struct.unpack_from(">I", data, j)[0]
+                            if not (p >> 26 == 31 and (p >> 1) & 0x3FF == 467):
+                                break
+                            j -= 4
+                        if j >= 0 and struct.unpack_from(">I", data, j)[0] == (0x38000000 | rs << 21):  # li rS, 0
+                            continue
                         written.add((spr - 912) if spr >= 912 else (spr - 896))
         return sum(1 << n for n in range(8) if n not in written)
 
@@ -353,14 +387,34 @@ class GcRecompiler:
         os.makedirs(outdir, exist_ok=True)
         self.unhandled = collections.Counter()
         self.cr_stats = [0, 0]
+        self.hot_count = 0
+        self.single_stats = [0, 0]
         self.leaf_count = self.nonleaf_count = 0
         self.untabled_switches = []
+        # hot functions first, in the list's order (config/GXEE8P/hot_functions.txt, tools/hot_functions.py):
+        # the code a race runs then sits together in the program. RECOMP_HOT=0 keeps address order.
+        hot = []
+        hot_path = os.path.join(self.config_dir, "hot_functions.txt")
+        if HOT and os.path.exists(hot_path):
+            seen = set()
+            for line in open(hot_path):
+                line = line.split("#")[0].strip()
+                if not line:
+                    continue
+                a = int(line, 16)  # an entry, or an address inside a function (a caller's return address)
+                f = self.func_of(a) if self.img.in_text(a) else None
+                if f is not None and a < self.func_end(f) and f not in seen:
+                    seen.add(f)
+                    hot.append(f)
+        hot_set = set(hot)
+        order = hot + [e for e in self.sorted_entries if e not in hot_set]
+        self.hot_count = len(hot)
         files, cur, n = [], [], 0
-        for start in self.sorted_entries:
+        for k, start in enumerate(order):
             src, count = self.emit_function(start)
             cur.append(src)
             n += count
-            if n >= per_file:
+            if n >= per_file or k + 1 == len(hot):  # the hot functions get files of their own
                 files.append(cur)
                 cur, n = [], 0
         if cur:
@@ -416,6 +470,9 @@ class GcRecompiler:
                 len(self.untabled_switches), "".join(" %08X" % a for a in self.untabled_switches[:40])))
             f.write("CR writers rewritten: %d\nleaf functions in locals: %d\nnon-leaf in locals: %d\n" % (
                 self.cr_stats[0], self.leaf_count, self.nonleaf_count))
+            f.write("hot functions emitted first: %d\n" % self.hot_count)
+            f.write("round25 multiplier operands: %d, left out as already single precision: %d%s\n" % (
+                self.single_stats[0], self.single_stats[1], " (checking build)" if singleflow.CHECK else ""))
             f.write("unhandled instruction kinds (op=0: zero/data words inside function ranges, never run):\n")
             for k, v in self.unhandled.most_common():
                 f.write("  %6d  %s\n" % (v, k))

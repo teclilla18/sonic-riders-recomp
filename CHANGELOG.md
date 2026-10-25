@@ -9,6 +9,11 @@
   *30 fps (full speed)* uses Sonic Riders' own unused 30 fps mode: a steady 30 fps at full speed.
   *60 fps (original)* behaves as before. Aimed at playing on a Switch without an overclock (not yet
   tested on hardware).
+- **Faster game code** on both platforms (most on the Switch): the translated game code is about
+  30% smaller on the Switch and does less work per instruction (ideas from SwitchWakerHD); the intro
+  movie's video decoding is much cheaper. Pictures are unchanged.
+- Switch: in handheld mode the GPU uses Nintendo's own 384 MHz setting for games instead of the
+  system's 307 MHz (not an overclock; docked is unchanged).
 - **PC: file mods.** A `mods` folder next to the game replaces or adds the game's files (character
   models, textures, music, stages) without touching your disc image; `mods/mods.ini` sets the order
   and turns mods off; the settings menu has a **Mods** page to turn them on and off. See
