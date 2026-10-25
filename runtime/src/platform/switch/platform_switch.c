@@ -51,6 +51,39 @@ static void applet_hook(AppletHookType type, void* param) {
     fflush(stderr);  /* rare; the log must hold it if the game hangs right after */
 }
 
+/* Handheld GPU clock: Nintendo's own 384 MHz configuration for games (the system default in handheld
+ * is 307.2 MHz; CPU 1020 and memory 1331 MHz stay), as SwitchWakerHD does (its round 29: +5 fps where
+ * the GPU was the limit). Not an overclock: an official profile, selected through apm, which needs
+ * title mode. Only the handheld ("Normal") mode is changed; docked keeps the system's 768 MHz. The
+ * previous configuration is restored at exit. SR_HANDHELD_GPU=0 (env.txt) leaves the clocks alone. */
+#define APM_CONF_HANDHELD_GPU384 0x00020004u
+static u32 g_apm_prev;
+static int g_apm_set;
+static void apm_restore(void) {
+    if (g_apm_set) apmSetPerformanceConfiguration(ApmPerformanceMode_Normal, g_apm_prev);
+}
+static void handheld_gpu_profile(void) {
+    const char* e = getenv("SR_HANDHELD_GPU");
+    if (e && atoi(e) == 0) {
+        rt_log("[switch] handheld GPU profile left as the system's (SR_HANDHELD_GPU=0)");
+        return;
+    }
+    Result rc = apmInitialize();
+    if (R_FAILED(rc)) {
+        rt_log("[switch] apm unavailable (0x%X; applet mode?): handheld GPU stays at 307 MHz", rc);
+        return;
+    }
+    if (R_SUCCEEDED(apmGetPerformanceConfiguration(ApmPerformanceMode_Normal, &g_apm_prev))) {
+        rc = apmSetPerformanceConfiguration(ApmPerformanceMode_Normal, APM_CONF_HANDHELD_GPU384);
+        if (R_SUCCEEDED(rc)) {
+            g_apm_set = 1;
+            atexit(apm_restore);
+        }
+        rt_log("[switch] handheld performance configuration 0x%08X -> 0x%08X (GPU 384 MHz): rc 0x%X", g_apm_prev,
+               APM_CONF_HANDHELD_GPU384, rc);
+    }
+}
+
 void platform_init(void) {
     appletHook(&g_hook, applet_hook, NULL);  /* before the render thread runs appletMainLoop */
     mkdir(BASE_DIR, 0777);
@@ -76,6 +109,7 @@ void platform_init(void) {
         }
         fclose(f);
     }
+    handheld_gpu_profile();
 }
 
 const char* platform_disc_path(void) {
