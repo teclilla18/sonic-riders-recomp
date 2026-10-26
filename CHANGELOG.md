@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Switch: fixed a large slowdown after the first few minutes.** After some races the game leaves a
+  rarely used color setting switched on, and from then on the port stopped using its fast
+  precompiled shaders for everything: menus and races took several times longer on the GPU (about
+  20 fps at stock clocks). The fast shaders now keep working for the whole session.
+- Faster translated game code on Switch: cheaper function calls and memory accesses (7% smaller code).
+
 ## v0.3.1
 
 - **Switch: playable without an overclock.** At stock clocks, races now hold a steady 30 fps (tested

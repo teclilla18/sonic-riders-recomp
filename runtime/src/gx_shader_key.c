@@ -35,19 +35,35 @@ void gx_frag_key(const uint32_t* bp, GxFragKey* k) {
         add(k, 0xC0 + 2 * s, bp[0xC0 + 2 * s]);
         add(k, 0xC1 + 2 * s, bp[0xC1 + 2 * s]);
     }
-    for (uint32_t i = 0; i < 8; i++) {  /* swap tables (bits 0-3) and the konst selects of stages 2i, 2i+1 */
+    /* swap tables (bits 0-3) and the konst selects of stages 2i, 2i+1: a stage's konst color select
+     * counts only when one of its color inputs is KONST (14), the alpha select only when an alpha
+     * input is (6). The game leaves selects set after a material that used them, so without this
+     * every later state missed the specialized table (hardware log hw35). */
+    uint32_t kc_used = 0, ka_used = 0;
+    for (uint32_t s = 0; s < stages; s++) {
+        uint32_t ce = bp[0xC0 + 2 * s], ae = bp[0xC1 + 2 * s];
+        for (int f = 0; f < 16; f += 4)
+            if (((ce >> f) & 15) == 14) kc_used |= 1u << s;
+        for (int f = 4; f < 16; f += 3)
+            if (((ae >> f) & 7) == 6) ka_used |= 1u << s;
+    }
+    for (uint32_t i = 0; i < 8; i++) {
         uint32_t v = bp[0xF6 + i], m = 0xF;
-        if (2 * i < stages) m |= 0x3FF0;
-        if (2 * i + 1 < stages) m |= 0xFFC000;
+        if (kc_used >> (2 * i) & 1) m |= 0x1F0;
+        if (ka_used >> (2 * i) & 1) m |= 0x3E00;
+        if (kc_used >> (2 * i + 1) & 1) m |= 0x7C000;
+        if (ka_used >> (2 * i + 1) & 1) m |= 0xF80000;
         add(k, 0xF6 + i, v & m);
     }
     add(k, 0xF3, bp[0xF3] & 0xFF0000);  /* alpha test functions and logic */
     add(k, 0x42, bp[0x42] & 0x100);     /* constant ("destination") alpha enable */
     if (nind) {
         for (uint32_t s = 0; s < stages; s++) add(k, 0x10 + s, bp[0x10 + s]);
-        add(k, 0x25, bp[0x25]);
-        add(k, 0x26, bp[0x26]);
-        add(k, 0x27, bp[0x27]);
+        /* scales and references of the indirect stages in use only (stage k: 0x25 + k / 2 bits
+         * (k & 1) * 8 .. +7, 0x27 bits 6k .. 6k + 5) */
+        add(k, 0x25, bp[0x25] & (nind > 1 ? 0xFFFFu : 0xFFu));
+        add(k, 0x26, bp[0x26] & (nind > 3 ? 0xFFFFu : nind > 2 ? 0xFFu : 0u));
+        add(k, 0x27, bp[0x27] & ((1u << (6 * (nind > 4 ? 4 : nind))) - 1));
     }
     uint64_t h = 0xCBF29CE484222325ull;
     for (int i = 0; i < k->n; i++) {

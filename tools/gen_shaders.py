@@ -40,8 +40,51 @@ def parse_keys(paths):
                 regs = [(int(a, 16), int(b, 16)) for a, b in (x.split(":") for x in f[2:2 + int(f[1])])]
             except ValueError:
                 continue
-            keys[h] = regs
+            regs = normalize(regs)
+            keys[key_hash(regs)] = regs
     return keys
+
+
+def normalize(regs):
+    """the masks of runtime/src/gx_shader_key.c, so key files recorded by older builds still match"""
+    d = dict(regs)
+    gen = d.get(0x00, 0)
+    stages = ((gen >> 10) & 15) + 1
+    nind = (gen >> 16) & 7
+    kc = ka = 0
+    for s in range(stages):
+        ce, ae = d.get(0xC0 + 2 * s, 0), d.get(0xC1 + 2 * s, 0)
+        if any((ce >> f) & 15 == 14 for f in (0, 4, 8, 12)):
+            kc |= 1 << s
+        if any((ae >> f) & 7 == 6 for f in (4, 7, 10, 13)):
+            ka |= 1 << s
+    out = []
+    for r, v in regs:
+        if 0xF6 <= r <= 0xFD:
+            i = r - 0xF6
+            m = 0xF
+            if kc >> (2 * i) & 1: m |= 0x1F0
+            if ka >> (2 * i) & 1: m |= 0x3E00
+            if kc >> (2 * i + 1) & 1: m |= 0x7C000
+            if ka >> (2 * i + 1) & 1: m |= 0xF80000
+            v &= m
+        elif r == 0x25:
+            v &= 0xFFFF if nind > 1 else 0xFF
+        elif r == 0x26:
+            v &= 0xFFFF if nind > 3 else 0xFF if nind > 2 else 0
+        elif r == 0x27:
+            v &= (1 << (6 * min(nind, 4))) - 1
+        out.append((r, v))
+    return out
+
+
+def key_hash(regs):
+    """FNV-1a over (register, value) pairs, as gx_frag_key computes it"""
+    h = 0xCBF29CE484222325
+    for r, v in regs:
+        h = ((h ^ r) * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+        h = ((h ^ v) * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return h
 
 
 def specialized_source(regs):
