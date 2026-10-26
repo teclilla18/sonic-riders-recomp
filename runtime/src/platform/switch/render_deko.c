@@ -42,8 +42,14 @@ static float g_s = EFB_SCALE;
 #define SLOT_VTX   (48u << 20)
 #define SLOT_UBO   (24u << 20)  /* ~14000 states (1792 bytes each) */
 #define SLOT_STAGE (32u << 20)
-#define SLOT_XFM   (8u << 20)   /* the frame's XF memory chunk pool (storage buffer) */
-#define SLOT_SIZE  (SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE + SLOT_XFM)
+#define SLOT_XFM   (8u << 20)   /* the frame's XF memory chunk pool (storage buffer; SR_GPU_AB's old shader only) */
+#define SLOT_XFI   (8u << 20)   /* the states' XF memory images (uniform buffers, XF_IMAGE_BYTES each) */
+#define SLOT_SIZE  (SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE + SLOT_XFM + SLOT_XFI)
+/* a state's XF memory as its vertex shader reads it (gx_common.glsl XF_UBO): chunks 0-3 (matrices), 16-17
+ * (normal matrices), 20-25 (post matrices, lights) of GX_XFM_CHUNK words */
+#define XF_IMAGE_CHUNKS 12
+#define XF_IMAGE_BYTES (XF_IMAGE_CHUNKS * GX_XFM_CHUNK * 4)
+static const uint8_t k_xf_image_chunks[XF_IMAGE_CHUNKS] = {0, 1, 2, 3, 16, 17, 20, 21, 22, 23, 24, 25};
 #define IMAGE_POOL (384u << 20)
 
 static DkDevice g_dev;
@@ -51,22 +57,21 @@ static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
-static DkShader g_vsh_pos, g_fsh_flat;  /* GPU cost test variants (SR_GPU_AB) */
+static DkShader g_vsh_ssbo;  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
 
-/* SR_GPU_AB=1 (hardware testing): cycles every AB_FRAMES frames through variants that leave out one
- * part of the GPU's work and logs the GPU time of each, to find what the time goes to:
- *   0 normal, 1 vertex shader positions only, 2 flat-colour fragment shader, 3 both, 4 no draws (state only)
- * The picture is wrong in modes 1-4. */
-#define AB_MODES 5
-#define AB_FRAMES 600
+/* SR_GPU_AB=1 (hardware testing): alternates every frame between the vertex shader reading XF memory
+ * from uniform buffers (normal) and the old one reading it from a storage buffer, and logs the GPU
+ * time of each every AB_LOG frames. Both draw the same picture. */
+#define AB_MODES 2
+#define AB_FRAMES 1
+#define AB_LOG 600
 static int g_ab_on = -1;
 static unsigned g_ab_frame;
 static int g_ab_mode;
 static int g_ts_mode[2];
 static double g_ab_ms[AB_MODES], g_ab_vs[AB_MODES], g_ab_fs[AB_MODES], g_ab_pr[AB_MODES];
 static unsigned g_ab_n[AB_MODES];
-static const char* const k_ab_names[AB_MODES] = {"normal", "vertex shader positions only", "flat fragment shader",
-                                                 "both", "no draws (state changes only)"};
+static const char* const k_ab_names[AB_MODES] = {"XF in uniform buffers (new)", "XF in a storage buffer (old)"};
 static const DkShader* g_fsh_bound;  /* the fragment shader bound in this frame's command list */
 static DkShader g_spec[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];  /* specialized fragment shaders */
 static int g_spec_on = 1;              /* SR_NOSPEC=1: the ubershader only */
@@ -78,7 +83,6 @@ static unsigned long long g_spec_hits, g_spec_misses;  /* states, for the log */
 static const DkShader* frag_shader_for(const GxUniforms* u) {
     int ind = ((u->bp[0x00] >> 16) & 7) != 0;
     const DkShader* uber = ind ? &g_fsh_ind : &g_fsh;
-    if (g_ab_mode == 2 || g_ab_mode == 3) return &g_fsh_flat;
     if (!g_spec_on) return uber;
     GxFragKey k;
     gx_frag_key(u->bp, &k);
@@ -295,7 +299,7 @@ static void dk_setup(void) {
     g_cmd = dkCmdBufCreate(&cm);
 
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
-                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_pos_dksh + sizeof k_gx_frag_flat_dksh + 7 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + 6 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -303,8 +307,7 @@ static void dk_setup(void) {
     shader_load(&g_fsh_ind, k_gx_frag_ind_dksh, sizeof k_gx_frag_ind_dksh, &off);
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
-    shader_load(&g_vsh_pos, k_gx_vert_pos_dksh, sizeof k_gx_vert_pos_dksh, &off);
-    shader_load(&g_fsh_flat, k_gx_frag_flat_dksh, sizeof k_gx_frag_flat_dksh, &off);
+    shader_load(&g_vsh_ssbo, k_gx_vert_ssbo_dksh, sizeof k_gx_vert_ssbo_dksh, &off);
     for (int i = 0; i < GX_SPEC_COUNT; i++) shader_load(&g_spec[i], k_spec_blob + k_spec_off[i], k_spec_size[i], &off);
     if (getenv("SR_NOSPEC")) g_spec_on = 0;
     rt_log("[deko3d] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
@@ -782,10 +785,10 @@ static void execute(GxFrame* f) {
     }
     if (g_ab_on) {
         g_ab_mode = (int)((g_ab_frame++ / AB_FRAMES) % AB_MODES);
-        if (g_ab_frame % (AB_FRAMES * AB_MODES) == 0) {
+        if (g_ab_frame % AB_LOG == 0) {
             for (int m = 0; m < AB_MODES; m++)
                 if (g_ab_n[m])
-                    rt_log("[gpu-ab] %-30s GPU %6.2f ms/frame, %6.0f vertex shader runs, %8.0f fragment shader runs, %6.0f primitives per frame",
+                    rt_log("[gpu-ab] %-29s GPU %6.2f ms/frame, %6.0f vertex shader runs, %8.0f fragment shader runs, %6.0f primitives per frame",
                            k_ab_names[m], g_ab_ms[m] / g_ab_n[m], g_ab_vs[m] / g_ab_n[m], g_ab_fs[m] / g_ab_n[m], g_ab_pr[m] / g_ab_n[m]);
             memset(g_ab_ms, 0, sizeof g_ab_ms);
             memset(g_ab_vs, 0, sizeof g_ab_vs);
@@ -811,14 +814,25 @@ static void execute(GxFrame* f) {
     if (ncopy < f->nidx) rt_log("[deko3d] frame has %u indices, more than the buffer holds; truncated", f->nidx);
     memcpy(cpu + ioff, f->idx, (size_t)ncopy * 4);
 
-    /* the XF memory chunk pool, read by the vertex shader through the states' chunk tables */
+    /* XF memory: one image per chunk table (state), bound as the vertex shader's uniform buffer 1 */
     uint32_t xoff = SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE;
     uint32_t xbytes = f->nxchunks * GX_XFM_CHUNK * 4;
-    if (xbytes > SLOT_XFM) {
-        rt_log("[deko3d] frame has %u XF memory chunks, more than the pool holds; truncated", f->nxchunks);
-        xbytes = SLOT_XFM;
+    if (xbytes > SLOT_XFM) xbytes = SLOT_XFM;
+    if (g_ab_on > 0) memcpy(cpu + xoff, f->xchunks, xbytes);  /* the old shader's chunk pool */
+    uint32_t xioff = xoff + SLOT_XFM, nximg = f->nxtabs < SLOT_XFI / XF_IMAGE_BYTES ? f->nxtabs : SLOT_XFI / XF_IMAGE_BYTES;
+    if (nximg < f->nxtabs) {
+        static int warned;
+        if (!warned++) rt_log("[deko3d] a frame has %u XF memory states, more than the %u images that fit; the rest reuse the last",
+                              f->nxtabs, nximg);
     }
-    memcpy(cpu + xoff, f->xchunks, xbytes);
+    for (uint32_t t = 0; t < nximg; t++) {
+        uint8_t* dst = cpu + xioff + (size_t)t * XF_IMAGE_BYTES;
+        for (int k = 0; k < XF_IMAGE_CHUNKS; k++) {
+            uint32_t pc = f->xtabs[t].xtab[k_xf_image_chunks[k]];
+            if (pc < f->nxchunks) memcpy(dst + k * GX_XFM_CHUNK * 4, f->xchunks + (size_t)pc * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
+            else memset(dst + k * GX_XFM_CHUNK * 4, 0, GX_XFM_CHUNK * 4);
+        }
+    }
 
     /* textures this frame uses: created and uploaded before any draw */
     for (uint32_t i = 0; i < f->ncmds; i++)
@@ -829,7 +843,7 @@ static void execute(GxFrame* f) {
 
     DkImageView const* targets[1] = {&g_efb_view};
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
-    DkShader const* shaders[2] = {g_ab_mode == 1 || g_ab_mode == 3 ? &g_vsh_pos : &g_vsh, &g_fsh};
+    DkShader const* shaders[2] = {g_ab_mode == 1 ? &g_vsh_ssbo : &g_vsh, &g_fsh};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
     g_fsh_bound = &g_fsh;
     dkCmdBufBindImageDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc), MAX_IMAGES);
@@ -851,7 +865,7 @@ static void execute(GxFrame* f) {
     dkCmdBufBindVtxBufferState(g_cmd, &vb, 1);
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
     dkCmdBufBindIdxBuffer(g_cmd, DkIdxFormat_Uint32, gpu + ioff);
-    dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
+    if (g_ab_mode == 1) dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
 
     /* the register blocks and chunk tables, uploaded once each at the uniform buffer alignment;
      * STATE commands bind them by index */
@@ -876,7 +890,10 @@ static void execute(GxFrame* f) {
             if (!ubo_ok) { cur = NULL; break; }
             if (c->b != cur_xtab) {
                 cur_xtab = c->b;
-                dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
+                uint32_t t = c->b < nximg ? c->b : nximg - 1;
+                if (nximg) dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xioff + (DkGpuAddr)t * XF_IMAGE_BYTES, XF_IMAGE_BYTES);
+                if (g_ab_mode == 1)
+                    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 2, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
             }
             if (c->a == cur_regs) break;
             cur_regs = c->a;
@@ -899,7 +916,6 @@ static void execute(GxFrame* f) {
         case GXC_DRAW:
             if (!cur || c->a + c->b > ncopy || vbytes < f->nverts * (uint32_t)sizeof(GxVertex)) break;
             bind_textures(c, cur);
-            if (g_ab_mode == 4) break;
             dkCmdBufDrawIndexed(g_cmd, c->prim == GXP_TRIANGLES ? DkPrimitive_Triangles
                                        : c->prim == GXP_LINES   ? DkPrimitive_Lines
                                                                 : DkPrimitive_Points,

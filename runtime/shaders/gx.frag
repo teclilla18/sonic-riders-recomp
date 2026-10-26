@@ -211,12 +211,6 @@ void tev_stage(int s, inout vec4 r0, inout vec4 r1, inout vec4 r2, inout vec4 r3
     if (adst == 0u) r0.a = ares; else if (adst == 1u) r1.a = ares; else if (adst == 2u) r2.a = ares; else r3.a = ares;
 }
 void main() {
-#ifdef GX_FLAT
-  /* GPU cost test (SR_GPU_AB, render_deko.c): the vertex colour only, no TEV and no textures */
-  o_color = vec4(v_col0.rgb, 1.0);
-  o_blend = vec4(1.0);
-  return;
-#endif
   vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
 #if GX_INDIRECT
   /* indirect texturing: the indirect stages' lookups, and the running coordinate for "add prev" */

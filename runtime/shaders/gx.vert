@@ -21,7 +21,11 @@ VARY(6) out vec3 v_tex4;
  VARY(8) out vec3 v_tex6;
  VARY(9) out vec3 v_tex7;
 
+#ifdef XF_UBO
+vec4 row(int a) { return uintBitsToFloat(xf[xfi(a) >> 2]); }  /* a is a multiple of 4: one vector */
+#else
 vec4 row(int a) { return vec4(XM(a), XM(a + 1), XM(a + 2), XM(a + 3)); }
+#endif
 vec3 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb, bool alpha) {
   vec4 sum = amb;
   uint mask = bits(ctrl, 2, 4) | (bits(ctrl, 11, 4) << 4);
@@ -109,12 +113,6 @@ void main() {
   float xs = uintBitsToFloat(XR(0x1A)), ys = uintBitsToFloat(XR(0x1B)), zs = uintBitsToFloat(XR(0x1C));
   float zo = uintBitsToFloat(XR(0x1F));
   gl_Position = vec4(clip.x * sign(xs), clip.y * sign(ys) * CLIP_Y, (2.0 * zo / 16777215.0 - 1.0) * clip.w + 2.0 * zs / 16777215.0 * clip.z, clip.w);
-#ifdef GX_POSONLY
-  /* GPU cost test (SR_GPU_AB, render_deko.c): the same positions, no lighting and no texture coordinates */
-  v_col0 = a_col0; v_col1 = a_col1;
-  v_tex0 = v_tex1 = v_tex2 = v_tex3 = v_tex4 = v_tex5 = v_tex6 = v_tex7 = vec3(a_tex01.xy, 1.0);
-  return;
-#endif
   uint nchan = bits(XR(0x09), 0, 2);
   v_col0 = nchan >= 1u ? channel(0, a_col0, pv, n) : vec4(0.0);
   v_col1 = nchan >= 2u ? channel(1, a_col1, pv, n) : vec4(0.0);

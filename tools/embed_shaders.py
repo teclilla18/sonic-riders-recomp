@@ -30,10 +30,11 @@ PRELUDE_DK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(
 # its register count (56 -> 76 GPRs, fewer pixels in flight), so only draws using it get that variant.
 PROGRAMS_GL = (("gx_vert", "gx", "vert", ""), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 1\n"),
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
-PROGRAMS_DK = (("gx_vert", "gx", "vert", ""), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
+# The deko3d vertex shader reads XF memory from a per-state uniform buffer (XF_UBO); gx_vert_ssbo is the
+# old storage-buffer form, kept for the GPU cost test (SR_GPU_AB) to compare against.
+PROGRAMS_DK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
-               ("gx_vert_pos", "gx", "vert", "#define GX_POSONLY 1\n"),  # GPU cost test (SR_GPU_AB)
-               ("gx_frag_flat", "gx", "frag", "#define GX_INDIRECT 0\n#define GX_FLAT 1\n"),
+               ("gx_vert_ssbo", "gx", "vert", "#define BIND_UBO_XT , binding = 2\n"),  # GPU cost test (SR_GPU_AB)
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
 
 
