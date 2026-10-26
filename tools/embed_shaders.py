@@ -32,6 +32,8 @@ PROGRAMS_GL = (("gx_vert", "gx", "vert", ""), ("gx_frag", "gx", "frag", "#define
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
 PROGRAMS_DK = (("gx_vert", "gx", "vert", ""), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
+               ("gx_vert_pos", "gx", "vert", "#define GX_POSONLY 1\n"),  # GPU cost test (SR_GPU_AB)
+               ("gx_frag_flat", "gx", "frag", "#define GX_INDIRECT 0\n#define GX_FLAT 1\n"),
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
 
 

@@ -51,6 +51,22 @@ static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
+static DkShader g_vsh_pos, g_fsh_flat;  /* GPU cost test variants (SR_GPU_AB) */
+
+/* SR_GPU_AB=1 (hardware testing): cycles every AB_FRAMES frames through variants that leave out one
+ * part of the GPU's work and logs the GPU time of each, to find what the time goes to:
+ *   0 normal, 1 vertex shader positions only, 2 flat-colour fragment shader, 3 both, 4 no draws (state only)
+ * The picture is wrong in modes 1-4. */
+#define AB_MODES 5
+#define AB_FRAMES 600
+static int g_ab_on = -1;
+static unsigned g_ab_frame;
+static int g_ab_mode;
+static int g_ts_mode[2];
+static double g_ab_ms[AB_MODES], g_ab_vs[AB_MODES], g_ab_fs[AB_MODES], g_ab_pr[AB_MODES];
+static unsigned g_ab_n[AB_MODES];
+static const char* const k_ab_names[AB_MODES] = {"normal", "vertex shader positions only", "flat fragment shader",
+                                                 "both", "no draws (state changes only)"};
 static const DkShader* g_fsh_bound;  /* the fragment shader bound in this frame's command list */
 static DkShader g_spec[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];  /* specialized fragment shaders */
 static int g_spec_on = 1;              /* SR_NOSPEC=1: the ubershader only */
@@ -62,6 +78,7 @@ static unsigned long long g_spec_hits, g_spec_misses;  /* states, for the log */
 static const DkShader* frag_shader_for(const GxUniforms* u) {
     int ind = ((u->bp[0x00] >> 16) & 7) != 0;
     const DkShader* uber = ind ? &g_fsh_ind : &g_fsh;
+    if (g_ab_mode == 2 || g_ab_mode == 3) return &g_fsh_flat;
     if (!g_spec_on) return uber;
     GxFragKey k;
     gx_frag_key(u->bp, &k);
@@ -94,7 +111,10 @@ static unsigned g_busy_frames;
 
 /* GPU time per frame: two timestamps around each slot's commands (DkCounter_Timestamp is written when
  * all earlier work is done, so the first one marks the end of the previous frame or of idle time) */
-static DkMemBlock g_ts;              /* per slot: 2 reports of 16 bytes (value, timestamp) */
+static DkMemBlock g_ts;              /* per slot: 4 counters x (start, end) reports of 16 bytes (value, timestamp) */
+static const DkCounter k_counters[4] = {DkCounter_Timestamp, DkCounter_VertexShaderInvocations,
+                                        DkCounter_FragmentShaderInvocations, DkCounter_InputPrimitives};
+static double g_cnt_sum[3];          /* vertex shader runs, fragment shader runs, primitives (for the log) */
 static int g_ts_valid[2];
 static uint64_t g_gpu_frame_ns;      /* the last measured frame */
 static uint64_t g_gpu_ns_sum, g_gpu_ns_max;
@@ -275,7 +295,7 @@ static void dk_setup(void) {
     g_cmd = dkCmdBufCreate(&cm);
 
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
-                       sizeof k_overlay_frag_dksh + 5 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_pos_dksh + sizeof k_gx_frag_flat_dksh + 7 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -283,6 +303,8 @@ static void dk_setup(void) {
     shader_load(&g_fsh_ind, k_gx_frag_ind_dksh, sizeof k_gx_frag_ind_dksh, &off);
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
+    shader_load(&g_vsh_pos, k_gx_vert_pos_dksh, sizeof k_gx_vert_pos_dksh, &off);
+    shader_load(&g_fsh_flat, k_gx_frag_flat_dksh, sizeof k_gx_frag_flat_dksh, &off);
     for (int i = 0; i < GX_SPEC_COUNT; i++) shader_load(&g_spec[i], k_spec_blob + k_spec_off[i], k_spec_size[i], &off);
     if (getenv("SR_NOSPEC")) g_spec_on = 0;
     rt_log("[deko3d] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
@@ -725,11 +747,22 @@ static void execute(GxFrame* f) {
     g_last_gpu = 0;
     slot_reclaim(g_slot);
     /* this slot's previous frame is done: its GPU time, for the log */
-    volatile uint64_t* ts = (volatile uint64_t*)dkMemBlockGetCpuAddr(g_ts) + g_slot * 4;
-    DkGpuAddr ts_gpu = dkMemBlockGetGpuAddr(g_ts) + g_slot * 32;
+    /* report k: start at [k * 4], end at [k * 4 + 2] (u64 value, u64 timestamp each) */
+    volatile uint64_t* ts = (volatile uint64_t*)dkMemBlockGetCpuAddr(g_ts) + g_slot * 16;
+    DkGpuAddr ts_gpu = dkMemBlockGetGpuAddr(g_ts) + g_slot * 128;
     int have = g_ts_valid[g_slot] && ts[3] >= ts[1];
     if (have) {
         g_gpu_frame_ns = dkTimestampToNs(ts[3] - ts[1]);
+        double vs = (double)(ts[6] - ts[4]), fs = (double)(ts[10] - ts[8]), pr = (double)(ts[14] - ts[12]);
+        g_cnt_sum[0] += vs;
+        g_cnt_sum[1] += fs;
+        g_cnt_sum[2] += pr;
+        int m = g_ts_mode[g_slot];
+        g_ab_ms[m] += g_gpu_frame_ns / 1e6;
+        g_ab_vs[m] += vs;
+        g_ab_fs[m] += fs;
+        g_ab_pr[m] += pr;
+        g_ab_n[m]++;
         double ms = g_gpu_frame_ns / 1e6;
         g_gpu_ms_avg = g_gpu_ms_avg < 0 ? ms : g_gpu_ms_avg * 0.9 + ms * 0.1;
         g_gpu_ns_sum += g_gpu_frame_ns;
@@ -743,7 +776,26 @@ static void execute(GxFrame* f) {
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
     dkCmdBufClear(g_cmd);
     dkCmdBufAddMemory(g_cmd, mem, 0, SLOT_CMD);
-    dkCmdBufReportCounter(g_cmd, DkCounter_Timestamp, ts_gpu);
+    if (g_ab_on < 0) {
+        g_ab_on = getenv("SR_GPU_AB") && atoi(getenv("SR_GPU_AB")) != 0;
+        if (g_ab_on) rt_log("[gpu-ab] GPU cost test on: %d modes of %d frames each", AB_MODES, AB_FRAMES);
+    }
+    if (g_ab_on) {
+        g_ab_mode = (int)((g_ab_frame++ / AB_FRAMES) % AB_MODES);
+        if (g_ab_frame % (AB_FRAMES * AB_MODES) == 0) {
+            for (int m = 0; m < AB_MODES; m++)
+                if (g_ab_n[m])
+                    rt_log("[gpu-ab] %-30s GPU %6.2f ms/frame, %6.0f vertex shader runs, %8.0f fragment shader runs, %6.0f primitives per frame",
+                           k_ab_names[m], g_ab_ms[m] / g_ab_n[m], g_ab_vs[m] / g_ab_n[m], g_ab_fs[m] / g_ab_n[m], g_ab_pr[m] / g_ab_n[m]);
+            memset(g_ab_ms, 0, sizeof g_ab_ms);
+            memset(g_ab_vs, 0, sizeof g_ab_vs);
+            memset(g_ab_fs, 0, sizeof g_ab_fs);
+            memset(g_ab_pr, 0, sizeof g_ab_pr);
+            memset(g_ab_n, 0, sizeof g_ab_n);
+        }
+    }
+    g_ts_mode[g_slot] = g_ab_mode;
+    for (int k = 0; k < 4; k++) dkCmdBufReportCounter(g_cmd, k_counters[k], ts_gpu + k * 32);
     g_vtx_off = g_stage_off = 0;
 
     /* vertices */
@@ -777,7 +829,7 @@ static void execute(GxFrame* f) {
 
     DkImageView const* targets[1] = {&g_efb_view};
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
-    DkShader const* shaders[2] = {&g_vsh, &g_fsh};
+    DkShader const* shaders[2] = {g_ab_mode == 1 || g_ab_mode == 3 ? &g_vsh_pos : &g_vsh, &g_fsh};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
     g_fsh_bound = &g_fsh;
     dkCmdBufBindImageDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc), MAX_IMAGES);
@@ -847,6 +899,7 @@ static void execute(GxFrame* f) {
         case GXC_DRAW:
             if (!cur || c->a + c->b > ncopy || vbytes < f->nverts * (uint32_t)sizeof(GxVertex)) break;
             bind_textures(c, cur);
+            if (g_ab_mode == 4) break;
             dkCmdBufDrawIndexed(g_cmd, c->prim == GXP_TRIANGLES ? DkPrimitive_Triangles
                                        : c->prim == GXP_LINES   ? DkPrimitive_Lines
                                                                 : DkPrimitive_Points,
@@ -895,7 +948,7 @@ static void execute(GxFrame* f) {
         dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
         shot_request(&fv);
     }
-    dkCmdBufReportCounter(g_cmd, DkCounter_Timestamp, ts_gpu + 16);
+    for (int k = 0; k < 4; k++) dkCmdBufReportCounter(g_cmd, k_counters[k], ts_gpu + k * 32 + 16);
     g_ts_valid[g_slot] = 1;
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     if (g_fb_slot >= 0) {
@@ -926,8 +979,11 @@ static void execute(GxFrame* f) {
                "specialized shaders for %llu of %llu states",
                armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,
                (unsigned long long)(g_upload_bytes / 120 / 1024), g_spec_hits, g_spec_hits + g_spec_misses);
-        rt_log("[deko3d]   GPU %.2f ms/frame (longest %.2f) at %.1fx internal resolution",
-               g_gpu_n ? g_gpu_ns_sum / (double)g_gpu_n / 1e6 : 0.0, g_gpu_ns_max / 1e6, g_s_sum / 120);
+        double n = g_gpu_n ? (double)g_gpu_n : 1.0;
+        rt_log("[deko3d]   GPU %.2f ms/frame (longest %.2f) at %.1fx internal resolution; per frame %.0f vertex shader runs, "
+               "%.0f fragment shader runs, %.0f primitives",
+               g_gpu_ns_sum / n / 1e6, g_gpu_ns_max / 1e6, g_s_sum / 120, g_cnt_sum[0] / n, g_cnt_sum[1] / n, g_cnt_sum[2] / n);
+        g_cnt_sum[0] = g_cnt_sum[1] = g_cnt_sum[2] = 0;
         g_gpu_ns_sum = g_gpu_ns_max = 0;
         g_gpu_n = 0;
         g_s_sum = 0.0f;
