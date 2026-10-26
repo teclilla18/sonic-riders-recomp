@@ -38,6 +38,11 @@ static volatile uint32_t g_trace_ring[TRACE_RING];
 static volatile unsigned g_trace_pos;
 void ppc_trace_enter(uint32_t addr) { g_trace_ring[g_trace_pos++ % TRACE_RING] = addr; }
 
+void ppc_float_report(uint32_t addr, double ref, double got) {
+    static int n;
+    if (n++ < 20) rt_log("[floatcheck] %08X: double-then-single %.9g, single %.9g", addr, ref, got);
+}
+
 void ppc_sum_report(uint32_t site, int reg) {
     static int n;
     if (n++ < 20) rt_log("[sumcheck] the call at %08X changed %s%d outside its register summary", site, reg < 32 ? "r" : "f",

@@ -22,12 +22,27 @@ on the generated C text of each instruction:
 round25(X) with X known single becomes (X), or ppc_single_chk(X, addr) when checking
 (RECOMP_SINGLE_CHECK=1: the runtime logs any operand that was not single after all).
 RECOMP_SINGLE=0 turns the pass off. Results are identical by construction.
+
+Single-precision arithmetic in float (RECOMP_FLOAT=0 off): `to_single(A op B)` with op one of + - * /
+and both A and B register halves known single becomes `(double)((float)A op (float)B)`. For these
+operations on single-precision operands, rounding the exact result to double and then to single gives
+the same value as rounding it to single directly (double has more than 2 * 24 + 2 bits), so the
+results are bit-identical; the C compiler then drops the float<->double conversions between such
+operations (two per single-precision instruction on ARM). Fused forms (fmadds etc.) stay in double.
+RECOMP_FLOAT_CHECK=1 computes both and logs any difference (ppc.h ppc_float_chk).
+Off by default (RECOMP_FLOAT=1 turns it on): checked identical on PC (attract demo and a menu route, 7,379
+operations), but GCC keeps the register locals as doubles, so the Switch code had slightly more
+conversions (one hot file: 5,328 fcvt vs 5,263). It would need the locals themselves typed float.
 """
 import os
 import re
 
 ENABLED = os.environ.get("RECOMP_SINGLE", "1") != "0"
 CHECK = os.environ.get("RECOMP_SINGLE_CHECK", "0") == "1"
+FLOAT = os.environ.get("RECOMP_FLOAT", "0") == "1"  # off: GCC kept the doubles (see the docstring)
+FLOAT_CHECK = os.environ.get("RECOMP_FLOAT_CHECK", "0") == "1"
+_HALF_PAT = r"(?:\((c->f\[(\d+)\]\.ps([01]))\)|(c->f\[(\d+)\]\.ps([01])))"  # (half) or half, balanced
+R_BINOP = re.compile(r"to_single\(" + _HALF_PAT + r" ([-+*/]) " + _HALF_PAT + r"\)")
 
 ALL = (1 << 64) - 1
 
@@ -206,6 +221,21 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
     seen = done = 0
     out = []
     for i, (a, w, s) in enumerate(body):
+        if FLOAT and "to_single(" in s and reach[i] and a not in patched:
+            state = st_in[i]
+
+            def frep(m, state=state, a=a):
+                ax, an, ak = (m.group(1), m.group(2), m.group(3)) if m.group(1) else (m.group(4), m.group(5), m.group(6))
+                bx, bn, bk = (m.group(8), m.group(9), m.group(10)) if m.group(8) else (m.group(11), m.group(12), m.group(13))
+                op = m.group(7)
+                if not (state & bit(int(an), int(ak)) and state & bit(int(bn), int(bk))):
+                    return m.group(0)
+                fl = "((double)((float)%s %s (float)%s))" % (ax, op, bx)
+                if FLOAT_CHECK:
+                    return "ppc_float_chk(to_single(%s %s %s), %s, 0x%08Xu)" % (ax, op, bx, fl, a)
+                return fl
+
+            s = R_BINOP.sub(frep, s)
         if "round25(" in s:
             state = st_in[i] if reach[i] and a not in patched else 0
 

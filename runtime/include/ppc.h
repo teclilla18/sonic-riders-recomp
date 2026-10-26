@@ -388,6 +388,14 @@ static inline void ppc_sum_check(Cpu* c, uint64_t keep, PpcSumSave* s, uint32_t 
         }
 }
 
+/* checking build of the float arithmetic (RECOMP_FLOAT_CHECK=1, tools/recomp/singleflow.py): the
+ * double-then-single result and the single-precision one must be the same bits (NaNs: both NaN) */
+void ppc_float_report(uint32_t addr, double ref, double got);
+static inline double ppc_float_chk(double ref, double got, uint32_t addr) {
+    if (__builtin_expect(f64_as_u64(ref) != f64_as_u64(got) && !(ref != ref && got != got), 0)) ppc_float_report(addr, ref, got);
+    return ref;
+}
+
 /* fcmpu / fcmpo. IEEE comparisons with a NaN are false, so lt/gt/eq need no NaN test; un is the
  * fourth outcome. FPSCR's FPCC field (which fcmp also sets) is not kept: only mffs and mcrfs read
  * it, and this game has neither (ppc2c warns when it translates one). */
