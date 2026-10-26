@@ -1,8 +1,10 @@
-/* Guest side of the renderer: decodes draws and EFB copies from the GX command stream into the
+﻿/* Guest side of the renderer: decodes draws and EFB copies from the GX command stream into the
  * current frame's command list (gx_render.h). Runs on the guest thread that writes the FIFO. */
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include "gx.h"
 #include "game_addrs.h"
@@ -383,6 +385,118 @@ static void decode_fast(const uint8_t** pp, const FastPlan* fp, GxVertex* v) {
     *pp = p;
 }
 
+/* ---- the vertex decode helper ----
+ * With the GP thread on (gx_async), a draw's vertices are decoded by a helper thread (on the render
+ * thread's core, below it in priority: that core idles while the render thread waits for the GPU)
+ * instead of on the GP thread, whose core was the limit in busy races. The draw's stream bytes are
+ * copied (the FIFO ring is reused), its FastPlan is kept, and its place in the frame's vertex array
+ * is reserved. Indexed attributes are read from guest RAM when decoded, so every job is finished
+ * (the GP thread takes the ones not started) before anything that lets the game reuse that memory or
+ * hands the frame on: draw done and tokens (gx_fifo.c), the frame's submission, and growing the
+ * vertex array. SR_DECODE_HELPER=0 decodes on the GP thread as before. */
+typedef struct DecJob { FastPlan fp; GxVertex* out; uint32_t count, src; } DecJob;
+#define DJ_MAX 4096
+#define DJ_BYTES (2u << 20)
+static DecJob* g_dj;
+static uint8_t* g_dj_bytes;
+static uint32_t g_dj_used;                         /* stream bytes queued (GP thread) */
+static _Atomic uint32_t g_dj_pub, g_dj_next, g_dj_done;  /* jobs published, claimed, finished */
+static _Atomic int g_dj_sleeping;
+static mtx_t g_dj_lock;
+static cnd_t g_dj_cv;
+static int g_dj_on = -1;
+static _Atomic uint64_t g_dj_helper_ticks;         /* decode time on the helper ([perf]) */
+
+static int dj_run_one(int helper) {
+    uint32_t i = atomic_load_explicit(&g_dj_next, memory_order_relaxed);
+    do {
+        if (i >= atomic_load_explicit(&g_dj_pub, memory_order_acquire)) return 0;
+    } while (!atomic_compare_exchange_weak_explicit(&g_dj_next, &i, i + 1, memory_order_acq_rel, memory_order_relaxed));
+    uint64_t t = helper ? rt_ticks() : 0;
+    const DecJob* j = &g_dj[i];
+    const uint8_t* p = g_dj_bytes + j->src;
+    for (uint32_t k = 0; k < j->count; k++) decode_fast(&p, &j->fp, j->out + k);
+    if (helper) atomic_fetch_add_explicit(&g_dj_helper_ticks, rt_ticks() - t, memory_order_relaxed);
+    atomic_fetch_add_explicit(&g_dj_done, 1, memory_order_release);
+    return 1;
+}
+
+static int dj_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(1);
+    rt_thread_lower_priority();
+    for (;;) {
+        if (dj_run_one(1)) continue;
+        mtx_lock(&g_dj_lock);
+        atomic_store(&g_dj_sleeping, 1);
+        if (atomic_load(&g_dj_next) >= atomic_load(&g_dj_pub)) {
+            struct timespec ts;
+            timespec_get(&ts, TIME_UTC);
+            ts.tv_nsec += 2000000;
+            if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+            cnd_timedwait(&g_dj_cv, &g_dj_lock, &ts);
+        }
+        atomic_store(&g_dj_sleeping, 0);
+        mtx_unlock(&g_dj_lock);
+    }
+    return 0;
+}
+
+/* every queued draw decoded (GP thread): the ones not started here, then wait for the helper's */
+void gx_decode_sync(void) {
+    uint32_t pub = atomic_load_explicit(&g_dj_pub, memory_order_relaxed);
+    if (!pub) return;
+    uint64_t t = rt_ticks();
+    while (dj_run_one(0)) {}
+    while (atomic_load_explicit(&g_dj_done, memory_order_acquire) != pub) {}  /* the helper's one job in progress: short */
+    g_decode_ticks += rt_ticks() - t;
+    atomic_store(&g_dj_pub, 0);
+    atomic_store(&g_dj_next, 0);
+    atomic_store(&g_dj_done, 0);
+    g_dj_used = 0;
+}
+
+static int dj_enabled(void) {
+    if (g_dj_on < 0) {
+        const char* e = getenv("SR_DECODE_HELPER");
+        g_dj_on = gx_async() && !(e && atoi(e) == 0);
+        if (g_dj_on) {
+            g_dj = malloc(sizeof(DecJob) * DJ_MAX);
+            g_dj_bytes = malloc(DJ_BYTES);
+            if (!g_dj || !g_dj_bytes) rt_fatal("out of memory (decode helper)");
+            mtx_init(&g_dj_lock, mtx_plain);
+            cnd_init(&g_dj_cv);
+            rt_thread_start(dj_thread, NULL);
+        }
+        rt_log("[gx] vertex decode helper thread %s", g_dj_on ? "on" : "off");
+    }
+    return g_dj_on;
+}
+
+/* queue a draw's decode; 0 when it must be decoded here (no room, or the helper is off) */
+static int dj_queue(const FastPlan* fp, GxVertex* out, uint32_t count, const uint8_t* vertices, uint32_t bytes) {
+    if (!dj_enabled() || bytes > DJ_BYTES / 4) return 0;
+    uint32_t n = atomic_load_explicit(&g_dj_pub, memory_order_relaxed);
+    if (n >= DJ_MAX || g_dj_used + bytes > DJ_BYTES) {
+        gx_decode_sync();
+        n = 0;
+    }
+    DecJob* j = &g_dj[n];
+    j->fp = *fp;
+    j->out = out;
+    j->count = count;
+    j->src = g_dj_used;
+    memcpy(g_dj_bytes + g_dj_used, vertices, bytes);
+    g_dj_used += (bytes + 7) & ~7u;
+    atomic_store_explicit(&g_dj_pub, n + 1, memory_order_release);
+    if (atomic_load_explicit(&g_dj_sleeping, memory_order_acquire)) {
+        mtx_lock(&g_dj_lock);
+        cnd_signal(&g_dj_cv);
+        mtx_unlock(&g_dj_lock);
+    }
+    return 1;
+}
+
 /* the texture bound to `map` for this draw (timed for [perf] and [hitch]) */
 static void lookup_map(GxCmd* c, int map) {
     uint64_t t = rt_ticks();
@@ -392,19 +506,18 @@ static void lookup_map(GxCmd* c, int map) {
     g_tex_total += d;
 }
 
-static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices);
+static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size);
 static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
-    (void)vertex_size;
     if (gx_async()) {  /* on the GP thread: the profiler's variable is the game core's */
-        draw_impl(prim, vat, count, vertices);
+        draw_impl(prim, vat, count, vertices, vertex_size);
         return;
     }
     uint32_t prev = g_ppc_cur_fn;
     g_ppc_cur_fn = PROF_DRAW;
-    draw_impl(prim, vat, count, vertices);
+    draw_impl(prim, vat, count, vertices, vertex_size);
     g_ppc_cur_fn = prev;
 }
-static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices) {
+static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     if (!count) return;
     if (g_state_dirty) {
         uint64_t ts = rt_ticks();
@@ -424,6 +537,7 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     default: out_n = count; kind = GXP_POINTS; break;
     }
     if (!out_n) return;
+    if (f->nverts + count > f->cap_verts) gx_decode_sync();  /* queued decodes write into the array */
     f->verts = grow(f->verts, &f->cap_verts, f->nverts + count, sizeof(GxVertex));
     const uint8_t* p = vertices;
     DecodePlan plan;
@@ -434,7 +548,8 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     if (check < 0) check = getenv("SR_DECODECHECK") != NULL;
     uint64_t td = rt_ticks();
     if (!check) {
-        for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
+        if (!dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
+            for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
     } else {  /* SR_DECODECHECK: the reference decoder too, compared bit for bit */
         static unsigned long long checked, bad;
         const uint8_t* q = vertices;
@@ -561,6 +676,7 @@ static void efb_copy(uint32_t v) {
         }
         game_mods_frame();
         push_cmd(GXC_PRESENT);
+        gx_decode_sync();
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         uint64_t ts = rt_ticks();
@@ -644,8 +760,9 @@ static void efb_copy(uint32_t v) {
                            (g_tsnap_used - u0) / 120.0, (g_tsnap_missed - m0) / 120.0);
                     u0 = g_tsnap_used; m0 = g_tsnap_missed;
                 }
-                rt_log("[perf]   draw processing parts: vertex decode %.2f ms/frame, state snapshots %.2f ms/frame (%u/frame)",
-                       g_decode_ticks * 1000.0 / 40500000.0 / 120, g_state_ticks * 1000.0 / 40500000.0 / 120, g_state_pushes / 120);
+                rt_log("[perf]   draw processing parts: vertex decode %.2f ms/frame (+ %.2f on the helper thread), state snapshots %.2f ms/frame (%u/frame)",
+                       g_decode_ticks * 1000.0 / 40500000.0 / 120,
+                       atomic_exchange(&g_dj_helper_ticks, 0) * 1000.0 / 40500000.0 / 120, g_state_ticks * 1000.0 / 40500000.0 / 120, g_state_pushes / 120);
                 g_decode_ticks = g_state_ticks = 0;
                 g_state_pushes = 0;
                 rt_log("[perf]   EFB copies to textures/frame %.1f, from depth %.1f, target format codes seen %04X",

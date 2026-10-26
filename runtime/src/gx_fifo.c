@@ -149,7 +149,9 @@ static _Atomic uint64_t g_dd_issued, g_dd_wait, g_dd_max, g_dd_n;
 void gx_drawdone_stats(uint64_t* total, uint64_t* max, uint64_t* n) {
     *total = atomic_exchange(&g_dd_wait, 0); *max = atomic_exchange(&g_dd_max, 0); *n = atomic_exchange(&g_dd_n, 0);
 }
+void gx_decode_sync(void);  /* gx_render.c: queued vertex decodes finished */
 static void pe_finish(void) {
+    gx_decode_sync();  /* the game may reuse vertex arrays once it sees draw done */
     {
         uint64_t t0 = atomic_exchange(&g_dd_issued, 0);
         if (t0) {
@@ -168,6 +170,7 @@ static void pe_finish(void) {
 }
 
 static void pe_token(uint16_t token, int irq) {
+    gx_decode_sync();
     mtx_lock(&g_pe_lock);
     gx_tl('T', token | (unsigned)irq << 16);
     PE_TOKEN = token;
