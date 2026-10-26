@@ -536,7 +536,20 @@ int gx_tlut_snapshot_copy(uint32_t v64, uint32_t v65, uint8_t* dst, uint32_t len
 
 /* ---- write-gather pipe ---- */
 static void pipe_write(uint32_t v, int size);
+/* the write-gather buffer (see pipe_flush below) */
+static uint8_t g_wg[32 + 4];  /* room for a store that crosses the 32-byte boundary */
+static int g_wg_n;
 void gx_pipe_write(uint32_t v, int size) {
+    /* the common case first (most of the ~50,000 stores a busy frame makes): a word that neither
+     * follows a BP prefix byte (tlut_watch has nothing to do) nor completes a burst */
+    if (size == 4 && !g_prev_bp_prefix && g_wg_n <= 24) {
+        uint32_t be = __builtin_bswap32(v);
+        memcpy(g_wg + g_wg_n, &be, 4);
+        g_wg_n += 4;
+        g_pipe_stores++;
+        g_pipe_bytes += 4;
+        return;
+    }
     uint32_t prev = g_ppc_cur_fn;
     g_ppc_cur_fn = PROF_PIPE;
     pipe_write(v, size);
@@ -545,8 +558,6 @@ void gx_pipe_write(uint32_t v, int size) {
 /* The write-gather pipe collects stores into 32-byte bursts, as the hardware's does (the SDK's GXFlush
  * pads with 32 zero bytes to push the last one out); a burst goes to RAM and the GP at once. Accesses
  * to the PI and CP registers flush a partial one first (the game may be reading the FIFO pointers). */
-static uint8_t g_wg[32 + 4];  /* room for a store that crosses the 32-byte boundary */
-static int g_wg_n;
 static void burst_out(const uint8_t* b, int size);
 
 static void pipe_flush(void) {

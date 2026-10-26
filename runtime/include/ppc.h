@@ -1,4 +1,4 @@
-/* Forked from ZeldaWWHDRecomp runtime/include/ppc.h (commit f10b566), MPL-2.0. Modified for GameCube; see NOTES.md. */
+﻿/* Forked from ZeldaWWHDRecomp runtime/include/ppc.h (commit f10b566), MPL-2.0. Modified for GameCube; see NOTES.md. */
 /* Espresso (Wii U PowerPC) CPU state and helpers used by recompiled code.
  *
  * Guest memory is a 4 GiB window mapped at a fixed host address, so a guest
@@ -8,6 +8,13 @@
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
+
+/* everything declared here is defined inside the program (a static executable): hidden visibility
+ * lets position-independent code (the Switch's PIE) address the globals the generated code touches
+ * at every function entry (g_ppc_cur_fn, g_core_preempt...) directly instead of through the GOT */
+#if defined(__GNUC__) && !defined(_WIN32)
+#pragma GCC visibility push(hidden)
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +51,7 @@ extern uint8_t* ppc_mem_base_var;
 #define PPC_MEM_BASE (ppc_mem_base_var)
 #endif
 #define PPC_PHYS_MASK 0x3FFFFFFFu
-#define PPC_IS_MMIO(ea) ((uint32_t)((ea) - 0xC8000000u) < 0x08000000u)
+#define PPC_IS_MMIO(ea) (((uint32_t)(ea) >> 27) == 0x19u)  /* 0xC8000000-0xCFFFFFFF */
 
 typedef struct Cpu {
     uint32_t r[32];
@@ -586,4 +593,8 @@ static inline __attribute__((always_inline)) void psq_store(Cpu* c, int fs, uint
 
 #ifdef __cplusplus
 }
+#endif
+
+#if defined(__GNUC__) && !defined(_WIN32)
+#pragma GCC visibility pop
 #endif

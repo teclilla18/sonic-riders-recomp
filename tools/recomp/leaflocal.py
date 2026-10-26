@@ -186,7 +186,8 @@ SUMMARY_CHECK = os.environ.get("RECOMP_SUMMARY_CHECK", "0") == "1"  # checking b
 SUMMARY = {}  # "f_XXXXXXXX" -> frozenset of register ids (GPR n, FPR 32 + n); absent: unknown
 SUMMARY_SAFE = {"cr_set_s", "cr_set_u", "cr_set_f", "cr_set_s_m", "cr_set_u_m", "cr_set_f_m", "cr0_rc", "cr0_rc_m",
                 "psq_load", "psq_store", "ppc_mfcr", "ppc_mtcrf", "ppc_fctiw", "ppc_mfxer", "ppc_mtxer",
-                "ppc_mfspr", "ppc_mtspr", "ppc_mfmsr", "ppc_dcbz", "ppc_lwarx", "ppc_stwcx", "ppc_cr_read"}
+                "ppc_mfspr", "ppc_mtspr", "ppc_mfmsr", "ppc_dcbz", "ppc_lwarx", "ppc_stwcx", "ppc_cr_read",
+                "ppc_unimplemented", "ppc_trap"}  # these two end the program (rt_fatal): no registers to keep
 _S_CALL = re.compile(r"\b(f_[0-9A-F]{8}(?:_orig)?)\(c\);")
 _S_USE = re.compile(r"\b(\w+)\(c\b(?!->)")
 
