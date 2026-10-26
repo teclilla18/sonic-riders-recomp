@@ -196,8 +196,8 @@ bool is_rect(const ImDrawVert* v, const ImDrawIdx* ix, unsigned n, unsigned i) {
 
 }  // namespace
 
-void menu_raster(ImDrawData* dd, uint8_t* px, int w, int h) {
-    /* textures: ImGui 1.92's protocol, kept on the CPU side (the pixels are read in place) */
+void menu_raster_textures(ImDrawData* dd) {
+    /* ImGui 1.92's protocol, kept on the CPU side (the pixels are read in place) */
     if (dd->Textures) {
         for (ImTextureData* t : *dd->Textures) {
             if (t->Status == ImTextureStatus_WantCreate) {
@@ -211,6 +211,9 @@ void menu_raster(ImDrawData* dd, uint8_t* px, int w, int h) {
             }
         }
     }
+}
+
+void menu_raster(const ImDrawData* dd, uint8_t* px, int w, int h) {
     Target T{px, w, h};
     const ImVec2 off = dd->DisplayPos;
     for (const ImDrawList* list : dd->CmdLists) {

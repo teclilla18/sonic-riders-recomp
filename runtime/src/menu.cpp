@@ -1,10 +1,13 @@
 /* The settings menu and FPS counter (overlay.h): Dear ImGui, laid out like SwitchWakerHD's settings
  * overlay (a centred panel with tabs; L / R switch tabs; a gold controller cursor; teal-style section
  * headings and grey notes; a short explanation on the selected option; Close and Quit Game on every
- * tab, Quit asking first), in Sonic colours. Drawn in software into the overlay image
- * (menu_raster.cpp) only when the picture changes. Runs on the render thread (which pumps input),
- * except overlay_set_fps. */
+ * tab, Quit asking first; the Switch has no Quit: HOME closes games there), in Sonic colours.
+ * ImGui runs on the render thread (which pumps input). When its picture changes, the draw lists are
+ * copied and drawn in software (menu_raster.cpp) by a low-priority helper thread into the image that
+ * is not on screen, so the render thread never waits for it; the image is then swapped in. */
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -33,7 +36,11 @@ namespace {
 constexpr uint64_t kHoldTicks = 40500000ull / 2;  /* Minus / Back / F1 held this long opens the menu (0.5 s) */
 constexpr float kFontSize = 19.0f;
 
-uint8_t g_img[OVERLAY_W * OVERLAY_H * 4];
+/* two images: g_front is shown, the other is drawn by the helper thread; each with its content
+ * rectangle (x0, y0, x1, y1; empty when x0 >= x1), outside which it is transparent */
+uint8_t g_img[2][OVERLAY_W * OVERLAY_H * 4];
+int g_box[2][4];
+int g_front;
 unsigned g_version;
 bool g_open, g_gate, g_quit_popup;
 unsigned g_prev;
@@ -48,6 +55,79 @@ bool g_ready;
 uint64_t g_last_ns;
 uint64_t g_last_hash;
 bool g_had_image;
+
+/* the helper thread's job: a copy of one frame's draw lists */
+struct Job {
+    ImDrawData dd;
+    int buf;
+    int box[4];
+    double ms;
+};
+std::mutex g_mx;
+std::condition_variable g_cv;
+Job* g_job;        /* waiting for the helper (render thread -> helper) */
+Job* g_done;       /* drawn (helper -> render thread) */
+bool g_busy;       /* a job is out (render thread only) */
+bool g_retry;      /* a changed picture waits for the helper */
+bool g_worker_started;
+
+void job_free(Job* j) {
+    for (ImDrawList* l : j->dd.CmdLists) IM_DELETE(l);
+    delete j;
+}
+
+/* the area the draw lists cover: their vertices, inside their clip rectangles */
+void content_box(const ImDrawData* dd, int box[4]) {
+    float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+    for (const ImDrawList* l : dd->CmdLists)
+        for (const ImDrawCmd& c : l->CmdBuffer) {
+            if (c.UserCallback || !c.ElemCount) continue;
+            float vx0 = 1e9f, vy0 = 1e9f, vx1 = -1e9f, vy1 = -1e9f;
+            const ImDrawIdx* ix = l->IdxBuffer.Data + c.IdxOffset;
+            const ImDrawVert* v = l->VtxBuffer.Data + c.VtxOffset;
+            for (unsigned i = 0; i < c.ElemCount; i++) {
+                const ImVec2 p = v[ix[i]].pos;
+                vx0 = fminf(vx0, p.x), vy0 = fminf(vy0, p.y), vx1 = fmaxf(vx1, p.x), vy1 = fmaxf(vy1, p.y);
+            }
+            vx0 = fmaxf(vx0, c.ClipRect.x), vy0 = fmaxf(vy0, c.ClipRect.y);
+            vx1 = fminf(vx1, c.ClipRect.z), vy1 = fminf(vy1, c.ClipRect.w);
+            if (vx0 >= vx1 || vy0 >= vy1) continue;
+            x0 = fminf(x0, vx0), y0 = fminf(y0, vy0), x1 = fmaxf(x1, vx1), y1 = fmaxf(y1, vy1);
+        }
+    box[0] = (int)fmaxf(0.0f, floorf(x0) - 1);
+    box[1] = (int)fmaxf(0.0f, floorf(y0) - 1);
+    box[2] = (int)fminf((float)OVERLAY_W, ceilf(x1) + 1);
+    box[3] = (int)fminf((float)OVERLAY_H, ceilf(y1) + 1);
+    if (box[0] >= box[2] || box[1] >= box[3]) box[0] = box[1] = box[2] = box[3] = 0;
+}
+
+void clear_box(uint8_t* img, const int b[4]) {
+    for (int y = b[1]; y < b[3]; y++) memset(img + ((size_t)y * OVERLAY_W + b[0]) * 4, 0, (size_t)(b[2] - b[0]) * 4);
+}
+
+/* off the game's core and below the GP thread there (gx_fifo.c): it only uses spare time */
+int raster_thread(void*) {
+    rt_thread_pin(2);
+    rt_thread_lower_priority();
+    rt_thread_lower_priority();
+    for (;;) {
+        Job* j;
+        {
+            std::unique_lock<std::mutex> lk(g_mx);
+            g_cv.wait(lk, [] { return g_job != nullptr; });
+            j = g_job;
+            g_job = nullptr;
+        }
+        uint64_t t0 = platform_now_ns();
+        uint8_t* img = g_img[j->buf];
+        clear_box(img, g_box[j->buf]);
+        menu_raster(&j->dd, img, OVERLAY_W, OVERLAY_H);
+        j->ms = (platform_now_ns() - t0) / 1e6;
+        std::lock_guard<std::mutex> lk(g_mx);
+        g_done = j;
+    }
+    return 0;
+}
 
 /* ---- Sonic colours ---- */
 const ImVec4 kGold(1.00f, 0.82f, 0.18f, 1.0f);    /* rings */
@@ -227,7 +307,13 @@ void tab_display() {
             settings_apply();
         }
     }
-    note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
+    if (check("Dynamic resolution", &g_settings.dynamic_res,
+              "Lowers the resolution for a moment when a scene is too much for the graphics chip (down to half of "
+              "1x at most) and goes back up as soon as there is room, so the frame rate holds. "
+              "The resolution above is the highest it uses."))
+        settings_apply();
+    note(g_settings.dynamic_res ? "The resolution changes by itself in busy scenes to keep the frame rate steady."
+                                : "Higher resolutions make the picture sharper but can lower the frame rate in races.");
 #else
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
@@ -239,7 +325,8 @@ void tab_performance() {
     heading("Frame rate");
     static const char* const tips[FR_MODES] = {
         "As the original game: when a frame takes too long, the whole game slows down.",
-        "60 fps while the console keeps up; when it cannot, frames are left out instead, so races keep their real speed.",
+        "60 fps while the console keeps up. When it keeps falling behind, Auto switches to a steady 30 fps at full "
+        "speed and goes back to 60 once the console has room again.",
         "Sonic Riders' own 30 fps mode: a steady 30 fps at full speed. The smoothest choice on a console that is not overclocked."};
     const int order[FR_MODES] = {FR_AUTO, FR_30, FR_60};
     for (int k = 0; k < FR_MODES; k++) {
@@ -249,7 +336,7 @@ void tab_performance() {
             settings_apply();
         }
     }
-    note("Auto keeps 60 steps a second whatever the frame rate. If Auto looks uneven, 30 fps is steadier.");
+    note("Auto and 30 fps keep the game at its real speed. 60 fps (original) slows the game down when a frame is late.");
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();
@@ -324,10 +411,15 @@ void tab_about() {
 
 void quit_row() {
     const float w_close = ImGui::CalcTextSize("Close").x + 2 * ImGui::GetStyle().FramePadding.x;
-    const float w_quit = ImGui::CalcTextSize("Quit Game").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::PushStyleColor(ImGuiCol_Text, kNote);
     ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
     ImGui::PopStyleColor();
+#ifdef __SWITCH__
+    /* no Quit Game: games on the Switch are closed from the HOME menu */
+    ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close);
+    if (ImGui::Button("Close")) close_menu();
+#else
+    const float w_quit = ImGui::CalcTextSize("Quit Game").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close - w_quit - ImGui::GetStyle().ItemSpacing.x);
     if (ImGui::Button("Close")) close_menu();
     ImGui::SameLine();
@@ -356,6 +448,7 @@ void quit_row() {
         }
         ImGui::EndPopup();
     }
+#endif
 }
 
 void settings_window() {
@@ -428,8 +521,30 @@ uint64_t draw_hash(const ImDrawData* dd) {
     return h;
 }
 
+/* a finished image becomes the shown one */
+void collect() {
+    Job* j;
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        j = g_done;
+        g_done = nullptr;
+    }
+    if (!j) return;
+    memcpy(g_box[j->buf], j->box, sizeof j->box);
+    g_front = j->buf;
+    g_version++;
+    g_busy = false;
+    static int logged;
+    if (logged < 3 && g_open) {
+        logged++;
+        rt_log("[menu] picture drawn in %.2f ms (helper thread)", j->ms);
+    }
+    job_free(j);
+}
+
 /* one ImGui frame; the image is drawn again only when ImGui's output changed */
 void frame() {
+    g_retry = false;
     init();
     ImGuiIO& io = ImGui::GetIO();
     uint64_t now = platform_now_ns();
@@ -446,17 +561,35 @@ void frame() {
     if (dd->Textures)
         for (ImTextureData* t : *dd->Textures) tex_pending |= t->Status != ImTextureStatus_OK && t->Status != ImTextureStatus_Destroyed;
     if (h == g_last_hash && g_had_image && !tex_pending) return;
+    if (g_busy) {  /* the helper is still drawing: this picture is looked at again next frame */
+        g_retry = true;
+        return;
+    }
+    /* texture requests (the font atlas) are answered here, while the helper is idle: it reads the
+     * pixels of textures in use, and ImGui frees a texture's pixels only after it was answered */
+    if (tex_pending) menu_raster_textures(dd);
     g_last_hash = h;
     g_had_image = true;
-    uint64_t t0 = platform_now_ns();
-    memset(g_img, 0, sizeof g_img);
-    menu_raster(dd, g_img, OVERLAY_W, OVERLAY_H);
-    g_version++;
-    static int logged;
-    if (logged < 3 && g_open) {
-        logged++;
-        rt_log("[menu] picture drawn in %.2f ms", (platform_now_ns() - t0) / 1e6);
+    Job* j = new Job();
+    j->dd.Valid = true;
+    j->dd.DisplayPos = dd->DisplayPos;
+    j->dd.DisplaySize = dd->DisplaySize;
+    j->dd.FramebufferScale = dd->FramebufferScale;
+    j->dd.Textures = nullptr;
+    for (ImDrawList* l : dd->CmdLists) j->dd.CmdLists.push_back(l->CloneOutput());
+    j->dd.CmdListsCount = j->dd.CmdLists.Size;
+    j->buf = g_front ^ 1;
+    content_box(dd, j->box);
+    if (!g_worker_started) {
+        g_worker_started = true;
+        rt_thread_start(raster_thread, nullptr);
     }
+    g_busy = true;
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        g_job = j;
+    }
+    g_cv.notify_one();
 }
 
 void feed(ImGuiKey k, unsigned held, unsigned changed, unsigned bit) {
@@ -544,17 +677,20 @@ int overlay_input(unsigned held) {
     return 1;
 }
 
-const uint8_t* overlay_image(unsigned* version) {
+const uint8_t* overlay_image(unsigned* version, int box[4]) {
     int fps10 = g_settings.show_fps ? g_fps10.load() : -1;
     bool fps_changed = fps10 != g_shown_fps10;
     g_shown_fps10 = fps10;
     static bool was_open;
     bool shown = g_open || g_settings.show_fps;
     /* the menu runs every frame while open (navigation, tooltips); the counter only when it changes */
-    if (g_open || fps_changed || was_open != g_open) frame();
+    collect();
+    /* a picture left waiting because the helper was busy is made again too */
+    if (g_open || fps_changed || was_open != g_open || g_retry) frame();
     was_open = g_open;
     *version = g_version;
-    return shown ? g_img : nullptr;
+    if (box) memcpy(box, g_box[g_front], sizeof g_box[g_front]);
+    return shown && g_had_image ? g_img[g_front] : nullptr;
 }
 
 }  // extern "C"

@@ -6,7 +6,7 @@
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1, 1};
 volatile double g_aspect_scale = 1.0;
 
 const char* settings_screen_name(int mode) {
@@ -27,6 +27,20 @@ const char* settings_framerate_name(int mode) {
 float settings_internal_scale(void) { return g_settings.resolution == RES_2X ? 2.0f : g_settings.resolution == RES_1_5X ? 1.5f : 1.0f; }
 
 float settings_display_aspect(void) { return g_settings.screen == SCREEN_4_3 ? 4.0f / 3.0f : 16.0f / 9.0f; }
+
+/* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
+static void settings_log(const char* when) {
+#ifdef __SWITCH__
+    const int dyn = g_settings.dynamic_res;
+#else
+    const int dyn = 0;  /* the PC renderer keeps its resolution */
+#endif
+    rt_log("[settings] %sscreen: %s, fps counter %s, resolution %s%s, frame rate %s, handheld graphics %s, Chaos Emerald gear %s",
+           when, settings_screen_name(g_settings.screen), g_settings.show_fps ? "on" : "off",
+           settings_resolution_name(g_settings.resolution), dyn ? " (dynamic)" : "",
+           settings_framerate_name(g_settings.framerate), g_settings.handheld_gpu ? "384 MHz" : "system default",
+           g_settings.chaos_emerald ? "unlocked" : "as in the save");
+}
 
 static void apply(void) {
     /* widescreen: the cameras' aspect ratio from 4:3 to 16:9 */
@@ -50,28 +64,28 @@ void settings_load(void) {
             else if (!strcmp(line, "fullscreen")) g_settings.fullscreen = v != 0;
             else if (!strcmp(line, "framerate") && v >= 0 && v < FR_MODES) g_settings.framerate = v;
             else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
+            else if (!strcmp(line, "dynamic_res")) g_settings.dynamic_res = v != 0;
         }
         fclose(f);
     }
     const char* fr = getenv("SR_FRAMERATE");  /* testing: 0 = 60 fps, 1 = Auto, 2 = 30 fps (not saved unless changed in the menu) */
     if (fr && atoi(fr) >= 0 && atoi(fr) < FR_MODES) g_settings.framerate = atoi(fr);
     apply();
-    rt_log("[settings] screen: %s, fps counter %s, resolution %s, frame rate %s, Chaos Emerald gear %s",
-           settings_screen_name(g_settings.screen), g_settings.show_fps ? "on" : "off",
-           settings_resolution_name(g_settings.resolution), settings_framerate_name(g_settings.framerate),
-           g_settings.chaos_emerald ? "unlocked" : "as in the save");
+    settings_log("");
 }
 
 void settings_apply(void) {
     apply();
+    settings_log("changed: ");
     game_mods_apply();
     FILE* f = fopen(platform_settings_path(), "w");
     if (!f) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\n", g_settings.screen,
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\ndynamic_res=%d\n",
+            g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
-            g_settings.handheld_gpu);
+            g_settings.handheld_gpu, g_settings.dynamic_res);
     fclose(f);
 }

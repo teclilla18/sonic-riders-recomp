@@ -11,6 +11,7 @@
 #include <deko3d.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include <switch.h>
 #include <threads.h>
@@ -27,7 +28,7 @@
 void input_init(void);
 void input_pump(void);
 
-#define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (1, 1.5 or 2) */
+#define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (dynres_scale) */
 static float g_s = EFB_SCALE;
 #define SC(v) ((uint32_t)((float)(v) * g_s + 0.5f))
 #define EFB_W (EFB_WIDTH * EFB_SCALE)
@@ -90,6 +91,71 @@ static uint64_t g_busy_ticks, g_gpu_ticks, g_upload_bytes;  /* for the [deko3d] 
 static uint64_t g_last_gpu;      /* this frame's GPU wait ([hitch]) */
 static uint32_t g_last_upload;   /* this frame's texture upload bytes ([hitch]) */
 static unsigned g_busy_frames;
+
+/* GPU time per frame: two timestamps around each slot's commands (DkCounter_Timestamp is written when
+ * all earlier work is done, so the first one marks the end of the previous frame or of idle time) */
+static DkMemBlock g_ts;              /* per slot: 2 reports of 16 bytes (value, timestamp) */
+static int g_ts_valid[2];
+static uint64_t g_gpu_frame_ns;      /* the last measured frame */
+static uint64_t g_gpu_ns_sum, g_gpu_ns_max;
+static unsigned g_gpu_n;
+static float g_s_sum, g_s_lo = 99.0f, g_s_hi;
+
+/* ---- dynamic resolution (settings "Dynamic resolution") ----
+ * GPU time here is mostly per pixel, so it scales with g_s squared. A frame over budget lowers the
+ * scale at once by what the overrun says; the scale goes back up one step at a time, after
+ * DYN_CALM frames that would still fit at the higher step. The frames already queued were drawn at the
+ * old scale, so a change is judged DYN_SETTLE frames later. */
+#define DYN_MIN 0.5f        /* 320x264 at the worst */
+#define DYN_STEP 0.0625f    /* 40x33 pixels at 1x */
+#define DYN_CALM 45
+#define DYN_SETTLE 3
+static float g_dyn;
+static int g_dyn_settle, g_dyn_calm, g_dyn_over;
+
+static volatile double g_gpu_ms_avg = -1.0;  /* smoothed, for frame_pacing.c */
+double platform_gpu_frame_ms(void) { return g_gpu_ms_avg; }
+
+static float dynres_scale(uint64_t gpu_ns, int have) {
+    float top = settings_internal_scale();
+    if (!g_settings.dynamic_res) return g_dyn = top;
+    if (g_dyn <= 0.0f || g_dyn > top) g_dyn = top;
+    if (!have) return g_dyn;
+    if (g_dyn_settle > 0) {
+        g_dyn_settle--;
+        return g_dyn;
+    }
+    /* the GPU must finish a frame within a retrace (two in the 30 fps mode), with room to spare */
+    double budget = (g_settings.framerate == FR_30 ? 33366667.0 : 16683333.0) * 0.85;
+    static double test_budget = -1.0;  /* SR_DYNRES_BUDGET_MS (testing): another GPU budget, e.g. tiny to see the lowest scale */
+    if (test_budget < 0.0) test_budget = getenv("SR_DYNRES_BUDGET_MS") ? atof(getenv("SR_DYNRES_BUDGET_MS")) * 1e6 : 0.0;
+    if (test_budget > 0.0) budget = test_budget;
+    double t = (double)gpu_ns;
+    g_dyn_over = t > budget ? g_dyn_over + 1 : 0;
+    if (g_dyn_over >= 2 || t > budget * 1.25) {
+        float want = g_dyn * (float)sqrt(budget * 0.9 / t);
+        float sc = floorf(want / DYN_STEP) * DYN_STEP;
+        if (sc > g_dyn - DYN_STEP) sc = g_dyn - DYN_STEP;
+        if (sc < DYN_MIN) sc = DYN_MIN;
+        if (sc != g_dyn) {
+            g_dyn = sc;
+            g_dyn_settle = DYN_SETTLE;
+        }
+        g_dyn_calm = g_dyn_over = 0;
+    } else if (g_dyn < top) {
+        float up = g_dyn + DYN_STEP > top ? top : g_dyn + DYN_STEP;
+        if (t * (up * up) / (g_dyn * g_dyn) < budget * 0.9) {
+            if (++g_dyn_calm >= DYN_CALM) {
+                g_dyn = up;
+                g_dyn_calm = 0;
+                g_dyn_settle = DYN_SETTLE;
+            }
+        } else {
+            g_dyn_calm = 0;
+        }
+    }
+    return g_dyn;
+}
 
 /* ---- image pool: first-fit free list ---- */
 typedef struct Block { uint32_t off, size; struct Block* next; } Block;
@@ -204,7 +270,10 @@ static int tex_prepare(int id) {
     GxTexture* gt = gx_texture_get(id);
     if (!gt) return -1;
     DkTex* t = tex_slot(id);
-    uint32_t w = gt->is_copy ? SC(gt->width) : gt->width, h = gt->is_copy ? SC(gt->height) : gt->height;
+    /* copy textures at the chosen resolution, whatever this frame's scale: the copy is scaled into them */
+    float cs = settings_internal_scale();
+    uint32_t w = gt->is_copy ? (uint32_t)(gt->width * cs + 0.5f) : gt->width;
+    uint32_t h = gt->is_copy ? (uint32_t)(gt->height * cs + 0.5f) : gt->height;
     if (!t->live) tex_create(t, w, h, gt->is_copy);
     if (!gt->is_copy && t->gen != gt->gen) {
         uint32_t bytes = gt->width * gt->height * 4;
@@ -271,6 +340,7 @@ static void dk_setup(void) {
     rt_log("[deko3d] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
 
     for (int i = 0; i < 2; i++) g_slots[i] = block(SLOT_SIZE, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
+    g_ts = block(4096, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
     g_images = block(IMAGE_POOL, DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image);
     g_free_list = malloc(sizeof *g_free_list);
     g_free_list->off = 0; g_free_list->size = IMAGE_POOL; g_free_list->next = NULL;
@@ -604,29 +674,55 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
     g_st_valid = 0;
     unsigned version;
-    const uint8_t* img = overlay_image(&version);
+    int box[4];
+    static int up_box[4];  /* what the overlay texture holds: content inside, transparent outside */
+    const uint8_t* img = overlay_image(&version, box);
     if (!img) return;
     dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image);  /* after the blit into the picture */
     DkImageView ov;
     dkImageViewDefaults(&ov, &g_ov_image);
-    uint32_t bytes = OVERLAY_W * OVERLAY_H * 4;
-    if (version != g_ov_version && g_stage_off + bytes <= SLOT_STAGE) {
-        uint32_t so = SLOT_CMD + SLOT_VTX + SLOT_UBO + g_stage_off;
-        memcpy(cpu + so, img, bytes);
-        DkCopyBuf src = {gpu + so, 0, 0};
-        DkImageRect r = {0, 0, 0, OVERLAY_W, OVERLAY_H, 1};
-        dkCmdBufCopyBufferToImage(g_cmd, &src, &ov, &r, 0);
-        dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
-        g_stage_off = (g_stage_off + bytes + 255) & ~255u;
-        g_ov_version = version;
+    if (version != g_ov_version) {
+        /* only the rows and columns that changed: the new content and what the old one covered */
+        int u[4] = {box[0], box[1], box[2], box[3]};
+        if (up_box[0] < up_box[2]) {
+            if (u[0] >= u[2]) memcpy(u, up_box, sizeof u);
+            else {
+                u[0] = up_box[0] < u[0] ? up_box[0] : u[0];
+                u[1] = up_box[1] < u[1] ? up_box[1] : u[1];
+                u[2] = up_box[2] > u[2] ? up_box[2] : u[2];
+                u[3] = up_box[3] > u[3] ? up_box[3] : u[3];
+            }
+        }
+        uint32_t uw = u[2] > u[0] ? (uint32_t)(u[2] - u[0]) : 0, uh = u[3] > u[1] ? (uint32_t)(u[3] - u[1]) : 0;
+        uint32_t bytes = uw * uh * 4;
+        if (!bytes) {
+            g_ov_version = version;
+        } else if (g_stage_off + bytes <= SLOT_STAGE) {
+            uint32_t so = SLOT_CMD + SLOT_VTX + SLOT_UBO + g_stage_off;
+            for (uint32_t y = 0; y < uh; y++)
+                memcpy(cpu + so + y * uw * 4, img + ((size_t)(u[1] + y) * OVERLAY_W + u[0]) * 4, uw * 4);
+            DkCopyBuf src = {gpu + so, 0, 0};
+            DkImageRect r = {(uint32_t)u[0], (uint32_t)u[1], 0, uw, uh, 1};
+            dkCmdBufCopyBufferToImage(g_cmd, &src, &ov, &r, 0);
+            dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
+            g_stage_off = (g_stage_off + bytes + 255) & ~255u;
+            g_ov_version = version;
+            memcpy(up_box, box, sizeof up_box);
+        }
     }
+    if (up_box[0] >= up_box[2]) return;  /* nothing visible: no full-screen blend */
     DkImageView fv;
     dkImageViewDefaults(&fv, &g_fb[g_fb_slot]);
     DkImageView const* targets[1] = {&fv};
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, NULL);
     DkViewport vp = {0, 0, FB_W, FB_H, 0.0f, 1.0f};
     dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
-    DkScissor sc = {0, 0, FB_W, FB_H};
+    /* only the overlay's content is blended (the FPS counter alone: a small corner, not 1280x720) */
+    uint32_t sx0 = (uint32_t)up_box[0] * FB_W / OVERLAY_W, sy0 = (uint32_t)up_box[1] * FB_H / OVERLAY_H;
+    uint32_t sx1 = ((uint32_t)up_box[2] * FB_W + OVERLAY_W - 1) / OVERLAY_W, sy1 = ((uint32_t)up_box[3] * FB_H + OVERLAY_H - 1) / OVERLAY_H;
+    if (sx1 > FB_W) sx1 = FB_W;
+    if (sy1 > FB_H) sy1 = FB_H;
+    DkScissor sc = {sx0, sy0, sx1 - sx0, sy1 - sy0};
     dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
     DkShader const* shaders[2] = {&g_ovs, &g_ofs};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
@@ -677,15 +773,31 @@ static void slot_reclaim(unsigned slot) {
 static void execute(GxFrame* f) {
     g_st_valid = 0;  /* a new command list */
     uint64_t t_start = armGetSystemTick();
-    g_s = settings_internal_scale();
     g_last_upload = 0;
     g_last_gpu = 0;
     slot_reclaim(g_slot);
+    /* this slot's previous frame is done: its GPU time decides this frame's resolution */
+    volatile uint64_t* ts = (volatile uint64_t*)dkMemBlockGetCpuAddr(g_ts) + g_slot * 4;
+    DkGpuAddr ts_gpu = dkMemBlockGetGpuAddr(g_ts) + g_slot * 32;
+    int have = g_ts_valid[g_slot] && ts[3] >= ts[1];
+    if (have) {
+        g_gpu_frame_ns = dkTimestampToNs(ts[3] - ts[1]);
+        double ms = g_gpu_frame_ns / 1e6;
+        g_gpu_ms_avg = g_gpu_ms_avg < 0 ? ms : g_gpu_ms_avg * 0.9 + ms * 0.1;
+        g_gpu_ns_sum += g_gpu_frame_ns;
+        if (g_gpu_frame_ns > g_gpu_ns_max) g_gpu_ns_max = g_gpu_frame_ns;
+        g_gpu_n++;
+    }
+    g_s = dynres_scale(g_gpu_frame_ns, have);
+    g_s_sum += g_s;
+    if (g_s < g_s_lo) g_s_lo = g_s;
+    if (g_s > g_s_hi) g_s_hi = g_s;
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
     dkCmdBufClear(g_cmd);
     dkCmdBufAddMemory(g_cmd, mem, 0, SLOT_CMD);
+    dkCmdBufReportCounter(g_cmd, DkCounter_Timestamp, ts_gpu);
     g_vtx_off = g_stage_off = 0;
 
     /* vertices */
@@ -807,17 +919,22 @@ static void execute(GxFrame* f) {
             DkTex* s = tex_slot(sid);
             DkTex* d = tex_slot(did);
             if (!s->live || !d->live) break;
-            uint32_t bw = SC(c->copy[2]), bh = SC(c->copy[3]);
-            if (bw > s->w) bw = s->w;
-            if (bh > s->h) bh = s->h;
-            if (bw > d->w) bw = d->w;
-            if (bh > d->h) bh = d->h;
+            /* each at its own scale (the resolution chosen when it was made) */
+            GxTexture* sg = gx_texture_get(sid);
+            GxTexture* dg = gx_texture_get(did);
+            if (!sg || !dg || !sg->width || !dg->width || !sg->height || !dg->height) break;
+            uint32_t sw = c->copy[2] * s->w / sg->width, sh = c->copy[3] * s->h / sg->height;
+            uint32_t dw = c->copy[2] * d->w / dg->width, dh = c->copy[3] * d->h / dg->height;
+            if (sw > s->w) sw = s->w;
+            if (sh > s->h) sh = s->h;
+            if (dw > d->w) dw = d->w;
+            if (dh > d->h) dh = d->h;
             DkImageView sv, dv;
             dkImageViewDefaults(&sv, &s->image);
             dkImageViewDefaults(&dv, &d->image);
-            DkImageRect r = {0, 0, 0, bw, bh, 1};
+            DkImageRect sr = {0, 0, 0, sw, sh, 1}, dr = {0, 0, 0, dw, dh, 1};
             dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);
-            dkCmdBufBlitImage(g_cmd, &sv, &r, &dv, &r, 0, 0);
+            dkCmdBufBlitImage(g_cmd, &sv, &sr, &dv, &dr, sw == dw && sh == dh ? 0 : DkBlitFlag_FilterLinear, 0);
             dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image);
             break;
         }
@@ -832,6 +949,8 @@ static void execute(GxFrame* f) {
         dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
         shot_request(&fv);
     }
+    dkCmdBufReportCounter(g_cmd, DkCounter_Timestamp, ts_gpu + 16);
+    g_ts_valid[g_slot] = 1;
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     if (g_fb_slot >= 0) {
         dkQueuePresentImage(g_queue, g_swap, g_fb_slot);
@@ -861,6 +980,13 @@ static void execute(GxFrame* f) {
                "specialized shaders for %llu of %llu states",
                armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,
                (unsigned long long)(g_upload_bytes / 120 / 1024), g_spec_hits, g_spec_hits + g_spec_misses);
+        rt_log("[deko3d]   GPU %.2f ms/frame (longest %.2f); internal resolution %.2fx on average (%.2fx to %.2fx)%s",
+               g_gpu_n ? g_gpu_ns_sum / (double)g_gpu_n / 1e6 : 0.0, g_gpu_ns_max / 1e6, g_s_sum / 120, g_s_lo, g_s_hi,
+               g_settings.dynamic_res ? ", dynamic" : "");
+        g_gpu_ns_sum = g_gpu_ns_max = 0;
+        g_gpu_n = 0;
+        g_s_sum = g_s_hi = 0.0f;
+        g_s_lo = 99.0f;
         g_spec_hits = g_spec_misses = 0;
         g_busy_ticks = g_gpu_ticks = g_upload_bytes = 0;
         g_busy_frames = 0;
@@ -915,7 +1041,7 @@ static int render_thread(void* arg) {
         while (!g_pending) {
             mtx_unlock(&g_lock);
             input_pump();
-            if (!appletMainLoop() || overlay_take_quit_request()) exit(0);
+            if (!appletMainLoop()) exit(0);
             mtx_lock(&g_lock);
             if (!g_pending) {
                 struct timespec ts;
@@ -928,7 +1054,7 @@ static int render_thread(void* arg) {
         GxFrame* f = g_pending;
         mtx_unlock(&g_lock);
         input_pump();
-        if (!appletMainLoop() || overlay_take_quit_request()) exit(0);
+        if (!appletMainLoop()) exit(0);
         g_dbg_exec = 1;
         execute(f);
         g_dbg_exec = 0;

@@ -3,5 +3,8 @@
 #include <stdint.h>
 
 struct ImDrawData;
-/* draws over px (w x h RGBA, straight alpha; the caller clears it) and handles ImGui's texture requests */
-void menu_raster(ImDrawData* dd, uint8_t* px, int w, int h);
+/* answers ImGui's texture requests (on ImGui's thread, while no menu_raster runs) */
+void menu_raster_textures(ImDrawData* dd);
+/* draws over px (w x h RGBA, premultiplied alpha; the caller clears it); reads only dd and the pixels of
+ * the textures it uses, so it can run on another thread on a copy of the draw lists */
+void menu_raster(const ImDrawData* dd, uint8_t* px, int w, int h);

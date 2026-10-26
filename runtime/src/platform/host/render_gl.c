@@ -299,7 +299,7 @@ static unsigned g_ov_version = ~0u;
 
 static void draw_overlay(int ww, int wh) {
     unsigned version;
-    const uint8_t* img = overlay_image(&version);
+    const uint8_t* img = overlay_image(&version, NULL);
     if (!img) return;
     if (!g_ov_prog) {
         g_ov_prog = p_glCreateProgram();

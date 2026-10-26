@@ -15,6 +15,7 @@ const char* platform_save_path(void);       /* memory card image for slot A */
 const char* platform_settings_path(void);   /* settings.ini (settings.c) */
 const char* platform_mods_dir(void);        /* the mods folder (mods.c, docs/MODDING.md) */
 void platform_set_handheld_gpu(int on);  /* Switch: the 384 MHz handheld GPU configuration on/off; elsewhere nothing */
+double platform_gpu_frame_ms(void);  /* GPU time of recent frames (Switch: timestamps, render_deko.c); < 0: unknown */
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
 void platform_sleep_ns(uint64_t ns);  /* a precise sleep (sub-millisecond) */

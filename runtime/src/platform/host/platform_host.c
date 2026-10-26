@@ -232,6 +232,7 @@ void rt_thread_start(int (*fn)(void*), void* arg) {
 }
 #endif
 
+double platform_gpu_frame_ms(void) { return -1.0; }  /* not measured by the GL renderer */
 void rt_thread_pin(int core) { (void)core; }
 void rt_thread_lower_priority(void) {}
 void rt_thread_raise_priority(void) {

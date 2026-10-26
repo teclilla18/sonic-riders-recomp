@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## v0.3.0
+
+- **Dynamic resolution** (Switch, Display tab, on by default): the GPU's time for each frame is
+  measured and the internal resolution drops for a moment in busy scenes (down to 0.5x at most) and
+  climbs back when there is room, so the frame rate holds without an overclock.
+- **Auto frame rate is steadier:** when 60 fps keeps failing, Auto settles on a steady 30 fps at full
+  speed instead of jumping between 40 and 60, and goes back to 60 once the console has room again.
+- 30 fps chosen in the middle of a race now also runs effects at the right speed straight away.
+- The FPS counter alone no longer blends a full-screen layer each frame (less GPU work), and the
+  menu is drawn on a helper thread (no more 30 ms hitches when moving the cursor on the Switch).
+- The Switch menu has no Quit Game button any more (close the game from HOME).
+- The log records every settings change, plus GPU time and resolution, for hardware reports.
 
 - **New settings menu** in the style of SwitchWakerHD's, in Sonic colours: tabs (Display,
   Performance, Controls, Gameplay, Mods, About) switched with L / R, a gold cursor, a short

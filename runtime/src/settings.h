@@ -15,6 +15,7 @@ typedef struct Settings {
     int fullscreen;     /* PC: borderless fullscreen window (F11 / Alt+Enter, or the menu); unused on the Switch */
     int framerate;      /* FR_*: what happens when a frame takes longer than a 60 Hz retrace (frame_pacing.c) */
     int handheld_gpu;   /* Switch: Nintendo's 384 MHz handheld GPU configuration (platform_set_handheld_gpu) */
+    int dynamic_res;    /* Switch: lower the internal resolution in busy scenes to hold the frame rate (render_deko.c) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -25,7 +26,7 @@ extern Settings g_settings;
 extern volatile double g_aspect_scale;  /* camera aspect multiplier (config/GXEE8P/patches.txt) */
 
 void settings_load(void);   /* at start-up: reads the file, applies */
-void settings_apply(void);  /* after a change: applies and saves */
+void settings_apply(void);  /* after a change: applies, saves and logs */
 float settings_display_aspect(void);  /* of the presented picture: 4/3 or 16/9 */
 const char* settings_screen_name(int mode);
 const char* settings_resolution_name(int res);
