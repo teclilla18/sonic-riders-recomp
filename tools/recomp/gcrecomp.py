@@ -287,6 +287,43 @@ class GcRecompiler:
         return "c->pc = c->ctr; MUSTTAIL return ppc_dispatch(c);"
 
     # --- emission ---
+    def summary_of(self, start):
+        """leaflocal.summarize over the function's struct-form statements, plus the next function
+        when this one falls through into it (no side effects on the report counters)"""
+        self.cur_start, self.cur_end = start, self.func_end(start)
+        self.labels = set()
+        stmts = []
+        for a in range(start, self.cur_end, 4):
+            try:
+                s = translate(a, self.img.word(a), self)
+            except Unhandled:
+                s = "ppc_unimplemented(c, 0, 0);"
+            if a in self.patches:
+                pre, post = self.patches[a]
+                s = "{%s %s%s }" % (pre, s, post)
+            stmts.append(s)
+        regs, callees, known = leaflocal.summarize(stmts)
+        last = self.img.word(self.cur_end - 4)
+        # the last instruction can continue into the next function unless it is b (no link), blr,
+        # bctr or rfi
+        ends = (last >> 26 == 18 and not (last & 1)) or last in (0x4E800020, 0x4E800420, 0x4C000064)
+        if not ends:
+            if self.cur_end < self.img.region_end(start):
+                callees.add(("f_%08X_orig" if self.cur_end in self.hooks else "f_%08X") % self.cur_end)
+            else:
+                known = False
+        if start in self.hooks:
+            known = False
+        return regs, callees, known
+
+    def compute_summaries(self):
+        saved = (self.unhandled, list(self.untabled_switches))
+        funcs = {}
+        for start in self.sorted_entries:
+            funcs["f_%08X" % start] = self.summary_of(start)
+        self.unhandled, self.untabled_switches = saved
+        self.summary_count = leaflocal.solve_summaries(funcs)
+
     def emit_function(self, start):
         self.cur_start, self.cur_end = start, self.func_end(start)
         self.labels = set()
@@ -391,6 +428,9 @@ class GcRecompiler:
         self.single_stats = [0, 0]
         self.leaf_count = self.nonleaf_count = 0
         self.untabled_switches = []
+        self.summary_count = 0
+        if NONLEAF and leaflocal.USE_SUMMARY:
+            self.compute_summaries()
         # hot functions first, in the list's order (config/GXEE8P/hot_functions.txt, tools/hot_functions.py):
         # the code a race runs then sits together in the program. RECOMP_HOT=0 keeps address order.
         hot = []
@@ -471,6 +511,7 @@ class GcRecompiler:
             f.write("CR writers rewritten: %d\nleaf functions in locals: %d\nnon-leaf in locals: %d\n" % (
                 self.cr_stats[0], self.leaf_count, self.nonleaf_count))
             f.write("hot functions emitted first: %d\n" % self.hot_count)
+            f.write("functions with a register summary (calls to them sync only those): %d\n" % self.summary_count)
             f.write("round25 multiplier operands: %d, left out as already single precision: %d%s\n" % (
                 self.single_stats[0], self.single_stats[1], " (checking build)" if singleflow.CHECK else ""))
             f.write("unhandled instruction kinds (op=0: zero/data words inside function ranges, never run):\n")

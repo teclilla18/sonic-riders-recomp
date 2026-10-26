@@ -37,6 +37,12 @@ void ppc_trap(Cpu* c, uint32_t addr) { rt_fatal("trap at %08X (lr %08X)", addr, 
 static volatile uint32_t g_trace_ring[TRACE_RING];
 static volatile unsigned g_trace_pos;
 void ppc_trace_enter(uint32_t addr) { g_trace_ring[g_trace_pos++ % TRACE_RING] = addr; }
+
+void ppc_sum_report(uint32_t site, int reg) {
+    static int n;
+    if (n++ < 20) rt_log("[sumcheck] the call at %08X changed %s%d outside its register summary", site, reg < 32 ? "r" : "f",
+                         reg & 31);
+}
 void cpu_dump_trace(void) {
     unsigned p = g_trace_pos;
     enum { SHOW = 256 };

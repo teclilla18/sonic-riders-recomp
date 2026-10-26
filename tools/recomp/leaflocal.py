@@ -173,6 +173,78 @@ SAVED_FPR = set(range(14, 32))
 NO_ABI = set()
 
 
+# Register summaries (RECOMP_SUMMARY=0 turns them off): for each function, every GPR/FPR that it or
+# anything it calls (directly, by a tail jump or by falling through) mentions at all, read or written.
+# A call to a function with a summary writes back only the dirty registers in it (the others stay
+# dirty in locals) and reads back only the volatile ones in it: the callee cannot see or change the
+# rest. Each guest thread has its own Cpu and interrupts run on a copy (sched.c), so nothing else reads
+# the caller's registers from the struct meanwhile. A function with an indirect call, a native
+# replacement, an instruction hook, an unknown instruction, a context switch (NO_ABI) or any helper
+# that is handed the Cpu other than the ones below has no summary (full write-back and reload).
+USE_SUMMARY = os.environ.get("RECOMP_SUMMARY", "1") != "0"
+SUMMARY_CHECK = os.environ.get("RECOMP_SUMMARY_CHECK", "0") == "1"  # checking build (ppc.h ppc_sum_poison)
+SUMMARY = {}  # "f_XXXXXXXX" -> frozenset of register ids (GPR n, FPR 32 + n); absent: unknown
+SUMMARY_SAFE = {"cr_set_s", "cr_set_u", "cr_set_f", "cr_set_s_m", "cr_set_u_m", "cr_set_f_m", "cr0_rc", "cr0_rc_m",
+                "psq_load", "psq_store", "ppc_mfcr", "ppc_mtcrf", "ppc_fctiw", "ppc_mfxer", "ppc_mtxer",
+                "ppc_mfspr", "ppc_mtspr", "ppc_mfmsr", "ppc_dcbz", "ppc_lwarx", "ppc_stwcx", "ppc_cr_read"}
+_S_CALL = re.compile(r"\b(f_[0-9A-F]{8}(?:_orig)?)\(c\);")
+_S_USE = re.compile(r"\b(\w+)\(c\b(?!->)")
+
+
+def summarize(stmts):
+    """(registers mentioned, functions called or jumped to, known): from the struct-form statements"""
+    regs, callees = set(), set()
+    for s in stmts:
+        regs |= {int(n) for n in _R.findall(s)}
+        regs |= {32 + int(n) for n, _ in _F.findall(s)}
+        regs |= {32 + int(n) for n in _PSQ_LOAD.findall(s)}
+        regs |= {32 + int(n) for n in _PSQ_STORE.findall(s)}
+        callees |= set(_S_CALL.findall(s))
+        for m in _S_USE.finditer(s):
+            name = m.group(1)
+            if name in SUMMARY_SAFE or re.match(r"f_[0-9A-F]{8}(_orig)?$", name):
+                continue
+            return regs, callees, False
+        if "hook_" in s or "site_" in s:
+            return regs, callees, False
+    return regs, callees, True
+
+
+def solve_summaries(funcs):
+    """funcs: name -> (regs, callees, known). Fills SUMMARY with the fixpoint over the call graph."""
+    SUMMARY.clear()
+    if not USE_SUMMARY:
+        return 0
+    unknown = {n for n, (_, _, k) in funcs.items() if not k or n in NO_ABI}
+    cur = {n: set(r) for n, (r, _, _) in funcs.items()}
+    changed = True
+    while changed:
+        changed = False
+        for n, (_, callees, _) in funcs.items():
+            if n in unknown:
+                continue
+            for t in callees:
+                if t in unknown or t not in funcs:
+                    unknown.add(n)
+                    changed = True
+                    break
+                if not cur[t] <= cur[n]:
+                    cur[n] |= cur[t]
+                    changed = True
+    for n in funcs:
+        if n not in unknown:
+            # r1 always: an interrupt delivered at the callee's entry puts its frame just below the
+            # struct's r1 (sched.c make_irq_cpu), which must be the caller's current stack pointer
+            SUMMARY[n] = frozenset(cur[n] | {1})
+    return len(SUMMARY)
+
+
+def _touch(name):
+    if not USE_SUMMARY or not name or name in NO_ABI:
+        return None
+    return SUMMARY.get(name)
+
+
 def transform_nonleaf(stmts, addrs):
     """stmts: the statements (site calls already prefixed to theirs), addrs: their guest addresses.
     Returns (prologue, statements, write-back for falling off the end), or None to keep the struct
@@ -224,7 +296,8 @@ def transform_nonleaf(stmts, addrs):
         for k, part in enumerate(segs[i]):
             d |= part
             if k < len(calls[i]):
-                d = set()  # written back, and the volatile ones read again
+                t = _touch(calls[i][k].group(1))
+                d = set() if t is None else d - t  # written back, and the volatile ones read again
         for j in succ[i]:
             arrive = set() if (j in heads and j > i) else d  # a forward edge into a loop head syncs
             if d_in[j] is None or not arrive <= d_in[j]:
@@ -249,7 +322,16 @@ def transform_nonleaf(stmts, addrs):
     reload_vol = rl(gprs - SAVED_GPR, fprs - SAVED_FPR) if CALLEE_SAVED else reload_all
 
     def reload_after(name):
-        return reload_all if not name or name == "ppc_dispatch" or name.startswith("site_") or name in NO_ABI else reload_vol
+        if not name or name == "ppc_dispatch" or name.startswith("site_") or name in NO_ABI:
+            return reload_all
+        t = _touch(name)
+        if t is None:
+            return reload_vol
+        g = {r for r in t if r < 32}
+        f = {r - 32 for r in t if r >= 32}
+        if CALLEE_SAVED:
+            return rl((gprs - SAVED_GPR) & g, (fprs - SAVED_FPR) & f)
+        return rl(gprs & g, fprs & f)
     ret_regs = RET_GPR | {32 + r for r in RET_FPR}
     final = []
     for i, s in enumerate(out):
@@ -260,9 +342,15 @@ def transform_nonleaf(stmts, addrs):
             d |= segs[i][k]
             exit_dirty |= segs[i][k]
             pieces.append(s[pos:m.start()])
-            pieces.append("{ %s %s %s }" % (wb(d), m.group(0), reload_after(m.group(1))))
+            t = _touch(m.group(1))
+            call = m.group(0)
+            if SUMMARY_CHECK and t is not None:
+                keep = sum(1 << r for r in t)
+                call = "{ PpcSumSave sv_; ppc_sum_poison(c, 0x%016Xull, &sv_); %s ppc_sum_check(c, 0x%016Xull, &sv_, 0x%08Xu); }" % (
+                    keep, call, keep, addrs[i])
+            pieces.append("{ %s %s %s }" % (wb(d if t is None else d & t), call, reload_after(m.group(1))))
             pos = m.end()
-            d = set()
+            d = set() if t is None else d - t
         pieces.append(s[pos:])
         exit_dirty |= segs[i][-1]
         s = "".join(pieces)
@@ -290,7 +378,8 @@ def transform_nonleaf(stmts, addrs):
             for k, part in enumerate(segs[i]):
                 d_end |= part
                 if k < len(calls[i]):
-                    d_end = set()
+                    t = _touch(calls[i][k].group(1))
+                    d_end = set() if t is None else d_end - t
             if d_end:
                 s += " " + wb(d_end)
         final.append(s)
@@ -299,7 +388,8 @@ def transform_nonleaf(stmts, addrs):
     for k, part in enumerate(segs[-1]):
         last |= part
         if k < len(calls[-1]):
-            last = set()
+            t = _touch(calls[-1][k].group(1))
+            last = set() if t is None else last - t
     prologue = []
     if gprs:
         prologue.append("uint32_t %s;" % ", ".join("r%d = c->r[%d]" % (r, r) for r in sorted(gprs)))

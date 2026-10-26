@@ -349,6 +349,38 @@ static inline double ppc_single_chk(double v, uint32_t addr) {
     return v;
 }
 
+/* checking build of the register summaries (RECOMP_SUMMARY_CHECK=1, tools/recomp/leaflocal.py): around a
+ * call that syncs only the callee's summary, every other register (but r2/r13, the small-data bases
+ * that interrupt handlers use) gets garbage in the struct, and is checked and put back after the call.
+ * A callee that read one would misbehave visibly; one that wrote one is reported. */
+typedef struct { uint32_t r[32]; double f[32][2]; } PpcSumSave;
+void ppc_sum_report(uint32_t site, int reg);
+static inline void ppc_sum_poison(Cpu* c, uint64_t keep, PpcSumSave* s) {
+    keep |= (1ull << 2) | (1ull << 13);
+    for (int i = 0; i < 32; i++)
+        if (!(keep >> i & 1)) { s->r[i] = c->r[i]; c->r[i] = 0xDEAD0000u | (uint32_t)i; }
+    for (int i = 0; i < 32; i++)
+        if (!(keep >> (32 + i) & 1)) {
+            s->f[i][0] = c->f[i].ps0; s->f[i][1] = c->f[i].ps1;
+            c->f[i].ps0 = c->f[i].ps1 = u64_as_f64(0x7FF4DEAD00000000ull | (uint64_t)i);
+        }
+}
+static inline void ppc_sum_check(Cpu* c, uint64_t keep, PpcSumSave* s, uint32_t site) {
+    keep |= (1ull << 2) | (1ull << 13);
+    for (int i = 0; i < 32; i++)
+        if (!(keep >> i & 1)) {
+            if (c->r[i] != (0xDEAD0000u | (uint32_t)i)) ppc_sum_report(site, i);
+            c->r[i] = s->r[i];
+        }
+    for (int i = 0; i < 32; i++)
+        if (!(keep >> (32 + i) & 1)) {
+            if (f64_as_u64(c->f[i].ps0) != (0x7FF4DEAD00000000ull | (uint64_t)i) ||
+                f64_as_u64(c->f[i].ps1) != (0x7FF4DEAD00000000ull | (uint64_t)i))
+                ppc_sum_report(site, 32 + i);
+            c->f[i].ps0 = s->f[i][0]; c->f[i].ps1 = s->f[i][1];
+        }
+}
+
 /* fcmpu / fcmpo. IEEE comparisons with a NaN are false, so lt/gt/eq need no NaN test; un is the
  * fourth outcome. FPSCR's FPCC field (which fcmp also sets) is not kept: only mffs and mcrfs read
  * it, and this game has neither (ppc2c warns when it translates one). */
