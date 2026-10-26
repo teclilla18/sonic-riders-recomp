@@ -28,7 +28,7 @@
 void input_init(void);
 void input_pump(void);
 
-#define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (dynres_scale) */
+#define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (1, 1.5 or 2) */
 static float g_s = EFB_SCALE;
 #define SC(v) ((uint32_t)((float)(v) * g_s + 0.5f))
 #define EFB_W (EFB_WIDTH * EFB_SCALE)
@@ -99,63 +99,11 @@ static int g_ts_valid[2];
 static uint64_t g_gpu_frame_ns;      /* the last measured frame */
 static uint64_t g_gpu_ns_sum, g_gpu_ns_max;
 static unsigned g_gpu_n;
-static float g_s_sum, g_s_lo = 99.0f, g_s_hi;
-
-/* ---- dynamic resolution (settings "Dynamic resolution") ----
- * GPU time here is mostly per pixel, so it scales with g_s squared. A frame over budget lowers the
- * scale at once by what the overrun says; the scale goes back up one step at a time, after
- * DYN_CALM frames that would still fit at the higher step. The frames already queued were drawn at the
- * old scale, so a change is judged DYN_SETTLE frames later. */
-#define DYN_MIN 0.5f        /* 320x264 at the worst */
-#define DYN_STEP 0.0625f    /* 40x33 pixels at 1x */
-#define DYN_CALM 45
-#define DYN_SETTLE 3
-static float g_dyn;
-static int g_dyn_settle, g_dyn_calm, g_dyn_over;
+static float g_s_sum;
 
 static volatile double g_gpu_ms_avg = -1.0;  /* smoothed, for frame_pacing.c */
 double platform_gpu_frame_ms(void) { return g_gpu_ms_avg; }
 
-static float dynres_scale(uint64_t gpu_ns, int have) {
-    float top = settings_internal_scale();
-    if (!g_settings.dynamic_res) return g_dyn = top;
-    if (g_dyn <= 0.0f || g_dyn > top) g_dyn = top;
-    if (!have) return g_dyn;
-    if (g_dyn_settle > 0) {
-        g_dyn_settle--;
-        return g_dyn;
-    }
-    /* the GPU must finish a frame within a retrace (two in the 30 fps mode), with room to spare */
-    double budget = (g_settings.framerate == FR_30 ? 33366667.0 : 16683333.0) * 0.85;
-    static double test_budget = -1.0;  /* SR_DYNRES_BUDGET_MS (testing): another GPU budget, e.g. tiny to see the lowest scale */
-    if (test_budget < 0.0) test_budget = getenv("SR_DYNRES_BUDGET_MS") ? atof(getenv("SR_DYNRES_BUDGET_MS")) * 1e6 : 0.0;
-    if (test_budget > 0.0) budget = test_budget;
-    double t = (double)gpu_ns;
-    g_dyn_over = t > budget ? g_dyn_over + 1 : 0;
-    if (g_dyn_over >= 2 || t > budget * 1.25) {
-        float want = g_dyn * (float)sqrt(budget * 0.9 / t);
-        float sc = floorf(want / DYN_STEP) * DYN_STEP;
-        if (sc > g_dyn - DYN_STEP) sc = g_dyn - DYN_STEP;
-        if (sc < DYN_MIN) sc = DYN_MIN;
-        if (sc != g_dyn) {
-            g_dyn = sc;
-            g_dyn_settle = DYN_SETTLE;
-        }
-        g_dyn_calm = g_dyn_over = 0;
-    } else if (g_dyn < top) {
-        float up = g_dyn + DYN_STEP > top ? top : g_dyn + DYN_STEP;
-        if (t * (up * up) / (g_dyn * g_dyn) < budget * 0.9) {
-            if (++g_dyn_calm >= DYN_CALM) {
-                g_dyn = up;
-                g_dyn_calm = 0;
-                g_dyn_settle = DYN_SETTLE;
-            }
-        } else {
-            g_dyn_calm = 0;
-        }
-    }
-    return g_dyn;
-}
 
 /* ---- image pool: first-fit free list ---- */
 typedef struct Block { uint32_t off, size; struct Block* next; } Block;
@@ -776,7 +724,7 @@ static void execute(GxFrame* f) {
     g_last_upload = 0;
     g_last_gpu = 0;
     slot_reclaim(g_slot);
-    /* this slot's previous frame is done: its GPU time decides this frame's resolution */
+    /* this slot's previous frame is done: its GPU time, for the log */
     volatile uint64_t* ts = (volatile uint64_t*)dkMemBlockGetCpuAddr(g_ts) + g_slot * 4;
     DkGpuAddr ts_gpu = dkMemBlockGetGpuAddr(g_ts) + g_slot * 32;
     int have = g_ts_valid[g_slot] && ts[3] >= ts[1];
@@ -788,10 +736,8 @@ static void execute(GxFrame* f) {
         if (g_gpu_frame_ns > g_gpu_ns_max) g_gpu_ns_max = g_gpu_frame_ns;
         g_gpu_n++;
     }
-    g_s = dynres_scale(g_gpu_frame_ns, have);
+    g_s = settings_internal_scale();
     g_s_sum += g_s;
-    if (g_s < g_s_lo) g_s_lo = g_s;
-    if (g_s > g_s_hi) g_s_hi = g_s;
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);
@@ -980,13 +926,11 @@ static void execute(GxFrame* f) {
                "specialized shaders for %llu of %llu states",
                armTicksToNs(g_busy_ticks) / 120 / 1e6, armTicksToNs(g_gpu_ticks) / 120 / 1e6,
                (unsigned long long)(g_upload_bytes / 120 / 1024), g_spec_hits, g_spec_hits + g_spec_misses);
-        rt_log("[deko3d]   GPU %.2f ms/frame (longest %.2f); internal resolution %.2fx on average (%.2fx to %.2fx)%s",
-               g_gpu_n ? g_gpu_ns_sum / (double)g_gpu_n / 1e6 : 0.0, g_gpu_ns_max / 1e6, g_s_sum / 120, g_s_lo, g_s_hi,
-               g_settings.dynamic_res ? ", dynamic" : "");
+        rt_log("[deko3d]   GPU %.2f ms/frame (longest %.2f) at %.1fx internal resolution",
+               g_gpu_n ? g_gpu_ns_sum / (double)g_gpu_n / 1e6 : 0.0, g_gpu_ns_max / 1e6, g_s_sum / 120);
         g_gpu_ns_sum = g_gpu_ns_max = 0;
         g_gpu_n = 0;
-        g_s_sum = g_s_hi = 0.0f;
-        g_s_lo = 99.0f;
+        g_s_sum = 0.0f;
         g_spec_hits = g_spec_misses = 0;
         g_busy_ticks = g_gpu_ticks = g_upload_bytes = 0;
         g_busy_frames = 0;

@@ -307,13 +307,7 @@ void tab_display() {
             settings_apply();
         }
     }
-    if (check("Dynamic resolution", &g_settings.dynamic_res,
-              "Lowers the resolution for a moment when a scene is too much for the graphics chip (down to half of "
-              "1x at most) and goes back up as soon as there is room, so the frame rate holds. "
-              "The resolution above is the highest it uses."))
-        settings_apply();
-    note(g_settings.dynamic_res ? "The resolution changes by itself in busy scenes to keep the frame rate steady."
-                                : "Higher resolutions make the picture sharper but can lower the frame rate in races.");
+    note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
 #else
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
@@ -325,8 +319,7 @@ void tab_performance() {
     heading("Frame rate");
     static const char* const tips[FR_MODES] = {
         "As the original game: when a frame takes too long, the whole game slows down.",
-        "60 fps while the console keeps up. When it keeps falling behind, Auto switches to a steady 30 fps at full "
-        "speed and goes back to 60 once the console has room again.",
+        "60 fps while the console keeps up; when it cannot, frames are left out instead, so races keep their real speed.",
         "Sonic Riders' own 30 fps mode: a steady 30 fps at full speed. The smoothest choice on a console that is not overclocked."};
     const int order[FR_MODES] = {FR_AUTO, FR_30, FR_60};
     for (int k = 0; k < FR_MODES; k++) {
@@ -336,7 +329,7 @@ void tab_performance() {
             settings_apply();
         }
     }
-    note("Auto and 30 fps keep the game at its real speed. 60 fps (original) slows the game down when a frame is late.");
+    note("Auto keeps 60 steps a second whatever the frame rate. If Auto looks uneven, 30 fps is steadier.");
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();
