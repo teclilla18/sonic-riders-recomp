@@ -27,9 +27,10 @@
 
 - **A Nintendo Switch running custom firmware** (Atmosphère) with the Homebrew Menu, and an SD card
   with about 2 GB free.
-- **An overclock.** Tested at CPU 1785 / GPU 1152 / memory 2133 MHz on an OLED, set with an
-  overclocking homebrew such as sys-clk. At stock clocks the game runs poorly (slow motion, low frame
-  rate). Overclock at your own risk and within your console's limits.
+- **For 60 fps, an overclock.** At stock clocks races run at a steady 30 fps (settings, Performance:
+  *30 fps*, or *60 fps*, which uses 60 where it can). A steady 60 was tested at CPU 1785 / GPU 1152 /
+  memory 2133 MHz on an OLED, set with an overclocking homebrew such as sys-clk. Overclock at your own
+  risk and within your console's limits.
 
 **For the PC:**
 
@@ -102,7 +103,7 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 | A download fails | Check your internet connection or firewall and run the setup again; finished downloads are kept. |
 | `Error opening archive: Can't initialize filter; unable to run program "xz -d -qq"` | Fixed in v0.2.2: download the latest release and run its installer. |
 | Switch: black screen or crash at start | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |
-| Switch: slow motion / low frame rate | Check your overclock (see [What you need](#what-you-need)). |
+| Switch: slow motion / low frame rate | Set the frame rate to *30 fps* or *60 fps* (hold Minus for the settings), or overclock (see [What you need](#what-you-need)). |
 | PC: the game doesn't start | Check `sonicriders.log` in the install folder; update your graphics driver (OpenGL 3.3 is needed). |
 | PC: no sound | Check Windows' default playback device; the game uses it. |
 | Anything else | See [Reporting bugs](REPORTING-BUGS.md). |

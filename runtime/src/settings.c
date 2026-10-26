@@ -20,7 +20,7 @@ const char* settings_resolution_name(int res) {
 }
 
 const char* settings_framerate_name(int mode) {
-    static const char* const names[FR_MODES] = {"60 fps (original)", "Auto (keep speed)", "30 fps (full speed)"};
+    static const char* const names[FR_MODES] = {"60 fps (30 when busy)", "Auto (keep speed)", "30 fps (full speed)"};
     return mode >= 0 && mode < FR_MODES ? names[mode] : "?";
 }
 

@@ -55,7 +55,7 @@ def readme_first(flavor, version):
     ]
     if flavor == "switch":
         body = [
-            "PLAY ON A NINTENDO SWITCH (custom firmware + Homebrew Menu; an overclock is needed for now)",
+            "PLAY ON A NINTENDO SWITCH (custom firmware + Homebrew Menu; 30 fps at stock clocks, overclock for 60)",
             "",
             "1. Extract this whole zip to a folder (for example C:\\SonicRiders).",
             "2. Put your Switch's SD card in the PC.",

@@ -318,7 +318,8 @@ void tab_display() {
 void tab_performance() {
     heading("Frame rate");
     static const char* const tips[FR_MODES] = {
-        "As the original game: when a frame takes too long, the whole game slows down.",
+        "60 fps while the console keeps up. In scenes too busy for that it switches to a steady 30 fps at full "
+        "speed, and back to 60 once the scene allows it.",
         "60 fps while the console keeps up; when it cannot, frames are left out instead, so races keep their real speed.",
         "Sonic Riders' own 30 fps mode: a steady 30 fps at full speed. The smoothest choice on a console that is not overclocked."};
     const int order[FR_MODES] = {FR_AUTO, FR_30, FR_60};
@@ -329,7 +330,7 @@ void tab_performance() {
             settings_apply();
         }
     }
-    note("Auto keeps 60 steps a second whatever the frame rate. If Auto looks uneven, 30 fps is steadier.");
+    note("All three keep the game at its real speed. If Auto looks uneven, 60 fps or 30 fps is steadier.");
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();

@@ -1,7 +1,18 @@
 # Changelog
 
-## Unreleased
+## v0.3.1
 
+- **Switch: playable without an overclock.** At stock clocks, races now hold a steady 30 fps (tested
+  on hardware in handheld mode, including the busiest views). Two changes made this possible:
+  - The vertex shader reads the game's matrices and lights from fast GPU memory: about 27% less GPU
+    time per race frame on hardware (e.g. 15 ms down to 11 ms).
+  - The game's vertices are converted on a second CPU core that was otherwise waiting for the GPU:
+    the thread that turns the game's drawing commands into GPU work went from 18-19 ms to 8-13 ms
+    per frame in busy races.
+- **The "60 fps" setting no longer slows the game down.** It now draws 60 fps while the console
+  keeps up and switches to a steady 30 fps at full speed in scenes too busy for 60, going back to 60
+  when the scene allows it. On a Switch at stock clocks, light parts of a race run at 60 and the
+  busiest ones at 30.
 - The Switch menu has no Quit Game button (close the game from HOME).
 - The FPS counter alone no longer blends a full-screen layer each frame (less GPU work), and the
   menu is drawn on a helper thread (no 30 ms hitches when moving the cursor on the Switch).
@@ -15,8 +26,7 @@
   frame instead of slowing the whole game down, so races always run at their real speed (the game
   keeps 60 steps a second; you see fewer frames, e.g. 35-55 fps, instead of 30 fps in slow motion).
   *30 fps (full speed)* uses Sonic Riders' own unused 30 fps mode: a steady 30 fps at full speed.
-  *60 fps (original)* behaves as before. Aimed at playing on a Switch without an overclock (not yet
-  tested on hardware).
+  *60 fps* (originally the game's own behaviour, slow motion when late; changed in v0.3.1, see above).
 - **Faster game code** on both platforms (most on the Switch): the translated game code is about
   30% smaller on the Switch and does less work per instruction (ideas from SwitchWakerHD); the intro
   movie's video decoding is much cheaper. Pictures are unchanged.

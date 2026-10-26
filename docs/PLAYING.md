@@ -28,7 +28,7 @@ goes back or closes. Selecting an option shows a short explanation. **Close** an
 | Tab | Options |
 |---|---|
 | Display | Screen: 4:3, 16:9 widescreen or 16:9 stretched. Resolution 1x / 1.5x / 2x (Switch) or fullscreen (PC) |
-| Performance | Frame rate: **Auto** (default: 60 fps when possible; when the game is busy it draws fewer frames but keeps its real speed), **30 fps** (a steady 30 at full speed, the game's own mode), **60 fps (original)** (slows down when busy). Frame-rate counter. Switch: Nintendo's 384 MHz handheld graphics setting (on by default, not an overclock) |
+| Performance | Frame rate: **Auto** (default: 60 fps when possible; when the game is busy it draws fewer frames but keeps its real speed), **30 fps** (a steady 30 at full speed, the game's own mode), **60 fps** (60 while the console keeps up, a steady 30 at full speed in scenes too busy for 60). Frame-rate counter. Switch: Nintendo's 384 MHz handheld graphics setting (on by default, not an overclock) |
 | Controls | Switch: the system's controller screen (pair or split Joy-Cons, player order) and the button layout. PC: keyboard and controller layout |
 | Gameplay | Unlock the Chaos Emerald gear |
 | Mods | Turn installed mods on or off (applies on restart); see [Modding](MODDING.md) |

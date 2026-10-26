@@ -5,8 +5,10 @@ Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **
 no game files.
 
 > [!IMPORTANT]
-> **Switch:** an overclock is needed for now. Testing is done at CPU 1785 MHz / GPU 1152 MHz /
-> memory 2133 MHz (OLED). At stock clocks the game runs poorly. Overclock at your own risk.
+> **Switch:** no overclock needed for a steady 30 fps: at stock clocks races run at 30 fps, and
+> the *60 fps* setting gives 60 in lighter parts of a race and 30 in the busiest ones. A steady 60 still
+> needs an overclock (tested at CPU 1785 MHz / GPU 1152 MHz / memory 2133 MHz on an OLED; overclock at
+> your own risk).
 
 ## Get it
 
@@ -38,6 +40,8 @@ Up to 4 players: connect more controllers. [Full controls, settings and multipla
 Playable from boot to races, story mode and 4-player Free Race, with sound, on both platforms.
 
 - **PC:** 60 fps on the test PC (RTX 3060), 4 players included.
+- **Switch (stock clocks):** a steady 30 fps in races (1 player tested); 60 fps in lighter scenes with
+  the *60 fps* setting.
 - **Switch (overclocked):** 1–2 players mostly 60 fps; 3 players mostly 60 with dips in the busiest
   moments; 4 players about 30 fps.
 - Known issues are tracked in [Issues](../../issues); what changed in each version is in the

@@ -362,6 +362,8 @@ static mtx_t g_gp_lock;
 static cnd_t g_gp_cv, g_space_cv;
 static int g_gx_async = 1;
 uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
+static _Atomic uint64_t g_gp_busy_all;  /* never reset (frame_pacing.c measures it per frame) */
+uint64_t gx_gp_busy_total(void) { return atomic_load_explicit(&g_gp_busy_all, memory_order_relaxed); }
 /* FIFO bytes written but not yet processed by the GP thread (0 in synchronous mode) */
 size_t gx_gp_backlog(void) {
     return atomic_load_explicit(&g_ring_head, memory_order_relaxed) - atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
@@ -445,7 +447,11 @@ static int gp_thread(void* arg) {
             uint64_t until = t0 + (uint64_t)((rt_ticks() - t0) * gp_slow);
             while (rt_ticks() < until) {}
         }
-        atomic_fetch_add_explicit(&g_gp_busy, rt_ticks() - t0, memory_order_relaxed);
+        {
+            uint64_t d = rt_ticks() - t0;
+            atomic_fetch_add_explicit(&g_gp_busy, d, memory_order_relaxed);
+            atomic_fetch_add_explicit(&g_gp_busy_all, d, memory_order_relaxed);
+        }
         atomic_store_explicit(&g_ring_tail, tail + n, memory_order_release);
         if (head + 65536 - (tail + n) > RING_SIZE) {  /* the producer may be waiting for space */
             mtx_lock(&g_gp_lock);
