@@ -62,26 +62,27 @@ static int g_apm_set;
 static void apm_restore(void) {
     if (g_apm_set) apmSetPerformanceConfiguration(ApmPerformanceMode_Normal, g_apm_prev);
 }
-static void handheld_gpu_profile(void) {
+static int g_apm_ready = -1;  /* -1 not tried, 0 unavailable, 1 ready (previous configuration saved) */
+void platform_set_handheld_gpu(int on) {
     const char* e = getenv("SR_HANDHELD_GPU");
-    if (e && atoi(e) == 0) {
-        rt_log("[switch] handheld GPU profile left as the system's (SR_HANDHELD_GPU=0)");
-        return;
-    }
-    Result rc = apmInitialize();
-    if (R_FAILED(rc)) {
-        rt_log("[switch] apm unavailable (0x%X; applet mode?): handheld GPU stays at 307 MHz", rc);
-        return;
-    }
-    if (R_SUCCEEDED(apmGetPerformanceConfiguration(ApmPerformanceMode_Normal, &g_apm_prev))) {
-        rc = apmSetPerformanceConfiguration(ApmPerformanceMode_Normal, APM_CONF_HANDHELD_GPU384);
-        if (R_SUCCEEDED(rc)) {
-            g_apm_set = 1;
-            atexit(apm_restore);
+    if (e && atoi(e) == 0) on = 0;  /* env.txt override: leave the clocks alone */
+    if (g_apm_ready < 0) {
+        if (!on) return;  /* nothing to change and nothing to restore yet */
+        g_apm_ready = 0;
+        Result rc = apmInitialize();
+        if (R_FAILED(rc)) {
+            rt_log("[switch] apm unavailable (0x%X; applet mode?): handheld GPU stays at 307 MHz", rc);
+            return;
         }
-        rt_log("[switch] handheld performance configuration 0x%08X -> 0x%08X (GPU 384 MHz): rc 0x%X", g_apm_prev,
-               APM_CONF_HANDHELD_GPU384, rc);
+        if (R_FAILED(apmGetPerformanceConfiguration(ApmPerformanceMode_Normal, &g_apm_prev))) return;
+        g_apm_ready = 1;
+        atexit(apm_restore);
     }
+    if (g_apm_ready != 1) return;
+    u32 want = on ? APM_CONF_HANDHELD_GPU384 : g_apm_prev;
+    Result rc = apmSetPerformanceConfiguration(ApmPerformanceMode_Normal, want);
+    g_apm_set = R_SUCCEEDED(rc);
+    rt_log("[switch] handheld performance configuration -> 0x%08X (%s): rc 0x%X", want, on ? "GPU 384 MHz" : "system default", rc);
 }
 
 void platform_init(void) {
@@ -109,7 +110,6 @@ void platform_init(void) {
         }
         fclose(f);
     }
-    handheld_gpu_profile();
 }
 
 const char* platform_disc_path(void) {

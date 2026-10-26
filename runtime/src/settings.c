@@ -6,7 +6,7 @@
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1};
 volatile double g_aspect_scale = 1.0;
 
 const char* settings_screen_name(int mode) {
@@ -31,6 +31,7 @@ float settings_display_aspect(void) { return g_settings.screen == SCREEN_4_3 ? 4
 static void apply(void) {
     /* widescreen: the cameras' aspect ratio from 4:3 to 16:9 */
     g_aspect_scale = g_settings.screen == SCREEN_WIDE ? (16.0 / 9.0) / (4.0 / 3.0) : 1.0;
+    platform_set_handheld_gpu(g_settings.handheld_gpu);
 }
 
 void settings_load(void) {
@@ -48,6 +49,7 @@ void settings_load(void) {
             else if (!strcmp(line, "chaos_emerald")) g_settings.chaos_emerald = v != 0;
             else if (!strcmp(line, "fullscreen")) g_settings.fullscreen = v != 0;
             else if (!strcmp(line, "framerate") && v >= 0 && v < FR_MODES) g_settings.framerate = v;
+            else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
         }
         fclose(f);
     }
@@ -68,7 +70,8 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\n", g_settings.screen,
-            g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate);
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\n", g_settings.screen,
+            g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
+            g_settings.handheld_gpu);
     fclose(f);
 }

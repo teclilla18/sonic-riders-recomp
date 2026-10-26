@@ -28,6 +28,7 @@ ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
+ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
 args = ap.parse_args()
 
@@ -82,7 +83,23 @@ if old != text:
         f.write(text)
 rt_c.append(version_c)
 
-inc = "-Iruntime/include -Iruntime/src -I%s -I%s/gen" % (GEN, OUT)
+# Dear ImGui (MIT, the settings menu): not in the repository (too big for the game-data guard); the
+# setup downloads the pinned release (setup/toolchain.json "imgui")
+IMGUI_FILES = ("LICENSE.txt", "imconfig.h", "imgui.cpp", "imgui.h", "imgui_draw.cpp", "imgui_internal.h", "imgui_tables.cpp",
+               "imgui_widgets.cpp", "imstb_rectpack.h", "imstb_textedit.h", "imstb_truetype.h")
+_imgui_src = args.imgui or os.path.join(ROOT, "build", "ext", "imgui-1.92.9b")
+if not os.path.isfile(os.path.join(_imgui_src, "imgui.h")):
+    sys.exit("Dear ImGui v1.92.9b not found (--imgui DIR): https://github.com/ocornut/imgui/archive/refs/tags/v1.92.9b.zip "
+             "extracted to build/ext/imgui-1.92.9b, or run the setup")
+IMGUI = "build/ext/imgui-1.92.9b"  # always built from here: a path inside the repository (no spaces in ninja paths)
+if os.path.normcase(os.path.abspath(_imgui_src)) != os.path.normcase(os.path.join(ROOT, IMGUI)):
+    import shutil
+    os.makedirs(os.path.join(ROOT, IMGUI), exist_ok=True)
+    for name in IMGUI_FILES:
+        src, dst = os.path.join(_imgui_src, name), os.path.join(ROOT, IMGUI, name)
+        if not os.path.exists(dst) or open(src, "rb").read() != open(dst, "rb").read():
+            shutil.copyfile(src, dst)
+inc = "-Iruntime/include -Iruntime/src -I%s -DIMGUI_DISABLE_DEMO_WINDOWS -DIMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS -I%s -I%s/gen" % (IMGUI, GEN, OUT)
 # generated code: no FMA contraction (Gekko rounds the product of fmadds; ppc.h models it exactly)
 gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
 
@@ -130,7 +147,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("cflags", "-std=gnu11 -g " + hostinc)
             n.variable("cxxflags", "-std=c++20 -g " + hostinc)
             # a windowed program (no console window); the log goes to sonicriders.log then (platform_host.c)
-            n.variable("ldflags", "-g -L%s/lib -lSDL2 -lopengl32 -lwinmm -Wl,--subsystem,windows -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
+            n.variable("ldflags", "-g -static-libstdc++ -static-libgcc -L%s/lib -lSDL2 -lopengl32 -lwinmm -Wl,--subsystem,windows -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/bin/SDL2.dll"
         else:
             sdl = args.sdl or pick_sdl(lambda d: os.path.isdir(os.path.join(d, "lib", "x64")))
@@ -216,6 +233,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     for src in rt_cpp:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
         n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
+        objs.append(o)
+    # Dear ImGui (MIT, --imgui): the settings menu (runtime/src/menu.cpp)
+    for src in ("imgui.cpp", "imgui_draw.cpp", "imgui_tables.cpp", "imgui_widgets.cpp"):
+        o = "%s/obj/imgui_%s.o" % (OUT, src)
+        n.build(o, "cxx", IMGUI + "/" + src, variables={"extra": "-O2 -w"})
         objs.append(o)
     # optional program icon (PC, llvm-mingw): build/icon.ico if present. It lives in build/ (never
     # committed); the setup or the user puts it there.

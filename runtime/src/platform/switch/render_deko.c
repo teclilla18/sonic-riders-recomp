@@ -558,7 +558,6 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         else dh = (uint32_t)(FB_W / aspect + 0.5f);
         DkImageRect dst = {(FB_W - dw) / 2, (FB_H - dh) / 2, 0, dw, dh, 1};
         dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
-        shot_request(&fv);
         DkImageView const* efb_targets[1] = {&g_efb_view};
         dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
     } else if ((int)c->copy[8] >= 0) {  /* to a texture */
@@ -649,7 +648,7 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
     DkBlendState bs;
     dkBlendStateDefaults(&bs);
     dkBlendStateSetOps(&bs, DkBlendOp_Add, DkBlendOp_Add);
-    dkBlendStateSetFactors(&bs, DkBlendFactor_SrcAlpha, DkBlendFactor_InvSrcAlpha, DkBlendFactor_Zero, DkBlendFactor_One);
+    dkBlendStateSetFactors(&bs, DkBlendFactor_One, DkBlendFactor_InvSrcAlpha, DkBlendFactor_Zero, DkBlendFactor_One);  /* premultiplied (menu_raster.cpp) */
     dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
     DkColorWriteState cw;
     dkColorWriteStateDefaults(&cw);
@@ -825,7 +824,14 @@ static void execute(GxFrame* f) {
         default: break;
         }
     }
-    if (g_fb_slot >= 0) draw_overlay(cpu, gpu);
+    if (g_fb_slot >= 0) {
+        draw_overlay(cpu, gpu);
+        /* screenshots show what the screen shows (the menu's own "Save screenshot" closes it first) */
+        DkImageView fv;
+        dkImageViewDefaults(&fv, &g_fb[g_fb_slot]);
+        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
+        shot_request(&fv);
+    }
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     if (g_fb_slot >= 0) {
         dkQueuePresentImage(g_queue, g_swap, g_fb_slot);
@@ -909,7 +915,7 @@ static int render_thread(void* arg) {
         while (!g_pending) {
             mtx_unlock(&g_lock);
             input_pump();
-            if (!appletMainLoop()) exit(0);
+            if (!appletMainLoop() || overlay_take_quit_request()) exit(0);
             mtx_lock(&g_lock);
             if (!g_pending) {
                 struct timespec ts;
@@ -922,7 +928,7 @@ static int render_thread(void* arg) {
         GxFrame* f = g_pending;
         mtx_unlock(&g_lock);
         input_pump();
-        if (!appletMainLoop()) exit(0);
+        if (!appletMainLoop() || overlay_take_quit_request()) exit(0);
         g_dbg_exec = 1;
         execute(f);
         g_dbg_exec = 0;

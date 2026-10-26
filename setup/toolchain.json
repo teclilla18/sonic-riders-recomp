@@ -49,6 +49,14 @@
         "sha256": "c9c5fc60e3dd2f82d7c6592611bd37cc610d150ef4fa75fe09ce329df998084d" }
     ]
   },
+  "imgui": {
+    "_comment": "Dear ImGui (MIT), the settings menu's library (runtime/src/menu.cpp), both targets. GitHub's source archive of tag v1.92.9b (commit f1cc2ae15e53a861a874c3034aae6798fde194ab); hash checked on two downloads.",
+    "url": "https://github.com/ocornut/imgui/archive/refs/tags/v1.92.9b.zip",
+    "sha256": "e1c46d676c2bcb7ced847ba27f50553e33a19db97b3cadaec7f8be64449139f8",
+    "kind": "zip",
+    "dir": "imgui",
+    "strip": "imgui-1.92.9b"
+  },
   "llvm_mingw": {
     "_comment": "PC test build only: clang for Windows with its own headers and libraries (no Visual Studio needed).",
     "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-x86_64.zip",

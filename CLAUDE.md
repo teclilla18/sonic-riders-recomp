@@ -35,7 +35,7 @@ disc image; this repository holds only our own source. Human contributors: see C
   pinned toolchain to `%LOCALAPPDATA%\SonicRidersSetup\tools` and builds `build/switch/sonicriders.nro`
   and `build/host-mingw/sonicriders.exe`. After that: `python configure.py --target host --toolchain
   mingw --llvm-mingw <tools>\llvm-mingw --sdl <tools>\sdl2` (or `--target switch --devkitpro
-  <tools>\devkitpro`) and `ninja`.
+  <tools>\devkitpro`), plus `--imgui <tools>\imgui` once (it copies Dear ImGui to build/ext), and `ninja`.
 - **The PC build is the fast test loop.** Useful variables: `SR_MINIMIZED=1` (window stays in the
   background; the user may be using the PC), `SR_NOAUDIO=1`, `SR_SCREENSHOT=<frame>` (saves
   `build/shot_<frame>.png`; look at it), `SR_INPUT="1500:START,1510:-START,..."` (scripted buttons

@@ -15,6 +15,8 @@ The steps it runs, if you want to do them by hand (tools on `PATH`, devkitPro in
 python tools/extract_iso.py <image.iso> baserom                        # main.dol, _Main.rel (hash-checked)
 dtk dol split config/GXEE8P/config.yml build/GXEE8P                    # decomp-toolkit 1.8.4 analysis
 python tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen        # PowerPC -> C
+# Dear ImGui v1.92.9b (the settings menu): https://github.com/ocornut/imgui/archive/refs/tags/v1.92.9b.zip
+# extracted to build/ext/imgui-1.92.9b, or pass --imgui <dir> to configure.py (the setup downloads it)
 python configure.py --target switch --devkitpro <devkitPro dir>        # -> build/switch/sonicriders.nro
 python configure.py --target host --toolchain mingw --llvm-mingw <dir> --sdl <SDL2 mingw dir>   # -> build/host-mingw/
 ninja

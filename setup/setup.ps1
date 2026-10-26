@@ -288,7 +288,8 @@ $python = Join-Path $pyDir "python.exe"
 $zstdDir = Ensure-Tool $tc.zstandard
 $ninja = Join-Path (Ensure-Tool $tc.ninja) "ninja.exe"
 $dtk = Join-Path (Ensure-Tool $tc.dtk) "dtk.exe"
-Log "Python, ninja and decomp-toolkit ready."
+$imgui = Ensure-Tool $tc.imgui
+Log "Python, ninja, decomp-toolkit and Dear ImGui ready."
 
 $dkp = $null
 if ($doSwitch) {
@@ -342,14 +343,14 @@ Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml",
 Step "6/7  Recompiling and building (a few minutes)"
 $builtNro = $null; $builtExe = $null  # (set when built)
 if ($doSwitch) {
-    Run "configure (Switch)" $python @("configure.py", "--target", "switch", "--devkitpro", $dkp) @{ DEVKITPRO = $dkp }
+    Run "configure (Switch)" $python @("configure.py", "--target", "switch", "--devkitpro", $dkp, "--imgui", $imgui) @{ DEVKITPRO = $dkp }
     Run "build the Switch homebrew (this takes a while)" $ninja @() @{ DEVKITPRO = $dkp }
     $builtNro = Join-Path $Root "build\switch\sonicriders.nro"
     if (-not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
 }
 if ($doPc) {
-    Run "configure (PC)" $python @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl)
+    Run "configure (PC)" $python @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
     Run "build the PC test build" $ninja @()
     $builtExe = Join-Path $Root "build\host-mingw\sonicriders.exe"
     if (-not (Test-Path $builtExe)) { Fail "The build finished but build\host-mingw\sonicriders.exe is missing." }

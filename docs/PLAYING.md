@@ -21,17 +21,18 @@ HOME exits on the Switch.
 ## Settings menu
 
 Hold **−** (Minus) for half a second on the Switch, or **F1** / the gamepad's **Back** button on PC.
+**L / R** (PC: **Q / E** or the shoulder buttons) switch tabs, the D-pad moves, **A** chooses, **B**
+goes back or closes. Selecting an option shows a short explanation. **Close** and **Quit Game**
+(asks first) sit at the bottom of every tab. Changes are saved at once.
 
-| Item | What it does |
+| Tab | Options |
 |---|---|
-| Screen | 4:3, 16:9 widescreen, or 16:9 stretched |
-| Resolution (Switch) / Fullscreen (PC) | 1x / 1.5x / 2x on the Switch; windowed or fullscreen on PC |
-| Frame rate | **Auto** (default): 60 fps when possible; when the game is busy it draws fewer frames but keeps its real speed. **30 fps**: a steady 30 at full speed (the game's own mode). **60 fps (original)**: slows down when busy, as before |
-| FPS counter | Frame rate in the corner |
-| Unlock Chaos Emerald gear | Makes the Chaos Emerald gear available |
-| Controllers (Switch only) | The system's controller screen: pair or split Joy-Cons, change player order |
+| Display | Screen: 4:3, 16:9 widescreen or 16:9 stretched. Resolution 1x / 1.5x / 2x (Switch) or fullscreen (PC) |
+| Performance | Frame rate: **Auto** (default: 60 fps when possible; when the game is busy it draws fewer frames but keeps its real speed), **30 fps** (a steady 30 at full speed, the game's own mode), **60 fps (original)** (slows down when busy). Frame-rate counter. Switch: Nintendo's 384 MHz handheld graphics setting (on by default, not an overclock) |
+| Controls | Switch: the system's controller screen (pair or split Joy-Cons, player order) and the button layout. PC: keyboard and controller layout |
+| Gameplay | Unlock the Chaos Emerald gear |
 | Mods | Turn installed mods on or off (applies on restart); see [Modding](MODDING.md) |
-| Save screenshot | Saves the next frame (see [Reporting bugs](REPORTING-BUGS.md#taking-a-screenshot)) |
+| About | Version; **Save screenshot** for bug reports (see [Reporting bugs](REPORTING-BUGS.md#taking-a-screenshot)) |
 
 ## Multiplayer
 

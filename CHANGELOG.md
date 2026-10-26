@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **New settings menu** in the style of SwitchWakerHD's, in Sonic colours: tabs (Display,
+  Performance, Controls, Gameplay, Mods, About) switched with L / R, a gold cursor, a short
+  explanation of the selected option, the Switch's own font, and a Quit Game button that asks first.
 - **No more slow motion when the game is busy.** New setting **Frame rate**: *Auto (keep speed)*,
   the default, draws 60 fps while it can and, when a frame takes too long, leaves out drawing a
   frame instead of slowing the whole game down, so races always run at their real speed (the game

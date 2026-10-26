@@ -308,8 +308,8 @@ static void draw_overlay(int ww, int wh) {
         p_glLinkProgram(g_ov_prog);
         glGenTextures(1, &g_ov_tex);
         glBindTexture(GL_TEXTURE_2D, g_ov_tex);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
@@ -320,14 +320,19 @@ static void draw_overlay(int ww, int wh) {
         g_ov_version = version;
     }
     p_glUseProgram(g_ov_prog);
-    glViewport(0, 0, ww, wh);
+    {
+        /* the overlay is a 16:9 picture (the menu's layout): centred, not stretched over a 4:3 window */
+        int vw = ww, vh = ww * 9 / 16;
+        if (vh > wh) vh = wh, vw = wh * 16 / 9;
+        glViewport((ww - vw) / 2, (wh - vh) / 2, vw, vh);
+    }
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glColorMask(1, 1, 1, 1);
     glEnable(GL_BLEND);
     p_glBlendEquation(0x8006 /* GL_FUNC_ADD */);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);  /* premultiplied alpha (menu_raster.cpp) */
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     p_glUseProgram(g_prog);  /* the GX state is set again by the next state command (apply_state) */
 }
@@ -809,6 +814,7 @@ static int render_thread(void* arg) {
         g_free[g_nfree++] = f;
         cnd_broadcast(&g_cv);
         mtx_unlock(&g_lock);
+        if (overlay_take_quit_request()) g_quit = 1;  /* the menu's "Quit Game" */
         if (g_quit) {
             rt_log("[gl] window closed");
             exit(0);

@@ -239,3 +239,4 @@ void rt_thread_raise_priority(void) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
 }
+void platform_set_handheld_gpu(int on) { (void)on; }

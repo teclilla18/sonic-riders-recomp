@@ -14,6 +14,7 @@ typedef struct Settings {
     int chaos_emerald;  /* the Chaos Emerald gear (Super Sonic) is unlocked; nothing else is (gx_render.c) */
     int fullscreen;     /* PC: borderless fullscreen window (F11 / Alt+Enter, or the menu); unused on the Switch */
     int framerate;      /* FR_*: what happens when a frame takes longer than a 60 Hz retrace (frame_pacing.c) */
+    int handheld_gpu;   /* Switch: Nintendo's 384 MHz handheld GPU configuration (platform_set_handheld_gpu) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

@@ -89,7 +89,7 @@ forks (`third_party/LICENSE-MPL-2.0`).
 - [nx-hbloader](https://github.com/switchbrew/nx-hbloader) (ISC) and
   [hacBrewPack](https://github.com/The-4n/hacBrewPack): the optional forwarder NSP.
 - [SDL2](https://www.libsdl.org/) and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw): the PC version.
-- [stb_easy_font](https://github.com/nothings/stb) (public domain / MIT): the settings menu's text.
+- [Dear ImGui](https://github.com/ocornut/imgui) (MIT): the settings menu; its layout follows [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD)'s settings overlay.
 - gamemasterplc's 16:9 Gecko code: the idea behind the widescreen option.
 
 Sonic Riders is © SEGA. This project is not affiliated with SEGA.
