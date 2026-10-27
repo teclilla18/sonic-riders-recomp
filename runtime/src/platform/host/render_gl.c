@@ -803,7 +803,7 @@ static int render_thread(void* arg) {
                 uint32_t nd = 0;
                 for (uint32_t i = 0; i < f->ncmds; i++) nd += f->cmds[i].type == GXC_DRAW;
                 rt_log("[gl] SR_SKIPSAME: frame %d, %u draws, %u blocks of %d", g_same_at, nd, (nd + g_same_step - 1) / g_same_step, g_same_step);
-                for (g_same_k = 0; g_same_k * g_same_step < (int)nd && g_same_k < 100; g_same_k++) execute(f);
+                for (g_same_k = 0; g_same_k * g_same_step < (int)nd && g_same_k < 400; g_same_k++) execute(f);
                 g_same_k = -1;
             }
             execute(f);
