@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.2 (2026-10-26)
 
 - **Switch: fixed a large slowdown after the first few minutes.** After some races the game leaves a
   rarely used color setting switched on, and from then on the port stopped using its fast
