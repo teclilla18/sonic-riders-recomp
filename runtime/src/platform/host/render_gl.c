@@ -92,9 +92,9 @@ static int g_shot_list[512 + 32], g_nshots;  /* SR_SCREENSHOT list (up to 512), 
 /* SR_SKIPSCAN=FRAME,STEP: from presented frame FRAME on, frame FRAME+k leaves out draws k*STEP up to
  * (k+1)*STEP and is saved as a screenshot (finding the draws behind a visual problem; debugging) */
 static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented frames to save */
-/* SR_SKIPSAME=N,STEP (debugging): frame N is drawn again once per block of STEP draws, without that
+/* SR_SKIPSAME=N,STEP[,FIRST] (debugging): frame N is drawn again once per block of STEP draws, without that
  * block, each saved as build/same_N_<block>.png: which draws make a difference, on one exact frame */
-static int g_same_at, g_same_step, g_same_k = -1;
+static int g_same_at, g_same_step, g_same_first, g_same_k = -1;  /* ,FIRST: start at draw FIRST */
 static unsigned g_presented;
 
 static GLuint compile(GLenum type, const char* src) {
@@ -485,7 +485,7 @@ static void execute(GxFrame* f) {
     int scan_k = g_scan_at ? (int)g_presented + 1 - g_scan_at : -1;
     int scanning = scan_k >= 0 && scan_k < 32;
     uint32_t draw_no = 0, skip_lo = scanning ? (uint32_t)(scan_k * g_scan_step) : 0, skip_hi = skip_lo + (uint32_t)g_scan_step;
-    if (g_same_k >= 0) { scanning = 1; skip_lo = (uint32_t)(g_same_k * g_same_step); skip_hi = skip_lo + (uint32_t)g_same_step; }
+    if (g_same_k >= 0) { scanning = 1; skip_lo = (uint32_t)(g_same_first + g_same_k * g_same_step); skip_hi = skip_lo + (uint32_t)g_same_step; }
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
@@ -803,7 +803,7 @@ static int render_thread(void* arg) {
                 uint32_t nd = 0;
                 for (uint32_t i = 0; i < f->ncmds; i++) nd += f->cmds[i].type == GXC_DRAW;
                 rt_log("[gl] SR_SKIPSAME: frame %d, %u draws, %u blocks of %d", g_same_at, nd, (nd + g_same_step - 1) / g_same_step, g_same_step);
-                for (g_same_k = 0; g_same_k * g_same_step < (int)nd && g_same_k < 400; g_same_k++) execute(f);
+                for (g_same_k = 0; g_same_first + g_same_k * g_same_step < (int)nd && g_same_k < 400; g_same_k++) execute(f);
                 g_same_k = -1;
             }
             execute(f);
@@ -836,7 +836,7 @@ void render_start(void) {
     for (const char* q = s; q && *q && g_nshots < 512; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
         g_shot_list[g_nshots++] = atoi(q);
     const char* same = getenv("SR_SKIPSAME");
-    if (same && sscanf(same, "%d,%d", &g_same_at, &g_same_step) == 2 && g_same_step > 0) {
+    if (same && sscanf(same, "%d,%d,%d", &g_same_at, &g_same_step, &g_same_first) >= 2 && g_same_step > 0) {
         g_shot_list[g_nshots++] = g_same_at;  /* the frame as drawn, for comparison */
         rt_log("[gl] SR_SKIPSAME: frame %d drawn again without each block of %d draws", g_same_at, g_same_step);
     }

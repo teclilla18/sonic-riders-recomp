@@ -26,12 +26,16 @@ vec4 row(int a) { return uintBitsToFloat(xf[xfi(a) >> 2]); }  /* a is a multiple
 #else
 vec4 row(int a) { return vec4(XM(a), XM(a + 1), XM(a + 2), XM(a + 3)); }
 #endif
-vec3 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb, bool alpha) {
-  vec4 sum = amb;
+/* the lit sum (ambient + lights), clamped; colour channels use .rgb, alpha channels .a. Returning a
+   vec4 for both: uam (deko3d) mixed up components of the old `alpha ? vec3(sum.a) : sum.rgb` once
+   both calls were inlined, and characters came out teal on the Switch (red lost; #11); the loop also
+   keeps no vec4 running sum seeded with the ambient and has no `continue` */
+vec4 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb) {
+  vec3 acc = vec3(0.0); float acca = 0.0;  /* the lights' part; the ambient is added after the loop */
   uint mask = bits(ctrl, 2, 4) | (bits(ctrl, 11, 4) << 4);
   uint diff_fn = bits(ctrl, 7, 2); bool atten = bits(ctrl, 9, 1) != 0u; bool spot = bits(ctrl, 10, 1) != 0u;
   for (int i = 0; i < 8; i++) {
-    if ((mask & (1u << uint(i))) == 0u) continue;
+    if ((mask & (1u << uint(i))) != 0u) {
     int b = 0x600 + i * 16;
     vec4 lc = rgba8(XMU(b + 3));
     vec3 ca = vec3(XM(b + 4), XM(b + 5), XM(b + 6)), da = vec3(XM(b + 7), XM(b + 8), XM(b + 9));
@@ -52,9 +56,10 @@ vec3 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb, bool alpha) {
     }
     float df = dot(l, n);
     df = diff_fn == 0u ? 1.0 : (diff_fn == 1u ? df : max(0.0, df));
-    sum += att * df * lc;
+    acc += (att * df) * lc.rgb; acca += (att * df) * lc.a;
+    }
   }
-  return alpha ? vec3(clamp(sum.a, 0.0, 1.0)) : clamp(sum.rgb, 0.0, 1.0);
+  return clamp(amb + vec4(acc, acca), 0.0, 1.0);
 }
 vec4 channel(int c, vec4 vcol, vec3 pos, vec3 n) {
   uint cc = XR(0x0E + c), ac = XR(0x10 + c);
@@ -62,8 +67,8 @@ vec4 channel(int c, vec4 vcol, vec3 pos, vec3 n) {
   vec3 mat = bits(cc, 0, 1) != 0u ? vcol.rgb : matr.rgb;
   float mata = bits(ac, 0, 1) != 0u ? vcol.a : matr.a;
   vec3 rgb = mat; float a = mata;
-  if (bits(cc, 1, 1) != 0u) rgb = mat * lights(cc, pos, n, vec4(bits(cc, 6, 1) != 0u ? vcol.rgb : ambr.rgb, 0.0), false);
-  if (bits(ac, 1, 1) != 0u) a = mata * lights(ac, pos, n, vec4(0.0, 0.0, 0.0, bits(ac, 6, 1) != 0u ? vcol.a : ambr.a), true).x;
+  if (bits(cc, 1, 1) != 0u) rgb = mat * lights(cc, pos, n, vec4(bits(cc, 6, 1) != 0u ? vcol.rgb : ambr.rgb, 0.0)).rgb;
+  if (bits(ac, 1, 1) != 0u) a = mata * lights(ac, pos, n, vec4(0.0, 0.0, 0.0, bits(ac, 6, 1) != 0u ? vcol.a : ambr.a)).a;
   return vec4(rgb, a);
 }
 vec3 texgen(int i, vec3 pos_raw, vec3 n, vec4 c0, vec4 c1, float tmtx) {

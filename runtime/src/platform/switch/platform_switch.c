@@ -99,7 +99,7 @@ void platform_init(void) {
     /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
     FILE* f = fopen(BASE_DIR "/env.txt", "r");
     if (f) {
-        char line[256];
+        char line[1024];  /* SR_INPUT scripts get long */
         while (fgets(line, sizeof line, f)) {
             line[strcspn(line, "\r\n")] = 0;
             char* eq = strchr(line, '=');

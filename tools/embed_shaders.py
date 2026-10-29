@@ -21,8 +21,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHADERS = os.path.join(os.path.dirname(HERE), "runtime", "shaders")
 
 PRELUDE_GL = "#define ATTR(n)\n#define VARY(n)\n#define SAMPLER(n)\n#define BIND_UBO\n#define BIND_UBO1\n#define CLIP_Y 1.0\nuniform usamplerBuffer u_xfm;\n#define XFM_WORD(i) texelFetch(u_xfm, (i)).r\nuniform int u_show_alpha;\n#define DEBUG_SHOW_ALPHA u_show_alpha\nuniform int u_tev_debug;\n#define DEBUG_TEV u_tev_debug\n"
+# SR_DK_DEBUG_TEV=<n> at build time: a deko3d build with that SR_TEVDEBUG view fixed on (hardware tests)
 PRELUDE_DK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(n) layout(location = n)\n"
-              "#define SAMPLER(n) layout(binding = n)\n#define BIND_UBO , binding = 0\n#define BIND_UBO1 , binding = 1\n#define CLIP_Y (-1.0)\n#define DEBUG_SHOW_ALPHA 0\n#define DEBUG_TEV 0\nlayout(std430, binding = 0) readonly buffer XFM { uint xfm_pool[]; };\n#define XFM_WORD(i) xfm_pool[(i)]\n")
+              "#define SAMPLER(n) layout(binding = n)\n#define BIND_UBO , binding = 0\n#define BIND_UBO1 , binding = 1\n#define CLIP_Y (-1.0)\n#define DEBUG_SHOW_ALPHA 0\n#define DEBUG_TEV " + os.environ.get("SR_DK_DEBUG_TEV", "0") + "\nlayout(std430, binding = 0) readonly buffer XFM { uint xfm_pool[]; };\n#define XFM_WORD(i) xfm_pool[(i)]\n")
 
 
 # (output id, source name, stage, extra defines): the GX ubershader (with gx_common.glsl) and the

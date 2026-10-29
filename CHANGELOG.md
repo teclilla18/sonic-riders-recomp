@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Switch: characters are no longer tinted blue/teal (#11).** Lit 3D models lost most of their red
+  on the Switch only: white gloves and shoes came out cyan, skin olive, in menus and in every race.
+  The Switch's shader compiler mishandled the lighting code; it is restructured so the lighting
+  now matches the GameCube (checked on hardware against the original game in Dolphin).
+
 ## v0.3.2 (2026-10-26)
 
 - **Switch: fixed a large slowdown after the first few minutes.** After some races the game leaves a
