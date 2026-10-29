@@ -85,6 +85,9 @@ def git(*args):
 
 
 def main():
+    # a refused path with letters the console can't show must not crash the check (and so pass it)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     mode = sys.argv[1] if len(sys.argv) > 1 else "--tree"
     bad = 0
     if mode == "--staged":
