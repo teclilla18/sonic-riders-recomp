@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.4 (2026-10-29)
 
 - **Setup: works when your Windows user name has accents or other non-English letters.** The build
   tools lost those letters in paths ("CreateProcess failed: The system cannot find the file
