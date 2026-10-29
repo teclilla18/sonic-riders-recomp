@@ -28,6 +28,7 @@
  *           a frame that finishes after its retrace is presented at once instead of waiting for the
  *           next retrace (VIWaitForRetrace skipped), as WWHD's "flip when ready" does.
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -136,7 +137,36 @@ static void auto_restart_schedule(void) {
     g_skips_in_row = 0;
 }
 
+/* SR_RAMHASH=<steps> (determinism testing, online play groundwork): at each of the first <steps> frame
+ * ends, a checksum of each 1 MB block of guest RAM, logged as "[hash] <step> <block hashes>". Two
+ * runs with the same inputs (or a PC and a Switch run) must print the same lines; the first line and
+ * block that differ show where they diverged. */
+static void ram_hash(void) {
+    static int limit = -1;
+    static unsigned step;
+    if (limit < 0) limit = getenv("SR_RAMHASH") ? atoi(getenv("SR_RAMHASH")) : 0;
+    if (!limit || step >= (unsigned)limit) return;
+    {   /* SR_RAMDUMPAT=<step>: all of guest RAM at that step to build/ramstep.bin, to diff two runs */
+        const char* d = getenv("SR_RAMDUMPAT");
+        if (d && (unsigned)atoi(d) == step) {
+            FILE* f = fopen("build/ramstep.bin", "wb");
+            if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
+        }
+    }
+    char line[64 + 28 * 9];
+    int n = snprintf(line, 64, "[hash] %u", step++);
+    const uint8_t* ram = mem_phys(0);
+    for (uint32_t blk = 0; blk < GUEST_RAM_SIZE >> 20; blk++) {
+        const uint64_t* p = (const uint64_t*)(ram + ((size_t)blk << 20));
+        uint64_t h = 0x9E3779B97F4A7C15ull;
+        for (size_t i = 0; i < (1u << 20) / 8; i++) h = (h ^ p[i]) * 0x100000001B3ull;
+        n += snprintf(line + n, sizeof line - n, " %08x", (uint32_t)(h ^ (h >> 32)));
+    }
+    rt_log("%s", line);
+}
+
 void hle_frame_end(Cpu* c) {
+    ram_hash();
     int mode = g_settings.framerate;
     int skipped = ld32(GAME_FRAME_SKIP) != 0;  /* this iteration's draws were left out */
     test_load(!skipped);
