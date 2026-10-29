@@ -101,6 +101,11 @@ if (-not [Environment]::Is64BitOperatingSystem) { Fail "64-bit Windows is requir
 if (-not (Test-Path "$Root\configure.py") -or -not (Test-Path "$Root\tools\recomp\gcrecomp.py")) {
     Fail "This does not look like the complete release folder (configure.py / tools are missing)." "Extract the whole zip first, then run SonicRidersSetup.bat from inside it."
 }
+# the build tools get paths in Windows' old 8-bit encoding: letters outside English (a user name
+# with accented or Turkish letters in the folder) turned into "?" and every tool failed with "CreateProcess failed" (GBAtemp report)
+if ($Root -match "[^ -~]") {
+    Fail "The folder path has letters the build tools can't handle: $Root" "Extract the zip to a folder whose path uses only English letters and digits, e.g. C:\SonicRiders, and run the installer from there."
+}
 # the downloaded Python must not pick up a Python installed on this PC (its settings or packages)
 foreach ($v in "PYTHONHOME", "PYTHONPATH", "PYTHONSTARTUP") { [Environment]::SetEnvironmentVariable($v, $null) }
 $env:PYTHONNOUSERSITE = "1"
@@ -188,9 +193,10 @@ Step "3/7  Toolchain (downloaded once, checked by SHA-256)"
 $tc = Get-Content -Raw (Join-Path $PSScriptRoot "toolchain.json") | ConvertFrom-Json
 if (-not $ToolsDir) {
     $ToolsDir = Join-Path $env:LOCALAPPDATA "SonicRidersSetup\tools"
-    if ($ToolsDir -match " ") { $ToolsDir = Join-Path $env:SystemDrive "SonicRidersTools" }  # devkitPro paths must not contain spaces
+    # devkitPro paths must not contain spaces, and no tool path may have letters outside English
+    if ($ToolsDir -match "[^!-~]") { $ToolsDir = Join-Path $env:SystemDrive "SonicRidersTools" }
 }
-if ($ToolsDir -match " ") { Fail "The tools folder must not contain spaces: $ToolsDir" "Pass -ToolsDir C:\SonicRidersTools (or another folder without spaces)." }
+if ($ToolsDir -match "[^!-~]") { Fail "The tools folder must not contain spaces or non-English letters: $ToolsDir" "Pass -ToolsDir C:\SonicRidersTools (or another such folder)." }
 $dlDir = Join-Path $ToolsDir "downloads"
 New-Item -ItemType Directory -Force -Path $dlDir | Out-Null
 Log "Tools folder: $ToolsDir"

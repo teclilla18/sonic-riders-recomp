@@ -114,7 +114,9 @@ def cmd_path(p, program=False):
         r = os.path.relpath(p, ROOT)
     except ValueError:  # another drive
         r = a
-    spaceless = [x for x in (a, r) if " " not in x]
+    # ASCII first: ninja hands commands to Windows in its 8-bit code page, where letters outside
+    # English (a user name in the path) are lost
+    spaceless = [x for x in (a, r) if " " not in x and x.isascii()] or [x for x in (a, r) if " " not in x]
     p = min(spaceless, key=len) if spaceless else r
     p = os.path.normpath(p) if program else p.replace("\\", "/")
     return '"%s"' % p if " " in p else p
@@ -264,4 +266,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.default(OUT + "/SDL2.dll")
     n.build("gen_objs", "phony", objs[:len(gen_c)])
     n.default(exe)
+with open(os.path.join(ROOT, "build.ninja"), encoding="utf-8", errors="replace") as f:
+    bad = sorted({line.strip()[:120] for line in f if not line.isascii()})
+if bad:
+    os.remove(os.path.join(ROOT, "build.ninja"))
+    sys.exit("configure: a path in the build has letters outside English, which the build tools can't use:\n  %s\n"
+             "Move the folder (and the tools folder) to a path with only English letters and digits, e.g. C:\\SonicRiders."
+             % bad[0])
 print("wrote build.ninja (%s): %d generated + %d runtime sources" % (args.target, len(gen_c), len(rt_c) + len(rt_cpp)))

@@ -41,6 +41,8 @@
 
 1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../../releases/latest).
 2. **Extract** the whole zip to a folder, for example `C:\SonicRiders`. Don't run it from inside the zip.
+   The folder's path must use only English letters and digits: if your Windows user name has accents or
+   other letters, don't use your Downloads or Desktop folder.
 3. **Put your Switch's SD card in the PC** (or connect the Switch over USB with a tool that shows the
    SD card as a drive).
 4. **Double-click `Install Sonic Riders (Switch).bat`.** If Windows shows "Windows protected your PC",
@@ -100,6 +102,7 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 |---|---|
 | "does not match the known-good dump" | Your image is not the clean USA rev 0 dump (trimmed, compressed or modified). Re-dump or convert to a full ISO. |
 | "game ID is ..." | Only the USA release (GXEE8P) works. |
+| `CreateProcess failed: The system cannot find the file specified` (paths shown with `?` or odd letters) | Your folder path (often your Windows user name) has letters outside English. Fixed in v0.3.4: extract the zip to a folder like `C:\SonicRiders` and run the installer there. On v0.3.3 or older, also start it with `-ToolsDir C:\SonicRidersTools`. |
 | A download fails | Check your internet connection or firewall and run the setup again; finished downloads are kept. |
 | `Error opening archive: Can't initialize filter; unable to run program "xz -d -qq"` | Fixed in v0.2.2: download the latest release and run its installer. |
 | Switch: black screen or crash at start | Make sure you started from a game with R held (not the Album), and that the `.iso` is in `switch/sonicriders/`. |

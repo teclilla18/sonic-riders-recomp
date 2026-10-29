@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Setup: works when your Windows user name has accents or other non-English letters.** The build
+  tools lost those letters in paths ("CreateProcess failed: The system cannot find the file
+  specified" for every tool). The tools folder now moves to `C:\SonicRidersTools` in that case, build
+  paths are kept to plain letters, and if the folder you extracted the zip to has such letters the
+  setup says so at the start (extract it to e.g. `C:\SonicRiders` instead).
+
 ## v0.3.3 (2026-10-29)
 
 - **Switch: characters are no longer tinted blue/teal (#11).** Lit 3D models lost most of their red
