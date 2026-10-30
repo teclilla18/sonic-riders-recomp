@@ -194,11 +194,10 @@ static uint32_t g_ai_start, g_ai_blocks;
  * DMA interrupts that 1/60 s of 32 kHz audio takes (ai_det_frame, at the frame end; the fraction is
  * carried over), handed over one at a time while the main thread sleeps in its frame wait and the CPU
  * is otherwise idle (ai_det_try_raise, from vi.c), before that frame's retrace. */
-static uint32_t g_ai_det_bytes;     /* the current DMA block size (ai_thread) */
 static _Atomic int g_ai_det_tokens;
 static uint64_t g_ai_det_acc;       /* bytes of audio time owed, x60 */
 void ai_det_frame(void) {
-    uint32_t bytes = g_ai_det_bytes;
+    uint32_t bytes = g_ai_blocks * 32;  /* the game's DMA block (registers, not the host audio thread's copy) */
     if (!atomic_load(&g_ai_dma_on) || !bytes) return;
     g_ai_det_acc += 128000;  /* 128000 bytes/s at 32 kHz 16-bit stereo; per frame = 128000/60 */
     int n = (int)(g_ai_det_acc / ((uint64_t)bytes * 60));
@@ -249,7 +248,7 @@ static int ai_thread(void* arg) {
         audio_submit(g_ai_start, bytes);
         {   /* SR_DETCLOCK: the interrupt is handed over per game frame (ai_det_try_raise) instead */
             int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
-            if (ppc_detclock() && ppc_detclock_steps() > 0) { g_ai_det_bytes = bytes; continue; }
+            if (ppc_detclock()) continue;
         }
         mtx_lock(&g_lock);
         g_csr |= CSR_AIDINT;
@@ -412,7 +411,9 @@ uint32_t ai_read(uint32_t ea, int size) {
          * the one gap it rejects, and only host jitter let it through (38 s on the Switch). A polling
          * loop now sees the next step at once; the counter still follows real time. */
         static uint32_t last, bump;
-        uint32_t v = (uint32_t)(rt_ticks() * 32000 / 40500000) + bump;
+        int ppc_detclock(void); uint64_t ppc_timebase(void);
+        uint64_t now = ppc_detclock() ? ppc_timebase() : rt_ticks();  /* SR_DETCLOCK: game time */
+        uint32_t v = (uint32_t)(now * 32000 / 40500000) + bump;
         if (v == last) { bump++; v++; }
         last = v;
         return v;

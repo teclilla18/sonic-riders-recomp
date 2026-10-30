@@ -150,6 +150,8 @@ void gx_drawdone_stats(uint64_t* total, uint64_t* max, uint64_t* n) {
     *total = atomic_exchange(&g_dd_wait, 0); *max = atomic_exchange(&g_dd_max, 0); *n = atomic_exchange(&g_dd_n, 0);
 }
 void gx_decode_sync(void);  /* gx_render.c: queued vertex decodes finished */
+static _Atomic int g_pe_det_pending;  /* SR_DETCLOCK: PE updates waiting (gx_det_deliver) */
+static struct { int finish, token, tok_irq; uint16_t tok; } g_pe_det;  /* under g_pe_lock */
 static void pe_finish(void) {
     gx_decode_sync();  /* the game may reuse vertex arrays once it sees draw done */
     {
@@ -163,6 +165,13 @@ static void pe_finish(void) {
     }
     mtx_lock(&g_pe_lock);
     gx_tl('F', 0);
+    int ppc_detclock(void);
+    if (ppc_detclock()) {  /* SR_DETCLOCK: the status and the interrupt wait for gx_det_deliver */
+        g_pe_det.finish = 1;
+        mtx_unlock(&g_pe_lock);
+        atomic_store(&g_pe_det_pending, 1);
+        return;
+    }
     PE_INTRSR |= 0x8;  /* finish status */
     int irq = (PE_INTRSR & 0x2) != 0;
     mtx_unlock(&g_pe_lock);
@@ -173,6 +182,15 @@ static void pe_token(uint16_t token, int irq) {
     gx_decode_sync();
     mtx_lock(&g_pe_lock);
     gx_tl('T', token | (unsigned)irq << 16);
+    int ppc_detclock(void);
+    if (ppc_detclock()) {  /* SR_DETCLOCK: the register, status and interrupt wait for gx_det_deliver */
+        g_pe_det.token = 1;
+        g_pe_det.tok = token;
+        g_pe_det.tok_irq |= irq;
+        mtx_unlock(&g_pe_lock);
+        atomic_store(&g_pe_det_pending, 1);
+        return;
+    }
     PE_TOKEN = token;
     int raise = 0;
     if (irq) {
@@ -181,6 +199,38 @@ static void pe_token(uint16_t token, int irq) {
     }
     mtx_unlock(&g_pe_lock);
     if (raise) os_raise_interrupt(OS_INTERRUPT_PI_PE_TOKEN);
+}
+
+/* SR_DETCLOCK: the GP thread reaches draw-done and token commands at times set by the host. What they
+ * change (the token register, the status bits) and their interrupts wait here and are applied at a point
+ * where no game thread is running (the CPU idles, or only a thread parked in a known wait loop runs:
+ * vi.c, sched.c), or when the game reads a PE register (after the GP has caught up), so the game sees
+ * them at the same place in its work every run. */
+static int g_wg_n;  /* (defined below with the write-gather pipe) */
+/* GPU work that could still wake a game thread: held PE updates, or commands the game thread wrote but
+ * has not pushed to the GP yet (flushed when it idles, gx_pipe_idle) */
+int gx_det_pending(void) { return atomic_load(&g_pe_det_pending) != 0 || *(volatile int*)&g_wg_n != 0; }
+int gx_det_parts(void) { return (atomic_load(&g_pe_det_pending) != 0) | (*(volatile int*)&g_wg_n != 0) << 1; }  /* diagnostics */
+int gx_det_deliver(void) {
+    if (!atomic_exchange(&g_pe_det_pending, 0)) return 0;
+    mtx_lock(&g_pe_lock);
+    int raise_f = 0, raise_t = 0;
+    if (g_pe_det.finish) {
+        PE_INTRSR |= 0x8;
+        raise_f = (PE_INTRSR & 0x2) != 0;
+    }
+    if (g_pe_det.token) {
+        PE_TOKEN = g_pe_det.tok;
+        if (g_pe_det.tok_irq) {
+            PE_INTRSR |= 0x4;
+            raise_t = (PE_INTRSR & 0x1) != 0;
+        }
+    }
+    memset(&g_pe_det, 0, sizeof g_pe_det);
+    mtx_unlock(&g_pe_lock);
+    if (raise_f) os_raise_interrupt(OS_INTERRUPT_PI_PE_FINISH);
+    if (raise_t) os_raise_interrupt(OS_INTERRUPT_PI_PE_TOKEN);
+    return 1;
 }
 
 /* BP registers whose write is an action (draw done, tokens, EFB copy, TLUT load), not only state */
@@ -633,6 +683,14 @@ void gx_cp_write(uint32_t off, uint32_t v, int size) {
 uint32_t gx_pe_read(uint32_t off, int size) {
     g_pe_reads++;
     pipe_flush();  /* a game polling draw sync tokens waits for commands still in the gather buffer */
+    {   /* SR_DETCLOCK: the GP finishes what was sent, then its held updates apply: the game reads the
+         * same value every run */
+        int ppc_detclock(void);
+        if (ppc_detclock()) {
+            while (gx_gp_backlog()) platform_sleep_ns(50000);
+            gx_det_deliver();
+        }
+    }
     off &= 0xFF;
     mtx_lock(&g_pe_lock);
     uint32_t v = size == 4 ? (uint32_t)g_pe_mmio[off >> 1] << 16 | g_pe_mmio[(off >> 1) + 1] : g_pe_mmio[off >> 1];

@@ -84,6 +84,21 @@ static int thread_main(void* arg) {
     rt_fatal("guest thread %08X continued after OSExitThread", g->ctx);
 }
 
+/* SR_DETCLOCK diagnostics: vi.c asks (after a retrace backstop) and the game thread logs its own call
+ * chain the next time it enables interrupts */
+volatile int g_det_bt_req;
+static void det_bt_log(const Cpu* c) {
+    uint32_t chain[8] = {0}, sp = c->r[1];
+    for (int i = 0; i < 8 && sp >= 0x80000000u && sp < 0x80000000u + GUEST_RAM_SIZE - 8; i++) {
+        uint32_t up = ld32(sp);
+        if (up <= sp || up >= 0x80000000u + GUEST_RAM_SIZE - 8) break;
+        chain[i] = ld32(up + 4);
+        sp = up;
+    }
+    rt_log("[det] after backstop: thread %08X lr %08X chain %08X %08X %08X %08X %08X %08X %08X %08X",
+           ld32(0x800000E4u), c->lr, chain[0], chain[1], chain[2], chain[3], chain[4], chain[5], chain[6], chain[7]);
+}
+
 /* hand the CPU to `next` and park until this host thread's context is loaded again */
 static void handoff(GThread* next) {
     uint32_t prof_fn = g_ppc_cur_fn;
@@ -216,9 +231,14 @@ static void make_irq_cpu(Cpu* ic, const Cpu* c) {
     ic->msr = c->msr & ~MSR_EE;
 }
 
+/* SR_DETCLOCK: interrupt handlers are running on the game thread. Set before the pending flag is
+ * cleared and cleared after the handlers ran (a thread they woke is in the run queue by then), so
+ * vi.c never sees "no thread running, nothing pending" in between */
+_Atomic int g_irq_running;
 static void deliver(Cpu* c) {
     if (t_in_irq) return;
     t_in_irq = 1;
+    atomic_store(&g_irq_running, 1);
     /* the profiler charges the time after the handlers to the interrupted code again */
     uint32_t prof_fn = g_ppc_cur_fn, prof_lr = g_ppc_cur_lr;
     while (g_core_preempt[0] && (c->msr & MSR_EE)) {
@@ -240,9 +260,13 @@ static void deliver(Cpu* c) {
         }
         c->msr |= MSR_EE;
     }
+    atomic_store(&g_irq_running, 0);
     t_in_irq = 0;
     g_ppc_cur_fn = prof_fn;
     g_ppc_cur_lr = prof_lr;
+    /* the handlers may have written GX commands (a retrace callback); while the CPU idles nothing else
+     * pushes them to the GP (SR_DETCLOCK counts them as GPU work under way) */
+    if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT) gx_pipe_idle();
     /* a thread made ready by the interrupt may preempt the interrupted one */
     if (ld32(OS_RUNQUEUE_HINT) && ld32(OS_CURRENT_THREAD) && ld32(OS_CURRENT_CONTEXT) == ld32(OS_CURRENT_THREAD)) {
         Cpu ic;
@@ -280,6 +304,7 @@ void sched_idle_split(uint64_t* idle, uint64_t* waiting_gp) {
 }
 
 void sched_interrupts_enabled(Cpu* c) {
+    if (g_det_bt_req && (uint32_t)g_det_bt_req == ld32(0x800000E4u)) { g_det_bt_req = 0; det_bt_log(c); }
     {
         uint64_t now = rt_ticks();
         if (ld32(OS_RUNQUEUE_BITS) == 0) {
@@ -296,6 +321,7 @@ void sched_interrupts_enabled(Cpu* c) {
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
         { void di_det_poll(void); di_det_poll(); }  /* SR_DETCLOCK: a disc command completes when the CPU idles */
+        { int gx_det_deliver(void); gx_det_deliver(); }  /* SR_DETCLOCK: and the GPU's interrupts arrive */
         if (g_core_preempt[0]) { deliver(c); return; }
         record_backtrace(c);
         uint32_t prof_prev = g_ppc_cur_fn;
@@ -336,7 +362,7 @@ static int64_t g_dec_deadline;  /* timebase ticks; INT64_MAX = not armed */
 static int64_t g_dec_vdeadline = INT64_MAX;
 static int det_dec(void) {
     int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
-    return ppc_detclock() && ppc_detclock_steps() > 0;
+    return ppc_detclock();
 }
 static int64_t det_now(void) { uint64_t ppc_detclock_base(void); return (int64_t)ppc_detclock_base(); }
 void sched_det_frame(void) {
@@ -377,11 +403,25 @@ static int dec_main(void* arg) {
     for (;;) {
         if (g_dec_deadline == INT64_MAX) { cnd_wait(&g_dec_cv, &g_dec_lock); continue; }
         int64_t left = g_dec_deadline - (int64_t)rt_ticks();
+        if (left <= 0 && g_dec_vdeadline != INT64_MAX) {
+            /* SR_DETCLOCK: while game time moves (frames, idle ticks) the alarm waits for it (it fires at
+             * a frame end); the host-clock backstop is only for stretches where game time stands still */
+            int vi_det_time_moving(void);
+            if (vi_det_time_moving()) {
+                g_dec_deadline = (int64_t)rt_ticks() + 40500000 / 20;
+                continue;
+            }
+        }
         if (left <= 0) {
             uint64_t late = (uint64_t)-left;
             g_dec_late_sum += late;
             if (late > g_dec_late_max) g_dec_late_max = late;
             g_dec_fired++;
+            if (g_dec_vdeadline != INT64_MAX) {  /* SR_DETCLOCK: the host-clock backstop fired first */
+                static unsigned logged;
+                if (logged++ < 20) rt_log("[det] alarm backstop: decrementer fired on the host clock (game time %lld ticks short)",
+                                          (long long)(g_dec_vdeadline - det_now()));
+            }
             g_dec_deadline = INT64_MAX;
             g_dec_vdeadline = INT64_MAX;
             mtx_unlock(&g_dec_lock);

@@ -172,19 +172,43 @@ static void ram_hash(void) {
      * to line up two runs whose loading took a different number of frames */
     static uint32_t key_addr = 1;
     if (key_addr == 1) key_addr = getenv("SR_RAMHASH_KEY") ? (uint32_t)strtoul(getenv("SR_RAMHASH_KEY"), NULL, 16) : 0;
-    {   /* SR_RAMDUMPKEY=<value>: RAM to build/ramkey.bin the first time the key reaches that value */
-        static int done;
+    {   /* SR_RAMDUMPKEY=<value>[,<value>...]: RAM to build/ramkey.bin (first value) or
+         * build/ramkey_<value>.bin (the others) the first time the key reaches that value */
+        static uint32_t done;  /* bit per list entry */
         const char* dk = getenv("SR_RAMDUMPKEY");
         const char* after = getenv("SR_RAMDUMPKEY_AFTER");  /* not before this frame (a later scene) */
-        if (dk && key_addr && !done && ld32(key_addr) == (uint32_t)atoi(dk) && (!after || step >= (unsigned)atoi(after))) {
-            done = 1;
-            FILE* f = fopen("build/ramkey.bin", "wb");
-            if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
-        }
+        int idx = 0;
+        if (key_addr && (!after || step >= (unsigned)atoi(after)))
+            for (const char* q = dk; q && *q && idx < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL, idx++) {
+                if (done >> idx & 1 || ld32(key_addr) != (uint32_t)atoi(q)) continue;
+                done |= 1u << idx;
+                char path[64];
+                if (q == dk) snprintf(path, sizeof path, "build/ramkey.bin");
+                else snprintf(path, sizeof path, "build/ramkey_%d.bin", atoi(q));
+                FILE* f = fopen(path, "wb");
+                if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
+            }
     }
     int n = key_addr ? snprintf(line, 64, "[hash] %u key=%u", step++, ld32(key_addr)) : snprintf(line, 64, "[hash] %u", step++);
+    /* SR_RAMHASH_BLOCKS=<from>-<to>[,...] (MB): hash only those blocks (others print "-"), so the
+     * measurement stays cheap enough not to slow frames down; "none" logs only the step and key */
+    static uint32_t blk_mask = 0;
+    static int blk_init;
+    if (!blk_init) {
+        blk_init = 1;
+        const char* bl = getenv("SR_RAMHASH_BLOCKS");
+        if (!bl) blk_mask = 0xFFFFFFFFu;
+        for (const char* q = bl; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) {
+            int a = atoi(q), b = a;
+            const char* dash = strchr(q, '-');
+            const char* comma = strchr(q, ',');
+            if (dash && (!comma || dash < comma)) b = atoi(dash + 1);
+            for (int i = a; i <= b && i < 32; i++) if (i >= 0 && (*q >= '0' && *q <= '9')) blk_mask |= 1u << i;
+        }
+    }
     const uint8_t* ram = mem_phys(0);
     for (uint32_t blk = 0; blk < GUEST_RAM_SIZE >> 20; blk++) {
+        if (!(blk_mask >> blk & 1)) { n += snprintf(line + n, sizeof line - n, " -"); continue; }
         const uint64_t* p = (const uint64_t*)(ram + ((size_t)blk << 20));
         uint64_t h0 = 0x9E3779B97F4A7C15ull, h1 = 0, h2 = 0, h3 = 0;  /* cheap: 4 lanes, add/xor/rotate */
         for (size_t i = 0; i < (1u << 20) / 8; i += 4) {
@@ -224,6 +248,17 @@ void hle_frame_end(Cpu* c) {
     { int ppc_detclock(void); void ai_det_frame(void); void sched_det_frame(void);
       if (ppc_detclock()) { ai_det_frame(); sched_det_frame(); } }  /* this frame's audio interrupts; due alarms */
     { int ppc_detclock(void); void si_det_latch(void); if (ppc_detclock()) si_det_latch(); }  /* and the next frame's input */
+    {   /* SR_DETCLOCK: no frame pacing (its skips and its 30 fps switch follow the host's timing and
+         * change the game's step); the game's own frame end, as on the console, including its own
+         * 30 fps mode while loading */
+        int ppc_detclock(void); void vi_det_frame_end(uint32_t thread, int in);
+        if (ppc_detclock()) {
+            vi_det_frame_end(g_main_thread, 1);
+            f_8000610C_orig(c);
+            vi_det_frame_end(g_main_thread, 0);
+            return;
+        }
+    }
     int mode = g_settings.framerate;
     int skipped = ld32(GAME_FRAME_SKIP) != 0;  /* this iteration's draws were left out */
     test_load(!skipped);
@@ -251,12 +286,7 @@ void hle_frame_end(Cpu* c) {
         g_s30_since = g_win_field = vi_field_count();
         g_win_trouble = g_win_rebase = 0;
     }
-    {   /* SR_DETCLOCK: the main thread is in the frame end, where it waits for retraces (vi.c) */
-        int ppc_detclock(void); void vi_det_frame_end(uint32_t thread, int in);
-        if (ppc_detclock()) vi_det_frame_end(g_main_thread, 1);
-        hle_frame_end_mode(c, mode, skipped);
-        if (ppc_detclock()) vi_det_frame_end(g_main_thread, 0);
-    }
+    hle_frame_end_mode(c, mode, skipped);
     g_t_exit = platform_now_ns();
 }
 

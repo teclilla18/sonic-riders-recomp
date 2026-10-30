@@ -3,6 +3,7 @@
  * holds a standard controller; ports 2-4 hold one while the host has a controller for that player
  * (input_connected), so the game sees controllers plugged in and out. All are fed by input_get_pad.
  * Registers and the controller protocol: YAGCD "SI", Dolphin's SerialInterface / SI_DeviceGCController. */
+#include <stdlib.h>
 #include <string.h>
 
 #include "runtime.h"
@@ -34,7 +35,18 @@ static uint32_t g_inl_latched[4];
 #define COMCSR_RDSTINT   0x10000000u
 #define COMCSR_RDSTINTMSK 0x08000000u
 
-static int connected(int ch) { return ch == 0 || input_connected(ch); }
+/* SR_DETCLOCK: which ports have a controller is fixed for the run (port 0, or ports 0..SR_PADS-1), not
+ * live hot-plugging: a gamepad the host finds a moment later would change what the game's controller
+ * detection sees from one run to the next (online, the session decides the ports) */
+static int connected(int ch) {
+    int ppc_detclock(void);
+    if (ppc_detclock()) {
+        static int ports = -1;
+        if (ports < 0) { const char* n = getenv("SR_PADS"); ports = n && atoi(n) > 1 ? atoi(n) : 1; }
+        return ch < ports;
+    }
+    return ch == 0 || input_connected(ch);
+}
 
 /* the controller's analog origin: neutral sticks, triggers released */
 static void origin(uint8_t* r) {
