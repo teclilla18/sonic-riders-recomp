@@ -6,6 +6,9 @@
   input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on
   the Switch), and two copies of the game racing in lockstep over the network (`SR_NET`), with a
   "desync" message if the two games ever stop matching.
+- Performance test for contributors (docs/PERF.md): `SR_PERFTEST=1` measures the title screen's two demo
+  races the same way every time, on PC or Switch, without touching your save; `tools/perf_test.py`
+  compares the result with a saved record.
 
 ## v0.3.4 (2026-10-29)
 

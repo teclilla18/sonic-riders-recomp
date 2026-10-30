@@ -63,14 +63,14 @@ static _Atomic unsigned g_card_file_writes;
 static _Atomic unsigned g_card_erases, g_card_programs;
 unsigned exi_card_file_writes(void) { return atomic_load(&g_card_file_writes); }
 
-/* online play (netplay.c): the card's writes stay in memory, the file is left as it was */
+/* online play (netplay.c) and the perf test (perftest.c): the card's writes stay in memory, the file is left as it was */
 static _Atomic int g_card_volatile;
 void exi_card_volatile(void) { atomic_store(&g_card_volatile, 1); }
 
 static void card_write_file(Card* c) {
     if (atomic_load(&g_card_volatile)) {
         static int logged;
-        if (!logged++) rt_log("[card] online session: the game's saves stay in memory, %s is not written", c->path);
+        if (!logged++) rt_log("[card] the game's saves stay in memory (online session or perf test): %s is not written", c->path);
         atomic_store(&c->dirty, 0);
         return;
     }

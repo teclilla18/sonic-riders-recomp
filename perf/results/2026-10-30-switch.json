@@ -1,0 +1,110 @@
+{
+ "version": 1,
+ "build": "v0.2.4-38-g236a1dc9-dirty",
+ "platform": "switch",
+ "settings": {
+  "framerate": "Auto (keep speed)",
+  "resolution": "1x (640x528, fastest)"
+ },
+ "runs": [
+  {
+   "version": 1,
+   "build": "v0.2.4-38-g236a1dc9-dirty",
+   "platform": "switch",
+   "settings": {
+    "framerate": "Auto (keep speed)",
+    "resolution": "1x (640x528, fastest)"
+   },
+   "scenes": {
+    "demo_1p": {
+     "speed": 59.953,
+     "steps_per_s": 59.953,
+     "fps": 58.121,
+     "game_ms_mean": 13.472,
+     "game_ms_p50": 13.901,
+     "game_ms_p95": 16.561,
+     "game_ms_max": 20.333,
+     "steps_over_16ms": 77,
+     "steps": 1800
+    },
+    "demo_2p": {
+     "speed": 59.942,
+     "steps_per_s": 59.942,
+     "fps": 56.378,
+     "game_ms_mean": 13.708,
+     "game_ms_p50": 13.728,
+     "game_ms_p95": 18.667,
+     "game_ms_max": 22.408,
+     "steps_over_16ms": 385,
+     "steps": 1800
+    }
+   }
+  }
+ ],
+ "summary": {
+  "demo_1p": {
+   "speed": {
+    "mean": 59.953,
+    "min": 59.953,
+    "max": 59.953
+   },
+   "fps": {
+    "mean": 58.121,
+    "min": 58.121,
+    "max": 58.121
+   },
+   "game_ms_mean": {
+    "mean": 13.472,
+    "min": 13.472,
+    "max": 13.472
+   },
+   "game_ms_p95": {
+    "mean": 16.561,
+    "min": 16.561,
+    "max": 16.561
+   },
+   "game_ms_max": {
+    "mean": 20.333,
+    "min": 20.333,
+    "max": 20.333
+   },
+   "steps_over_16ms": {
+    "mean": 77.0,
+    "min": 77,
+    "max": 77
+   }
+  },
+  "demo_2p": {
+   "speed": {
+    "mean": 59.942,
+    "min": 59.942,
+    "max": 59.942
+   },
+   "fps": {
+    "mean": 56.378,
+    "min": 56.378,
+    "max": 56.378
+   },
+   "game_ms_mean": {
+    "mean": 13.708,
+    "min": 13.708,
+    "max": 13.708
+   },
+   "game_ms_p95": {
+    "mean": 18.667,
+    "min": 18.667,
+    "max": 18.667
+   },
+   "game_ms_max": {
+    "mean": 22.408,
+    "min": 22.408,
+    "max": 22.408
+   },
+   "steps_over_16ms": {
+    "mean": 385.0,
+    "min": 385,
+    "max": 385
+   }
+  }
+ }
+}

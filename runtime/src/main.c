@@ -103,6 +103,11 @@ int main(int argc, char** argv) {
     di_init();
     {
         const char* card = getenv("SR_CARD");
+        int perftest_on(void); void exi_card_volatile(void);
+        if (perftest_on()) {  /* SR_PERFTEST: a fresh card in memory; the player's save is left alone */
+            exi_card_volatile();
+            card = "(perftest: fresh card in memory)";
+        }
         exi_init(card ? card : platform_save_path());
     }
     { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine (same save) first */

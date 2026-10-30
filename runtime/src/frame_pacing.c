@@ -325,7 +325,15 @@ static void shot_step(void) {
         }
 }
 
+static void frame_end_body(Cpu* c);
 void hle_frame_end(Cpu* c) {
+    void perftest_frame_begin(void); void perftest_frame_done(void);
+    perftest_frame_begin();  /* SR_PERFTEST (perftest.c): the game's work per step */
+    frame_end_body(c);
+    perftest_frame_done();
+}
+
+static void frame_end_body(Cpu* c) {
     ram_hash();
     { void netplay_frame_start(void); netplay_frame_start(); }  /* the state checksum for record/replay/online */
     shot_step();

@@ -21,8 +21,9 @@ void si_det_latch(void) {
     netplay_latch(g_det_latch);  /* live, recorded, replayed or exchanged with another machine (netplay.c) */
 }
 static void get_pad(int ch, GcPad* p) {
-    int ppc_detclock(void);
-    if (ppc_detclock()) *p = g_det_latch[ch & 3];
+    int ppc_detclock(void); int perftest_on(void); void perftest_pad(GcPad* p);
+    if (perftest_on()) perftest_pad(p);  /* SR_PERFTEST: no controllers (perftest.c) */
+    else if (ppc_detclock()) *p = g_det_latch[ch & 3];
     else input_get_pad(ch, p);
 }
 

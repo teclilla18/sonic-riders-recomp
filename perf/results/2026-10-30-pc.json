@@ -1,0 +1,176 @@
+{
+ "version": 1,
+ "build": "v0.2.4-38-g236a1dc9-dirty",
+ "platform": "pc",
+ "settings": {
+  "framerate": "60 fps (30 when busy)",
+  "resolution": "1x (640x528, fastest)"
+ },
+ "runs": [
+  {
+   "version": 1,
+   "build": "v0.2.4-38-g236a1dc9-dirty",
+   "platform": "pc",
+   "settings": {
+    "framerate": "60 fps (30 when busy)",
+    "resolution": "1x (640x528, fastest)"
+   },
+   "scenes": {
+    "demo_1p": {
+     "speed": 59.939,
+     "steps_per_s": 59.939,
+     "fps": 59.906,
+     "game_ms_mean": 2.508,
+     "game_ms_p50": 2.179,
+     "game_ms_p95": 4.253,
+     "game_ms_max": 5.539,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    },
+    "demo_2p": {
+     "speed": 59.945,
+     "steps_per_s": 59.945,
+     "fps": 59.945,
+     "game_ms_mean": 2.372,
+     "game_ms_p50": 2.075,
+     "game_ms_p95": 4.369,
+     "game_ms_max": 7.862,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    }
+   }
+  },
+  {
+   "version": 1,
+   "build": "v0.2.4-38-g236a1dc9-dirty",
+   "platform": "pc",
+   "settings": {
+    "framerate": "60 fps (30 when busy)",
+    "resolution": "1x (640x528, fastest)"
+   },
+   "scenes": {
+    "demo_1p": {
+     "speed": 59.943,
+     "steps_per_s": 59.943,
+     "fps": 59.876,
+     "game_ms_mean": 2.326,
+     "game_ms_p50": 2.026,
+     "game_ms_p95": 4.303,
+     "game_ms_max": 5.474,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    },
+    "demo_2p": {
+     "speed": 59.941,
+     "steps_per_s": 59.941,
+     "fps": 59.908,
+     "game_ms_mean": 2.37,
+     "game_ms_p50": 2.12,
+     "game_ms_p95": 4.116,
+     "game_ms_max": 5.915,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    }
+   }
+  },
+  {
+   "version": 1,
+   "build": "v0.2.4-38-g236a1dc9-dirty",
+   "platform": "pc",
+   "settings": {
+    "framerate": "60 fps (30 when busy)",
+    "resolution": "1x (640x528, fastest)"
+   },
+   "scenes": {
+    "demo_1p": {
+     "speed": 59.941,
+     "steps_per_s": 59.941,
+     "fps": 59.875,
+     "game_ms_mean": 2.422,
+     "game_ms_p50": 2.102,
+     "game_ms_p95": 4.292,
+     "game_ms_max": 5.295,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    },
+    "demo_2p": {
+     "speed": 59.936,
+     "steps_per_s": 59.936,
+     "fps": 59.936,
+     "game_ms_mean": 2.326,
+     "game_ms_p50": 2.056,
+     "game_ms_p95": 4.212,
+     "game_ms_max": 5.618,
+     "steps_over_16ms": 0,
+     "steps": 1800
+    }
+   }
+  }
+ ],
+ "summary": {
+  "demo_1p": {
+   "speed": {
+    "mean": 59.941,
+    "min": 59.939,
+    "max": 59.943
+   },
+   "fps": {
+    "mean": 59.88566666666666,
+    "min": 59.875,
+    "max": 59.906
+   },
+   "game_ms_mean": {
+    "mean": 2.4186666666666667,
+    "min": 2.326,
+    "max": 2.508
+   },
+   "game_ms_p95": {
+    "mean": 4.282666666666667,
+    "min": 4.253,
+    "max": 4.303
+   },
+   "game_ms_max": {
+    "mean": 5.436,
+    "min": 5.295,
+    "max": 5.539
+   },
+   "steps_over_16ms": {
+    "mean": 0.0,
+    "min": 0,
+    "max": 0
+   }
+  },
+  "demo_2p": {
+   "speed": {
+    "mean": 59.940666666666665,
+    "min": 59.936,
+    "max": 59.945
+   },
+   "fps": {
+    "mean": 59.92966666666666,
+    "min": 59.908,
+    "max": 59.945
+   },
+   "game_ms_mean": {
+    "mean": 2.356,
+    "min": 2.326,
+    "max": 2.372
+   },
+   "game_ms_p95": {
+    "mean": 4.232333333333333,
+    "min": 4.116,
+    "max": 4.369
+   },
+   "game_ms_max": {
+    "mean": 6.465,
+    "min": 5.618,
+    "max": 7.862
+   },
+   "steps_over_16ms": {
+    "mean": 0.0,
+    "min": 0,
+    "max": 0
+   }
+  }
+ }
+}
