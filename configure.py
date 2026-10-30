@@ -149,7 +149,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("cflags", "-std=gnu11 -g " + hostinc)
             n.variable("cxxflags", "-std=c++20 -g " + hostinc)
             # a windowed program (no console window); the log goes to sonicriders.log then (platform_host.c)
-            n.variable("ldflags", "-g -static-libstdc++ -static-libgcc -L%s/lib -lSDL2 -lopengl32 -lwinmm -Wl,--subsystem,windows -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
+            n.variable("ldflags", "-g -static-libstdc++ -static-libgcc -L%s/lib -lSDL2 -lopengl32 -lwinmm -lws2_32 -Wl,--subsystem,windows -Wl,-Map=%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/bin/SDL2.dll"
         else:
             sdl = args.sdl or pick_sdl(lambda d: os.path.isdir(os.path.join(d, "lib", "x64")))
@@ -160,7 +160,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("cxx", "clang++")
             n.variable("cflags", "-std=gnu11 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
             n.variable("cxxflags", "-std=c++20 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
-            n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32 -lwinmm -Wl,/MAP:%s/sonicriders.map" % (sdl, OUT))
+            n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32 -lwinmm -lws2_32 -Wl,/MAP:%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/lib/x64/SDL2.dll"
         exe = OUT + "/sonicriders.exe"
     else:

@@ -79,6 +79,7 @@ int ppc_detclock(void) {
     if (g_detclock < 0) { const char* e = getenv("SR_DETCLOCK"); g_detclock = e && atoi(e) != 0; }
     return g_detclock;
 }
+void ppc_detclock_force(void) { g_detclock = 1; }  /* netplay.c: recording, replay and online play need it */
 void ppc_detclock_step(void) { g_det_step++; }
 uint32_t ppc_detclock_steps(void) { return g_det_step; }
 uint64_t ppc_detclock_base(void) { return 40500000ull * 60 + (uint64_t)g_det_step * DET_TICKS_PER_STEP; }  /* this frame's start */

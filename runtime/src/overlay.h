@@ -24,6 +24,8 @@ int overlay_input(unsigned held);
  * outside which the image is transparent (all 0: nothing to draw) */
 const uint8_t* overlay_image(unsigned* version, int box[4]);
 void overlay_set_fps(float fps);  /* any thread */
+/* a message across the top of the screen until replaced; NULL or "" removes it (any thread) */
+void overlay_set_banner(const char* text);
 /* the menu's "Save screenshot": 1 once after it was chosen (the backend saves the next picture) */
 int overlay_take_screenshot_request(void);
 void overlay_request_screenshot(void);

@@ -55,6 +55,11 @@ bool g_ready;
 uint64_t g_last_ns;
 uint64_t g_last_hash;
 bool g_had_image;
+/* overlay_set_banner: a message across the top (online play: desync, connection lost) */
+std::mutex g_banner_lock;
+char g_banner_next[256], g_banner[256];
+std::atomic<unsigned> g_banner_seq{0};
+unsigned g_shown_banner_seq;
 
 /* the helper thread's job: a copy of one frame's draw lists */
 struct Job {
@@ -495,6 +500,17 @@ void fps_counter() {
     dl->AddText(ImVec2(16, 12), IM_COL32(255, 210, 46, 255), t);
 }
 
+void banner_box() {
+    if (!g_banner[0]) return;
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImVec2 ts = ImGui::CalcTextSize(g_banner, nullptr, false, OVERLAY_W - 160.0f);
+    float x0 = (OVERLAY_W - ts.x) * 0.5f - 20, y0 = 40;
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ts.x + 40, y0 + ts.y + 24), IM_COL32(60, 6, 10, 225), 8.0f);
+    dl->AddRect(ImVec2(x0, y0), ImVec2(x0 + ts.x + 40, y0 + ts.y + 24), IM_COL32(255, 80, 80, 230), 8.0f, 0, 2.0f);
+    dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(x0 + 20, y0 + 12), IM_COL32(255, 240, 240, 255), g_banner,
+                nullptr, OVERLAY_W - 160.0f);
+}
+
 uint64_t draw_hash(const ImDrawData* dd) {
     uint64_t h = 1469598103934665603ull;
     auto mix = [&h](const void* p, size_t n) {
@@ -548,6 +564,7 @@ void frame() {
     ImGui::NewFrame();
     if (g_open) settings_window();
     fps_counter();
+    banner_box();
     ImGui::Render();
     ImDrawData* dd = ImGui::GetDrawData();
     uint64_t h = draw_hash(dd);
@@ -595,6 +612,12 @@ void feed(ImGuiKey k, unsigned held, unsigned changed, unsigned bit) {
 extern "C" {
 
 void overlay_set_fps(float fps) { g_fps10.store((int)(fps * 10.0f + 0.5f)); }
+
+void overlay_set_banner(const char* text) {
+    std::lock_guard<std::mutex> l(g_banner_lock);
+    snprintf(g_banner_next, sizeof g_banner_next, "%s", text ? text : "");
+    g_banner_seq.fetch_add(1);
+}
 
 int overlay_take_controllers_request(void) {
     int r = g_pads_request;
@@ -677,12 +700,19 @@ const uint8_t* overlay_image(unsigned* version, int box[4]) {
     int fps10 = g_settings.show_fps ? g_fps10.load() : -1;
     bool fps_changed = fps10 != g_shown_fps10;
     g_shown_fps10 = fps10;
+    unsigned bseq = g_banner_seq.load();
+    bool banner_changed = bseq != g_shown_banner_seq;
+    if (banner_changed) {
+        std::lock_guard<std::mutex> l(g_banner_lock);
+        memcpy(g_banner, g_banner_next, sizeof g_banner);
+        g_shown_banner_seq = bseq;
+    }
     static bool was_open;
-    bool shown = g_open || g_settings.show_fps;
+    bool shown = g_open || g_settings.show_fps || g_banner[0];
     /* the menu runs every frame while open (navigation, tooltips); the counter only when it changes */
     collect();
     /* a picture left waiting because the helper was busy is made again too */
-    if (g_open || fps_changed || was_open != g_open || g_retry) frame();
+    if (g_open || fps_changed || banner_changed || was_open != g_open || g_retry) frame();
     was_open = g_open;
     *version = g_version;
     if (box) memcpy(box, g_box[g_front], sizeof g_box[g_front]);

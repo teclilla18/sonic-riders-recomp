@@ -63,7 +63,17 @@ static _Atomic unsigned g_card_file_writes;
 static _Atomic unsigned g_card_erases, g_card_programs;
 unsigned exi_card_file_writes(void) { return atomic_load(&g_card_file_writes); }
 
+/* online play (netplay.c): the card's writes stay in memory, the file is left as it was */
+static _Atomic int g_card_volatile;
+void exi_card_volatile(void) { atomic_store(&g_card_volatile, 1); }
+
 static void card_write_file(Card* c) {
+    if (atomic_load(&g_card_volatile)) {
+        static int logged;
+        if (!logged++) rt_log("[card] online session: the game's saves stay in memory, %s is not written", c->path);
+        atomic_store(&c->dirty, 0);
+        return;
+    }
     atomic_fetch_add(&g_card_file_writes, 1);
     static uint8_t snap[CARD_SIZE];
     mtx_lock(&c->lock);
@@ -416,6 +426,15 @@ void exi_write(uint32_t ea, uint32_t v, int size) {
     case 3: g_ch[ch].cr = v; if (v & 1) transfer((int)ch); break;
     default: g_ch[ch].data = v; break;
     }
+}
+
+/* a checksum of the card image as it is now (netplay.c: every machine must start from the same save) */
+uint32_t exi_card_hash(void) {
+    uint32_t h = 2166136261u;
+    mtx_lock(&g_card_a.lock);
+    for (uint32_t i = 0; i < CARD_SIZE; i++) h = (h ^ g_card_a.mem[i]) * 16777619u;
+    mtx_unlock(&g_card_a.lock);
+    return h;
 }
 
 void exi_init(const char* card_path) {

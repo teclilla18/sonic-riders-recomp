@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
     settings_load();
+    { void netplay_init(void); netplay_init(); }  /* SR_RECORD / SR_REPLAY / SR_NET (they turn SR_DETCLOCK on) */
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
     load_game();
     cpu_init(&g_main_cpu);
@@ -104,6 +105,7 @@ int main(int argc, char** argv) {
         const char* card = getenv("SR_CARD");
         exi_init(card ? card : platform_save_path());
     }
+    { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine (same save) first */
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
     if (wd && atoi(wd) > 0) {

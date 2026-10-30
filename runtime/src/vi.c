@@ -87,12 +87,18 @@ static unsigned g_det_n[6];  /* [det] log: delivered, fallback, main running, di
  * the game without its timing showing: no interrupt handler is running, and either no game thread runs
  * (the OS idles) or the one running is parked in a known wait loop (the frame end's retrace-count
  * loop, the REL loader's disc-data loops; code patches mark them) */
+static _Thread_local int g_det_at_loop;  /* the game thread is in vi_det_loop_point */
 static int det_quiet(void) {
     extern _Atomic int g_irq_running;
     extern volatile int g_core_preempt[3];
     if (atomic_load(&g_irq_running) || g_core_preempt[0]) return 0;
     uint32_t cur = ld32(0x800000E4u);
     if (cur == 0) return ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT;
+    /* a thread in a marked wait loop: only at the loop's head, from the game thread itself
+     * (vi_det_loop_point). The marks stay set while that thread is switched out, so a host thread seeing
+     * them could hand something over just as the thread comes back and leaves the loop (a GPU token landed
+     * at a different point in 2 of 3 replays of a race load, 2026-10-30) */
+    if (!g_det_at_loop) return 0;
     if (cur == (uint32_t)g_det_lspin) return 1;
     return cur == g_det_main && g_det_in_end && g_det_spin;
 }
@@ -211,6 +217,32 @@ static int det_idle_tick(void) {  /* game thread (sched.c det_idle via vi_det_id
     vi_pending = 1;
     return 1;
 }
+
+/* SR_DETCLOCK, game thread, at the head of a marked wait loop (patches.txt: the frame end's retrace-count
+ * loop, the REL loader's disc-data loops): hand over what is due there, as vi_thread does for a thread
+ * asleep: the GPU's results once it has done the queued work, then (det_raise) a disc completion, audio,
+ * the main thread's retrace. The thread takes the interrupt at the loop's next check, inside the loop. */
+void vi_det_loop_point(void) {
+    int ppc_detclock(void); int gx_det_deliver(void); size_t gx_gp_backlog(void);
+    if (!ppc_detclock()) return;
+    g_det_at_loop = 1;
+    if (det_quiet()) {
+        /* the GPU first, as if infinitely fast: wait until it has done the queued work (skipping the
+         * hand-over while it was still busy made the result depend on the host GPU's speed: a token
+         * went to the loader here in one run and to the idle loop in another) */
+        while (gx_gp_backlog()) platform_sleep_ns(50000);
+        if (!gx_det_deliver() && g_det_waiting) {  /* one thing per pass: the interrupt is taken first */
+            mtx_lock(&g_det_lock);
+            det_raise();
+            mtx_unlock(&g_det_lock);
+        }
+    }
+    g_det_at_loop = 0;
+}
+
+/* SR_DETCLOCK: the game is held on purpose (netplay.c waiting for another machine's input at a frame
+ * end): no game time passes and nothing is handed over meanwhile, so the backstops must not fire */
+void vi_det_keepalive(void) { atomic_store(&g_det_last_tick, rt_ticks()); }
 
 /* SR_DETCLOCK, game thread, the CPU idle with nothing under way (sched.c det_idle): hand over what is
  * due (audio interrupts, a retrace for the main thread asleep in its frame wait, or an idle tick).

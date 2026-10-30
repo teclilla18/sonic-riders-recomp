@@ -33,7 +33,7 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
 | Phase | What | Status |
 |---|---|---|
 | 1 | **Determinism**: two runs with the same inputs give byte-identical game state every frame, on PC and on Switch, and PC = Switch | Done (`SR_DETCLOCK`): PC, Switch, and PC = Switch |
-| 2 | Input recording and replay (also gives replays and ghosts); two copies in lockstep on one PC | |
+| 2 | Input recording and replay (also gives replays and ghosts); two copies in lockstep on one PC | Done (`SR_RECORD`, `SR_REPLAY`, `SR_NET`): PC; a PC recording replays identically on the Switch; lockstep on one PC |
 | 3 | Online races PC-PC and Switch-Switch, direct connection, one player per machine, own view full screen | |
 | 4 | Cross-play PC-Switch | |
 | 5 | Lobby server with NAT hole punching and a relay fallback (no port forwarding), self-hostable | |
@@ -91,5 +91,83 @@ and dumps memory where they first disagree; `SR_DETTRACE=1` logs every interrupt
 the frame and where the game was, so two machines' traces show the first event that lands differently.
 On the Switch these go in `env.txt`, and `SR_INPUT` works there too.
 
-**Next:** phase 2: record a session's inputs per frame and replay them (also gives replays and ghosts);
-two copies on one PC exchanging inputs in lockstep. Then the save-data rule for online races.
+## Recording, replay and lockstep (phase 2)
+
+`runtime/src/netplay.c`. All of it turns `SR_DETCLOCK` on by itself. At each game frame end the controllers for
+the next frame are decided once (si.c `si_det_latch`), and come from one of:
+
+- **Live** (`SR_RECORD=<file>` also writes them to a file): the machine's controllers and `SR_INPUT`.
+- **Replay** (`SR_REPLAY=<file>`): read back from a recording. The run is the recorded run again, frame for
+  frame. The number of controller ports comes from the recording.
+- **Lockstep** (`SR_NET=host:<port>` on one machine, `SR_NET=join:<address>:<port>` on the other; `host:<address>:<port>`
+  listens on one address only, e.g. `127.0.0.1` for two copies on one PC). Two players: the host is player 1,
+  the one who joins player 2, each with its own first controller. Each frame a machine sends its player's buttons
+  for frame N + D (`SR_NET_DELAY` on the host, default 4 frames) over UDP (resent until acknowledged) and steps frame
+  N once it has both players' buttons for N. The first D frames are neutral for both. `SR_NET_TIMEOUT` (default
+  10 s) without anything from the other machine ends the session.
+
+Frames are counted in frame ends, from 1. (Game time, `ppc_detclock_steps()`, also moves on in idle ticks
+without a frame end, so it is not a frame counter; a recording keeps it per frame as a check.)
+
+**Recording file:** a 64-byte header (`SRINPUT1`, version 1, number of ports, flags (1 = an online session),
+the build version), then per frame: the game step, the state checksum, and 8 bytes per port (buttons, main
+stick, C stick, L/R). Little-endian. About 1 KB per second for one port.
+
+**State checksum:** each frame end, the checksum of one 1 MB block of game memory, block (frame mod 28); 28
+frames cover all of it at 1/28 of the cost (~0.1 ms a frame on PC). A recording stores it, so a replay checks
+itself every frame (`[replay] frame N DIFFERS ...`, and a line at the end). Lockstep machines send each other
+their last 8 checksums with every packet; a mismatch ends the session on both machines with a message on screen
+("Desync: the two games no longer match (frame N). The online session has ended.") and in the log (the frame,
+the memory block, both checksums). A desync is found within 28 frames of the memory changing. After a session
+ends (desync, the other player left, connection lost) the game goes on alone with the other player's controller
+neutral.
+
+**Joining:** the host checks the joiner's protocol version, game build and memory card checksum, and refuses
+with the reason on both machines when they differ. During a session the game's saves stay in memory (exi.c
+`exi_card_volatile`): the card file is not written.
+
+Testing: `SR_NET_TEST_DESYNC=<frame>` changes one byte of that machine's game memory at that frame (in the DOL's
+code, which only the recompiled copy runs, so the game itself is unaffected), to see the desync check work.
+
+**Status (2026-10-30) [measured, PC]:**
+
+- Record then replay, the determinism route (menus, 1P Metal City race with steering), 7,700 frames: every
+  frame's full 28 MB checksum (`SR_RAMHASH`) equal between the recorded run and two replays (one with the GPU
+  thread slowed 4x), and the replays' own checks all equal.
+- Lockstep, two copies on one PC (host drives the menus as player 1, the joiner steers as player 2 during the
+  race), delay 4: identical full-memory checksums on both for all 7,700 frames; both wrote byte-identical
+  recordings; an offline replay of that recording matches the session frame for frame. Waiting for the other
+  copy: ~0.01-0.6 ms a frame on average.
+- Desync test (`SR_NET_TEST_DESYNC=3000` on the joiner): found at frame 3024 on the joiner, reported on both, the
+  message shown on screen. Connection lost (joiner killed): the host waits, ends the session after the timeout,
+  and goes on. A joiner with a different save: refused, with the reason on both.
+- PC recording replayed on the Switch (overclocked, `SR_REPLAY` in env.txt): all 7,700 frames' full-memory
+  checksums equal to the PC's, the replay's own check equal on all 7,920 frames, no backstops. So PC = Switch still
+  holds after the fix below, and a recording made on one machine plays on the other. Lockstep on the Switch
+  (sockets) has not run yet.
+- Found on the way, fixed: two runs could differ in game memory block 26 (thread stacks; nothing else) for 4-8
+  frames during loading. Hand-overs at the marked wait loops (frame end, REL loader) were made by the retrace
+  thread when the marks were set, but a mark stays set while its thread is switched out, so a hand-over could
+  land just as the thread came back and left the loop; and at a loop the GPU's results were only handed over if
+  the GPU thread had already finished, so where a token landed depended on the GPU thread's speed. Now the loop
+  heads hand over themselves, on the game thread (patches.txt -> vi.c `vi_det_loop_point`), after waiting for the
+  GPU to finish its queued work. The rolling checksum would otherwise have reported false desyncs there.
+
+Not done yet: more than two players (the protocol carries a player number; the host would relay), a two-player
+race route (in the test, player 2 is connected but not in the race, so the race exercises player 1's input; the
+menus see both controllers), each machine's own view full screen (phase 3).
+
+## Save data for online races (proposal, 2026-10-30)
+
+The game reads its memory card at boot (settings, unlocks, records), so every machine must start from the same
+card image or the games differ from the first frames. Today the host refuses a joiner whose card differs.
+
+Proposal: **the host's save for everyone, in memory only.** When a player joins, the host sends its card image
+(512 KB) to the joiner; both machines boot the session from that image, and during the session nobody's saves
+reach a file (already so). Everyone races with the host's unlocked characters, gear and tracks and the host's game
+settings; nobody's own save changes. Nothing to set up, and it works the same PC to Switch.
+
+Alternatives considered: requiring the same save on every machine (impractical outside tests); a fixed online save
+(a fresh card has most characters and tracks locked, and shipping an unlocked save would mean distributing a file
+made by the game, which this project does not do).
+

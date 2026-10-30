@@ -212,6 +212,20 @@ static void ram_hash_ref(unsigned step, const uint32_t* hv, uint32_t blk_mask) {
     prev_bad = bad;
 }
 
+/* the checksum of 1 MB block `blk` of guest RAM (SR_RAMHASH; netplay.c's per-frame state checksum) */
+uint32_t ram_block_hash(uint32_t blk) {
+    const uint64_t* p = (const uint64_t*)(mem_phys(0) + ((size_t)blk << 20));
+    uint64_t h0 = 0x9E3779B97F4A7C15ull, h1 = 0, h2 = 0, h3 = 0;  /* cheap: 4 lanes, add/xor/rotate */
+    for (size_t i = 0; i < (1u << 20) / 8; i += 4) {
+        h0 = ((h0 << 5) | (h0 >> 59)) ^ p[i];
+        h1 = ((h1 << 7) | (h1 >> 57)) + p[i + 1];
+        h2 = ((h2 << 11) | (h2 >> 53)) ^ p[i + 2];
+        h3 = ((h3 << 13) | (h3 >> 51)) + p[i + 3];
+    }
+    uint64_t h = (h0 ^ (h1 * 3) ^ (h2 * 5) ^ (h3 * 7)) * 0x100000001B3ull;
+    return (uint32_t)(h ^ (h >> 32));
+}
+
 static void ram_hash(void) {
     static int limit = -1;
     static unsigned step;
@@ -272,16 +286,7 @@ static void ram_hash(void) {
     uint32_t hv[32] = {0};
     for (uint32_t blk = 0; blk < GUEST_RAM_SIZE >> 20; blk++) {
         if (!(blk_mask >> blk & 1)) { n += snprintf(line + n, sizeof line - n, " -"); continue; }
-        const uint64_t* p = (const uint64_t*)(ram + ((size_t)blk << 20));
-        uint64_t h0 = 0x9E3779B97F4A7C15ull, h1 = 0, h2 = 0, h3 = 0;  /* cheap: 4 lanes, add/xor/rotate */
-        for (size_t i = 0; i < (1u << 20) / 8; i += 4) {
-            h0 = ((h0 << 5) | (h0 >> 59)) ^ p[i];
-            h1 = ((h1 << 7) | (h1 >> 57)) + p[i + 1];
-            h2 = ((h2 << 11) | (h2 >> 53)) ^ p[i + 2];
-            h3 = ((h3 << 13) | (h3 >> 51)) + p[i + 3];
-        }
-        uint64_t h = (h0 ^ (h1 * 3) ^ (h2 * 5) ^ (h3 * 7)) * 0x100000001B3ull;
-        hv[blk] = (uint32_t)(h ^ (h >> 32));
+        hv[blk] = ram_block_hash(blk);
         n += snprintf(line + n, sizeof line - n, " %08x", hv[blk]);
     }
     rt_log("%s", line);
@@ -322,6 +327,7 @@ static void shot_step(void) {
 
 void hle_frame_end(Cpu* c) {
     ram_hash();
+    { void netplay_frame_start(void); netplay_frame_start(); }  /* the state checksum for record/replay/online */
     shot_step();
     g_main_thread = ld32(OS_CURRENT_THREAD);
     { void ppc_detclock_step(void); ppc_detclock_step(); }  /* SR_DETCLOCK: game time moves one frame on */

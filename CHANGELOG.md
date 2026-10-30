@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Groundwork for online play (test options for now, see docs/ONLINE.md): record a session's controller
+  input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on
+  the Switch), and two copies of the game racing in lockstep over the network (`SR_NET`), with a
+  "desync" message if the two games ever stop matching.
+
 ## v0.3.4 (2026-10-29)
 
 - **Setup: works when your Windows user name has accents or other non-English letters.** The build

@@ -23,33 +23,36 @@ decl void dbg_event(int kind, uint32_t a, uint32_t b);
 
 # ---- SR_DETCLOCK (online play groundwork, runtime/src/vi.c): the frame end's 30 fps mode busy-waits on
 # the retrace count (loop 800061C8-800061D0, no calls); mark it so a retrace is handed over exactly there
+# The loop heads hand over what is due themselves (vi.c vi_det_loop_point, on the game thread): a host
+# thread checking the marks could act just as the loop ends (a thread resumed with its data there).
+decl void vi_det_loop_point(void);
 decl extern volatile int g_det_spin;
-800061C8 before { g_det_spin = 1; }
+800061C8 before { g_det_spin = 1; vi_det_loop_point(); }
 800061D4 before { g_det_spin = 0; }
 # the REL's streaming loader thread (fn 819594F4) busy-waits in 11 loops for the bytes-arrived counter of
 # the chunk it decompresses; mark them (head: this thread waits; exit and return: no longer) so a retrace
 # may be handed over while it waits there, not while it decompresses
 decl extern volatile int g_det_lspin;
-81959544 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959544 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959564 before { g_det_lspin = 0; }
-8195976C before { g_det_lspin = (int)ld32(0x800000E4u); }
+8195976C before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 8195978C before { g_det_lspin = 0; }
-81959844 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959844 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959868 before { g_det_lspin = 0; }
-819598C8 before { g_det_lspin = (int)ld32(0x800000E4u); }
+819598C8 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 819598E8 before { g_det_lspin = 0; }
-81959938 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959938 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 8195995C before { g_det_lspin = 0; }
-81959A18 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959A18 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959A38 before { g_det_lspin = 0; }
-81959A88 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959A88 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959AAC before { g_det_lspin = 0; }
-81959B30 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959B30 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959B50 before { g_det_lspin = 0; }
-81959BA4 before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959BA4 before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959BC4 before { g_det_lspin = 0; }
-81959C2C before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959C2C before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959C54 before { g_det_lspin = 0; }
-81959D1C before { g_det_lspin = (int)ld32(0x800000E4u); }
+81959D1C before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959D44 before { g_det_lspin = 0; }
 81959DA4 before { g_det_lspin = 0; }

@@ -17,7 +17,8 @@
 static GcPad g_det_latch[4] = {{0, 0x80, 0x80, 0x80, 0x80, 0, 0}, {0, 0x80, 0x80, 0x80, 0x80, 0, 0},
                                {0, 0x80, 0x80, 0x80, 0x80, 0, 0}, {0, 0x80, 0x80, 0x80, 0x80, 0, 0}};
 void si_det_latch(void) {
-    for (int ch = 0; ch < 4; ch++) input_get_pad(ch, &g_det_latch[ch]);
+    void netplay_latch(GcPad* pads);
+    netplay_latch(g_det_latch);  /* live, recorded, replayed or exchanged with another machine (netplay.c) */
 }
 static void get_pad(int ch, GcPad* p) {
     int ppc_detclock(void);
@@ -42,7 +43,12 @@ static int connected(int ch) {
     int ppc_detclock(void);
     if (ppc_detclock()) {
         static int ports = -1;
-        if (ports < 0) { const char* n = getenv("SR_PADS"); ports = n && atoi(n) > 1 ? atoi(n) : 1; }
+        int netplay_ports(void);
+        if (ports < 0) {
+            const char* n = getenv("SR_PADS");
+            ports = n && atoi(n) > 1 ? atoi(n) : 1;
+            if (getenv("SR_RECORD") || getenv("SR_REPLAY") || getenv("SR_NET")) ports = netplay_ports();  /* the recording / session decides */
+        }
         return ch < ports;
     }
     return ch == 0 || input_connected(ch);
