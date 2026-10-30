@@ -150,6 +150,68 @@ static void auto_restart_schedule(void) {
  * ends, a checksum of each 1 MB block of guest RAM, logged as "[hash] <step> <block hashes>". Two
  * runs with the same inputs (or a PC and a Switch run) must print the same lines; the first line and
  * block that differ show where they diverged. */
+#ifdef __SWITCH__
+#define DUMP_DIR "sdmc:/switch/sonicriders/"  /* RAM dumps next to the log */
+#else
+#define DUMP_DIR "build/"
+#endif
+/* SR_RAMHASH_REF=<file>: another machine's SR_RAMHASH log (same settings and inputs). Each step's
+ * checksums are compared with it; where a block first disagrees after agreeing (up to
+ * SR_RAMHASH_REF_DUMPS times, default 3) all of RAM goes to ramdiff_<step>.bin, to be compared with
+ * the other machine's SR_RAMDUMPAT dump at that step. That catches a difference that comes and goes
+ * at a different place each run. */
+static void ram_hash_ref(unsigned step, const uint32_t* hv, uint32_t blk_mask) {
+    static uint32_t (*ref)[28];
+    static uint32_t* have;  /* bit per step: the reference has it */
+    static unsigned nref;
+    static int init, dumps_left;
+    static uint32_t prev_bad;
+    if (!init) {
+        init = 1;
+        const char* path = getenv("SR_RAMHASH_REF");
+        FILE* f = path ? fopen(path, "r") : NULL;
+        if (!f) { if (path) rt_log("[hash] SR_RAMHASH_REF: cannot open %s", path); return; }
+        nref = 20000;
+        ref = calloc(nref, sizeof *ref);
+        have = calloc((nref + 31) / 32, 4);
+        dumps_left = getenv("SR_RAMHASH_REF_DUMPS") ? atoi(getenv("SR_RAMHASH_REF_DUMPS")) : 3;
+        static char l[512];
+        unsigned got = 0;
+        while (fgets(l, sizeof l, f)) {
+            char* q = strstr(l, "[hash] ");
+            if (!q) continue;
+            char* e;
+            unsigned st = (unsigned)strtoul(q + 7, &e, 10);
+            if (st >= nref || e == q + 7) continue;
+            if (!strncmp(e, " key=", 5)) strtoul(e + 5, &e, 10);
+            for (int b = 0; b < 28; b++) {
+                while (*e == ' ') e++;
+                if (*e == '-') { ref[st][b] = 0; e++; continue; }
+                ref[st][b] = (uint32_t)strtoul(e, &e, 16);
+            }
+            have[st / 32] |= 1u << (st % 32);
+            got++;
+        }
+        fclose(f);
+        rt_log("[hash] SR_RAMHASH_REF: %u reference steps from %s", got, path);
+    }
+    if (!ref || step >= nref || !(have[step / 32] >> (step % 32) & 1)) return;
+    uint32_t bad = 0;
+    for (int b = 0; b < 28; b++)
+        if (blk_mask >> b & 1 && ref[step][b] && ref[step][b] != hv[b]) bad |= 1u << b;
+    if (bad & ~prev_bad) {
+        rt_log("[hash] step %u differs from the reference in blocks %08X", step, bad);
+        if (dumps_left > 0) {
+            dumps_left--;
+            char path[96];
+            snprintf(path, sizeof path, DUMP_DIR "ramdiff_%u.bin", step);
+            FILE* f = fopen(path, "wb");
+            if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
+        }
+    }
+    prev_bad = bad;
+}
+
 static void ram_hash(void) {
     static int limit = -1;
     static unsigned step;
@@ -161,8 +223,8 @@ static void ram_hash(void) {
         for (const char* q = d; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) {
             if ((unsigned)atoi(q) != step) continue;
             char path[64];
-            if (q == d) snprintf(path, sizeof path, "build/ramstep.bin");
-            else snprintf(path, sizeof path, "build/ramstep_%u.bin", step);
+            if (q == d) snprintf(path, sizeof path, DUMP_DIR "ramstep.bin");
+            else snprintf(path, sizeof path, DUMP_DIR "ramstep_%u.bin", step);
             FILE* f = fopen(path, "wb");
             if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
         }
@@ -183,8 +245,8 @@ static void ram_hash(void) {
                 if (done >> idx & 1 || ld32(key_addr) != (uint32_t)atoi(q)) continue;
                 done |= 1u << idx;
                 char path[64];
-                if (q == dk) snprintf(path, sizeof path, "build/ramkey.bin");
-                else snprintf(path, sizeof path, "build/ramkey_%d.bin", atoi(q));
+                if (q == dk) snprintf(path, sizeof path, DUMP_DIR "ramkey.bin");
+                else snprintf(path, sizeof path, DUMP_DIR "ramkey_%d.bin", atoi(q));
                 FILE* f = fopen(path, "wb");
                 if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
             }
@@ -207,6 +269,7 @@ static void ram_hash(void) {
         }
     }
     const uint8_t* ram = mem_phys(0);
+    uint32_t hv[32] = {0};
     for (uint32_t blk = 0; blk < GUEST_RAM_SIZE >> 20; blk++) {
         if (!(blk_mask >> blk & 1)) { n += snprintf(line + n, sizeof line - n, " -"); continue; }
         const uint64_t* p = (const uint64_t*)(ram + ((size_t)blk << 20));
@@ -218,9 +281,27 @@ static void ram_hash(void) {
             h3 = ((h3 << 13) | (h3 >> 51)) + p[i + 3];
         }
         uint64_t h = (h0 ^ (h1 * 3) ^ (h2 * 5) ^ (h3 * 7)) * 0x100000001B3ull;
-        n += snprintf(line + n, sizeof line - n, " %08x", (uint32_t)(h ^ (h >> 32)));
+        hv[blk] = (uint32_t)(h ^ (h >> 32));
+        n += snprintf(line + n, sizeof line - n, " %08x", hv[blk]);
     }
     rt_log("%s", line);
+    ram_hash_ref(step - 1, hv, blk_mask);
+    {   /* SR_RAMHASH_SUB=<block>: also 64 checksums of 16 KB each inside that 1 MB block ("[hsub] <step>
+         * ..."), to narrow down which variable two runs disagree on */
+        static int sub = -2;
+        if (sub == -2) sub = getenv("SR_RAMHASH_SUB") ? atoi(getenv("SR_RAMHASH_SUB")) : -1;
+        if (sub >= 0 && sub < (int)(GUEST_RAM_SIZE >> 20)) {
+            char sl[32 + 64 * 9];
+            int m = snprintf(sl, 32, "[hsub] %u", step - 1);
+            for (int k = 0; k < 64; k++) {
+                const uint32_t* p = (const uint32_t*)(ram + ((size_t)sub << 20) + ((size_t)k << 14));
+                uint32_t h = 2166136261u;
+                for (size_t i = 0; i < (1u << 14) / 4; i++) h = (h ^ p[i]) * 16777619u;
+                m += snprintf(sl + m, sizeof sl - m, " %08x", h);
+            }
+            rt_log("%s", sl);
+        }
+    }
 }
 
 /* SR_SHOTSTEP=<frame>[,<frame>...] (determinism tests): a screenshot of the frame drawn at those game

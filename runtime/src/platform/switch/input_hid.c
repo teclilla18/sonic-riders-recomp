@@ -56,6 +56,7 @@ void input_init(void) {
     padInitialize(&g_pad[3], HidNpadIdType_No4);
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(&k_neutral));
     atomic_store(&g_connected[0], 1);
+    input_script_init();
 }
 
 /* the system's controller screen: pair controllers, split Joy-Cons, set the player order. Blocks
@@ -210,6 +211,7 @@ void input_get_pad(int chan, GcPad* out) {
     out->buttons = (uint16_t)v; out->stick_x = (uint8_t)(v >> 16); out->stick_y = (uint8_t)(v >> 24);
     out->c_x = (uint8_t)(v >> 32); out->c_y = (uint8_t)(v >> 40); out->trig_l = (uint8_t)(v >> 48);
     out->trig_r = (uint8_t)(v >> 56);
+    input_script_apply(chan, out);
 }
 
 void input_set_rumble(int chan, int motor) { (void)chan; (void)motor; }

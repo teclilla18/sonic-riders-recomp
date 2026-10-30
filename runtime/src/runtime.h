@@ -126,6 +126,8 @@ typedef struct GcPad {
 void input_get_pad(int chan, GcPad* out);
 int input_connected(int chan);  /* GameCube port 0-3 has a controller (port 0 always does) */
 void input_set_rumble(int chan, int motor);
+void input_script_init(void);                    /* SR_INPUT (input_script.c) */
+void input_script_apply(int chan, GcPad* out);
 
 /* exi.c: EXI bus: memory card (slot A), IPL SRAM/RTC */
 void exi_init(const char* card_path);

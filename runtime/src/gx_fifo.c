@@ -210,6 +210,7 @@ static int g_wg_n;  /* (defined below with the write-gather pipe) */
 /* GPU work that could still wake a game thread: held PE updates, or commands the game thread wrote but
  * has not pushed to the GP yet (flushed when it idles, gx_pipe_idle) */
 int gx_det_pending(void) { return atomic_load(&g_pe_det_pending) != 0 || *(volatile int*)&g_wg_n != 0; }
+int gx_det_wg(void) { return *(volatile int*)&g_wg_n != 0; }  /* commands in the gather buffer, not pushed yet */
 int gx_det_parts(void) { return (atomic_load(&g_pe_det_pending) != 0) | (*(volatile int*)&g_wg_n != 0) << 1; }  /* diagnostics */
 int gx_det_deliver(void) {
     if (!atomic_exchange(&g_pe_det_pending, 0)) return 0;

@@ -32,7 +32,7 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | **Determinism**: two runs with the same inputs give byte-identical game state every frame, on PC and on Switch, and PC = Switch | PC done (`SR_DETCLOCK`); Switch and PC = Switch not yet measured |
+| 1 | **Determinism**: two runs with the same inputs give byte-identical game state every frame, on PC and on Switch, and PC = Switch | Done (`SR_DETCLOCK`): PC, Switch, and PC = Switch |
 | 2 | Input recording and replay (also gives replays and ghosts); two copies in lockstep on one PC | |
 | 3 | Online races PC-PC and Switch-Switch, direct connection, one player per machine, own view full screen | |
 | 4 | Cross-play PC-Switch | |
@@ -41,21 +41,29 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
 
 ## Determinism (phase 1)
 
-**Status (2026-10-30) [measured, PC]:** with `SR_DETCLOCK=1`, two runs of a scripted route to a 1P race
-(with steering during the race) have identical checksums of all 28 MB of game memory on every frame,
-from boot through 2,400 race frames. Six runs, two of them with the GPU thread slowed 4x
-(`SR_GPSLOW=4`), were identical at the race start. Not yet measured: the Switch, and PC against Switch.
+**Status (2026-10-30) [measured]:** with `SR_DETCLOCK=1`, a scripted route to a 1P race (with steering
+during the race) gives identical checksums of all 28 MB of game memory on every frame, from boot through
+about 2,500 race frames: two PC runs, two Switch runs, and PC against Switch, all identical. Six more
+PC runs, two of them with the GPU thread slowed 4x (`SR_GPSLOW=4`), were identical at the race start.
+Floating point needed no work: x86 and ARM gave the same results.
+
+**Save data must match.** The game reads its memory card at boot (settings, unlocks, records), so two
+machines with different saves compute different games. The tests point both at the same card image
+(`SR_CARD=<file>`); online play will need the same save on every machine, or a fixed one for online
+races (to decide in phase 3).
 
 `SR_DETCLOCK=1` is off by default; normal play is unchanged. What it does:
 
 - **Game time follows game frames.** The clock the game reads (`mftb`, OSGetTime) advances 1/60 s per
   frame end; within a frame, each game thread counts its own reads. The RTC date is fixed. The audio
   sample counter and the video beam position follow game time too.
-- **Outside events arrive at quiet points.** A retrace, an audio interrupt, a finished disc read or the
-  GPU's draw-done/token result is handed to the game only when no interrupt handler is running and
-  either no game thread runs (the OS idles) or the running one sits in a known wait loop (code patches
-  mark the frame end's retrace-count loop and the stage loader's disc-data loops). So where these land
-  in the game's work does not depend on how fast the PC or Switch is.
+- **Outside events arrive at quiet points, in a fixed order.** A retrace, an audio interrupt, a finished
+  disc read or the GPU's draw-done/token result is handed to the game only when no interrupt handler is
+  running and either no game thread runs (the OS idles) or the running one sits in a known wait loop
+  (code patches mark the frame end's retrace-count loop and the stage loader's disc-data loops). First
+  the GPU finishes the work already queued (as if it were infinitely fast), then one kind at a time:
+  GPU results, disc, audio, retrace. While the CPU idles, only the game thread hands things over. So
+  where these land in the game's work does not depend on how fast the PC or Switch is.
 - **Idle ticks.** When every game thread is blocked and nothing is under way that could wake one,
   1/60 s of game time passes there (boot, loading screens that wait on timers or audio).
 - **No frame pacing.** The port's frame skipping and "30 when busy" switch follow the host's timing and
@@ -78,9 +86,10 @@ synchronize at the race start and make only the race deterministic. Measuring th
 the race only differed because loading and menus did, and the remaining sources turned out to be few;
 whole-run determinism makes the race-start barrier simple (every machine reaches it in the same state).
 
-**Next:**
-1. The same check on the Switch, then PC against Switch (cross-play). Floating point must match exactly
-   between x86 and ARM: same rounding, no fused multiply-add contraction by the compilers
-   (`-ffp-contract=off` is set on PC), the same approximation tables (`fres`, `frsqrte`).
-2. Phase 2: record a session's inputs per frame and replay them (also gives replays and ghosts); two
-   copies on one PC exchanging inputs in lockstep.
+PC against Switch: `SR_RAMHASH_REF=<the PC's hash log>` on the Switch compares every frame as it runs
+and dumps memory where they first disagree; `SR_DETTRACE=1` logs every interrupt and disc command with
+the frame and where the game was, so two machines' traces show the first event that lands differently.
+On the Switch these go in `env.txt`, and `SR_INPUT` works there too.
+
+**Next:** phase 2: record a session's inputs per frame and replay them (also gives replays and ghosts);
+two copies on one PC exchanging inputs in lockstep. Then the save-data rule for online races.

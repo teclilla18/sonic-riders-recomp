@@ -6,6 +6,7 @@
  * a masked one stays pending until it is unmasked. */
 #include <stdatomic.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "game_addrs.h"
 #include "runtime.h"
@@ -16,6 +17,18 @@ int dsp_irq_asserted(int id);  /* dsp.c */
 
 static _Atomic uint32_t g_pending;  /* bit (0x80000000 >> id): raised, not delivered yet */
 static _Atomic int g_posted;        /* a delivery item is queued */
+
+/* SR_DETTRACE=1 (determinism tests): one line per interrupt handed to the game and per disc command,
+ * with the game frame, the running thread and the function it is in; two machines' traces show the
+ * first event that lands at a different point */
+void det_trace(char type, uint32_t what) {
+    static int on = -1;
+    if (on < 0) on = getenv("SR_DETTRACE") != NULL;
+    if (!on) return;
+    uint32_t ppc_detclock_steps(void); int sched_on_guest_thread(void);
+    rt_log("[dtr] %u %c%c %X cur %08X ctx %08X fn %08X lr %08X", ppc_detclock_steps(), type, sched_on_guest_thread() ? 'g' : 'h', what, ld32(OS_CURRENT_THREAD),
+           ld32(OS_CURRENT_CONTEXT), g_ppc_cur_fn, g_ppc_cur_lr);
+}
 
 static void dispatch_all(Cpu* ic, void* arg) {
     (void)arg;
@@ -34,6 +47,7 @@ static void dispatch_all(Cpu* ic, void* arg) {
         uint32_t handler = ld32(OS_INTERRUPT_TABLE + 4 * (uint32_t)id);
         if (id == 21) dbg_event(5, 0, 0);  /* DVD */
         if (!handler) continue;
+        det_trace('I', (uint32_t)id);
         *ic = base;
         ic->r[3] = (uint32_t)id;
         ic->r[4] = ld32(OS_CURRENT_CONTEXT);
@@ -42,6 +56,7 @@ static void dispatch_all(Cpu* ic, void* arg) {
 }
 
 void os_raise_interrupt(int id) {
+    if (id != 24) det_trace('R', (uint32_t)id);
     atomic_fetch_or(&g_pending, 0x80000000u >> id);
     if (!atomic_exchange(&g_posted, 1)) rt_irq_post(dispatch_all, NULL);
 }

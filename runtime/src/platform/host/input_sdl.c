@@ -5,9 +5,7 @@
  * Keyboard: arrows = main stick, I/J/K/L = C stick, T/F/G/H = D-pad, X = A, Z = B, S = X, A = Y,
  *           Enter = START, Q = L, W = R, E = Z.
  * Gamepad (SDL layout): A/B/X/Y, Start, left stick, right stick = C, triggers = L/R, RB = Z, D-pad.
- * Testing: SR_INPUT="900:START,910:-START,1500:A" presses (or releases, "-") buttons at the given
- *          VI field counts; names: A B X Y START L R Z UP DOWN LEFT RIGHT, prefixed "2." .. "4." for
- *          ports 2-4 ("1500:2.START").
+ * Testing: SR_INPUT scripts buttons (input_script.c).
  *          SR_PADS=N connects ports 1..N even without gamepads (scripted multiplayer tests). */
 #include <SDL.h>
 #include <stdatomic.h>
@@ -38,41 +36,6 @@ static void unpack(uint64_t v, GcPad* p) {
     p->c_x = (uint8_t)(v >> 32); p->c_y = (uint8_t)(v >> 40); p->trig_l = (uint8_t)(v >> 48); p->trig_r = (uint8_t)(v >> 56);
 }
 
-/* ---- scripted input ---- */
-typedef struct { uint32_t field; uint16_t mask; int press, port, axis, value; } Step;  /* axis 1/2: SX=/SY= */
-static Step g_script[1024];
-static int g_nscript;
-static uint16_t g_script_held[PORTS];
-static int g_script_stick[PORTS][2];  /* scripted main-stick offsets from centre (SX=, SY=) */
-
-unsigned long long gx_frames_presented(void);
-
-static uint16_t button_mask(const char* n) {
-    static const struct { const char* name; uint16_t m; } t[] = {
-        {"A", B_A}, {"B", B_B}, {"X", B_X}, {"Y", B_Y}, {"START", B_START}, {"L", B_L}, {"R", B_R}, {"Z", B_Z},
-        {"UP", B_UP}, {"DOWN", B_DOWN}, {"LEFT", B_LEFT}, {"RIGHT", B_RIGHT}};
-    for (size_t i = 0; i < sizeof t / sizeof t[0]; i++)
-        if (!strcmp(n, t[i].name)) return t[i].m;
-    return 0;
-}
-
-static void parse_script(const char* s) {
-    static char buf[16384];
-    snprintf(buf, sizeof buf, "%s", s);
-    for (char* tok = strtok(buf, ","); tok && g_nscript < 1024; tok = strtok(NULL, ",")) {
-        char* colon = strchr(tok, ':');
-        if (!colon) continue;
-        *colon = 0;
-        const char* name = colon + 1;
-        int press = 1, port = 0;
-        if (*name == '-') { press = 0; name++; }
-        if (name[0] >= '1' && name[0] <= '4' && name[1] == '.') { port = name[0] - '1'; name += 2; }
-        int axis = (name[0] == 'S' && (name[1] == 'X' || name[1] == 'Y') && name[2] == '=') ? 1 + (name[1] == 'Y') : 0;
-        g_script[g_nscript++] = (Step){(uint32_t)atoi(tok), axis ? 0 : button_mask(name), press, port, axis, axis ? atoi(name + 3) : 0};
-    }
-    rt_log("[input] scripted input: %d steps", g_nscript);
-}
-
 static uint8_t axis8(int v, int range) {  /* SDL axis -> GameCube 0x80 +- range */
     int r = 0x80 + v * range / 32767;
     return (uint8_t)(r < 1 ? 1 : r > 255 ? 255 : r);
@@ -95,8 +58,7 @@ static void stick8(int x, int y, uint8_t* ox, uint8_t* oy) {
 }
 
 void input_init(void) {
-    const char* s = getenv("SR_INPUT");
-    if (s) parse_script(s);
+    input_script_init();
     const char* n = getenv("SR_PADS");
     if (n) {
         g_forced_ports = atoi(n);
@@ -245,27 +207,8 @@ int input_connected(int chan) {
 
 void input_get_pad(int chan, GcPad* out) {
     chan &= 3;
-    /* scripted steps are applied in step with the game's own clock (VI fields; with SR_DETCLOCK, game
-     * frames, so a script gives the same input on the same frame in every run) */
-    if (g_nscript) {
-        int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
-        uint32_t f = ppc_detclock() ? ppc_detclock_steps() : vi_field_count();
-        static int next;
-        while (next < g_nscript && g_script[next].field <= f) {
-            uint16_t* held = &g_script_held[g_script[next].port];
-            rt_log("[input] script step at field %u = presented frame %llu", g_script[next].field, gx_frames_presented());
-            if (g_script[next].axis) g_script_stick[g_script[next].port][g_script[next].axis - 1] = g_script[next].value;
-            else if (g_script[next].press) *held |= g_script[next].mask;
-            else *held &= (uint16_t)~g_script[next].mask;
-            next++;
-        }
-    }
     unpack(atomic_load(&g_pad[chan]), out);
-    out->buttons |= g_script_held[chan];
-    if (g_script_stick[chan][0] || g_script_stick[chan][1]) {
-        out->stick_x = (uint8_t)(0x80 + g_script_stick[chan][0]);
-        out->stick_y = (uint8_t)(0x80 + g_script_stick[chan][1]);
-    }
+    input_script_apply(chan, out);
 }
 
 void input_set_rumble(int chan, int motor) {

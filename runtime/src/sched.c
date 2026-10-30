@@ -43,6 +43,7 @@ static GThread* g_threads;
 static GThread* volatile g_running;
 static _Thread_local GThread* t_self;
 static GThread g_boot;
+int sched_on_guest_thread(void) { return t_self != NULL; }  /* SR_DETTRACE: raised by game code or a host thread */
 
 static GThread* find_thread(uint32_t ctx) {
     for (GThread* g = g_threads; g; g = g->next)
@@ -303,6 +304,35 @@ void sched_idle_split(uint64_t* idle, uint64_t* waiting_gp) {
     g_spin_idle = g_spin_idle_gp = 0;
 }
 
+/* SR_DETCLOCK: the CPU idles (no ready thread). The game's idle loop enables interrupts once and then
+ * spins, so this stays here until a thread is ready and finishes what is under way one kind at a
+ * time in a fixed order: the GPU's work already queued and its results, then the commands still in
+ * the gather buffer, then a disc command; then it waits for an interrupt (a retrace, audio, an idle
+ * tick: vi.c). Handing these over from several places, each in its own order, let a slower GPU (the
+ * Switch) change which came first. */
+static void det_idle(Cpu* c) {
+    void di_det_poll(void); int di_det_busy(void); int gx_det_deliver(void); int gx_det_wg(void); void gx_pipe_idle(void);
+    for (;;) {
+        if (ld32(OS_CURRENT_CONTEXT) != OS_IDLE_CONTEXT || ld32(OS_RUNQUEUE_BITS) != 0) return;
+        if (g_core_preempt[0]) { deliver(c); continue; }
+        while (gx_gp_backlog()) platform_sleep_ns(50000);
+        if (gx_det_deliver()) continue;
+        if (gx_det_wg()) { gx_pipe_idle(); continue; }
+        if (di_det_busy()) { di_det_poll(); continue; }
+        int vi_det_idle(void);
+        if (vi_det_idle()) continue;
+        mtx_lock(&g_irq_lock);
+        if (!g_core_preempt[0]) {
+            struct timespec ts;
+            timespec_get(&ts, TIME_UTC);
+            ts.tv_nsec += 2000000;
+            if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+            cnd_timedwait(&g_irq_cv, &g_irq_lock, &ts);
+        }
+        mtx_unlock(&g_irq_lock);
+    }
+}
+
 void sched_interrupts_enabled(Cpu* c) {
     if (g_det_bt_req && (uint32_t)g_det_bt_req == ld32(0x800000E4u)) { g_det_bt_req = 0; det_bt_log(c); }
     {
@@ -320,8 +350,8 @@ void sched_interrupts_enabled(Cpu* c) {
     os_irq_retry();
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
-        { void di_det_poll(void); di_det_poll(); }  /* SR_DETCLOCK: a disc command completes when the CPU idles */
-        { int gx_det_deliver(void); gx_det_deliver(); }  /* SR_DETCLOCK: and the GPU's interrupts arrive */
+        { int ppc_detclock(void); if (ppc_detclock()) { det_idle(c); return; } }
+        { void di_det_poll(void); di_det_poll(); }
         if (g_core_preempt[0]) { deliver(c); return; }
         record_backtrace(c);
         uint32_t prof_prev = g_ppc_cur_fn;

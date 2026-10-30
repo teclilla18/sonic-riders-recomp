@@ -145,7 +145,8 @@ const char* platform_disc_path(void) {
     return path;
 }
 
-const char* platform_save_path(void) { return "saves/card_a.raw"; }
+/* SR_CARD=<file>: another memory card image (determinism tests run every machine on the same save) */
+const char* platform_save_path(void) { return getenv("SR_CARD") ? getenv("SR_CARD") : "saves/card_a.raw"; }
 const char* platform_settings_path(void) { return "saves/settings.ini"; }
 const char* platform_mods_dir(void) { return "mods"; }  /* in the install folder */
 

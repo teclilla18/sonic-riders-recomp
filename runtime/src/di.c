@@ -126,6 +126,8 @@ static void execute(void) {
          * a time on the host clock, so every run sees the same disc timing */
         int ppc_detclock(void);
         if (ppc_detclock()) {
+            void det_trace(char type, uint32_t what);
+            det_trace('D', cmd == 0xA8 ? g_di[DICMD1] << 2 : cmd);
             if (g_di_dma.len) { dma_piece(g_di_dma.len); g_di_dma.len = 0; }
             g_det_pending = 1;
             return;

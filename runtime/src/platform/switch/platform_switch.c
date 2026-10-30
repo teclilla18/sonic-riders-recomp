@@ -99,7 +99,7 @@ void platform_init(void) {
     /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
     FILE* f = fopen(BASE_DIR "/env.txt", "r");
     if (f) {
-        char line[1024];  /* SR_INPUT scripts get long */
+        static char line[8192];  /* SR_INPUT scripts get long */
         while (fgets(line, sizeof line, f)) {
             line[strcspn(line, "\r\n")] = 0;
             char* eq = strchr(line, '=');
@@ -129,7 +129,8 @@ const char* platform_disc_path(void) {
     return path;
 }
 
-const char* platform_save_path(void) { return BASE_DIR "/saves/card_a.raw"; }
+/* SR_CARD=<file> (env.txt): another memory card image (determinism tests run every machine on the same save) */
+const char* platform_save_path(void) { return getenv("SR_CARD") ? getenv("SR_CARD") : BASE_DIR "/saves/card_a.raw"; }
 const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
 const char* platform_mods_dir(void) { return BASE_DIR "/mods"; }
 

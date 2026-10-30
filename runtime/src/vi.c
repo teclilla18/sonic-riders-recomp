@@ -134,6 +134,16 @@ static void det_raise(void) {  /* under g_det_lock: hand one due retrace to the 
         static unsigned logged;
         if (logged++ < 20) rt_log("[det] retrace handed over while thread %08X still runs (in %08X)", ld32(0x800000E4u), g_ppc_cur_fn);
     }
+    {   /* the GPU first: wait until it has done the work already queued and hand its results over (a
+         * draw-done / token interrupt) before anything else, as if it were infinitely fast. Otherwise a
+         * slower GPU (the Switch) let an audio interrupt in ahead of a token the PC had delivered. */
+        size_t gx_gp_backlog(void); int gx_det_deliver(void); int gx_det_wg(void);
+        if (gx_gp_backlog()) { g_det_n[2]++; return; }
+        /* idle with commands still in the gather buffer: the idle loop (sched.c det_idle) pushes them
+         * and delivers their results first */
+        if (ld32(0x800000E4u) == 0 && gx_det_wg()) { g_det_n[2]++; return; }
+        if (gx_det_deliver()) return;  /* delivered before the next check (det_quiet sees it posted) */
+    }
     /* and only once no disc read is in flight (requiring every other thread to be idle too stalled
      * races: a low-priority game thread is always runnable there) */
     int di_det_busy(void); void di_det_poll(void);
@@ -164,10 +174,10 @@ void vi_det_frame_done(void) {  /* the main thread's retrace wait returned */
  * but time), 1/60 s of game time passes there: the clock steps, the frame's audio quota and due alarms
  * are handed over, then a retrace, one at a time while the CPU stays idle. */
 static _Atomic uint64_t g_det_last_tick;  /* the last idle tick (the backstop leaves those periods alone) */
-static void det_idle_tick(void) {
-    static int idle_seen, vi_pending;
+static int det_idle_tick(void) {  /* game thread (sched.c det_idle via vi_det_idle); 1: did something */
+    static int vi_pending;
     int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
-    if (!ppc_detclock()) return;
+    if (!ppc_detclock()) return 0;
     /* idle: no game thread runs or is ready, and nothing that could wake one is under way (a disc read,
      * GPU work, a GPU interrupt held for delivery, an interrupt raised but not delivered yet). Then the
      * state stays as it is until game time moves, however long the host takes to notice, so a tick here
@@ -177,9 +187,9 @@ static void det_idle_tick(void) {
     extern volatile int g_core_preempt[3];
     int idle = ld32(OS_CURRENT_THREAD) == 0 && det_quiet() && ld32(OS_RUNQUEUE_BITS) == 0 && !di_det_busy() &&
                !gx_gp_backlog() && !gx_det_pending() && !g_core_preempt[0];
-    if (!idle) { idle_seen = 0; return; }
+    if (!idle) return 0;
     int ai_det_try_raise(void);
-    if (ai_det_try_raise()) { idle_seen = 0; return; }  /* audio interrupts owed for past frames first */
+    if (ai_det_try_raise()) return 1;  /* audio interrupts owed for past frames first */
     if (vi_pending) {  /* the tick's retrace */
         mtx_lock(&g_det_lock);
         if (g_det_due) g_det_due--;
@@ -190,16 +200,31 @@ static void det_idle_tick(void) {
             g_vi[0x30 >> 1] |= 0x8000;
             os_raise_interrupt(OS_INTERRUPT_PI_VI);
         }
-        return;
+        return 1;
     }
-    if (!g_det_due || ++idle_seen < 2) return;
-    idle_seen = 0;
+    if (!g_det_due) return 0;  /* one tick per host field: idle periods pass in real time */
     void ppc_detclock_step(void); void ai_det_frame(void); void sched_det_frame(void);
     atomic_store(&g_det_last_tick, rt_ticks());
     ppc_detclock_step();
     ai_det_frame();
     sched_det_frame();
     vi_pending = 1;
+    return 1;
+}
+
+/* SR_DETCLOCK, game thread, the CPU idle with nothing under way (sched.c det_idle): hand over what is
+ * due (audio interrupts, a retrace for the main thread asleep in its frame wait, or an idle tick).
+ * While the CPU idles only the game thread hands things over, in one order; the retrace thread just
+ * counts retraces due. 1: something was handed over or game time moved. */
+int vi_det_idle(void) {
+    extern volatile int g_core_preempt[3];
+    if (g_det_waiting) {
+        mtx_lock(&g_det_lock);
+        det_raise();
+        mtx_unlock(&g_det_lock);
+        return g_core_preempt[0] != 0;
+    }
+    return det_idle_tick();
 }
 
 /* SR_DETCLOCK: game time is moving (a frame wait or an idle tick in the last half second); sched.c's
@@ -236,14 +261,14 @@ static int vi_thread(void* arg) {
             {   /* SR_DETCLOCK: the GPU's draw-done/token interrupts, at a quiet point: no game thread
                  * running, or only one parked in a known wait loop (frame end, REL loader) */
                 int ppc_detclock(void); int gx_det_deliver(void);
-                if (ppc_detclock() && det_quiet()) gx_det_deliver();
+                size_t gx_gp_backlog(void);  /* only once the GPU has done all queued work (fast and slow GPUs alike) */
+                /* (not while the CPU idles: sched.c det_idle hands everything over then) */
+                if (ppc_detclock() && ld32(0x800000E4u) != 0 && det_quiet() && !gx_gp_backlog()) gx_det_deliver();
             }
-            if (g_det_waiting) {  /* SR_DETCLOCK: a due retrace for the main thread once it sleeps */
+            if (g_det_waiting && ld32(0x800000E4u) != 0) {  /* SR_DETCLOCK: a due retrace for the main thread */
                 mtx_lock(&g_det_lock);
                 det_raise();
                 mtx_unlock(&g_det_lock);
-            } else {
-                det_idle_tick();
             }
             if (left <= 0) break;
             struct timespec ts = {0, (long)(left * 2000 / 81)};
@@ -267,12 +292,13 @@ static int vi_thread(void* arg) {
             memset(g_det_cur, 0, sizeof g_det_cur);
         }
         uint64_t det_active = atomic_load(&g_det_last_wait) > atomic_load(&g_det_last_tick) ? atomic_load(&g_det_last_wait) : atomic_load(&g_det_last_tick);
-        /* the backstop waits 10 fields, or 2 s while the main thread is busy running game code (a slow
-         * frame on a busy host: a retrace slipped in mid-frame would change the game's frame counters) */
+        /* the backstop waits 10 fields, or 12 s while a game thread is busy running code outside the
+         * known wait loops (a slow frame, or a background thread decompressing on a slower machine:
+         * the Switch's boot ran past 10 fields where the PC did not; a retrace slipped in mid-work
+         * would change the outcome) */
         uint64_t det_limit = TICKS_PER_FIELD * 10;
-        if (g_det_main && ld32(0x800000E4u) == g_det_main && ld16(g_det_main + 0x2C8) == 2 && !g_det_in_end)
-            det_limit = TICKS_PER_FIELD * 120;
-        if (g_det_in_vwait && ld32(0x800000E4u) != 0 && ld32(0x800000E4u) != (uint32_t)g_det_lspin) det_limit = TICKS_PER_FIELD * 720;  /* det_raise waits for it */
+        {   uint32_t cur = ld32(0x800000E4u);
+            if (cur && cur != (uint32_t)g_det_lspin && !(cur == g_det_main && g_det_in_end)) det_limit = TICKS_PER_FIELD * 720; }
         /* nor while the GPU still has queued work: the game waits for it (the first frames wait ~300 ms
          * while the render thread creates its GL context), and no game time passes meanwhile */
         { size_t gx_gp_backlog(void);
@@ -296,7 +322,7 @@ static int vi_thread(void* arg) {
         if (ppc_detclock() && rt_ticks() - det_active < det_limit) {
             mtx_lock(&g_det_lock);
             if (g_det_due < 2) g_det_due++;
-            det_raise();
+            if (ld32(0x800000E4u) != 0) det_raise();  /* idle: sched.c det_idle hands it over */
             mtx_unlock(&g_det_lock);
             continue;
         }
