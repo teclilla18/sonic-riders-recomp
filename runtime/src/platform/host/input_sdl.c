@@ -245,9 +245,11 @@ int input_connected(int chan) {
 
 void input_get_pad(int chan, GcPad* out) {
     chan &= 3;
-    /* scripted steps are applied in step with the game's own clock (VI fields) */
+    /* scripted steps are applied in step with the game's own clock (VI fields; with SR_DETCLOCK, game
+     * frames, so a script gives the same input on the same frame in every run) */
     if (g_nscript) {
-        uint32_t f = vi_field_count();
+        int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
+        uint32_t f = ppc_detclock() ? ppc_detclock_steps() : vi_field_count();
         static int next;
         while (next < g_nscript && g_script[next].field <= f) {
             uint16_t* held = &g_script_held[g_script[next].port];

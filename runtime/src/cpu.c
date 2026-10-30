@@ -65,7 +65,36 @@ static uint64_t g_t0;
  * and the renderer times its work; on the Switch, CLOCK_REALTIME went through the time service */
 static uint64_t host_ns(void) { return platform_now_ns(); }
 uint64_t rt_ticks(void) { return (host_ns() - g_t0) * 81 / 2000; }  /* ns * 40.5e6 / 1e9 */
-uint64_t ppc_timebase(void) { return rt_ticks(); }
+/* SR_DETCLOCK=1 (online play groundwork, docs/ONLINE.md): the time the game reads follows the game, not
+ * the host clock. Each game frame end (frame_pacing.c) moves it on by one 60 Hz frame; within a frame,
+ * each guest thread has its own count that moves on one tick per read, so a thread's readings depend
+ * only on what it ran, and loops that wait for time to pass still see it pass. (The runtime's own
+ * timing, rt_ticks(), stays on the host clock.) */
+#define DET_TICKS_PER_STEP 675000u  /* 40.5 MHz / 60 */
+static int g_detclock = -1;
+static uint32_t g_det_step;
+typedef struct { uint32_t ctx, step; uint64_t reads; } DetThread;
+static DetThread g_det_threads[32];
+int ppc_detclock(void) {
+    if (g_detclock < 0) { const char* e = getenv("SR_DETCLOCK"); g_detclock = e && atoi(e) != 0; }
+    return g_detclock;
+}
+void ppc_detclock_step(void) { g_det_step++; }
+uint32_t ppc_detclock_steps(void) { return g_det_step; }
+uint64_t ppc_detclock_base(void) { return 40500000ull * 60 + (uint64_t)g_det_step * DET_TICKS_PER_STEP; }  /* this frame's start */
+uint64_t ppc_timebase(void) {
+    if (!ppc_detclock()) return rt_ticks();
+    const uint8_t* cp = mem_phys(0x800000D4u);  /* OS_CURRENT_CONTEXT: the running guest thread */
+    uint32_t ctx = (uint32_t)cp[0] << 24 | (uint32_t)cp[1] << 16 | (uint32_t)cp[2] << 8 | cp[3];
+    DetThread* t = NULL;
+    for (int i = 0; i < 32 && !t; i++)
+        if (g_det_threads[i].ctx == ctx || g_det_threads[i].ctx == 0) t = &g_det_threads[i];
+    if (!t) t = &g_det_threads[31];
+    if (t->ctx != ctx || t->step != g_det_step) { t->ctx = ctx; t->step = g_det_step; t->reads = 0; }
+    /* a fixed start (a minute in), then one frame per step; a thread reading more than a frame's worth
+     * of ticks in one step (a long wait loop) runs into the next frame's time, which is harmless */
+    return 40500000ull * 60 + (uint64_t)g_det_step * DET_TICKS_PER_STEP + t->reads++;
+}
 
 /* ---- supervisor state ---- */
 static uint32_t g_spr[1024];

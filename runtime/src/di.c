@@ -22,6 +22,7 @@ static unsigned long long g_read_bytes, g_read_ticks;
 static mtx_t g_di_lock;           /* g_di: the CPU's accesses vs. the completion thread */
 static cnd_t g_di_cv;
 static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress completes */
+static _Atomic int g_det_pending;  /* SR_DETCLOCK: a command waits for di_det_poll() */
 /* a read's data arrives in pieces during the transfer, as on the hardware (the DI DMAs each 32-byte
  * block as the drive delivers it). The game's streaming decompressor (CRI's loader, REL f_819594F4)
  * starts on a chunk while the rest of it is still arriving; with the whole chunk landing only at
@@ -120,8 +121,32 @@ static void execute(void) {
      * completion before that leaves the alarm to fire later as a drive timeout, and loading stops. */
     uint64_t bytes = cmd == 0xA8 ? len : 0;
     dbg_event(3, cmd == 0xA8 ? g_di[DICMD1] << 2 : g_di[DICMD0], len);
+    {   /* SR_DETCLOCK (online play groundwork): the data lands now and the command completes at the next
+         * deterministic point (di_det_poll: the next game frame end, or the CPU going idle), not after
+         * a time on the host clock, so every run sees the same disc timing */
+        int ppc_detclock(void);
+        if (ppc_detclock()) {
+            if (g_di_dma.len) { dma_piece(g_di_dma.len); g_di_dma.len = 0; }
+            g_det_pending = 1;
+            return;
+        }
+    }
     g_di_done_at = (int64_t)rt_ticks() + 81000 + (int64_t)(bytes * TICKS_PER_KB / 1024) + 1;
     cnd_signal(&g_di_cv);
+}
+
+int di_det_busy(void) { return g_det_pending != 0; }
+/* SR_DETCLOCK: complete the command started by execute() (game thread: frame end or idle) */
+void di_det_poll(void) {
+    if (!g_det_pending) return;
+    mtx_lock(&g_di_lock);
+    g_det_pending = 0;
+    dbg_event(4, 0, 0);
+    g_di[DICR] &= ~1u;
+    g_di[DISR] |= TCINT;
+    int raise = (g_di[DISR] & TCINT_MASK) != 0;
+    mtx_unlock(&g_di_lock);
+    if (raise) os_raise_interrupt(OS_INTERRUPT_PI_DI);
 }
 
 static int di_timer(void* arg) {

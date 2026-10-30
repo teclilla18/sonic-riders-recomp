@@ -9,6 +9,21 @@
 
 #define OS_INTERRUPT_PI_SI 20
 
+
+/* SR_DETCLOCK (online play groundwork): the controllers are read once per game frame (si_det_latch, at
+ * the frame end) and every poll in the next frame sees that state, so the game sees the same input
+ * on the same frame in every run, whenever its own polls happen */
+static GcPad g_det_latch[4] = {{0, 0x80, 0x80, 0x80, 0x80, 0, 0}, {0, 0x80, 0x80, 0x80, 0x80, 0, 0},
+                               {0, 0x80, 0x80, 0x80, 0x80, 0, 0}, {0, 0x80, 0x80, 0x80, 0x80, 0, 0}};
+void si_det_latch(void) {
+    for (int ch = 0; ch < 4; ch++) input_get_pad(ch, &g_det_latch[ch]);
+}
+static void get_pad(int ch, GcPad* p) {
+    int ppc_detclock(void);
+    if (ppc_detclock()) *p = g_det_latch[ch & 3];
+    else input_get_pad(ch, p);
+}
+
 static uint32_t g_out[4];        /* SICnOUTBUF: the poll command (0x40 0x03 motor) */
 static uint32_t g_poll, g_comcsr, g_status, g_exilk;
 static uint8_t g_buf[128];       /* SI I/O buffer for SITransfer */
@@ -45,7 +60,7 @@ static void transfer(void) {
             break;
         case 0x40: {                       /* direct poll */
             GcPad p;
-            input_get_pad(ch, &p);
+            get_pad(ch, &p);
             uint16_t b = p.buttons | 0x0080;
             resp[0] = (uint8_t)(b >> 8); resp[1] = (uint8_t)b;
             resp[2] = p.stick_x; resp[3] = p.stick_y; resp[4] = p.c_x; resp[5] = p.c_y;
@@ -72,7 +87,7 @@ static void transfer(void) {
 /* polled input: the response of channel `ch` to its poll command, as INBUFH / INBUFL */
 static void poll_response(int ch, uint32_t* hi, uint32_t* lo) {
     GcPad p;
-    input_get_pad(ch, &p);
+    get_pad(ch, &p);
     uint16_t b = p.buttons | 0x0080;
     *hi = (uint32_t)b << 16 | (uint32_t)p.stick_x << 8 | p.stick_y;
     *lo = (uint32_t)p.c_x << 24 | (uint32_t)p.c_y << 16 | (uint32_t)p.trig_l << 8 | p.trig_r;

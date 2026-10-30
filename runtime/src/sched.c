@@ -295,6 +295,8 @@ void sched_interrupts_enabled(Cpu* c) {
     os_irq_retry();
     if (g_core_preempt[0]) deliver(c);
     if (ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT && ld32(OS_RUNQUEUE_BITS) == 0) {
+        { void di_det_poll(void); di_det_poll(); }  /* SR_DETCLOCK: a disc command completes when the CPU idles */
+        if (g_core_preempt[0]) { deliver(c); return; }
         record_backtrace(c);
         uint32_t prof_prev = g_ppc_cur_fn;
         g_ppc_cur_fn = PROF_IDLE;
@@ -328,8 +330,33 @@ static mtx_t g_dec_lock;
 static cnd_t g_dec_cv;
 static int64_t g_dec_deadline;  /* timebase ticks; INT64_MAX = not armed */
 
+/* SR_DETCLOCK (online play groundwork): once game frames run, the decrementer counts game time
+ * (cpu.c's frame-locked time base) and fires at a frame end (sched_det_frame); the host-clock
+ * deadline stays only as a backstop, 50 ms after the real one (loading without frames) */
+static int64_t g_dec_vdeadline = INT64_MAX;
+static int det_dec(void) {
+    int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
+    return ppc_detclock() && ppc_detclock_steps() > 0;
+}
+static int64_t det_now(void) { uint64_t ppc_detclock_base(void); return (int64_t)ppc_detclock_base(); }
+void sched_det_frame(void) {
+    mtx_lock(&g_dec_lock);
+    int fire = g_dec_vdeadline != INT64_MAX && det_now() >= g_dec_vdeadline;
+    if (fire) { g_dec_vdeadline = INT64_MAX; g_dec_deadline = INT64_MAX; }
+    mtx_unlock(&g_dec_lock);
+    if (fire) rt_irq_raise(RT_IRQ_DEC);
+}
+
 void sched_set_decrementer(uint32_t v) {
     mtx_lock(&g_dec_lock);
+    if (det_dec()) {
+        g_dec_vdeadline = det_now() + (int32_t)v;
+        g_dec_deadline = (int64_t)rt_ticks() + (int32_t)v + 40500000 / 20;  /* backstop: 50 ms late on the host clock */
+        cnd_signal(&g_dec_cv);
+        mtx_unlock(&g_dec_lock);
+        return;
+    }
+    g_dec_vdeadline = INT64_MAX;
     g_dec_deadline = (int64_t)rt_ticks() + (int32_t)v;
     cnd_signal(&g_dec_cv);
     mtx_unlock(&g_dec_lock);
@@ -337,7 +364,8 @@ void sched_set_decrementer(uint32_t v) {
 
 uint32_t sched_get_decrementer(void) {
     mtx_lock(&g_dec_lock);
-    int64_t d = g_dec_deadline == INT64_MAX ? -1 : g_dec_deadline - (int64_t)rt_ticks();
+    int64_t d = g_dec_vdeadline != INT64_MAX ? g_dec_vdeadline - det_now()
+              : g_dec_deadline == INT64_MAX ? -1 : g_dec_deadline - (int64_t)rt_ticks();
     mtx_unlock(&g_dec_lock);
     return (uint32_t)d;
 }
@@ -355,6 +383,7 @@ static int dec_main(void* arg) {
             if (late > g_dec_late_max) g_dec_late_max = late;
             g_dec_fired++;
             g_dec_deadline = INT64_MAX;
+            g_dec_vdeadline = INT64_MAX;
             mtx_unlock(&g_dec_lock);
             rt_irq_raise(RT_IRQ_DEC);
             mtx_lock(&g_dec_lock);

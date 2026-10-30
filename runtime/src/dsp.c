@@ -190,6 +190,39 @@ static void dsp_mail_from_cpu(uint32_t mail) {
 static atomic_uint g_ai_dma_on;
 static uint32_t g_ai_start, g_ai_blocks;
 
+/* SR_DETCLOCK (online play groundwork): the audio clock follows the game. Each game frame gets the
+ * DMA interrupts that 1/60 s of 32 kHz audio takes (ai_det_frame, at the frame end; the fraction is
+ * carried over), handed over one at a time while the main thread sleeps in its frame wait and the CPU
+ * is otherwise idle (ai_det_try_raise, from vi.c), before that frame's retrace. */
+static uint32_t g_ai_det_bytes;     /* the current DMA block size (ai_thread) */
+static _Atomic int g_ai_det_tokens;
+static uint64_t g_ai_det_acc;       /* bytes of audio time owed, x60 */
+void ai_det_frame(void) {
+    uint32_t bytes = g_ai_det_bytes;
+    if (!atomic_load(&g_ai_dma_on) || !bytes) return;
+    g_ai_det_acc += 128000;  /* 128000 bytes/s at 32 kHz 16-bit stereo; per frame = 128000/60 */
+    int n = (int)(g_ai_det_acc / ((uint64_t)bytes * 60));
+    g_ai_det_acc -= (uint64_t)n * bytes * 60;
+    int t = atomic_fetch_add(&g_ai_det_tokens, n) + n;
+    if (t > 8) atomic_store(&g_ai_det_tokens, 8);
+}
+int ai_det_pending(void) { return atomic_load(&g_ai_det_tokens) > 0; }
+int ai_det_try_raise(void) {  /* 1: one was raised or is being handled (the retrace waits) */
+    if (atomic_load(&g_ai_det_tokens) <= 0) return 0;
+    mtx_lock(&g_lock);
+    if (!(g_csr & CSR_AIDMSK)) {  /* masked: nothing would run; the tokens lapse */
+        atomic_store(&g_ai_det_tokens, 0);
+        mtx_unlock(&g_lock);
+        return 0;
+    }
+    if (g_csr & CSR_AIDINT) { mtx_unlock(&g_lock); return 1; }  /* the previous one is not handled yet: wait */
+    atomic_fetch_sub(&g_ai_det_tokens, 1);
+    g_csr |= CSR_AIDINT;
+    mtx_unlock(&g_lock);
+    os_raise_interrupt(OS_INTERRUPT_DSP_AI);
+    return 1;
+}
+
 static int ai_thread(void* arg) {
     (void)arg;
     rt_thread_pin(2);
@@ -214,6 +247,10 @@ static int ai_thread(void* arg) {
             platform_sleep_ns((uint64_t)left * 2000 / 81);
         }
         audio_submit(g_ai_start, bytes);
+        {   /* SR_DETCLOCK: the interrupt is handed over per game frame (ai_det_try_raise) instead */
+            int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
+            if (ppc_detclock() && ppc_detclock_steps() > 0) { g_ai_det_bytes = bytes; continue; }
+        }
         mtx_lock(&g_lock);
         g_csr |= CSR_AIDINT;
         int irq = (g_csr & CSR_AIDMSK) != 0;
@@ -399,6 +436,7 @@ void dsp_init(void) {
     cnd_init(&g_ax_cv);
     const char* sync = getenv("SR_DSP_SYNC");
     g_ax_sync = sync && sync[0] == '1';
+    { int ppc_detclock(void); if (ppc_detclock()) g_ax_sync = 1; }  /* SR_DETCLOCK: mixes finish at a fixed point */
     if (g_ax_sync) rt_log("[dsp] SR_DSP_SYNC: audio mixed on the game thread");
     else rt_thread_start(ax_thread, NULL);
 }

@@ -284,6 +284,8 @@ static int64_t days_from_civil(int y, int m, int d) {
 }
 
 static uint32_t rtc_now(void) {  /* seconds since 2000-01-01 00:00 local time (no mktime: it failed on the Switch) */
+    int ppc_detclock(void);
+    if (ppc_detclock()) return 26u * 365 * 86400;  /* SR_DETCLOCK: a fixed date (early 2026), the same on every machine */
     int y, mo, d, h, mi, s;
     platform_local_time(&y, &mo, &d, &h, &mi, &s);
     int64_t secs = (days_from_civil(y, mo, d) - days_from_civil(2000, 1, 1)) * 86400 + h * 3600 + mi * 60 + s;

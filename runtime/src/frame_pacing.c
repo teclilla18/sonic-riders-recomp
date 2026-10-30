@@ -79,8 +79,17 @@ static void set_steps(float n) {
     st32(GAME_FRAME_STEPS, f32_as_u32(n * scale));
 }
 
+static uint32_t g_main_thread;  /* the guest thread that runs the frame end (SR_DETCLOCK) */
 void hle_vi_wait_retrace(Cpu* c) {
     if (g_present_now && g_present_now == ld32(OS_CURRENT_THREAD)) return;
+    { int ppc_detclock(void); void vi_det_frame_wait(uint32_t thread);
+      if (ppc_detclock() && ld32(OS_CURRENT_THREAD) == g_main_thread) {
+          vi_det_frame_wait(g_main_thread);
+          f_80017038_orig(c);
+          void vi_det_frame_done(void);
+          vi_det_frame_done();
+          return;
+      } }
     f_80017038_orig(c);
 }
 
@@ -146,20 +155,44 @@ static void ram_hash(void) {
     static unsigned step;
     if (limit < 0) limit = getenv("SR_RAMHASH") ? atoi(getenv("SR_RAMHASH")) : 0;
     if (!limit || step >= (unsigned)limit) return;
-    {   /* SR_RAMDUMPAT=<step>: all of guest RAM at that step to build/ramstep.bin, to diff two runs */
+    {   /* SR_RAMDUMPAT=<step>[,<step>...]: all of guest RAM at that step to build/ramstep.bin (the first
+         * step) or build/ramstep_<step>.bin (the others), to diff two runs or find variables */
         const char* d = getenv("SR_RAMDUMPAT");
-        if (d && (unsigned)atoi(d) == step) {
-            FILE* f = fopen("build/ramstep.bin", "wb");
+        for (const char* q = d; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) {
+            if ((unsigned)atoi(q) != step) continue;
+            char path[64];
+            if (q == d) snprintf(path, sizeof path, "build/ramstep.bin");
+            else snprintf(path, sizeof path, "build/ramstep_%u.bin", step);
+            FILE* f = fopen(path, "wb");
             if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
         }
     }
     char line[64 + 28 * 9];
-    int n = snprintf(line, 64, "[hash] %u", step++);
+    /* SR_RAMHASH_KEY=<address>: also log that u32 (e.g. 8021BB64, frames since the race scene started),
+     * to line up two runs whose loading took a different number of frames */
+    static uint32_t key_addr = 1;
+    if (key_addr == 1) key_addr = getenv("SR_RAMHASH_KEY") ? (uint32_t)strtoul(getenv("SR_RAMHASH_KEY"), NULL, 16) : 0;
+    {   /* SR_RAMDUMPKEY=<value>: RAM to build/ramkey.bin the first time the key reaches that value */
+        static int done;
+        const char* dk = getenv("SR_RAMDUMPKEY");
+        if (dk && key_addr && !done && ld32(key_addr) == (uint32_t)atoi(dk)) {
+            done = 1;
+            FILE* f = fopen("build/ramkey.bin", "wb");
+            if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
+        }
+    }
+    int n = key_addr ? snprintf(line, 64, "[hash] %u key=%u", step++, ld32(key_addr)) : snprintf(line, 64, "[hash] %u", step++);
     const uint8_t* ram = mem_phys(0);
     for (uint32_t blk = 0; blk < GUEST_RAM_SIZE >> 20; blk++) {
         const uint64_t* p = (const uint64_t*)(ram + ((size_t)blk << 20));
-        uint64_t h = 0x9E3779B97F4A7C15ull;
-        for (size_t i = 0; i < (1u << 20) / 8; i++) h = (h ^ p[i]) * 0x100000001B3ull;
+        uint64_t h0 = 0x9E3779B97F4A7C15ull, h1 = 0, h2 = 0, h3 = 0;  /* cheap: 4 lanes, add/xor/rotate */
+        for (size_t i = 0; i < (1u << 20) / 8; i += 4) {
+            h0 = ((h0 << 5) | (h0 >> 59)) ^ p[i];
+            h1 = ((h1 << 7) | (h1 >> 57)) + p[i + 1];
+            h2 = ((h2 << 11) | (h2 >> 53)) ^ p[i + 2];
+            h3 = ((h3 << 13) | (h3 >> 51)) + p[i + 3];
+        }
+        uint64_t h = (h0 ^ (h1 * 3) ^ (h2 * 5) ^ (h3 * 7)) * 0x100000001B3ull;
         n += snprintf(line + n, sizeof line - n, " %08x", (uint32_t)(h ^ (h >> 32)));
     }
     rt_log("%s", line);
@@ -167,6 +200,12 @@ static void ram_hash(void) {
 
 void hle_frame_end(Cpu* c) {
     ram_hash();
+    g_main_thread = ld32(OS_CURRENT_THREAD);
+    { void ppc_detclock_step(void); ppc_detclock_step(); }  /* SR_DETCLOCK: game time moves one frame on */
+    { void di_det_poll(void); di_det_poll(); }  /* SR_DETCLOCK: a disc command in progress completes */
+    { int ppc_detclock(void); void ai_det_frame(void); void sched_det_frame(void);
+      if (ppc_detclock()) { ai_det_frame(); sched_det_frame(); } }  /* this frame's audio interrupts; due alarms */
+    { int ppc_detclock(void); void si_det_latch(void); if (ppc_detclock()) si_det_latch(); }  /* and the next frame's input */
     int mode = g_settings.framerate;
     int skipped = ld32(GAME_FRAME_SKIP) != 0;  /* this iteration's draws were left out */
     test_load(!skipped);
