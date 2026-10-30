@@ -76,5 +76,13 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
   REL data around 0x81Axxxxx and the 0x802040D4 block), make the menus/loading use no backstop (the code
   that polls the retrace count), compare only game state (not the audio threads' stacks), then a PC
   vs Switch run (cross-play), then the race-start barrier and lockstep.
+- **Where the backstop still fires [confirmed, `[det] backstop` log lines]:** only during loading,
+  always with the main thread inside the frame end (`8000610C`, called from the loading loop at
+  `819BC5B8`), polling `8003062C` = an EFB pixel read (`0xC8000000` + x/y): on that path the frame end
+  waits for the GPU by polling a framebuffer pixel, with a retrace as the way out. The port does not
+  model EFB reads (mmio.c returns 0; the same gap as the missing lens flare, issue #7), so only a
+  retrace ends the loop, and in this mode that is the host-clock backstop. Menus and races use no
+  backstop (`[det]`: 600 of 600 retraces handed over). Next: real EFB peeks (flush the GP, read the
+  EFB; also fixes #7), which lets this wait end at a fixed point.
 - Cross-play needs floating point to match exactly between x86 (PC) and ARM (Switch): same rounding,
   no fused multiply-add contraction by the compilers, same approximation tables (`fres`, `frsqrte`).

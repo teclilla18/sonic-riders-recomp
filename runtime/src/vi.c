@@ -133,8 +133,11 @@ static int vi_thread(void* arg) {
                    g_det_n[0], g_det_n[1], g_det_n[2], g_det_n[3], g_det_n[4], g_det_n[5]);
             memset(g_det_n, 0, sizeof g_det_n);
         }
-        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - atomic_load(&g_det_last_wait) >= TICKS_PER_FIELD * 10)
+        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - atomic_load(&g_det_last_wait) >= TICKS_PER_FIELD * 10) {
             g_det_n[1]++;
+            static unsigned logged;  /* what the game runs instead of waiting (first 40) */
+            if (logged++ < 40) rt_log("[det] backstop: running thread %08X in %08X (lr %08X)", ld32(0x800000E4u), g_ppc_cur_fn, g_ppc_cur_lr);
+        }
         if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - atomic_load(&g_det_last_wait) < TICKS_PER_FIELD * 10) {
             mtx_lock(&g_det_lock);
             if (g_det_due < 2) g_det_due++;
