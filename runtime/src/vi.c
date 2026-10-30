@@ -109,6 +109,47 @@ void vi_det_frame_done(void) {  /* the main thread's retrace wait returned */
     g_det_in_vwait = 0;
     mtx_unlock(&g_det_lock);
 }
+/* SR_DETCLOCK: when every game thread is blocked (the OS idles in SelectThread) and the main thread is
+ * not in a frame wait (boot, loading screens that wait on audio or timers), 1/60 s of game time passes
+ * there: the clock steps, the frame's audio quota and due alarms are handed over, then a retrace, one at
+ * a time while the CPU stays idle. Everything is blocked at those points, so when it happens does not
+ * change what the game sees. Only while frames have stopped (no frame wait for 3 fields), and the idle
+ * state must last 4 checks (~8 ms). */
+static _Atomic uint64_t g_det_last_tick;  /* the last idle tick (the backstop leaves those periods alone) */
+static void det_idle_tick(void) {
+    static int idle_seen, vi_pending;
+    int ppc_detclock(void); uint32_t ppc_detclock_steps(void);
+    if (!ppc_detclock() || !ppc_detclock_steps()) return;
+    int di_det_busy(void);
+    size_t gx_gp_backlog(void);  /* not while the GPU still has queued work (a frame waiting on the GPU) */
+    int idle = ld32(OS_CURRENT_THREAD) == 0 && ld32(OS_RUNQUEUE_BITS) == 0 && !di_det_busy() && !gx_gp_backlog();
+    /* only while frames have stopped (no frame wait for 3 fields): in the frame loop, time passes there */
+    if (rt_ticks() - atomic_load(&g_det_last_wait) < TICKS_PER_FIELD * 3 && !vi_pending) idle = 0;
+    if (!idle) { idle_seen = 0; return; }
+    if (vi_pending) {  /* the tick's audio interrupts, then its retrace */
+        int ai_det_try_raise(void);
+        if (ai_det_try_raise()) return;
+        mtx_lock(&g_det_lock);
+        if (g_det_due) g_det_due--;
+        mtx_unlock(&g_det_lock);
+        vi_pending = 0;
+        g_det_n[0]++;
+        if (g_vi[0x30 >> 1] & 0x1000) {
+            g_vi[0x30 >> 1] |= 0x8000;
+            os_raise_interrupt(OS_INTERRUPT_PI_VI);
+        }
+        return;
+    }
+    if (!g_det_due || ++idle_seen < 4) return;
+    idle_seen = 0;
+    void ppc_detclock_step(void); void ai_det_frame(void); void sched_det_frame(void);
+    atomic_store(&g_det_last_tick, rt_ticks());
+    ppc_detclock_step();
+    ai_det_frame();
+    sched_det_frame();
+    vi_pending = 1;
+}
+
 void vi_det_frame_wait(uint32_t thread) {
     atomic_store(&g_det_last_wait, rt_ticks());
     mtx_lock(&g_det_lock);
@@ -137,6 +178,8 @@ static int vi_thread(void* arg) {
                 mtx_lock(&g_det_lock);
                 det_raise();
                 mtx_unlock(&g_det_lock);
+            } else {
+                det_idle_tick();
             }
             if (left <= 0) break;
             struct timespec ts = {0, (long)(left * 2000 / 81)};
@@ -155,12 +198,13 @@ static int vi_thread(void* arg) {
                    g_det_n[0], g_det_n[1], g_det_n[2], g_det_n[3], g_det_n[4], g_det_n[5]);
             memset(g_det_n, 0, sizeof g_det_n);
         }
-        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - atomic_load(&g_det_last_wait) >= TICKS_PER_FIELD * 10) {
+        uint64_t det_active = atomic_load(&g_det_last_wait) > atomic_load(&g_det_last_tick) ? atomic_load(&g_det_last_wait) : atomic_load(&g_det_last_tick);
+        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - det_active >= TICKS_PER_FIELD * 10) {
             g_det_n[1]++;
             static unsigned logged;  /* what the game runs instead of waiting (first 40) */
             if (logged++ < 40) rt_log("[det] backstop: running thread %08X in %08X (lr %08X)", ld32(0x800000E4u), g_ppc_cur_fn, g_ppc_cur_lr);
         }
-        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - atomic_load(&g_det_last_wait) < TICKS_PER_FIELD * 10) {
+        if (ppc_detclock() && ppc_detclock_steps() > 0 && rt_ticks() - det_active < TICKS_PER_FIELD * 10) {
             mtx_lock(&g_det_lock);
             if (g_det_due < 2) g_det_due++;
             det_raise();

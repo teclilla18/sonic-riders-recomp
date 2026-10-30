@@ -94,5 +94,21 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
 - Next: find the remaining sources with a dump at the race scene's first frame in two runs that differ
   there (`SR_RAMDUMPKEY` with a step condition), remove the last backstops (`8000BB6C`), then decide which
   memory must match (game state) and which may differ (audio threads' stacks and timestamps).
+- **Idle ticks (2026-10-29, late):** when every game thread is blocked (the OS idles in SelectThread),
+  frames have stopped (no frame wait for 3 fields) and the GPU has no queued work, 1/60 s of game time
+  passes at that idle point (clock step, the audio quota, due alarms, then a retrace). This removed the
+  boot-time backstops in some runs; races stay at 60 fps. 6 backstops remain at boot (OS idle while a
+  disc read is pending; completing the read there instead upset the boot sequence: 23 backstops,
+  reverted).
+- **Status after the last round [measured]:** the race scene starts within 0-1 frames between runs, and
+  in one pair of runs the race data stayed identical for the whole race, but not reliably: other pairs
+  differ from the race scene's first frame (frame counters 5 apart = retraces delivered by the boot
+  backstops). `SR_RAMHASH` itself makes frames slow enough to add backstops, so measurements disturb
+  what they measure (a cheaper or sampled checksum, or one over the game-state blocks only, is needed).
+- **Assessment:** whole-system determinism of a natively run game with host threads (audio, disc, GPU)
+  is a long road; every source found so far had a fix, but the boot/loading phase keeps producing new
+  ones. Two ways forward: (a) keep removing sources (the boot idle/disc case next), or (b) aim lower:
+  synchronize at the race start and make only the race deterministic, which needs the race state
+  (racers, RNG, timers) identified in memory so it can be checked, and if needed copied, at the barrier.
 - Cross-play needs floating point to match exactly between x86 (PC) and ARM (Switch): same rounding,
   no fused multiply-add contraction by the compilers, same approximation tables (`fres`, `frsqrte`).

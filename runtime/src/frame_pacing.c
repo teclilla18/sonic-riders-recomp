@@ -175,7 +175,8 @@ static void ram_hash(void) {
     {   /* SR_RAMDUMPKEY=<value>: RAM to build/ramkey.bin the first time the key reaches that value */
         static int done;
         const char* dk = getenv("SR_RAMDUMPKEY");
-        if (dk && key_addr && !done && ld32(key_addr) == (uint32_t)atoi(dk)) {
+        const char* after = getenv("SR_RAMDUMPKEY_AFTER");  /* not before this frame (a later scene) */
+        if (dk && key_addr && !done && ld32(key_addr) == (uint32_t)atoi(dk) && (!after || step >= (unsigned)atoi(after))) {
             done = 1;
             FILE* f = fopen("build/ramkey.bin", "wb");
             if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
