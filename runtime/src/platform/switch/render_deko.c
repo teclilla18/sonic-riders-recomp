@@ -596,6 +596,11 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
         /* at the chosen aspect (settings.h), centred */
         float aspect = settings_display_aspect();
+        if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
+            src.y = SC(y + (c->copy[11] >> 16));
+            src.height = SC(c->copy[11] & 0xFFFF);
+            aspect *= (float)h / (float)(c->copy[11] & 0xFFFF);
+        }
         uint32_t dw = FB_W, dh = FB_H;
         if ((float)FB_W > FB_H * aspect) dw = (uint32_t)(FB_H * aspect + 0.5f);
         else dh = (uint32_t)(FB_W / aspect + 0.5f);

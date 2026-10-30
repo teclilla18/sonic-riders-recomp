@@ -325,6 +325,27 @@ static void shot_step(void) {
         }
 }
 
+/* SR_POKEAT=<frame>:<addr>:<hex bytes>[,...] (testing): write guest memory at the end of that game frame
+ * (frame ends counted from 1, as SR_SHOTSTEP), e.g. 2000:81AAD3A0:0101 */
+static void poke_at(void) {
+    static const char* list = (const char*)1;
+    static unsigned frame;
+    if (list == (const char*)1) list = getenv("SR_POKEAT");
+    frame++;
+    for (const char* q = list; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) {
+        char* e;
+        if (strtoul(q, &e, 10) != frame || *e != ':') continue;
+        uint32_t a = (uint32_t)strtoul(e + 1, &e, 16);
+        if (*e != ':') continue;
+        unsigned n = 0;
+        for (const char* h = e + 1; h[0] && h[1] && h[0] != ','; h += 2, n++) {
+            char b[3] = {h[0], h[1], 0};
+            *mem_phys((a + n) & 0x3FFFFFFF) = (uint8_t)strtoul(b, NULL, 16);
+        }
+        rt_log("[poke] frame %u: %u bytes at %08X", frame, n, a);
+    }
+}
+
 static void frame_end_body(Cpu* c);
 void hle_frame_end(Cpu* c) {
     void perftest_frame_begin(void); void perftest_frame_done(void);
@@ -334,6 +355,7 @@ void hle_frame_end(Cpu* c) {
 }
 
 static void frame_end_body(Cpu* c) {
+    poke_at();
     ram_hash();
     { void netplay_frame_start(void); netplay_frame_start(); }  /* the state checksum for record/replay/online */
     shot_step();

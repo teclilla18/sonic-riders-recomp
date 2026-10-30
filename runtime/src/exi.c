@@ -63,17 +63,8 @@ static _Atomic unsigned g_card_file_writes;
 static _Atomic unsigned g_card_erases, g_card_programs;
 unsigned exi_card_file_writes(void) { return atomic_load(&g_card_file_writes); }
 
-/* online play (netplay.c) and the perf test (perftest.c): the card's writes stay in memory, the file is left as it was */
-static _Atomic int g_card_volatile;
-void exi_card_volatile(void) { atomic_store(&g_card_volatile, 1); }
 
 static void card_write_file(Card* c) {
-    if (atomic_load(&g_card_volatile)) {
-        static int logged;
-        if (!logged++) rt_log("[card] the game's saves stay in memory (online session or perf test): %s is not written", c->path);
-        atomic_store(&c->dirty, 0);
-        return;
-    }
     atomic_fetch_add(&g_card_file_writes, 1);
     static uint8_t snap[CARD_SIZE];
     mtx_lock(&c->lock);
@@ -252,6 +243,12 @@ static void card_init(Card* c, int chan, const char* path, const uint8_t* sram) 
     c->status = 0x41;  /* ready | unlocked: the SDK skips the unlock sequence */
     c->mem = malloc(CARD_SIZE);
     mtx_init(&c->lock, mtx_plain);
+    if (!path) {  /* a fresh card in memory (online play, perf test): no file is read or written */
+        snprintf(c->path, sizeof c->path, "(a fresh card in memory)");
+        card_format(c->mem, sram);
+        rt_log("[card] slot A: a fresh formatted card in memory (59 blocks); no card file is used");
+        return;
+    }
     snprintf(c->path, sizeof c->path, "%s", path);
     FILE* f = fopen(path, "rb");
     if (f && fread(c->mem, 1, CARD_SIZE, f) == CARD_SIZE) {
@@ -428,16 +425,7 @@ void exi_write(uint32_t ea, uint32_t v, int size) {
     }
 }
 
-/* a checksum of the card image as it is now (netplay.c: every machine must start from the same save) */
-uint32_t exi_card_hash(void) {
-    uint32_t h = 2166136261u;
-    mtx_lock(&g_card_a.lock);
-    for (uint32_t i = 0; i < CARD_SIZE; i++) h = (h ^ g_card_a.mem[i]) * 16777619u;
-    mtx_unlock(&g_card_a.lock);
-    return h;
-}
-
-void exi_init(const char* card_path) {
+void exi_init(const char* card_path) {  /* NULL: a fresh card in memory */
     ipl_init();
     card_init(&g_card_a, 0, card_path, g_ipl.sram);
 }

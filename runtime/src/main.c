@@ -103,14 +103,13 @@ int main(int argc, char** argv) {
     di_init();
     {
         const char* card = getenv("SR_CARD");
-        int perftest_on(void); void exi_card_volatile(void);
-        if (perftest_on()) {  /* SR_PERFTEST: a fresh card in memory; the player's save is left alone */
-            exi_card_volatile();
-            card = "(perftest: fresh card in memory)";
-        }
-        exi_init(card ? card : platform_save_path());
+        int perftest_on(void); int netplay_online_save(void);
+        /* SR_PERFTEST, and online play (the generated save, docs/ONLINE.md): a fresh card in memory;
+         * the player's save is left alone */
+        if (perftest_on() || netplay_online_save()) exi_init(NULL);
+        else exi_init(card ? card : platform_save_path());
     }
-    { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine (same save) first */
+    { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine first */
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
     if (wd && atoi(wd) > 0) {

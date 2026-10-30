@@ -6,6 +6,11 @@
   input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on
   the Switch), and two copies of the game racing in lockstep over the network (`SR_NET`), with a
   "desync" message if the two games ever stop matching.
+- Online play (still test options): every machine uses a generated save with everything unlocked (all
+  characters, tracks and gear), built in memory; your own memory card is never read or written during an
+  online session. In a two-player race each machine shows only its own player's view. The first session
+  between a PC and a Switch ran in lockstep (a known difference between PC and Switch still ends cross-play
+  races; PC-PC and Switch-Switch are not affected).
 - Performance test for contributors (docs/PERF.md): `SR_PERFTEST=1` measures the title screen's two demo
   races the same way every time, on PC or Switch, without touching your save; `tools/perf_test.py`
   compares the result with a saved record.

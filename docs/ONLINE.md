@@ -49,8 +49,8 @@ Floating point needed no work: x86 and ARM gave the same results.
 
 **Save data must match.** The game reads its memory card at boot (settings, unlocks, records), so two
 machines with different saves compute different games. The tests point both at the same card image
-(`SR_CARD=<file>`); online play will need the same save on every machine, or a fixed one for online
-races (to decide in phase 3).
+(`SR_CARD=<file>`); online play uses a generated save, the same on every machine (see "Save data for
+online races" below).
 
 `SR_DETCLOCK=1` is off by default; normal play is unchanged. What it does:
 
@@ -122,9 +122,9 @@ the memory block, both checksums). A desync is found within 28 frames of the mem
 ends (desync, the other player left, connection lost) the game goes on alone with the other player's controller
 neutral.
 
-**Joining:** the host checks the joiner's protocol version, game build and memory card checksum, and refuses
-with the reason on both machines when they differ. During a session the game's saves stay in memory (exi.c
-`exi_card_volatile`): the card file is not written.
+**Joining:** the host checks the joiner's protocol version and game build, and refuses with the reason on both
+machines when they differ. Every machine plays on the generated online save (below), so there is no save to compare;
+no card file is read or written during a session.
 
 Testing: `SR_NET_TEST_DESYNC=<frame>` changes one byte of that machine's game memory at that frame (in the DOL's
 code, which only the recompiled copy runs, so the game itself is unaffected), to see the desync check work.
@@ -140,7 +140,8 @@ code, which only the recompiled copy runs, so the game itself is unaffected), to
   copy: ~0.01-0.6 ms a frame on average.
 - Desync test (`SR_NET_TEST_DESYNC=3000` on the joiner): found at frame 3024 on the joiner, reported on both, the
   message shown on screen. Connection lost (joiner killed): the host waits, ends the session after the timeout,
-  and goes on. A joiner with a different save: refused, with the reason on both.
+  and goes on. A joiner with a different save: refused, with the reason on both (before the generated save; now
+  there is no save check).
 - PC recording replayed on the Switch (overclocked, `SR_REPLAY` in env.txt): all 7,700 frames' full-memory
   checksums equal to the PC's, the replay's own check equal on all 7,920 frames, no backstops. So PC = Switch still
   holds after the fix below, and a recording made on one machine plays on the other. Lockstep on the Switch
@@ -153,21 +154,79 @@ code, which only the recompiled copy runs, so the game itself is unaffected), to
   heads hand over themselves, on the game thread (patches.txt -> vi.c `vi_det_loop_point`), after waiting for the
   GPU to finish its queued work. The rolling checksum would otherwise have reported false desyncs there.
 
-Not done yet: more than two players (the protocol carries a player number; the host would relay), a two-player
-race route (in the test, player 2 is connected but not in the race, so the race exercises player 1's input; the
-menus see both controllers), each machine's own view full screen (phase 3).
+Not done yet: more than two players (the protocol carries a player number; the host would relay).
 
-## Save data for online races (proposal, 2026-10-30)
+## Phase 3 (in progress)
+
+**Own view.** In a two-player race the game draws a split screen (player 1 on top, player 2 below, each a
+640x240 view). Every machine must keep computing exactly the same game, so the game still draws both views; only
+what is shown changes: gx_render.c notes when a frame drew 3D into both halves (a full-width, half-height viewport
+with a perspective projection) and marks the frame's XFB copy, and the backends (render_gl.c, render_deko.c) show
+only this machine's player's half, scaled the same both ways (a wide picture with bars above and below; on a 16:9
+screen with the widescreen setting, a 32:9 picture). Menus and other screens are shown whole. `SR_VIEW=<1|2>` forces
+one player's view, also offline. Limits: the track map, drawn across the split line, is cut in half; the picture
+has the split view's resolution; the other player's view still costs its drawing time.
+
+**Two-player race route** (test scripts, not in the repository): from boot on the online save, both players pick
+characters at Player Entry (player 2 presses A on its box), START, and both steer (main stick held forward, left and
+right, A) through Metal City. In lockstep each copy gets its own player's part of the script.
+
+**Status (2026-10-30) [measured]:**
+- Generated save: two copies in lockstep on one PC, no card shared, 7,700 frames identical (full SR_RAMHASH), and
+  the 2P race route 8,400 frames identical (about 2,400 race frames with both players steering), byte-identical
+  recordings; an offline replay of the session identical. The Switch replaying the PC's menus-only session
+  recording: all 7,700 frames identical to the PC.
+- **PC against Switch, 2P race: not identical (a cross-play blocker, phase 4).** Replaying the PC's 2P race
+  recording on the Switch, 13 of the 8,400 frames differ (frames 6918-7103, memory blocks 3 and 26; equal again
+  afterwards). The only difference is the **sign of a NaN** the game stores (at 8036DEA0, 8036DEB8 and in a REL
+  structure at 81A1780C/81A17824): when a float operation creates a NaN (0/0, inf-inf), x86 gives 0xFFC00000 /
+  0xFFF8000000000000 and ARM (like the GameCube's CPU) the positive 0x7FC00000 / 0x7FF8000000000000. PC-PC and
+  Switch-Switch are unaffected. Fixing it at the float stores does not work: the game also keeps real
+  0xFFF8000000000000 doubles as data (138 words at that frame, the same on both machines), which a store-side fix
+  changed. The fix has to be where a NaN is made: on x86, after an arithmetic operation whose result is a NaN while
+  no input was, use the positive NaN (inside fnmadd/fnmsub before their negation; ppc_fres/ppc_frsqrte inside their
+  helpers), through a macro that is empty on ARM so the Switch pays nothing, and without breaking the recompiler's
+  passes that pattern-match these expressions (singleflow, single-precision floats).
+- **First session between two machines** (Switch hosting on the LAN, the PC joining as player 2, the 2P race route,
+  delay 4): the Switch's socket code works; all 28 MB of game memory identical on both machines on every frame up to
+  6917 (menus, loading, ~1,000 race frames with both players steering); at frame 6919 the Switch found the NaN-sign
+  difference above, both machines ended the session with the desync message and went on alone. The Switch showed
+  only player 1's view. The PC waited up to ~21 ms a frame for the Switch (full-memory hashing slows the Switch to
+  ~29 fps in this test).
+- Open: in that session one PC frame stalled 585 ms in the game thread (not in the network wait) and the
+  host-clock alarm backstop fired; it changed nothing that time, but in a session a host-clock fallback should
+  never decide anything (consider turning those backstops off in sessions: a stall then only slows the game).
+- Next: PC-PC on two PCs and Switch-Switch (the user has a laptop and two more Switches), then the NaN fix for
+  cross-play (phase 4).
+
+
+## Save data for online races (decided, 2026-10-30)
 
 The game reads its memory card at boot (settings, unlocks, records), so every machine must start from the same
-card image or the games differ from the first frames. Today the host refuses a joiner whose card differs.
+save or the games differ from the first frames.
 
-Proposal: **the host's save for everyone, in memory only.** When a player joins, the host sends its card image
-(512 KB) to the joiner; both machines boot the session from that image, and during the session nobody's saves
-reach a file (already so). Everyone races with the host's unlocked characters, gear and tracks and the host's game
-settings; nobody's own save changes. Nothing to set up, and it works the same PC to Switch.
+Rule: **online sessions use a generated save with everything unlocked, the same on every machine.**
 
-Alternatives considered: requiring the same save on every machine (impractical outside tests); a fixed online save
-(a fresh card has most characters and tracks locked, and shipping an unlocked save would mean distributing a file
-made by the game, which this project does not do).
+- Everything is unlocked: all characters, all boards and gear, all tracks.
+- It is built in memory, never shipped as a file (a save made by the game is game-derived data, which this
+  project does not distribute). Each machine starts from a fresh, empty memory card made in code (fixed contents
+  under `SR_DETCLOCK`), and once the game has loaded its save data into memory, every unlock flag is set in memory
+  at the same frame on all machines.
+- Nothing is written to anyone's card. Leaving online play boots normally with the player's own save, untouched.
+- Settings stored in the save are the game's defaults online.
 
+Because every machine uses the same generated save, the host no longer compares memory cards when a player joins.
+
+**How it is done** (netplay.c `online_unlock`, exi.c `exi_init(NULL)`): with `SR_NET` (or `SR_ONLINE_SAVE=1`, to
+record a run on it offline; a replay of such a recording uses it again), slot A holds a freshly formatted card in
+memory and `SR_CARD` / the player's card file is not opened. The game then shows its NEW GAME file screen and asks
+whether to create game data; answering Yes creates the save on that in-memory card. At every frame end, before the
+state checksum, the unlock flags are set in the game's save data (a struct at `81AAD000`): all 16 tracks, characters
+0-16, bit 0 of every gear flag in the game's gear table, and one more course flag. The game reads these flags as
+"equal to 1" (or bit 0 for gear), so setting them every frame is harmless, and it also covers the game resetting its
+save data on the NEW GAME path. Every machine sets the same bytes at the same frames, so the games stay identical.
+The flags and how they were found: NOTES.md (2026-10-30, unlock flags).
+
+Alternatives considered: the host's card sent to every joiner, in memory only (everyone would race with the host's
+unlocks and settings, and it needs a 512 KB transfer); requiring the same save on every machine (impractical outside
+tests); shipping an unlocked save file (a file made by the game).

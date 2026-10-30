@@ -784,3 +784,67 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
 - tools/perf_test.py run (PC, N runs) / show (perftest.json files, e.g. from the SD card, or records) with --save and --expect (SLOWER when speed/fps -1.0 or game ms +10% and +0.2). docs/PERF.md; records in perf/results/.
 - [measured] PC, 3 runs (188 s each): both scenes 59.9 speed/fps, game thread 2.4 ms mean (2.33-2.51 across runs), p95 4.3.
 - [measured] Switch (overclocked, frame rate Auto), 1 run via env.txt (switch-remote): demo_1p speed 59.95, fps 58.1, game thread 13.5 ms (p95 16.6, 77 steps > 16.7 ms); demo_2p (Splash Canyon split screen, seen on screen) speed 59.94, fps 56.4, 13.7 ms (p95 18.7, 385 over). Records perf/results/2026-10-30-{pc,switch}.json.
+
+### 2026-10-30 (night): unlock flags; the generated online save
+- Save-data rule for online decided by the user (docs/ONLINE.md "Save data for online races"): a generated save with
+  everything unlocked, built in memory on every machine, nothing written to anyone's card.
+- **The game's save data** [confirmed]: one card file `SONICRIDERS_GAMEDATA_01` (GXEE/8P, 1 block); comment and
+  banner/icon first, game data from file offset 0x1440 to 0x1B50. In memory the game keeps it in one struct at
+  **81AAD000** (= file offset 0x1460; 0x6F0 bytes; the code forms the address as lis 81AB / addi -0x3000). It lies in
+  _Main.rel's data, so its initial values (the new-game defaults) are there from boot (seen at frame 50); on the det
+  route the card's copy is applied between frames 1300 and 2000 (after the file screen).
+  How found: located the save's bytes in RAM dumps (SR_RAMDUMPAT) before/after the card is read, then a small
+  scanner over the recompiled code's instruction comments listed every load/store off 81AAD000, and the readers were
+  disassembled (devkitPPC objdump on words rebuilt from build/gen comments). Flag meanings checked by setting them in
+  memory at a fixed frame (new SR_POKEAT) and looking at the select screens.
+- **Unlock flags** (offsets in the struct at 81AAD000):
+  - +0x004..+0x013, 16 bytes: the tracks, 1 = unlocked [confirmed: all 8 track slots and both courses of each
+    (e.g. SEGA Carnival / SEGA Illusion) selectable]. A new game has the first five (Metal City .. Sand Ruins).
+  - +0x3A0 + c, c = 0..16: the characters, read as "== 1" [confirmed: all 16 Player Entry slots, no "?"]. A new game
+    has 0-6 (Sonic, Tails, Knuckles, Amy, Jet, Storm, Wave). 17 entries for 16 slots: the extra one is probably Super
+    Sonic [uncertain].
+  - +0x348 + i: gear, bit 0 = owned [confirmed by the code (gear selector at 81999080) and by cycling Sonic's gear:
+    High Booster, Auto Slider, Powerful Gear, Fastest, Turbo Star, Speed Balancer, Blue Star II, Access, Beginner,
+    Accelerator, Trap Gear, Light Board, Slide Booster, Legend]. The selector walks a 54-entry table at 819D55F8 of
+    (u16 flag index, s16 character): flag index 0 = a character's own gear, available when that character is
+    unlocked; the others use flag indices 1-24, 40-49 and 70-75. Saves also hold the value 2 here (bit 1: unknown,
+    perhaps "seen in the shop").
+  - +0x002: read as "== 1" for one course in the mode menus (819952E8 and three similar readers) [likely an unlock;
+    which one is uncertain]; set too.
+  - Not unlock flags: +0x3BA.. time records (0x112C = the 43"96 best lap shown) [likely]; +0x6B8 0x07D0 = 2000,
+    perhaps the ring total [uncertain]; missions / story progress (mostly zero in a new game) not mapped.
+- **Online save** (netplay.c, exi.c, main.c): `SR_NET`, or `SR_ONLINE_SAVE=1` (offline, with SR_RECORD; the
+  recording's flag 2 makes its replay use it), gives slot A a freshly formatted card in memory (`exi_init(NULL)`;
+  fixed contents under SR_DETCLOCK: fixed RTC and SRAM) and never opens SR_CARD / the player's card file. The game
+  shows its NEW GAME screen and asks to create game data (the det route's A presses answer Yes and still reach Track
+  Select at the same frame). `online_unlock()` sets the flags above at every frame end, before the state checksum:
+  idempotent with how the game reads them, and it also covers the game resetting the struct on the NEW GAME path.
+  The host's memory-card check is gone (protocol 2; exi_card_hash / exi_card_volatile removed; the perf test uses
+  `exi_init(NULL)` too).
+- New tool: `SR_POKEAT=<frame>:<addr>:<hex bytes>[,...]` writes guest memory at the end of that frame (frame ends
+  from 1, as SR_SHOTSTEP); deterministic, unlike SR_POKE (per present, one byte).
+
+### 2026-10-30 (night): phase 3 start: 2P race route, own view, PC vs Switch NaN sign, first PC-Switch session
+- **The det route does not reach the race on the online save**: with every track unlocked, Track Select asks for
+  the course (Metal City / Night Chase), an extra A, so the old route stops at gear select and its "race" input cycles
+  gear. The first lockstep test on the online save (7,700 identical frames) was therefore menus only. New 2P route
+  (scratchpad mk2p.py; not in the repo): player 2 joins at Player Entry (2.A), picks Knuckles, both confirm, START at
+  4700, race from ~5900; in the race the stick is held forward (SY=100: on foot to the start line, d-pad alone left
+  the racers standing) and steers with SX, A taps. [confirmed] lockstep on one PC 8,400 frames identical (~2,400 race
+  frames, both players moving), byte-identical recordings, offline replay self-check all 8,580 equal.
+- **Own view** (gx_render.c note_split_view / copy[11], render_gl.c, render_deko.c, netplay_view_player, SR_VIEW):
+  2P race frame viewports [confirmed SR_GXDEBUG]: 3D in two 640x240 viewports (scale 320/-120, top at y 0, bottom
+  at 240, perspective), 2D HUD in full-screen orthographic viewports (the track map straddles the split line). The
+  local player's half is shown scaled uniformly (8:3 at a 4:3 display). [confirmed PC screenshot, SR_VIEW=2: menus
+  whole, race shows Knuckles' half]. Switch backend compiles, not looked at on hardware yet.
+- **PC vs Switch differ by a NaN's sign** [confirmed, RAM dumps at frame 6918 from both]: details in docs/ONLINE.md
+  phase 3 status. Tried and reverted: canonicalizing at stf32/stf64/psq stores on x86 (changed real FFF8000000000000
+  data at boot: 138 words). Needs the creation-site fix (phase 4). Also seen: x86 vs ARM agree on fctiwz/psq quantize
+  of NaN (both 0 / 0x80000000 paths), not verified exhaustively.
+- **First PC-Switch session** [confirmed]: Switch `SR_NET=host:7777` (env.txt, with the route's player-1 part in
+  SR_INPUT), PC `SR_NET=join:<switch ip>:7777` (player 2). Joined at once; full SR_RAMHASH equal on both for frames
+  0-6917; desync found by the Switch at 6919 (block 3, the NaN), session ended on both with the banner; the Switch
+  showed player 1's half full width. One `[det] alarm backstop` on the PC at frame ~1743 during a 585 ms PC stall
+  outside net_frame (keepalive not called), harmless that time; open item in docs/ONLINE.md.
+- Switch-remote notes: HOME tiles wrap (LEFT from the first tile goes to All Software); the game tile asks "Who is
+  using the software?" first (A picks the first user); presses can be dropped, so check with a screenshot.

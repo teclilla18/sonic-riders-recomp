@@ -18,8 +18,10 @@
  * itself every frame; lockstep machines exchange it, and a mismatch ends the session with a "desync"
  * message on screen and in the log.
  *
- * Save data: all machines must start from the same memory card image; the host checks the joiner's card
- * checksum. During an online session the game's saves stay in memory (exi.c exi_card_volatile). */
+ * Save data (docs/ONLINE.md): online, every machine uses the same generated save with everything unlocked.
+ * The game boots on a fresh card made in memory (exi.c, fixed contents under SR_DETCLOCK; the player's card
+ * is not touched), and at every frame end the unlock flags are set in the game's save data (online_unlock).
+ * SR_ONLINE_SAVE=1 does the same without a session (with SR_RECORD; a replay of such a recording uses it). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,8 +52,6 @@ typedef int sock_t;
 
 extern const char g_build_version[];
 uint32_t ram_block_hash(uint32_t blk);
-uint32_t exi_card_hash(void);
-void exi_card_volatile(void);
 void vi_det_keepalive(void);
 void ppc_detclock_force(void);
 uint32_t ppc_detclock_steps(void);
@@ -64,6 +64,7 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 static int g_active;              /* any mode other than plain live input */
 static int g_ports = 1;           /* controllers connected for the run (si.c) */
 static uint32_t g_frame;          /* frame ends latched so far */
+static int g_online_save;         /* the generated online save: a fresh card in memory, everything unlocked */
 static uint32_t g_sum_next;       /* netplay_frame_start: the checksum for frame g_frame + 1 */
 
 static void pack(const GcPad* p, uint8_t* b) {
@@ -78,7 +79,8 @@ static void put32(uint8_t* b, uint32_t v) { b[0] = (uint8_t)v; b[1] = (uint8_t)(
 static uint32_t get32(const uint8_t* b) { return (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24; }
 
 /* ------------------------------------------------------------------ recording and replay */
-/* File: a 64-byte header ("SRINPUT1", u32 version 1, u32 ports, u32 flags (1: an online session),
+/* File: a 64-byte header ("SRINPUT1", u32 version 1, u32 ports, u32 flags (1: an online session,
+ * 2: the generated online save),
  * u32 reserved, the build version, 40 bytes), then per frame: u32 game step, u32 state checksum,
  * ports x 8 bytes (buttons u16, stick x/y, C x/y, L/R). Little-endian. */
 #define REC_HEADER 64
@@ -121,8 +123,9 @@ static int rep_open(const char* path) {
     char build[41];
     memcpy(build, h + 24, 40);
     build[40] = 0;
-    rt_log("[replay] replaying %s (%d port%s%s, recorded with %s)", path, g_ports, g_ports > 1 ? "s" : "",
-           get32(h + 16) & 1 ? ", an online session" : "", build);
+    if (get32(h + 16) & 2) g_online_save = 1;  /* recorded on the generated online save: replayed on it too */
+    rt_log("[replay] replaying %s (%d port%s%s%s, recorded with %s)", path, g_ports, g_ports > 1 ? "s" : "",
+           get32(h + 16) & 1 ? ", an online session" : "", g_online_save ? ", the online save" : "", build);
     if (strncmp(build, g_build_version, 39)) rt_log("[replay] note: recorded with another build (%s); it may not match", build);
     return 1;
 }
@@ -154,7 +157,7 @@ static int rep_read(GcPad* pads, uint32_t* sum) {
 
 /* ------------------------------------------------------------------ lockstep */
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
-#define PROTO 1
+#define PROTO 2  /* 2: no save check (everyone uses the generated online save) */
 static sock_t g_sock = SOCK_BAD;
 static struct sockaddr_in g_peer;
 static int g_net;                 /* 1: a session is on */
@@ -406,7 +409,6 @@ static void net_connect(const char* spec) {
     }
 #endif
     if (bind(g_sock, (struct sockaddr*)&me, sizeof me)) net_fail("cannot use that network port (another program has it?)");
-    uint32_t card = exi_card_hash();
     if (g_is_host) {
         g_me = 0;
         g_delay = getenv("SR_NET_DELAY") ? atoi(getenv("SR_NET_DELAY")) : 4;
@@ -426,7 +428,6 @@ static void net_connect(const char* spec) {
             build[64] = 0;
             if (m[3] != PROTO) snprintf(why, sizeof why, "a different online protocol version");
             else if (strncmp(build, g_build_version, 63)) snprintf(why, sizeof why, "a different game build (%.60s, the host has %.60s)", build, g_build_version);
-            else if (get32(m + 4) != card) snprintf(why, sizeof why, "a different save (memory card); all players need the same one");
             if (why[0]) {
                 char ip[64];
                 inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
@@ -447,7 +448,6 @@ static void net_connect(const char* spec) {
         rt_log("[net] joining %s:%d", host, port);
         overlay_set_banner("Online: joining...");
         uint8_t hello[72] = {'S', 'R', M_HELLO, PROTO};
-        put32(hello + 4, card);
         snprintf((char*)hello + 8, 64, "%s", g_build_version);
         uint64_t t0 = platform_now_ns(), last = 0;
         for (;;) {
@@ -486,7 +486,6 @@ static void net_connect(const char* spec) {
     g_net = 1;
     g_recv_upto = g_peer_ack = (uint32_t)g_delay;  /* the first D frames: neutral for everyone, never sent */
     g_last_recv_ns = platform_now_ns();
-    exi_card_volatile();
     atexit(net_bye_at_exit);
     overlay_set_banner(NULL);
 }
@@ -496,7 +495,9 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
     const char* rec = getenv("SR_RECORD");
     const char* rep = getenv("SR_REPLAY");
     const char* net = getenv("SR_NET");
-    if (!rec && !rep && !net) return;
+    const char* os = getenv("SR_ONLINE_SAVE");
+    if (net || (os && atoi(os))) g_online_save = 1;
+    if (!rec && !rep && !net && !g_online_save) return;
     if (rep && net) rt_fatal("SR_REPLAY and SR_NET cannot be used together");
     ppc_detclock_force();
     g_active = 1;
@@ -510,14 +511,41 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
     const char* net = getenv("SR_NET");
     if (net) net_connect(net);
     const char* rec = getenv("SR_RECORD");
-    if (rec) rec_open(rec, g_net);
+    if (rec) rec_open(rec, g_net | g_online_save << 1);
 }
 
 int netplay_ports(void) { return g_ports; }
+int netplay_online_save(void) { return g_online_save; }  /* main(): a fresh card in memory */
+
+/* gx_render.c: whose view to show full screen in a split-screen race (0-based), or -1 for the whole
+ * picture. Online: this machine's player. SR_VIEW=<1-2> forces one (testing, also offline). Presentation
+ * only: the game still draws every view, so all machines keep computing the same game. */
+int netplay_view_player(void) {
+    static int forced = -2;
+    if (forced == -2) forced = getenv("SR_VIEW") ? atoi(getenv("SR_VIEW")) - 1 : -1;
+    if (forced >= 0) return forced;
+    return g_net ? g_me : -1;
+}
+
+/* The unlock flags in the game's save data (one struct at 81AAD000, saved in SONICRIDERS_GAMEDATA_01 from
+ * file offset 0x1460; NOTES.md 2026-10-30 "unlock flags"). A flag is read as "== 1" (characters, tracks)
+ * or by its bit 0 (gear), so setting them again each frame is harmless, and it also covers the game
+ * re-initialising its save data (the NEW GAME / create-save path on a fresh card). */
+#define SAVE_DATA 0x81AAD000u
+static void online_unlock(void) {
+    uint8_t* s = mem_phys(SAVE_DATA & 0x3FFFFFFF);
+    s[0x002] = 1;                       /* a course gated separately in the mode menus */
+    memset(s + 0x004, 1, 16);           /* the 16 tracks (8 track slots x 2 courses) */
+    memset(s + 0x3A0, 1, 17);           /* the characters 0-16 */
+    static const uint8_t gear[][2] = {{1, 24}, {40, 49}, {70, 75}};  /* the gear table's flag indices */
+    for (unsigned r = 0; r < sizeof gear / sizeof gear[0]; r++)
+        for (unsigned i = gear[r][0]; i <= gear[r][1]; i++) s[0x348 + i] |= 1;
+}
 
 /* hle_frame_end, at its start (where SR_RAMHASH looks): the next frame's state checksum */
 void netplay_frame_start(void) {
     if (!g_active) return;
+    if (g_online_save) online_unlock();  /* before the checksum: the same on every machine */
     {   /* SR_NET_TEST_DESYNC=<frame> (testing the desync check): change one byte of this machine's game
          * memory then, in the DOL's code (only the recompiled copy runs, so the game is unaffected) */
         static int at = -1;

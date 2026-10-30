@@ -77,6 +77,23 @@ static GxCmd* push_cmd(int type) {
     return c;
 }
 
+/* Online play, each player's own view (docs/ONLINE.md): which halves of a two-player split screen this
+ * frame drew 3D into: bit 0 the top, bit 1 the bottom (a full-width, half-height viewport with a
+ * perspective projection). Read and cleared at the frame's XFB copy. */
+static unsigned g_split_seen;
+static void note_split_view(void) {
+    const uint32_t* xr = g_gx.xf_reg;
+    if (xr[0x26] != 0) return;  /* orthographic: 2D (the HUD) */
+    float xs, ys, yo;
+    memcpy(&xs, &xr[0x1A], 4); memcpy(&ys, &xr[0x1B], 4); memcpy(&yo, &xr[0x1E], 4);
+    if (xs < 0) xs = -xs;
+    if (ys < 0) ys = -ys;
+    if (xs != 320.0f || ys != 120.0f) return;
+    float vy = yo - ys - (float)(((g_gx.bp[0x59] >> 10) & 0x3FF) * 2);
+    if (vy > -1.0f && vy < 1.0f) g_split_seen |= 1;
+    else if (vy > 239.0f && vy < 241.0f) g_split_seen |= 2;
+}
+
 /* a state snapshot: copies of the XF memory chunks changed since the last one, a new chunk table
  * when any did, and a new register block only when a BP or XF register was written and differs.
  * A STATE command is pushed only when either changed. */
@@ -109,6 +126,7 @@ static void push_state(void) {
             memcpy(u->xfr, g_gx.xf_reg, sizeof u->xfr);
             memcpy(u->konst, g_gx.konst, sizeof u->konst);
             new_regs = 1;
+            note_split_view();
         }
     }
     if (!new_tab && !new_regs) return;
@@ -665,6 +683,13 @@ static void efb_copy(uint32_t v) {
     c->copy[9] = v;
     c->copy[10] = dest;
     if (to_xfb) {
+        /* online: show only this machine's player's half of a two-player split screen (copy[11] = the
+         * rows shown: first << 16 | count; the backend scales the picture uniformly) */
+        int netplay_view_player(void);
+        int p = netplay_view_player();
+        if (p >= 0 && p < 2 && g_split_seen == 3 && x == 0 && y == 0 && w == 640 && h == 480)
+            c->copy[11] = (uint32_t)(p * 240) << 16 | 240;
+        g_split_seen = 0;
         /* SR_DUMPRAM=FRAME: guest RAM to build/ram.bin at that presented frame (debugging, desktop) */
         {
             static int dump_at = -1;

@@ -359,11 +359,16 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             /* the picture at the chosen aspect (settings.h), centred; the EFB is stored top row first:
              * flip while blitting to the window */
             float aspect = settings_display_aspect();
+            int sy = y, sh = h;
+            if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
+                sy = y + (int)(c->copy[11] >> 16), sh = (int)(c->copy[11] & 0xFFFF);
+                aspect *= (float)h / (float)sh;
+            }
             int dw = ww, dh = wh;
             if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
             else dh = (int)((float)ww / aspect + 0.5f);
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
-            p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
+            p_glBlitFramebuffer(x * EFB_SCALE, sy * EFB_SCALE, (x + w) * EFB_SCALE, (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
             draw_overlay(ww, wh);
             if (g_same_k >= 0) {  /* SR_SKIPSAME: a repeat of this frame; saved, not counted */
