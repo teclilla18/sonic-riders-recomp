@@ -198,8 +198,25 @@ static void ram_hash(void) {
     rt_log("%s", line);
 }
 
+/* SR_SHOTSTEP=<frame>[,<frame>...] (determinism tests): a screenshot of the frame drawn at those game
+ * frames (frame ends), so two runs can be compared picture by picture even when their presented-frame
+ * counts differ (the game's 30 fps mode while loading); they are saved in that order */
+static void shot_step(void) {
+    static const char* list = (const char*)1;
+    static unsigned step;
+    if (list == (const char*)1) list = getenv("SR_SHOTSTEP");
+    step++;
+    for (const char* q = list; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
+        if ((unsigned)atoi(q) == step) {
+            void overlay_request_screenshot(void);
+            overlay_request_screenshot();
+            rt_log("[det] screenshot requested at game frame %u", step);
+        }
+}
+
 void hle_frame_end(Cpu* c) {
     ram_hash();
+    shot_step();
     g_main_thread = ld32(OS_CURRENT_THREAD);
     { void ppc_detclock_step(void); ppc_detclock_step(); }  /* SR_DETCLOCK: game time moves one frame on */
     { void di_det_poll(void); di_det_poll(); }  /* SR_DETCLOCK: a disc command in progress completes */
@@ -233,7 +250,12 @@ void hle_frame_end(Cpu* c) {
         g_s30_since = g_win_field = vi_field_count();
         g_win_trouble = g_win_rebase = 0;
     }
-    hle_frame_end_mode(c, mode, skipped);
+    {   /* SR_DETCLOCK: the main thread is in the frame end, where it waits for retraces (vi.c) */
+        int ppc_detclock(void); void vi_det_frame_end(uint32_t thread, int in);
+        if (ppc_detclock()) vi_det_frame_end(g_main_thread, 1);
+        hle_frame_end_mode(c, mode, skipped);
+        if (ppc_detclock()) vi_det_frame_end(g_main_thread, 0);
+    }
     g_t_exit = platform_now_ns();
 }
 

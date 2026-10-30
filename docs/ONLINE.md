@@ -76,13 +76,23 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
   REL data around 0x81Axxxxx and the 0x802040D4 block), make the menus/loading use no backstop (the code
   that polls the retrace count), compare only game state (not the audio threads' stacks), then a PC
   vs Switch run (cross-play), then the race-start barrier and lockstep.
-- **Where the backstop still fires [confirmed, `[det] backstop` log lines]:** only during loading,
-  always with the main thread inside the frame end (`8000610C`, called from the loading loop at
-  `819BC5B8`), polling `8003062C` = an EFB pixel read (`0xC8000000` + x/y): on that path the frame end
-  waits for the GPU by polling a framebuffer pixel, with a retrace as the way out. The port does not
-  model EFB reads (mmio.c returns 0; the same gap as the missing lens flare, issue #7), so only a
-  retrace ends the loop, and in this mode that is the host-clock backstop. Menus and races use no
-  backstop (`[det]`: 600 of 600 retraces handed over). Next: real EFB peeks (flush the GP, read the
-  EFB; also fixes #7), which lets this wait end at a fixed point.
+- **Where the backstop fired (fixed, 2026-10-29 evening):** during loading the game switches to its own
+  30 fps mode, and its frame end (`8000610C`) then busy-waits until the retrace count reaches the last
+  present + 2, without calling VIWaitForRetrace (`L_800061C8` in the generated code). The handoff now
+  also delivers while the main thread spins there (seen in the frame end on two checks in a row); when
+  the main thread is not running it must be asleep inside VIWaitForRetrace. (Correction: the
+  `8003062C` calls in the frame end are not a GPU wait; they run a list of EFB Z reads, likely the lens
+  flare's visibility checks, issue #7.) Backstops fell from 17-55 per 600 retraces during loading to
+  ~6 at boot (before the game's threads exist) and 1-2 in one later transition (main in `8000BB6C`).
+- **Measured after that (PC, two runs each):** the race scene starts on the same game frame in both
+  runs (5146 / 5146). One pair of runs kept the race data blocks (18-22 MB) identical for all 2,854
+  race frames; another pair, with steering inputs during the race, differed from the scene's first
+  frame. So the remaining nondeterminism is intermittent: the few backstops left, and the order in
+  which the audio threads (which run on their own interrupts) interleave with the rest.
+- `SR_SHOTSTEP=<frames>` takes screenshots at game frames (not presented frames). Pictures from two runs
+  can still be a frame or two apart, because the render thread presents later than the game frame.
+- Next: find the remaining sources with a dump at the race scene's first frame in two runs that differ
+  there (`SR_RAMDUMPKEY` with a step condition), remove the last backstops (`8000BB6C`), then decide which
+  memory must match (game state) and which may differ (audio threads' stacks and timestamps).
 - Cross-play needs floating point to match exactly between x86 (PC) and ARM (Switch): same rounding,
   no fused multiply-add contraction by the compilers, same approximation tables (`fres`, `frsqrte`).

@@ -65,11 +65,31 @@ static uint32_t g_det_due;
 static int g_det_waiting;
 static _Atomic uint64_t g_det_last_wait;
 static uint32_t g_det_main;  /* the main thread's OSThread* */
+static volatile int g_det_in_vwait;  /* ... and inside VIWaitForRetrace */
+static volatile int g_det_in_end;  /* the main thread is in the game's frame end (frame_pacing.c) */
+void vi_det_frame_end(uint32_t thread, int in) {
+    mtx_lock(&g_det_lock);
+    g_det_main = thread;
+    g_det_in_end = in;
+    if (in) { g_det_waiting = 1; atomic_store(&g_det_last_wait, rt_ticks()); }  /* the frame end waits for retraces one way or another */
+    else g_det_waiting = 0;
+    mtx_unlock(&g_det_lock);
+}
 static unsigned g_det_n[6];  /* [det] log: delivered, fallback, main running, disc, audio, polls */
 static void det_raise(void) {  /* under g_det_lock: hand one due retrace to the main thread, asleep in its wait */
     if (!g_det_due || !g_det_waiting) return;
     g_det_n[5]++;
-    if (ld32(0x800000E4u) == g_det_main) { g_det_n[2]++; return; }  /* still running (before it reads the retrace count) */
+    if (ld32(0x800000E4u) == g_det_main) {
+        /* still running: hand it over only if the main thread spins in the frame end itself (the game's
+         * 30 fps mode, used while loading, polls the retrace count there until it reaches the last
+         * present + 2, without VIWaitForRetrace); seen there on two checks in a row, not passing through */
+        static int seen;
+        int spinning = g_det_in_end && g_ppc_cur_fn == 0x8000610Cu;
+        if (!spinning || !seen) { seen = spinning; g_det_n[2]++; return; }
+    } else if (!g_det_in_vwait) {  /* not running, but not asleep in VIWaitForRetrace either (preempted) */
+        g_det_n[2]++;
+        return;
+    }
     /* and only once no disc read is in flight (requiring every other thread to be idle too stalled
      * races: a low-priority game thread is always runnable there) */
     int di_det_busy(void); void di_det_poll(void);
@@ -86,6 +106,7 @@ static void det_raise(void) {  /* under g_det_lock: hand one due retrace to the 
 void vi_det_frame_done(void) {  /* the main thread's retrace wait returned */
     mtx_lock(&g_det_lock);
     g_det_waiting = 0;
+    g_det_in_vwait = 0;
     mtx_unlock(&g_det_lock);
 }
 void vi_det_frame_wait(uint32_t thread) {
@@ -93,6 +114,7 @@ void vi_det_frame_wait(uint32_t thread) {
     mtx_lock(&g_det_lock);
     g_det_main = thread;
     g_det_waiting = 1;
+    g_det_in_vwait = 1;
     mtx_unlock(&g_det_lock);
 }
 

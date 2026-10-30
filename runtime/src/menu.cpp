@@ -602,6 +602,8 @@ int overlay_take_controllers_request(void) {
     return r;
 }
 
+void overlay_request_screenshot(void) { g_shot_request = 1; }  /* SR_SHOTSTEP (frame_pacing.c) */
+
 int overlay_take_screenshot_request(void) {
     int r = g_shot_request;
     g_shot_request = 0;
