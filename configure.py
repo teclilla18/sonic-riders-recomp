@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate build.ninja for the port.
 
-usage: python configure.py [--target host|switch]
+usage: python configure.py [--target host|switch|android]
 
 Pipeline (everything under build/ is derived from the game and never committed):
   1. dtk analysis       baserom/main.dol + _Main.rel -> config/GXEE8P/{,_Main/}symbols.txt
@@ -13,6 +13,8 @@ host: --toolchain msvc (default): clang with the MSVC/SDK headers (run `. tools/
       --toolchain mingw: llvm-mingw (--llvm-mingw DIR) with SDL2's MinGW build (--sdl DIR); the setup
       tool (setup/setup.ps1) uses this one
 switch: devkitA64 + libnx + deko3d (devkitPro: $DEVKITPRO, --devkitpro DIR, or C:/devkitPro)
+android: NDK + SDK build-tools + JDK 17 + SDL2 source (the setup downloads them); written by
+      tools/android_build.py (docs/ANDROID_PLAN.md). Milestone 1: the probe APK, no game code yet.
 """
 import argparse
 import glob
@@ -23,16 +25,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
 from ninja_syntax import Writer  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--target", choices=["host", "switch"], default="host")
+ap.add_argument("--target", choices=["host", "switch", "android"], default="host")
 ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="host compiler setup")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
 ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
+ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-tools, platforms; default $ANDROID_HOME)")
+ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
+ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAVA_HOME)")
+ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
+ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
+ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+if args.target == "android":
+    import android_build  # noqa: E402
+    _py = sys.executable.replace("\\", "/")
+    android_build.write_ninja(args, ROOT, Writer, '"%s"' % _py if " " in _py else _py)
+    sys.exit(0)
 GEN = "build/gen"
 OUT = "build/%s" % ("host-mingw" if args.target == "host" and args.toolchain == "mingw" else args.target)
 py = sys.executable.replace("\\", "/")

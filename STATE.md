@@ -46,6 +46,16 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 - 2026-10-29: teal tint fix confirmed ("Are you ready?" screen and a Metal City race, 59.9 fps at the countdown).
 - 2026-10-26, stock clocks (hw32-hw36): uniform-buffer XF reads -27% GPU time; decode helper; shader-key fix.
 
+## Android port (branch `android`; plan: docs/ANDROID_PLAN.md)
+
+- Milestone 1 done (2026-11-03): setup `-Target android` (pinned NDK r27d, build-tools 35, JDK 17, SDL2 source;
+  license must be accepted), `configure.py --target android`, probe APK; `tools/android_run.py` for adb test runs.
+  Runs on the headless x86_64 emulator and the user's S23 Ultra (Android 17, Adreno 740). [confirmed]
+- Measured on the S23 Ultra: 7,000 draws cost 8.06 ms CPU in GLES vs 2.00 ms in Vulkan -> Vulkan renderer.
+- **Next, milestone 2:** `libmain.so` with the recompiled game, ISO pushed to the app folder, frames recycled
+  (no renderer); check `[mem]`/`[vi]` in logcat and `SR_DETCLOCK` + `SR_RAMHASH` against a Switch run.
+  Reconfigure build.ninja for host/switch afterwards (one target at a time). Ask the user to plug in the phone.
+
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
 Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-done in the tree):
@@ -60,7 +70,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android port (branch `android`): plan in docs/ANDROID_PLAN.md, waiting for the user's OK before milestone 1.
+1. Android port (branch `android`): milestone 2 next (see "Android" above).
 2. Online phase 3/4 (paused, see above).
 3. #12 PC at 13 fps (v0.3.4): read the attached log (GPU? vsync? software GL?).
 4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.

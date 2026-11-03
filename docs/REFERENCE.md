@@ -219,6 +219,31 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 
 **PC program icon (2026-10-23):** [confirmed] `tools/make_icon.py` reads the memory card save icon (32x32 CI8, 8x4 tiles; RGB5A3 palette) from the verified `_Main.rel` at 0x1F7660 (palette at 0x1F7420; found by matching the icon in a real save in `saves/card_a.raw`), writes `build/icon.ico` (PNG entries 16/32/64/128/256: 2x2 average for 16, nearest 2x/4x/8x above) and `configure.py` compiles it in with llvm-mingw's windres when the file exists. SDL2 takes the window/taskbar icon from the program's first icon resource. The setup makes it after step 4 for the PC target (failure only warns). The disc banner (`opening.bnr`, 96x32 logo only) was too wide to read as a square icon.
 
+## Android: build, install, test (branch `android`, 2026-11-03)
+
+- Plan and milestones: docs/ANDROID_PLAN.md. Tools (setup `-Target android -AcceptAndroidSdkLicense`, pins in
+  `setup/toolchain.json` "android"): `<tools>/android-sdk/{ndk/27.3.13750724, build-tools/35.0.0,
+  platforms/android-35, platform-tools}`, `<tools>/jdk17`, `<tools>/sdl2-src`; signing key
+  `<tools>/android/sonicriders-local.keystore` (keep it: another key cannot update the installed app, and
+  uninstalling deletes the app folder).
+- `python configure.py --target android --android-sdk <tools>/android-sdk --jdk <tools>/jdk17 --sdl-src
+  <tools>/sdl2-src --abi arm64-v8a|x86_64|both --keystore <key>`, then `ninja` → `build/android/probe-<abi>.apk`
+  (milestone 1: the probe, `tools/android/probe/`). build.ninja holds one target at a time: reconfigure before
+  building host/switch again. Steps (no Gradle): `tools/android_build.py` (ndk-build SDL2 + libc++_shared,
+  javac + d8, aapt2, zipalign -P 16, apksigner); `.so` stored uncompressed, 16 KB segments.
+- Java: `android/java/net/srnative/sonicriders/SonicRidersActivity.java` (SDLActivity; intent extra `args`:
+  space-separated words to argv, KEY=VALUE become environment variables). Manifest template
+  `android/AndroidManifest.xml.in` (minSdk 29, targetSdk 35, sensorLandscape, profileable).
+- Test run: `python tools/android_run.py --apk <apk> --package <pkg> --wait <regex> --pull <file> [--args ".."]
+  [--serial S]`: install, start, logcat of the app's pid only, files from `/sdcard/Android/data/<pkg>/files`,
+  results in `build/android/run/`. Packages: probe `net.srnative.sonicriders.probe`.
+- Emulator (dev only, not in the setup): emulator 16740729 + `system-images;android-35;google_apis;x86_64` r09
+  unpacked into `<tools>/android-sdk` (Google SHA-1 checked), AVD `srtest` in `<tools>/avd` (`ANDROID_AVD_HOME`),
+  started with `-no-window -gpu host` (WHPX). Its GLES stops at 3.1 and its GPU is the PC's: no performance numbers.
+- S23 Ultra facts (Android 17, SM8550): CPUs 0-2 A510 2016 MHz (capacity 266), 3-6 2803 MHz (811), 7 X3 3360 MHz
+  (1024); affinity and nice -16/-19 allowed for apps; APerformanceHint, AThermal, ANativeWindow_setFrameRate
+  present; SDL audio uses OpenSL ES at 32 kHz, 512 frames; display 3088x1440 at 120 Hz (frames of 8.3 ms).
+
 ## GitHub and pushing
 
 **GitHub:** https://github.com/teclilla18/sonic-riders-recomp (public). Push at the end of every work session, after `python tools/check_no_game_data.py` passes.

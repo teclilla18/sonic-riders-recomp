@@ -3,14 +3,18 @@ Sonic Riders native port: setup tool (Windows).
 
 Builds the port from YOUR OWN disc image, on your PC. Nothing from the game is downloaded or
 shipped: the tool checks your image, recompiles its code locally, builds the Switch homebrew
-(.nro) and/or a PC test build, and copies the Switch build to your SD card.
+(.nro), a PC build and/or an Android APK, and copies the Switch build to your SD card.
 
   SonicRidersSetup.bat                 (double-click: asks for everything)
   powershell -ExecutionPolicy Bypass -File setup\setup.ps1 -Iso <image> -Target switch -Sd E:\
 
 Parameters (all optional; asked for when missing):
   -Iso PATH          your Sonic Riders (USA) disc image, GXEE8P revision 0 (Redump, 1.4 GB .iso)
-  -Target T          switch | pc | both
+  -Target T          switch | pc | both (Switch + PC) | android | all
+  -Abi A             Android: arm64-v8a (phones, default) | x86_64 (the emulator) | both
+  -Install yes|no    Android: install the APK on the phone connected by USB (adb), if there is one
+  -AcceptAndroidSdkLicense   Android: you accept the Android SDK License (https://developer.android.com/studio/terms);
+                     without it the setup asks (and -Yes stops)
   -Sd PATH           the SD card (drive or folder) to install to; files go to <Sd>\switch\sonicriders\
   -NoSd              build only, do not copy to an SD card
   -CopyIso yes|no    also copy the disc image to the SD card (the Switch build needs it there once)
@@ -23,7 +27,10 @@ setup\toolchain.json and checked before use.
 #>
 param(
     [string]$Iso,
-    [ValidateSet("", "switch", "pc", "both")][string]$Target = "",
+    [ValidateSet("", "switch", "pc", "both", "android", "all")][string]$Target = "",
+    [ValidateSet("arm64-v8a", "x86_64", "both")][string]$Abi = "arm64-v8a",
+    [ValidateSet("", "yes", "no")][string]$Install = "",
+    [switch]$AcceptAndroidSdkLicense,
     [string]$Sd,
     [switch]$NoSd,
     [ValidateSet("", "yes", "no")][string]$CopyIso = "",
@@ -146,11 +153,14 @@ if (-not $Target) {
     Log "  1) Nintendo Switch (homebrew .nro, copied to your SD card)"
     Log "  2) Windows PC (play natively on this PC, no emulator)"
     Log "  3) Both"
-    $c = Ask "Choose 1, 2 or 3" "1"
-    switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } default { Fail "Unknown choice '$c'." } }
+    Log "  4) Android phone (APK; in development: for now a test app, no game yet)"
+    Log "  5) All three"
+    $c = Ask "Choose 1, 2, 3, 4 or 5" "1"
+    switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } "4" { $Target = "android" } "5" { $Target = "all" } default { Fail "Unknown choice '$c'." } }
 }
-$doSwitch = $Target -ne "pc"
-$doPc = $Target -ne "switch"
+$doSwitch = @("switch", "both", "all") -contains $Target
+$doPc = @("pc", "both", "all") -contains $Target
+$doAndroid = @("android", "all") -contains $Target
 Log "Building: $Target"
 
 $sdDir = $null
@@ -280,6 +290,7 @@ function Ensure-Tool($spec) {
         Extract $file $stage
         $src = $stage
         if ($spec.strip) { $src = Join-Path $stage $spec.strip }
+        New-Item -ItemType Directory -Force -Path (Split-Path $dir) | Out-Null
         Move-Item $src $dir
         if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
     }
@@ -325,8 +336,29 @@ if ($doPc) {
     $sdl = Ensure-Tool $tc.sdl2
     Log "PC toolchain ready (llvm-mingw, SDL2)."
 }
+$asdk = $null; $jdk = $null; $sdlSrc = $null; $adb = $null
+if ($doAndroid) {
+    if (-not $AcceptAndroidSdkLicense) {
+        Log "The Android build uses Google's Android SDK and NDK. Using them means accepting the Android SDK License:"
+        Log "  https://developer.android.com/studio/terms"
+        if ($Yes) { Fail "-Yes does not accept the Android SDK License for you." "Read it and add -AcceptAndroidSdkLicense, or run without -Yes." }
+        $a = Ask "Do you accept the Android SDK License? (y/n)" "n"
+        if ($a -notmatch "^[yY]") { Fail "The Android build needs the Android SDK License accepted." }
+    }
+    Log "Android SDK License accepted."
+    $an = $tc.android
+    foreach ($k in "ndk", "build_tools", "platform", "platform_tools") { [void](Ensure-Tool $an.$k) }
+    $asdk = Join-Path $ToolsDir "android-sdk"
+    $jdk = Ensure-Tool $an.jdk
+    $sdlSrc = Ensure-Tool $an.sdl2_src
+    $adb = Join-Path $asdk "platform-tools\adb.exe"
+    if (-not (Test-Path (Join-Path $asdk "ndk\27.3.13750724\ndk-build.cmd"))) { Fail "The Android NDK is incomplete in $asdk" "Delete that folder and run the setup again." }
+    Log "Android toolchain ready (NDK r27d, SDK build-tools 35, platform 35, JDK 17, SDL2 source)."
+}
 
 # ---------------------------------------------------------------- recompile
+$needGame = $doSwitch -or $doPc  # the Android test app has no game code yet (milestone 2)
+if ($needGame) {
 Step "4/7  Extracting the game code from your disc image"
 $baserom = Join-Path $Root "baserom"
 New-Item -ItemType Directory -Force -Path $baserom | Out-Null
@@ -344,6 +376,7 @@ if ($doPc) {
 
 Step "5/7  Analysing the game code"
 Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P")
+}
 # the build recompiles the code to C (configure.py the first time, ninja when its inputs change)
 
 Step "6/7  Recompiling and building (a few minutes)"
@@ -367,6 +400,19 @@ if ($doPc) {
         catch { Log "Copying the disc image into baserom\ ..."; Copy-Item -LiteralPath $Iso $isoDest }
     }
     Log "PC build: $builtExe" "Green"
+}
+$builtApks = @()
+if ($doAndroid) {
+    $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
+    Run "configure (Android)" $python @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $Abi, "--keystore", $keystore)
+    Run "build the Android APK" $ninja @()
+    foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
+        $apk = Join-Path $Root "build\android\probe-$a.apk"
+        if (-not (Test-Path $apk)) { Fail "The build finished but build\android\probe-$a.apk is missing." }
+        $builtApks += $apk
+        Log ("Android build: {0} ({1:N0} bytes)" -f $apk, (Get-Item $apk).Length) "Green"
+    }
+    Log "Your signing key is ${keystore}: keep it. An update signed with another key cannot replace the installed app." "Yellow"
 }
 
 # ---------------------------------------------------------------- install
@@ -419,6 +465,24 @@ if ($builtExe) {
     Log "A game controller works too. Hold F1 (or the controller's Back/View button) for the settings menu;" "Green"
     Log "F11 or Alt+Enter switches fullscreen." "Green"
 }
-if (-not $sdDir -and -not $builtNro -and -not $builtExe) { Log "Done." "Green" }
+if ($builtApks.Count -gt 0) {
+    $phoneApk = $builtApks | Where-Object { $_ -match "arm64-v8a" } | Select-Object -First 1
+    if (-not $phoneApk) { $phoneApk = $builtApks[0] }
+    $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" })
+    $ErrorActionPreference = $old
+    if (-not $Install) {
+        if ($devs.Count -eq 1) { $Install = (Ask "Install it on the connected Android device now? (y/n)" "y") -replace "^[yY].*", "yes" -replace "^[nN].*", "no" }
+        else { $Install = "no" }
+    }
+    if ($Install -eq "yes") {
+        if ($devs.Count -ne 1) { Fail "Install: $($devs.Count) Android devices are connected and authorized; exactly one is needed." "Turn on USB debugging, connect the phone, allow this PC on its screen, then run the setup again." }
+        Run "install on the Android device" $adb @("install", "-r", $phoneApk)
+        Log "Installed. Start 'SR_Probe' from the phone's app list." "Green"
+    } else {
+        Log "Android: install $phoneApk with 'adb install -r' (USB debugging on)." "Green"
+    }
+}
+if (-not $sdDir -and -not $builtNro -and -not $builtExe -and $builtApks.Count -eq 0) { Log "Done." "Green" }
 Log "Log: $LogFile"
 exit 0

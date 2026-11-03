@@ -576,3 +576,19 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   [confirmed by reading]; `profile_win.c` is Windows only. Recommended renderer: Vulkan ported from `render_deko.c`
   with SPIR-V built from the shared GLSL [likely; to be confirmed by M1's GLES vs Vulkan draw-cost measurement].
   Nothing built or run for Android yet.
+
+## 2026-11-03 (later): Android milestone 1: toolchain, probe APK, GLES vs Vulkan on the S23 Ultra
+- Setup `-Target android|all` (`-Abi`, `-Install`, `-AcceptAndroidSdkLicense`; `-Yes` never accepts the license):
+  Google's packages straight from dl.google.com (SHA-1 matched Google's manifest, SHA-256 pinned), Temurin JDK 17,
+  SDL2 2.32.10 source. `configure.py --target android` hands off to `tools/android_build.py` (no Gradle). The probe
+  APK (`tools/android/probe/probe.c`) reports system/CPU/GPU facts, plays a tone, logs input and measures draws.
+  [confirmed] setup run end to end; host-mingw and switch still build.
+- Emulator (x86_64, headless, WHPX): probe runs; ES 3.2 context refused (EGL_BAD_CONFIG), so the probe falls back
+  to 3.1/3.0. [confirmed]
+- **S23 Ultra, Android 17** [confirmed, one run]: GLES 8.06 ms vs Vulkan 2.00 ms CPU per frame of 7,000 draws ->
+  Vulkan is the renderer. dualSrcBlend, EDS1/2, push descriptors, dynamic rendering present. Swapchain transform
+  ROTATE_90 (pre-rotation needed). 120 Hz panel (8.3 ms frames: the port needs setFrameRate(60) or pacing).
+  Page size 4 KB on this phone (16 KB alignment kept anyway). No input events were logged (nobody touched it).
+- Gotcha: build.ninja is per target; a stale Switch build.ninja failed without DEVKITPRO set. Unproven: the
+  probe's audio was not listened to; controllers untested.
+

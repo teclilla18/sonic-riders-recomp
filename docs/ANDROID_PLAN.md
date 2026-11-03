@@ -3,8 +3,8 @@
 Goal: one setup run on the user's PC, with their own Sonic Riders ISO, builds an APK for their own phone with
 everything the Switch and Windows builds have. The APK holds recompiled game code, so like the `.nro` it is built
 locally and never distributed (`*.apk`, `*.aab`, `*.so`, `*.dex`, `*.spv`, keystores: `.gitignore` and
-`tools/check_no_game_data.py`). Status: **plan only, waiting for the user's OK.** Test device: [PHONE MODEL, ANDROID
-VERSION] (to fill in). Marks: [confirmed] read in the code, [likely] strong reason, [uncertain] to be measured.
+`tools/check_no_game_data.py`). Status: **milestone 1 done (2026-11-03)**; next: milestone 2. Test device: Galaxy S23 Ultra (SM8550, Adreno 740),
+Android 17, over wired adb. Marks: [confirmed] read in the code, [likely] strong reason, [uncertain] to be measured.
 
 ## 1. Inventory: what Android must match (from the code)
 
@@ -66,8 +66,11 @@ blend x depth x cull x mask x topology): dynamic state where present (core 1.1 v
 dynamic state on 1.3 drivers), a `VkPipelineCache` saved in the app folder, and pipeline keys recorded and
 prebuilt at boot like the shader keys.
 
-**Recommendation: Vulkan (B)** [likely], confirmed by a measurement in M1 before the renderer is written: the test
-APK draws 7,000 small draws with per-draw uniform ranges in both GLES and Vulkan and logs CPU ms per frame. Reasons:
+**Decision: Vulkan (B)** [confirmed by the M1 measurement on the S23 Ultra, Android 17]: 7,000 small draws with a
+uniform range each and a state change every 8 cost **8.06 ms** of CPU per frame in GLES 3.2 and **2.00 ms** in Vulkan
+1.3 (4x), medians of 180 frames. The device also has `dualSrcBlend`, extended dynamic state 1 and 2 (not 3), push
+descriptors, dynamic rendering and timeline semaphores; GLES has `GL_EXT_blend_func_extended` and framebuffer fetch.
+The swapchain reports a 90-degree transform (landscape on a portrait panel): the backend must pre-rotate. Reasons:
 draw-call cost is the known limit of GameCube rendering on phones; ahead-of-time SPIR-V plus a pipeline cache fits
 the "built in advance" approach the Switch already uses; it starts from the faster backend (deko3d) instead of the
 simpler one. If the user's GPU lacks Vulkan 1.1 or the measurement favours GLES, A becomes the fallback.

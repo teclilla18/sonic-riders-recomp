@@ -71,5 +71,20 @@
     "sha256": "f15cff5fca62ec9381a016ef1d42a95c638cd72d2f226ba5781c76fe43dbd1ac",
     "kind": "zip",
     "dir": "sdl2"
+  },
+  "android": {
+    "_comment": "Android build only (-Target android). Google's packages come straight from dl.google.com (no sdkmanager) and are unpacked into an SDK layout under <ToolsDir>/android-sdk. Their sha1 values are the ones in Google's package manifest (dl.google.com/android/repository/repository2-3.xml); the sha256 values were computed from those verified files. Using them means accepting the Android SDK License (the setup asks). JDK: Eclipse Temurin 17 (javac, d8, apksigner and keytool need Java 17+), hash from Adoptium's API. SDL2: the source release (built with the NDK), digest published by GitHub.",
+    "ndk": { "url": "https://dl.google.com/android/repository/android-ndk-r27d-windows.zip", "sha256": "82094f53e66a76b6a9ec4fc35a5076091a92de3b91d13c5d4a7cfdb226304c59",
+             "sha1": "56607cbccd3642d4a1991f6bb3114a00f884f426", "kind": "zip", "dir": "android-sdk/ndk/27.3.13750724", "strip": "android-ndk-r27d" },
+    "build_tools": { "url": "https://dl.google.com/android/repository/build-tools_r35_windows.zip", "sha256": "5753c679a1b90bcf6fbc9945a2ce39dfb9e74f1df0831a1e1866ae5b594326f0",
+                     "sha1": "af059bb67cf7786f45ee0db85e2d24985df1b4b6", "kind": "zip", "dir": "android-sdk/build-tools/35.0.0", "strip": "android-15" },
+    "platform": { "url": "https://dl.google.com/android/repository/platform-35_r02.zip", "sha256": "0988cacad01b38a18a47bac14a0695f246bc76c1b06c0eeb8eb0dc825ab0c8e0",
+                  "sha1": "0bb560a90a7a2cbd0dd8348224d518b638fe7949", "kind": "zip", "dir": "android-sdk/platforms/android-35", "strip": "android-35" },
+    "platform_tools": { "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip", "sha256": "45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99",
+                        "sha1": "e03e78b1d80b396f1c3358e31251cb31740e1110", "kind": "zip", "dir": "android-sdk/platform-tools", "strip": "platform-tools" },
+    "jdk": { "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21_9.zip",
+             "sha256": "98518ecf554465057ee5509462631deeee374bc368c12a411d225cd29381f84b", "kind": "zip", "dir": "jdk17", "strip": "jdk-17.0.21+9" },
+    "sdl2_src": { "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.zip",
+                  "sha256": "12b2dc2eb8f2836100a7916b5d394a0c82f1f7e32693f95f98305403af242f08", "kind": "zip", "dir": "sdl2-src", "strip": "SDL2-2.32.10" }
   }
 }
