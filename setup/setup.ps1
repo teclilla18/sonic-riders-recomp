@@ -153,7 +153,7 @@ if (-not $Target) {
     Log "  1) Nintendo Switch (homebrew .nro, copied to your SD card)"
     Log "  2) Windows PC (play natively on this PC, no emulator)"
     Log "  3) Both"
-    Log "  4) Android phone (APK; in development: for now a test app, no game yet)"
+    Log "  4) Android phone (APK; in development: the game runs, no picture yet)"
     Log "  5) All three"
     $c = Ask "Choose 1, 2, 3, 4 or 5" "1"
     switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } "4" { $Target = "android" } "5" { $Target = "all" } default { Fail "Unknown choice '$c'." } }
@@ -357,7 +357,7 @@ if ($doAndroid) {
 }
 
 # ---------------------------------------------------------------- recompile
-$needGame = $doSwitch -or $doPc  # the Android test app has no game code yet (milestone 2)
+$needGame = $doSwitch -or $doPc -or $doAndroid
 if ($needGame) {
 Step "4/7  Extracting the game code from your disc image"
 $baserom = Join-Path $Root "baserom"
@@ -404,11 +404,11 @@ if ($doPc) {
 $builtApks = @()
 if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
-    Run "configure (Android)" $python @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $Abi, "--keystore", $keystore)
-    Run "build the Android APK" $ninja @()
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
-        $apk = Join-Path $Root "build\android\probe-$a.apk"
-        if (-not (Test-Path $apk)) { Fail "The build finished but build\android\probe-$a.apk is missing." }
+        Run "configure (Android, $a)" $python @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore)
+        Run "build the Android APK ($a; this takes a while)" $ninja @()
+        $apk = Join-Path $Root "build\android\sonicriders-$a.apk"
+        if (-not (Test-Path $apk)) { Fail "The build finished but build\android\sonicriders-$a.apk is missing." }
         $builtApks += $apk
         Log ("Android build: {0} ({1:N0} bytes)" -f $apk, (Get-Item $apk).Length) "Green"
     }
@@ -478,7 +478,28 @@ if ($builtApks.Count -gt 0) {
     if ($Install -eq "yes") {
         if ($devs.Count -ne 1) { Fail "Install: $($devs.Count) Android devices are connected and authorized; exactly one is needed." "Turn on USB debugging, connect the phone, allow this PC on its screen, then run the setup again." }
         Run "install on the Android device" $adb @("install", "-r", $phoneApk)
-        Log "Installed. Start 'SR_Probe' from the phone's app list." "Green"
+        # the game reads the disc image from its own folder on the phone (docs/ANDROID_PLAN.md section 5)
+        $phoneDir = "/sdcard/Android/data/net.srnative.sonicriders/files/baserom"
+        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        $have = (& $adb shell "sha1sum $phoneDir/*.iso 2>/dev/null") -join " "
+        $ErrorActionPreference = $old
+        if ($have -match $IsoSha1) {
+            Log "The disc image is already on the phone."
+        } else {
+            # the app must create its own folder: one made from the adb shell first is not readable by the app
+            $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+            & $adb shell "am start -W -n net.srnative.sonicriders/net.srnative.sonicriders.SonicRidersActivity" 2>&1 | Out-Null
+            Start-Sleep -Seconds 4
+            & $adb shell "am force-stop net.srnative.sonicriders" 2>&1 | Out-Null
+            $ErrorActionPreference = $old
+            Run "make the game's folder on the phone" $adb @("shell", "mkdir -p $phoneDir")
+            Log "Copying the disc image to the phone (1.4 GB, about a minute over USB)..."
+            Run "copy the disc image to the phone" $adb @("push", $Iso, "$phoneDir/SonicRiders.iso")
+            $have = (& $adb shell "sha1sum $phoneDir/SonicRiders.iso") -join " "
+            if ($have -notmatch $IsoSha1) { Fail "The disc image on the phone does not match (storage full?)." }
+            Log "Disc image on the phone verified." "Green"
+        }
+        Log "Installed. Start 'Sonic Riders' from the phone's app list (no picture yet: Android is in development)." "Green"
     } else {
         Log "Android: install $phoneApk with 'adb install -r' (USB debugging on)." "Green"
     }

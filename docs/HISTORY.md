@@ -592,3 +592,20 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
 - Gotcha: build.ninja is per target; a stale Switch build.ninja failed without DEVKITPRO set. Unproven: the
   probe's audio was not listened to; controllers untested.
 
+## 2026-11-03 (evening): Android milestone 2: the game boots on the phone; memory identical to PC
+- `configure.py --target android` builds the game: build/gen + runtime with NDK clang (aarch64/x86_64-linux-android30,
+  PIC), platform = `platform/host` (POSIX branch) + new `platform/android/render_android.c` (no picture; frames recycled,
+  SDL events pumped). minSdk raised to 30: bionic has C11 `<threads.h>` from API 30. `main.c` uses SDL_main on
+  Android and turns KEY=VALUE launch words into environment variables; `platform_host.c` chdirs to the app folder,
+  rotates the log, reads env.txt; `rt_log` also writes logcat (tag `sonicriders`). Built first time, 168 MB with debug
+  info; the APK step now strips (26 MB). [confirmed]
+- S23 Ultra, Android 17: boots from the pushed ISO, 59.9 fps, AX sound through SDL (OpenSL ES, 32 kHz). [confirmed log;
+  sound not listened to]
+- Det compare phone vs PC first differed at step 2 (settings: PC widescreen + Chaos Emerald "as in the save" vs phone
+  defaults; block 26 = REL data the options patch), then at step 1494: the phone got perftest's START a frame earlier.
+  Cause: `perftest_pad` timed START by `vi_field_count()`, which is not deterministic during the intro even with
+  SR_DETCLOCK (SR_INPUT uses `ppc_detclock_steps()`). Fixed to use the step count under SR_DETCLOCK. After it: phone =
+  PC on all 4,000 steps (28 MB each), x86_64 emulator = PC on 1,500. [confirmed] Not compared directly with a Switch run.
+- Gotchas: stripped .so files kept a temp name in the APK at first (`libc++_shared.so not found`); a folder created by
+  `adb shell mkdir` before the app's first start is unreadable for the app (emulator): the setup starts the app once.
+

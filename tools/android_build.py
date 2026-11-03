@@ -18,7 +18,7 @@ import sys
 import zipfile
 
 HOST_TAG = "windows-x86_64" if os.name == "nt" else "linux-x86_64"
-MIN_SDK = 29     # Android 10: Vulkan 1.1, AAudio
+MIN_SDK = 30     # Android 11: Vulkan 1.1, AAudio, C11 <threads.h> in bionic
 TARGET_SDK = 35
 ABIS = {"arm64-v8a": "aarch64-linux-android", "x86_64": "x86_64-linux-android"}
 JAVA_PACKAGE_DIR = "android/java"
@@ -109,7 +109,12 @@ def step_apk(a):
         z.write(a.dex, "classes.dex", compress_type=zipfile.ZIP_DEFLATED)
         for spec in a.lib:  # ABI=FILE; stored, so they load straight from the APK (extractNativeLibs false)
             abi, path = spec.split("=", 1)
-            z.write(path, "lib/%s/%s" % (abi, os.path.basename(path)), compress_type=zipfile.ZIP_STORED)
+            name = os.path.basename(path)
+            if a.strip:  # without debug info in the APK (the unstripped .so stays in build/ for crash reports)
+                stripped = os.path.join(work, abi + "_" + name)
+                run([a.strip, "--strip-debug", "-o", stripped, path])
+                path = stripped
+            z.write(path, "lib/%s/%s" % (abi, name), compress_type=zipfile.ZIP_STORED)
     aligned = os.path.join(work, "aligned.apk")
     run([os.path.join(tools, "zipalign"), "-f", "-P", "16", "4", base, aligned])
     run([bat(os.path.join(tools, "apksigner")), "sign", "--ks", a.keystore, "--ks-pass", "pass:android",
@@ -118,51 +123,89 @@ def step_apk(a):
 
 
 # ---------------------------------------------------------------- build.ninja
-def write_ninja(args, root, writer_cls, py):
-    """configure.py --target android: milestone 1 builds the probe APK (tools/android/probe, no game code)"""
-    def need(path, what):
-        if not os.path.exists(path):
-            sys.exit("configure: %s not found: %s" % (what, path))
-        return path.replace("\\", "/")
-    sdk = need(args.android_sdk or os.environ.get("ANDROID_HOME", ""), "Android SDK (--android-sdk)")
-    ndk = args.ndk or (sorted(glob.glob(os.path.join(sdk, "ndk", "*")))[-1:] or [""])[0]
-    ndk = need(ndk, "Android NDK (--ndk)")
-    jdk = need(args.jdk or os.environ.get("JAVA_HOME", ""), "JDK 17 (--jdk)")
-    sdl_src = need(args.sdl_src, "SDL2 source (--sdl-src)")
-    bt = need((sorted(glob.glob(os.path.join(sdk, "build-tools", "*")))[-1:] or [""])[0], "SDK build-tools")
-    plat = need(os.path.join(sdk, "platforms", "android-%d" % TARGET_SDK), "SDK platform android-%d" % TARGET_SDK)
-    keystore = (args.keystore or os.path.join(os.path.dirname(os.path.abspath(sdk)), "sonicriders-local.keystore")).replace("\\", "/")
-    for p in (sdk, ndk, jdk, sdl_src, keystore):
-        if " " in p:
-            sys.exit("configure: Android tool paths must not contain spaces (ndk-build): %s" % p)
+class Tools:
+    """the Android tool folders from configure.py's arguments"""
+    def __init__(self, args):
+        def need(path, what):
+            if not path or not os.path.exists(path):
+                sys.exit("configure: %s not found: %s" % (what, path))
+            return path.replace("\\", "/")
+        self.sdk = need(args.android_sdk or os.environ.get("ANDROID_HOME", ""), "Android SDK (--android-sdk)")
+        self.ndk = need(args.ndk or (sorted(glob.glob(os.path.join(self.sdk, "ndk", "*")))[-1:] or [""])[0], "Android NDK (--ndk)")
+        self.jdk = need(args.jdk or os.environ.get("JAVA_HOME", ""), "JDK 17 (--jdk)")
+        self.sdl_src = need(args.sdl_src, "SDL2 source (--sdl-src)")
+        self.bt = need((sorted(glob.glob(os.path.join(self.sdk, "build-tools", "*")))[-1:] or [""])[0], "SDK build-tools")
+        self.plat = need(os.path.join(self.sdk, "platforms", "android-%d" % TARGET_SDK), "SDK platform android-%d" % TARGET_SDK)
+        self.keystore = (args.keystore or os.path.join(os.path.dirname(os.path.abspath(self.sdk)),
+                                                       "sonicriders-local.keystore")).replace("\\", "/")
+        for p in (self.sdk, self.ndk, self.jdk, self.sdl_src, self.keystore):
+            if " " in p:
+                sys.exit("configure: Android tool paths must not contain spaces (ndk-build): %s" % p)
+        exe = ".exe" if os.name == "nt" else ""
+        llvm = "%s/toolchains/llvm/prebuilt/%s/bin" % (self.ndk, HOST_TAG)
+        self.clang = "%s/clang%s" % (llvm, exe)
+        self.clangxx = "%s/clang++%s" % (llvm, exe)
+        self.strip = "%s/llvm-strip%s" % (llvm, exe)
+        self.glslc = "%s/shader-tools/%s/glslc%s" % (self.ndk, HOST_TAG, exe)
+
+    def target(self, abi):
+        return "--target=%s%d" % (ABIS[abi], MIN_SDK)
+
+
+ME = "tools/android_build.py"
+OUT = "build/android"
+
+
+def add_common(n, t, py, root, abis):
+    """rules shared by the probe and the game: SDL2 per ABI, the Java code, the signing key, the APK step.
+    Returns (dex, {abi: [libSDL2.so, libc++_shared.so]})."""
+    n.rule("sdl", "%s %s sdl %s %s $abi $outdir" % (py, ME, t.ndk, t.sdl_src), description="SDL2 ($abi, ndk-build)", pool="console")
+    n.rule("dex", "%s %s dex %s %s %s $out %s $srcdirs" % (py, ME, t.jdk, t.bt, t.plat, JAVA_PACKAGE_DIR), description="DEX $out")
+    n.rule("keystore", "%s %s keystore %s $out" % (py, ME, t.jdk), description="KEYSTORE (local signing key)")
+    n.rule("apk", "%s %s apk --jdk %s --build-tools %s --platform %s --manifest android/AndroidManifest.xml.in "
+           "--package $package --label \"$label\" --version-code $vcode --version-name $vname --dex $dex --keystore %s "
+           "--strip %s $libs --out $out" % (py, ME, t.jdk, t.bt, t.plat, t.keystore, t.strip), description="APK $out")
+    n.build(t.keystore, "keystore")
+    sdl_java = t.sdl_src + "/android-project/app/src/main/java"
+    rootf = root.replace("\\", "/")
+    java_srcs = sorted(p.replace("\\", "/") for d in (sdl_java, os.path.join(root, JAVA_PACKAGE_DIR))
+                       for p in glob.glob(os.path.join(d, "**", "*.java"), recursive=True))
+    java_srcs = [os.path.relpath(p, root).replace("\\", "/") if p.startswith(rootf) else p for p in java_srcs]
+    dex = OUT + "/classes.dex"
+    n.build(dex, "dex", java_srcs + [ME], variables={"srcdirs": sdl_java})
+    libs = {}
+    for abi in abis:
+        sdl_out = "%s/sdl/%s" % (OUT, abi)
+        libs[abi] = ["%s/libs/%s/libSDL2.so" % (sdl_out, abi), "%s/libs/%s/libc++_shared.so" % (sdl_out, abi)]
+        n.build(libs[abi], "sdl", [ME], variables={"abi": abi, "outdir": sdl_out})
+    return dex, libs
+
+
+def add_apk(n, t, abi, apk, so, sdl_libs, dex, package, label, vcode, vname):
+    libs = " ".join("--lib %s=%s" % (abi, p) for p in sdl_libs + [so])
+    n.build(apk, "apk", [dex, so] + sdl_libs, implicit=[t.keystore, "android/AndroidManifest.xml.in", ME],
+            variables={"package": package, "label": label, "vcode": vcode, "vname": vname, "dex": dex, "libs": libs})
+
+
+def sdl_flags(t, abi):
+    """compile and link flags for code that uses SDL2 (the game's runtime, the probe)"""
+    return ("-I%s/include" % t.sdl_src, "-L%s/sdl/%s/libs/%s -lSDL2" % (OUT, abi, abi))
+
+
+def write_probe_ninja(args, root, writer_cls, py):
+    """configure.py --target android --android-app probe: the milestone 1 test APK (tools/android/probe)"""
+    t = Tools(args)
     abis = list(ABIS) if args.abi == "both" else [args.abi]
-    llvm = "%s/toolchains/llvm/prebuilt/%s/bin" % (ndk, HOST_TAG)
-    exe = ".exe" if os.name == "nt" else ""
-    glslc = "%s/shader-tools/%s/glslc%s" % (ndk, HOST_TAG, exe)
-    out = "build/android"
-    me = "tools/android_build.py"
     with open(os.path.join(root, "build.ninja"), "w") as f:
         n = writer_cls(f)
         n.variable("ninja_required_version", "1.10")
-        n.rule("sdl", "%s %s sdl %s %s $abi $outdir" % (py, me, ndk, sdl_src), description="SDL2 ($abi, ndk-build)", pool="console")
-        n.rule("cc", "%s/clang%s --target=${triple}%d -MMD -MF $out.d -fPIC -O2 -g -Wall $cflags -c $in -o $out" % (llvm, exe, MIN_SDK),
+        n.rule("cc", "%s $target -MMD -MF $out.d -fPIC -O2 -g -Wall $cflags -c $in -o $out" % t.clang,
                depfile="$out.d", deps="gcc", description="CC $in")
-        n.rule("so", "%s/clang%s --target=${triple}%d -shared -o $out $in -Wl,-soname,libmain.so -Wl,--no-undefined "
-               "-Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 $ldflags" % (llvm, exe, MIN_SDK), description="LINK $out")
-        n.rule("spv", "%s -mfmt=c -O --target-env=vulkan1.1 -o $out $in" % glslc, description="GLSLC $in")
-        n.rule("dex", "%s %s dex %s %s %s $out %s $srcdirs" % (py, me, jdk, bt, plat, JAVA_PACKAGE_DIR), description="DEX $out")
-        n.rule("keystore", "%s %s keystore %s $out" % (py, me, jdk), description="KEYSTORE (local signing key)")
-        n.rule("apk", "%s %s apk --jdk %s --build-tools %s --platform %s --manifest android/AndroidManifest.xml.in "
-               "--package $package --label \"$label\" --version-code $vcode --version-name $vname --dex $dex --keystore %s $libs --out $out"
-               % (py, me, jdk, bt, plat, keystore), description="APK $out")
-        n.build(keystore, "keystore")
-        sdl_java = sdl_src + "/android-project/app/src/main/java"
-        java_srcs = sorted(p.replace("\\", "/") for d in (sdl_java, os.path.join(root, JAVA_PACKAGE_DIR))
-                           for p in glob.glob(os.path.join(d, "**", "*.java"), recursive=True))
-        java_srcs = [os.path.relpath(p, root).replace("\\", "/") if p.startswith(root.replace("\\", "/")) else p for p in java_srcs]
-        dex = out + "/classes.dex"
-        n.build(dex, "dex", java_srcs + [me], variables={"srcdirs": sdl_java})
-        gen = out + "/probe/gen"
+        n.rule("so", "%s $target -shared -o $out $in -Wl,-soname,libmain.so -Wl,--no-undefined "
+               "-Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 $ldflags" % t.clang, description="LINK $out")
+        n.rule("spv", "%s -mfmt=c -O --target-env=vulkan1.1 -o $out $in" % t.glslc, description="GLSLC $in")
+        dex, libs = add_common(n, t, py, root, abis)
+        gen = OUT + "/probe/gen"
         incs = []
         for stage in ("vert", "frag"):
             o = "%s/probe_%s.inc" % (gen, stage)
@@ -170,21 +213,15 @@ def write_ninja(args, root, writer_cls, py):
             incs.append(o)
         defaults = []
         for abi in abis:
-            triple = ABIS[abi]
-            sdl_out = "%s/sdl/%s" % (out, abi)
-            sdl_libs = ["%s/libs/%s/libSDL2.so" % (sdl_out, abi), "%s/libs/%s/libc++_shared.so" % (sdl_out, abi)]
-            n.build(sdl_libs, "sdl", [me], variables={"abi": abi, "outdir": sdl_out})
-            obj = "%s/probe/%s/probe.o" % (out, abi)
+            inc, link = sdl_flags(t, abi)
+            obj = "%s/probe/%s/probe.o" % (OUT, abi)
             n.build(obj, "cc", "tools/android/probe/probe.c", implicit=incs,
-                    variables={"triple": triple, "cflags": "-I%s/include -I%s" % (sdl_src, gen)})
-            so = "%s/probe/%s/libmain.so" % (out, abi)
-            n.build(so, "so", [obj], implicit=sdl_libs[:1],
-                    variables={"triple": triple, "ldflags": "-L%s/libs/%s -lSDL2 -lvulkan -lGLESv3 -lEGL -llog -landroid -ldl -lm" % (sdl_out, abi)})
-            apk = "%s/probe-%s.apk" % (out, abi)
-            libs = " ".join("--lib %s=%s" % (abi, p) for p in sdl_libs + [so])
-            n.build(apk, "apk", [dex, so] + sdl_libs, implicit=[keystore, "android/AndroidManifest.xml.in", me],
-                    variables={"package": "net.srnative.sonicriders.probe", "label": "SR_Probe", "vcode": "1",
-                               "vname": "m1", "dex": dex, "libs": libs})
+                    variables={"target": t.target(abi), "cflags": "%s -I%s" % (inc, gen)})
+            so = "%s/probe/%s/libmain.so" % (OUT, abi)
+            n.build(so, "so", [obj], implicit=libs[abi][:1],
+                    variables={"target": t.target(abi), "ldflags": "%s -lvulkan -lGLESv3 -lEGL -llog -landroid -ldl -lm" % link})
+            apk = "%s/probe-%s.apk" % (OUT, abi)
+            add_apk(n, t, abi, apk, so, libs[abi], dex, "net.srnative.sonicriders.probe", "SR_Probe", "1", "m1")
             defaults.append(apk)
         n.default(defaults)
     print("wrote build.ninja (android probe, %s)" % ", ".join(abis))
@@ -207,6 +244,7 @@ def main():
                   "keystore", "out"):
             ap.add_argument("--" + k, required=True)
         ap.add_argument("--lib", action="append", default=[])
+        ap.add_argument("--strip", default="", help="llvm-strip: remove debug info from the .so files")
         step_apk(ap.parse_args(rest))
     else:
         sys.exit("unknown step %s" % cmd)

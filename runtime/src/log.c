@@ -9,9 +9,23 @@
 
 #include "runtime.h"
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+
 void rt_log(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+#ifdef __ANDROID__
+    {   /* also to logcat (tag "sonicriders"): adb logcat follows the game live */
+        char buf[1024];
+        va_list ap2;
+        va_copy(ap2, ap);
+        vsnprintf(buf, sizeof buf, fmt, ap2);
+        va_end(ap2);
+        __android_log_write(ANDROID_LOG_INFO, "sonicriders", buf);
+    }
+#endif
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fputc('\n', stderr);
@@ -28,6 +42,16 @@ void rt_log(const char* fmt, ...) {
 _Noreturn void rt_fatal(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+#ifdef __ANDROID__
+    {
+        char buf[1024];
+        va_list ap2;
+        va_copy(ap2, ap);
+        vsnprintf(buf, sizeof buf, fmt, ap2);
+        va_end(ap2);
+        __android_log_print(ANDROID_LOG_FATAL, "sonicriders", "FATAL: %s", buf);
+    }
+#endif
     fputs("FATAL: ", stderr);
     vfprintf(stderr, fmt, ap);
     va_end(ap);

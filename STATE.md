@@ -48,13 +48,16 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 
 ## Android port (branch `android`; plan: docs/ANDROID_PLAN.md)
 
-- Milestone 1 done (2026-11-03): setup `-Target android` (pinned NDK r27d, build-tools 35, JDK 17, SDL2 source;
-  license must be accepted), `configure.py --target android`, probe APK; `tools/android_run.py` for adb test runs.
-  Runs on the headless x86_64 emulator and the user's S23 Ultra (Android 17, Adreno 740). [confirmed]
-- Measured on the S23 Ultra: 7,000 draws cost 8.06 ms CPU in GLES vs 2.00 ms in Vulkan -> Vulkan renderer.
-- **Next, milestone 2:** `libmain.so` with the recompiled game, ISO pushed to the app folder, frames recycled
-  (no renderer); check `[mem]`/`[vi]` in logcat and `SR_DETCLOCK` + `SR_RAMHASH` against a Switch run.
-  Reconfigure build.ninja for host/switch afterwards (one target at a time). Ask the user to plug in the phone.
+- Milestone 1 (2026-11-03): setup `-Target android` (pinned NDK r27d, build-tools 35, JDK 17, SDL2 source; license
+  must be accepted), probe APK, `tools/android_run.py`. S23 Ultra: GLES 8.06 ms vs Vulkan 2.00 ms CPU per 7,000
+  draws -> Vulkan renderer. [confirmed]
+- Milestone 2 (2026-11-03): the recompiled game runs on the S23 Ultra (Android 17) at 59.9 fps with sound, no
+  picture (`platform/android/render_android.c` recycles frames). `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0
+  SR_RAMHASH=4000` with the PC's settings.ini: phone = PC on all 4,000 frames (into the 1P demo race); x86_64
+  emulator = PC on 1,500. Setup builds the game APK (~26 MB), installs it and pushes the disc image. [confirmed]
+- **Next, milestone 3:** `render_vk.c` from `render_deko.c` (SPIR-V via glslc, pre-rotation for the 90-degree
+  swapchain transform, 60 Hz on the 120 Hz panel), title screen self-captures diffed against PC captures.
+  Not yet checked: controllers/touch, the sound by ear, background/resume. Ask the user to plug in the phone.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

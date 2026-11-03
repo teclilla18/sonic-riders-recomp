@@ -99,6 +99,13 @@ def main():
                     print("the app has exited", flush=True)
                     break
     proc.kill()
+    # the whole log of that process from the buffer (the live stream misses lines when the app ends quickly)
+    full = sh("logcat", "-d", "-v", "time", "--pid=" + pid, check=False)
+    if full.strip():
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(full)
+        if not found and pat:
+            found = any(pat.search(l) for l in full.splitlines())
     # a crash report from the system's crash dumper, if it names this package
     crash = sh("logcat", "-d", "-v", "time", "-s", "DEBUG:F", "AndroidRuntime:E", check=False)
     crash = "\n".join(l for l in crash.splitlines() if a.package in l or "backtrace" in l or re.search(r"#\d\d pc ", l))

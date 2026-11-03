@@ -3,7 +3,9 @@
 ## Unreleased
 
 - Android port started (branch `android`, docs/ANDROID_PLAN.md): the setup has a new `-Target android` that
-  downloads the Android tools (pinned and checked) and builds a test app for your phone. No game on Android yet.
+  downloads the Android tools (pinned and checked), builds the game for your phone, installs it and copies your disc
+  image to it over USB. On Android the game runs with sound but shows no picture yet.
+- Perf test with `SR_DETCLOCK`: the intro skip now lands on the same frame on every machine (runs can be compared).
 - Groundwork for online play (test options for now, see docs/ONLINE.md): record a session's controller
   input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on
   the Switch), and two copies of the game racing in lockstep over the network (`SR_NET`), with a

@@ -3,7 +3,7 @@
 Goal: one setup run on the user's PC, with their own Sonic Riders ISO, builds an APK for their own phone with
 everything the Switch and Windows builds have. The APK holds recompiled game code, so like the `.nro` it is built
 locally and never distributed (`*.apk`, `*.aab`, `*.so`, `*.dex`, `*.spv`, keystores: `.gitignore` and
-`tools/check_no_game_data.py`). Status: **milestone 1 done (2026-11-03)**; next: milestone 2. Test device: Galaxy S23 Ultra (SM8550, Adreno 740),
+`tools/check_no_game_data.py`). Status: **milestones 1 and 2 done (2026-11-03)**; next: milestone 3 (Vulkan renderer). Test device: Galaxy S23 Ultra (SM8550, Adreno 740),
 Android 17, over wired adb. Marks: [confirmed] read in the code, [likely] strong reason, [uncertain] to be measured.
 
 ## 1. Inventory: what Android must match (from the code)
@@ -116,7 +116,7 @@ clang (`aarch64-linux-android29-clang`, `-fPIC -fvisibility=hidden`, `-Wl,-z,max
 `ndk-build` → `libSDL2.so`; `glslc` → SPIR-V embedded; `javac` + `d8` → `classes.dex` (SDL's Java + our activity);
 `aapt2` → manifest, resources, icon (`make_icon.py`'s save icon as PNG); `zipalign -P 16` (uncompressed, aligned
 `.so`); `apksigner` with a keystore made once by `keytool` in `<ToolsDir>` (never in the repo).
-Output `build/android/sonicriders-<abi>.apk`. minSdk 29 (Android 10: Vulkan 1.1, AAudio), targetSdk 35.
+Output `build/android/sonicriders-<abi>.apk`. minSdk 30 (Android 11: Vulkan 1.1, AAudio, C11 `<threads.h>` in bionic), targetSdk 35.
 Trade-off: we must follow SDK changes by hand; if that bites, a Gradle project is the fallback.
 
 Game data: **read at run time, not packed in the APK** (recommended).

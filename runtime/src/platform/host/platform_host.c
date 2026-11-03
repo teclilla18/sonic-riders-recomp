@@ -83,7 +83,56 @@ void platform_sample_threads(void) {
 void platform_sample_threads(void) {}
 #endif
 
+#ifdef __ANDROID__
+#include <SDL_system.h>
+#include <unistd.h>
+/* Android: everything lives in the app's own folder, /sdcard/Android/data/<package>/files (adb push/pull
+ * reach it; uninstalling the app deletes it): baserom/<image>.iso, saves/, mods/, env.txt and the log.
+ * env.txt holds KEY=VALUE lines (as on the Switch); launch arguments (SonicRidersActivity "args") win. */
+static void android_files(void) {
+    const char* dir = SDL_AndroidGetExternalStoragePath();
+    if (!dir || chdir(dir) != 0) dir = SDL_AndroidGetInternalStoragePath();
+    if (dir && chdir(dir) != 0) dir = NULL;
+    remove("sonicriders.prev.log");
+    rename("sonicriders.log", "sonicriders.prev.log");
+    freopen("sonicriders.log", "w", stderr);
+    mkdir("baserom", 0777);
+    FILE* f = fopen("env.txt", "r");
+    if (f) {
+        char line[1024];
+        while (fgets(line, sizeof line, f)) {
+            char* eq = strchr(line, '=');
+            if (line[0] == '#' || !eq) continue;
+            *eq = 0;
+            char* v = eq + 1;
+            v[strcspn(v, "\r\n")] = 0;
+            setenv(line, v, 0);
+        }
+        fclose(f);
+    }
+}
+
+/* KEY=VALUE launch words become environment variables; other words stay arguments (argv[1]: a disc path) */
+int platform_android_args(int argc, char** argv) {
+    int n = 1;
+    for (int i = 1; i < argc; i++) {
+        char* eq = strchr(argv[i], '=');
+        if (eq && eq != argv[i]) {
+            *eq = 0;
+            setenv(argv[i], eq + 1, 1);
+            *eq = '=';
+        } else {
+            argv[n++] = argv[i];
+        }
+    }
+    return n;
+}
+#endif
+
 void platform_init(void) {
+#ifdef __ANDROID__
+    android_files();
+#endif
 #ifdef _WIN32
     /* started as a normal windowed program (no console, stderr not redirected): the log goes to
      * sonicriders.log next to the game, the previous one kept as sonicriders.prev.log (as on the Switch) */

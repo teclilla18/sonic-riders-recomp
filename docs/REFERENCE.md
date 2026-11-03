@@ -227,16 +227,26 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
   `<tools>/android/sonicriders-local.keystore` (keep it: another key cannot update the installed app, and
   uninstalling deletes the app folder).
 - `python configure.py --target android --android-sdk <tools>/android-sdk --jdk <tools>/jdk17 --sdl-src
-  <tools>/sdl2-src --abi arm64-v8a|x86_64|both --keystore <key>`, then `ninja` → `build/android/probe-<abi>.apk`
-  (milestone 1: the probe, `tools/android/probe/`). build.ninja holds one target at a time: reconfigure before
+  <tools>/sdl2-src --abi arm64-v8a|x86_64 --keystore <key>`, then `ninja` → `build/android/sonicriders-<abi>.apk`
+  (objects in `build/android-<abi>/`, unstripped `libmain.so` there; the APK gets stripped copies, ~26 MB).
+  `--android-app probe [--abi both]` builds the milestone 1 probe (`tools/android/probe/`) instead. build.ninja holds one target at a time: reconfigure before
   building host/switch again. Steps (no Gradle): `tools/android_build.py` (ndk-build SDL2 + libc++_shared,
   javac + d8, aapt2, zipalign -P 16, apksigner); `.so` stored uncompressed, 16 KB segments.
 - Java: `android/java/net/srnative/sonicriders/SonicRidersActivity.java` (SDLActivity; intent extra `args`:
   space-separated words to argv, KEY=VALUE become environment variables). Manifest template
-  `android/AndroidManifest.xml.in` (minSdk 29, targetSdk 35, sensorLandscape, profileable).
+  `android/AndroidManifest.xml.in` (minSdk 30, targetSdk 35, sensorLandscape, profileable).
 - Test run: `python tools/android_run.py --apk <apk> --package <pkg> --wait <regex> --pull <file> [--args ".."]
   [--serial S]`: install, start, logcat of the app's pid only, files from `/sdcard/Android/data/<pkg>/files`,
-  results in `build/android/run/`. Packages: probe `net.srnative.sonicriders.probe`.
+  results in `build/android/run/`. Packages: game `net.srnative.sonicriders`, probe `net.srnative.sonicriders.probe`.
+- Game on Android (milestone 2): platform = `platform/host` (POSIX branch of platform_host.c, audio_sdl.c, input_sdl.c)
+  + `platform/android/render_android.c` (frames recycled, SDL events pumped; no picture until milestone 3). The app
+  folder `/sdcard/Android/data/net.srnative.sonicriders/files` is the working directory: `baserom/*.iso`, `saves/`,
+  `env.txt`, `sonicriders.log` (also logcat tag `sonicriders`), `build/` for `SR_RAMDUMPAT` dumps (make it first).
+  Disc image: `adb push <iso> <folder>/baserom/SonicRiders.iso` (35 s over USB 3; works on Android 17). From Git Bash
+  set `MSYS_NO_PATHCONV=1` or device paths get rewritten. The app must create its folder itself (start it once): a
+  folder made from the adb shell first is owned by `shell` and the app cannot read the image in it (seen on the emulator).
+  Deterministic compare without a route: `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_RAMHASH=N` and the same
+  `saves/settings.ini` on both machines (widescreen and the Chaos Emerald option change game memory). x28 base register not used yet (generic memory base load).
 - Emulator (dev only, not in the setup): emulator 16740729 + `system-images;android-35;google_apis;x86_64` r09
   unpacked into `<tools>/android-sdk` (Google SHA-1 checked), AVD `srtest` in `<tools>/avd` (`ANDROID_AVD_HOME`),
   started with `-no-window -gpu host` (WHPX). Its GLES stops at 3.1 and its GPU is the PC's: no performance numbers.

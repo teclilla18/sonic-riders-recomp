@@ -64,7 +64,11 @@ int perftest_on(void) {
 void perftest_pad(GcPad* p) {
     static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     *p = neutral;
-    uint32_t f = vi_field_count();
+    /* with SR_DETCLOCK, game frames (as SR_INPUT): the field count is not deterministic during the intro, so
+     * the press landed a frame apart on two machines and the whole run differed from there */
+    int ppc_detclock(void);
+    uint32_t ppc_detclock_steps(void);
+    uint32_t f = ppc_detclock() ? ppc_detclock_steps() : vi_field_count();
     if ((f >= 1500 && f < 1510)) p->buttons = 0x1000;  /* START: skip the intro movie */
 }
 
