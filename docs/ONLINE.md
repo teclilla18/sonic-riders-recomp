@@ -77,7 +77,7 @@ online races" below).
 How it was found: `SR_RAMHASH=<frames>` logs a checksum of each 1 MB block of game memory per frame
 (`SR_RAMHASH_BLOCKS` limits it), `SR_RAMHASH_KEY=8021BB64` adds the frame number within the current
 scene, `SR_RAMDUMPAT` / `SR_RAMDUMPKEY` write all of game memory at chosen frames; two runs (or a PC and
-a Switch run) are compared line by line. NOTES.md (2026-10-29/30) lists every source found and its fix:
+a Switch run) are compared line by line. HISTORY.md (2026-10-29/30) lists every source found and its fix:
 the host clock, disc timing, retraces landing mid-frame, frame pacing, background loading progress,
 GPU interrupts and registers, audio interrupt timing, controller hot-plugging.
 
@@ -225,7 +225,7 @@ state checksum, the unlock flags are set in the game's save data (a struct at `8
 0-16, bit 0 of every gear flag in the game's gear table, and one more course flag. The game reads these flags as
 "equal to 1" (or bit 0 for gear), so setting them every frame is harmless, and it also covers the game resetting its
 save data on the NEW GAME path. Every machine sets the same bytes at the same frames, so the games stay identical.
-The flags and how they were found: NOTES.md (2026-10-30, unlock flags).
+The flags and how they were found: HISTORY.md (2026-10-30, unlock flags); addresses in REFERENCE.md.
 
 Alternatives considered: the host's card sent to every joiner, in memory only (everyone would race with the host's
 unlocks and settings, and it needs a 512 KB transfer); requiring the same save on every machine (impractical outside

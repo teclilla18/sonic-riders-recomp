@@ -65,7 +65,7 @@ The game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of t
 controllers) is reimplemented natively: deko3d on the Switch, OpenGL 3.3 on PC. The approach follows
 [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
 [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp), whose PowerPC→C translator this
-project forks. Design notes are in [NOTES.md](NOTES.md).
+project forks. Current status is in [STATE.md](STATE.md); design notes in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Legal
 

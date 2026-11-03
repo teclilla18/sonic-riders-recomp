@@ -29,6 +29,6 @@ commits that contain anything derived from the game.
 
 Where to read next:
 
-- [NOTES.md](../NOTES.md): the design log (architecture, decisions, findings, debug variables).
+- [STATE.md](../STATE.md), [REFERENCE.md](REFERENCE.md) and [HISTORY.md](HISTORY.md): the design notes (status; architecture and debug variables; findings by date).
 - [CONTRIBUTING.md](../CONTRIBUTING.md): how to contribute, test and send a pull request.
 - [CLAUDE.md](../CLAUDE.md): the rules and test workflow for coding agents.

@@ -24,9 +24,9 @@ to start; each one has the context an agent or a person needs.
 4. Start Claude Code in the repository folder. It reads [CLAUDE.md](CLAUDE.md) automatically: the hard
    rules (no game data, no personal details), how to build and test, and where the design notes are.
 5. Give it one issue, for example:
-   > Read CLAUDE.md and the parts of NOTES.md about this area, then work on issue #<number>. Reproduce it on
+   > Read CLAUDE.md and STATE.md (and the parts of docs/REFERENCE.md and docs/HISTORY.md about this area), then work on issue #<number>. Reproduce it on
    > the PC build first (screenshots with SR_SCREENSHOT, scripted input with SR_INPUT), fix it, verify
-   > the fix the same way, add what you found to NOTES.md, and commit.
+   > the fix the same way, add what you found to docs/HISTORY.md, and commit.
 6. **Review what it did before opening a pull request**: read the diff, run the PC build yourself, and
    check that it didn't add files from `build/` or `baserom/` (the guard should refuse them anyway).
    Say in the pull request that an agent wrote it and what you tested; if you could test on a Switch,
@@ -35,7 +35,7 @@ to start; each one has the context an agent or a person needs.
 Agents work best on well-scoped problems with a visible result: a rendering difference with a
 screenshot, a crash with a log, a performance hotspot with `[perf]`/`SR_PROFILE` numbers. Large
 open-ended requests ("make it faster") tend to burn tokens without a result; ask for an investigation
-written into NOTES.md first, then a fix.
+written into docs/HISTORY.md first, then a fix.
 
 ## The one hard rule: no game data
 
@@ -66,8 +66,9 @@ loop; the Switch build needs hardware or a Switch emulator to test.
 
 ## How the project works
 
-[NOTES.md](NOTES.md) is the design log: architecture, decisions and why, debugging aids (`SR_*`
-variables), findings, open items. It is written for whoever (person or coding agent) picks the work
+The design notes are split in three: [STATE.md](STATE.md) (current status and open items),
+[docs/REFERENCE.md](docs/REFERENCE.md) (architecture, decisions and why, debugging aids (`SR_*` variables), game
+addresses) and [docs/HISTORY.md](docs/HISTORY.md) (findings, by date). It is written for whoever (person or coding agent) picks the work
 up next. Read the relevant part before changing an area, and add what you learn: what was wrong, how
 you found it, what the fix is, and what is still unproven.
 
