@@ -609,3 +609,15 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
 - Gotchas: stripped .so files kept a temp name in the APK at first (`libc++_shared.so not found`); a folder created by
   `adb shell mkdir` before the app's first start is unreadable for the app (emulator): the setup starts the app once.
 
+## 2026-11-03 (night): Android milestone 3 started: Vulkan renderer and touch controls; first picture on the phone
+- Research for the touch layout: Sonic Riders' controls (sonicriders.org glossary): A jump (hold = charge), B/X boost,
+  L/R drift, L+R tornado, START pause; virtual-joystick guidance (floating stick, dead zone, activation zone). Layout
+  mockup shown to the user (scratchpad); same numbers in touch_android.c.
+- `render_vk.c` (~1,200 lines) and `touch_android.c` built first time; `render_android.c` (M2 stand-in) removed.
+  S23 Ultra, Android 17: Adreno 740 Vulkan 1.3.128, dual-source + push descriptors used; intro FMV on screen at
+  59.9 fps with the FPS counter and touch controls in the self-capture. [confirmed, one run] First pipelines took
+  150-300 ms each (hitches at boot). Not yet seen: title screen, races, EFB copies, touch by hand, resume.
+- The user reported the screen going to sleep after 10 minutes: M2 never created a window; now SDL's window +
+  SDL_DisableScreenSaver (keep screen on). [likely; not timed]
+- Switch dksh all `per_warp_scratch 0` after the gx.vert change (guarded by DEPTH_ZERO_ONE). Host + Switch build.
+

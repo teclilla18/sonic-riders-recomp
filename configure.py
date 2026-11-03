@@ -198,7 +198,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("cflags", "-std=gnu11 -g " + andinc)
         n.variable("cxxflags", "-std=c++20 -g -fno-exceptions -fno-rtti " + andinc)
         n.variable("ldflags", "-shared -g -Wl,-soname,libmain.so -Wl,--no-undefined -Wl,-z,max-page-size=16384 "
-                   "-Wl,--build-id=sha1 -Wl,--gc-sections -Wl,-Map=%s/sonicriders.map %s -landroid -llog -ldl -lm" % (OUT, sdl_link))
+                   "-Wl,--build-id=sha1 -Wl,--gc-sections -Wl,-Map=%s/sonicriders.map %s -lvulkan -landroid -llog -ldl -lm" % (OUT, sdl_link))
         exe = OUT + "/libmain.so"
     else:
         dkp =(args.devkitpro or os.environ.get("DEVKITPRO", "")).replace("\\", "/")
@@ -240,7 +240,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
                   "runtime/shaders/overlay.vert", "runtime/shaders/overlay.frag", "tools/embed_shaders.py"]
     if args.target == "android":
-        shader_h = None  # milestone 2: no renderer yet (platform/android/render_android.c)
+        # SPIR-V for the Vulkan backend (platform/android/render_vk.c), compiled with the NDK's glslc
+        shader_h = OUT + "/gen/gx_shaders_spv.h"
+        shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_tex.frag", "runtime/shaders/vk_fill.frag",
+                       "runtime/shaders/vk_touch.frag"]
+        n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, atools.glslc, OUT), description="GLSLC $out")
     elif args.target == "host":
         shader_h = OUT + "/gen/gx_shaders_gl.h"
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")

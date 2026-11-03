@@ -243,7 +243,11 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
   folder `/sdcard/Android/data/net.srnative.sonicriders/files` is the working directory: `baserom/*.iso`, `saves/`,
   `env.txt`, `sonicriders.log` (also logcat tag `sonicriders`), `build/` for `SR_RAMDUMPAT` dumps (make it first).
   Disc image: `adb push <iso> <folder>/baserom/SonicRiders.iso` (35 s over USB 3; works on Android 17). From Git Bash
-  set `MSYS_NO_PATHCONV=1` or device paths get rewritten. The app must create its folder itself (start it once): a
+  set `MSYS_NO_PATHCONV=1` or device paths get rewritten. Renderer: `platform/android/render_vk.c` (SPIR-V from
+  `tools/embed_shaders.py spv`, prelude PRELUDE_VK: set 0 = UBOs binding 0/1 with dynamic offsets, set 1 = 8 textures;
+  `DEPTH_ZERO_ONE` remaps clip z in gx.vert; Vulkan-only quads `runtime/shaders/vk_*.{vert,frag}`). Touch:
+  `platform/android/touch_android.c` (layout in units of the screen height). Self-captures: `SR_SHOTS=a,b` ->
+  `shot_<n>.bmp` in the app folder (the screen, with menu and touch controls). The app must create its folder itself (start it once): a
   folder made from the adb shell first is owned by `shell` and the app cannot read the image in it (seen on the emulator).
   Deterministic compare without a route: `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_RAMHASH=N` and the same
   `saves/settings.ini` on both machines (widescreen and the Chaos Emerald option change game memory). x28 base register not used yet (generic memory base load).

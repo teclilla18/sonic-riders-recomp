@@ -151,6 +151,9 @@ void input_pump(void) {
     }
     update_gamepads();
     GcPad pads[PORTS];
+#ifdef __ANDROID__
+    { void touch_apply(GcPad* p); touch_apply(&p); }  /* the touch controls (platform/android/touch_android.c) */
+#endif
     pads[0] = p;
     for (int i = 1; i < PORTS; i++) pads[i] = k_neutral;
     for (int i = 0; i < PORTS; i++)

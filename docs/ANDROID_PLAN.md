@@ -3,7 +3,7 @@
 Goal: one setup run on the user's PC, with their own Sonic Riders ISO, builds an APK for their own phone with
 everything the Switch and Windows builds have. The APK holds recompiled game code, so like the `.nro` it is built
 locally and never distributed (`*.apk`, `*.aab`, `*.so`, `*.dex`, `*.spv`, keystores: `.gitignore` and
-`tools/check_no_game_data.py`). Status: **milestones 1 and 2 done (2026-11-03)**; next: milestone 3 (Vulkan renderer). Test device: Galaxy S23 Ultra (SM8550, Adreno 740),
+`tools/check_no_game_data.py`). Status: **milestones 1 and 2 done; milestone 3 (Vulkan renderer + touch controls, moved up at the user's request) in progress (2026-11-03)**. Test device: Galaxy S23 Ultra (SM8550, Adreno 740),
 Android 17, over wired adb. Marks: [confirmed] read in the code, [likely] strong reason, [uncertain] to be measured.
 
 ## 1. Inventory: what Android must match (from the code)

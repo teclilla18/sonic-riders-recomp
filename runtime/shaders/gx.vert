@@ -118,6 +118,9 @@ void main() {
   float xs = uintBitsToFloat(XR(0x1A)), ys = uintBitsToFloat(XR(0x1B)), zs = uintBitsToFloat(XR(0x1C));
   float zo = uintBitsToFloat(XR(0x1F));
   gl_Position = vec4(clip.x * sign(xs), clip.y * sign(ys) * CLIP_Y, (2.0 * zo / 16777215.0 - 1.0) * clip.w + 2.0 * zs / 16777215.0 * clip.z, clip.w);
+#ifdef DEPTH_ZERO_ONE
+  gl_Position.z = 0.5 * (gl_Position.z + gl_Position.w);  // Vulkan: clip depth 0..w (GL and deko3d here: -w..w)
+#endif
   uint nchan = bits(XR(0x09), 0, 2);
   v_col0 = nchan >= 1u ? channel(0, a_col0, pv, n) : vec4(0.0);
   v_col1 = nchan >= 2u ? channel(1, a_col1, pv, n) : vec4(0.0);

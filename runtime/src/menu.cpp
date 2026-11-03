@@ -633,6 +633,28 @@ int overlay_take_screenshot_request(void) {
     return r;
 }
 
+int overlay_menu_open(void) { return g_open; }
+
+/* a touch control's menu button: open or close at once (no hold) */
+void overlay_menu_toggle(void) {
+    if (g_open) {
+        close_menu();
+        return;
+    }
+    g_open = g_just_opened = true;
+    if (g_ready) ImGui::GetIO().ClearInputKeys();
+}
+
+/* a finger on the open menu, in overlay pixels (OVERLAY_W x OVERLAY_H); down = 0 when lifted */
+void overlay_pointer(float x, float y, int down) {
+    init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+    io.AddMousePosEvent(x, y);
+    io.AddMouseButtonEvent(0, down != 0);
+    if (!down) io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  /* no hover left behind after the finger lifts */
+}
+
 int overlay_take_quit_request(void) {
     int r = g_quit_request;
     g_quit_request = 0;

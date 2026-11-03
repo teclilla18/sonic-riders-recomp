@@ -55,9 +55,16 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   picture (`platform/android/render_android.c` recycles frames). `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0
   SR_RAMHASH=4000` with the PC's settings.ini: phone = PC on all 4,000 frames (into the 1P demo race); x86_64
   emulator = PC on 1,500. Setup builds the game APK (~26 MB), installs it and pushes the disc image. [confirmed]
-- **Next, milestone 3:** `render_vk.c` from `render_deko.c` (SPIR-V via glslc, pre-rotation for the 90-degree
-  swapchain transform, 60 Hz on the 120 Hz panel), title screen self-captures diffed against PC captures.
-  Not yet checked: controllers/touch, the sound by ear, background/resume. Ask the user to plug in the phone.
+- Milestone 3 (2026-11-03, in progress): `platform/android/render_vk.c` (Vulkan, ported from render_deko.c: dynamic
+  rendering, push descriptors, pipelines cached in `vk_pipeline_cache.bin`, picture/menu/touch as screen quads) and
+  `touch_android.c` (floating stick left; JUMP A, BOOST B, DRIFT R, TORNADO L+R right; PAUSE / MENU top corners; menu
+  taps via `overlay_pointer`; a gamepad hides them; phone Back = menu). First phone run: intro FMV renders at 59.9 fps,
+  touch controls drawn (self-capture `SR_SHOTS=300,600`). Screen stays on now (SDL window + SDL_DisableScreenSaver).
+- **Next (continue milestone 3):** (1) let the attract mode reach the title screen and races (`SR_SHOTS` later
+  frames) and diff against PC self-captures of the same frames; (2) first-use pipeline hitches (150-300 ms each):
+  prewarm/record keys; (3) touch controls by hand on the phone (the user tests; ask for feedback), controller check,
+  background/resume; (4) specialized shaders / GPU timing later. Ask the user to plug in the phone.
+  Swapchain uses IDENTITY transform (current is ROTATE_90): the system rotates; pre-rotation is a later optimisation.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
