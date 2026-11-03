@@ -59,6 +59,21 @@ fst_listing.txt
 *.dksh
 *.bin
 
+# Android build products (contain recompiled game code; built locally, never distributed)
+*.apk
+*.aab
+*.apks
+*.idsig
+*.so
+*.dex
+*.spv
+*.keystore
+*.jks
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+
 # Caches / IDE
 __pycache__/
 *.pyc

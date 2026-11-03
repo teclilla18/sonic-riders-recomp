@@ -7,7 +7,7 @@
 
 This repository holds only our own source, docs and tooling. Refused:
   - game-data / build directories (baserom/, build/, gen/, asm/, ...) and file types (disc images,
-    DOL/REL, ADX/SFD/AFS, objects, NRO/NSO/NSP, shader binaries, keys, saves, logs, screenshots);
+    DOL/REL, ADX/SFD/AFS, objects, NRO/NSO/NSP, APK/AAB/.so/.dex, shader binaries (dksh, SPIR-V), signing keystores, keys, saves, logs, screenshots);
   - files over 512 KB, binary files (NUL bytes);
   - the game's own files by hash (ISO, main.dol, _Main.rel, SonicR.str);
   - disassembly (decomp-toolkit asm lines) and recompiled C (the recompiler's per-instruction lines);
@@ -21,11 +21,14 @@ import subprocess
 import sys
 
 MAX_BYTES = 512 * 1024
-DIRS = ("baserom/", "orig/", "game/", "build/", "asm/", "gen/", "extracted/", "saves/", "assets_out/")
+DIRS = ("baserom/", "orig/", "game/", "build/", "asm/", "gen/", "extracted/", "saves/", "assets_out/",
+        ".gradle/", "android/app/build/")
 EXTS = (".iso", ".gcm", ".rvz", ".ciso", ".gcz", ".wbfs", ".tgc", ".dol", ".rel", ".str", ".plf", ".elf",
         ".map", ".adx", ".sfd", ".afs", ".bnr", ".thp", ".s", ".o", ".obj", ".a", ".lib", ".exe", ".dll",
         ".nro", ".nso", ".nsp", ".nca", ".xci", ".npdm", ".nacp", ".dksh", ".bin", ".keys", ".raw", ".gci",
-        ".sav", ".log", ".bmp", ".tga", ".wav", ".dtm", ".dat")
+        ".sav", ".log", ".bmp", ".tga", ".wav", ".dtm", ".dat",
+        # Android build products: they hold recompiled game code (or signing keys) and are built locally
+        ".apk", ".aab", ".apks", ".idsig", ".so", ".dex", ".spv", ".keystore", ".jks")
 # SHA-1 of the user's disc image and the files on it (Redump GXEE8P rev 0); never committable
 GAME_SHA1 = {
     "ce0cecf57034bef8bab7d6f588ce92c85a849613": "the disc image",

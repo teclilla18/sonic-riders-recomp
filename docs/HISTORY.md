@@ -564,3 +564,15 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   outside net_frame (keepalive not called), harmless that time; open item in docs/ONLINE.md.
 - Switch-remote notes: HOME tiles wrap (LEFT from the first tile goes to All Software); the game tile asks "Who is
   using the software?" first (A picks the first user); presses can be dropped, so check with a screenshot.
+
+## 2026-11-03: Android port planned (branch `android`); online play paused
+- Online work recorded as paused in STATE.md on `main` (phase 3 next steps: PC-PC and Switch-Switch sessions, then
+  the phase 4 NaN-sign fix on x86). Branch `android` created from it.
+- `.gitignore` and `tools/check_no_game_data.py` refuse Android outputs: `*.apk`, `*.aab`, `*.apks`, `*.idsig`,
+  `*.so`, `*.dex`, `*.spv`, keystores (`*.keystore`, `*.jks`), `android/app/build/`, `.gradle/`. [confirmed: guard
+  test on sample names]
+- docs/ANDROID_PLAN.md from reading the code: SDL2 covers window, audio, input, lifecycle and paths on Android;
+  `platform_host.c`'s POSIX branch, `memory.c`'s mmap branch and `netplay.c`'s POSIX sockets carry over
+  [confirmed by reading]; `profile_win.c` is Windows only. Recommended renderer: Vulkan ported from `render_deko.c`
+  with SPIR-V built from the shared GLSL [likely; to be confirmed by M1's GLES vs Vulkan draw-cost measurement].
+  Nothing built or run for Android yet.
