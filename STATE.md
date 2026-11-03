@@ -66,10 +66,8 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   - Touch pictures `android/touch_icons/*.png` are committed (user's own art; guard exception pinned by SHA-1 in
     `tools/check_no_game_data.py` OWN_ART: a changed picture needs its new hash there).
 - **Next: the user's touch/controller feedback (2026-11-03), all not done yet:**
-  1. Stick knob: rings centred on the ball (they sit at (141,100) in the 256 px knob, ball centre 128; radii 27/54/81,
-     evenly spaced). A warped candidate is in `build/android/run/user1/knob_new.png` (rings moved to the centre,
-     blended to the original rim from r 92-126): check it, put it in `android/touch_icons/`, update OWN_ART. Base well
-     centre measured ~(188,188) of 384 (base content is 384 x 358, not square): centre the knob on the well.
+  1. DONE (2026-11-03): new knob picture from the user (rings centred), cut out of its baked-in checkerboard on a
+     fitted circle, 256 px, same opacity and movement; installed on the phone, not yet looked at by the user.
   2. Stick home position a little north-east; stick less sensitive in the game's menus (bigger dead zone / curve).
   3. PAUSE: a circle with "START" written inside, centred.
   4. Overlay menu by touch is unreliable (taps sometimes ignored); its "Close" does not close the menu (only brings

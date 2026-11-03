@@ -652,3 +652,7 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   hide Fullscreen, controls text, app icon, analog trigger click threshold). Not done yet.
 - Scope decision (user): local split screen up to 2 players with pads; 3-4 players only online.
 - Touch pictures committed with the user's OK: guard exception `OWN_ART` (exact paths + SHA-1 + PNG signature).
+- Later: the user supplied a new joystick cap picture (rings centred). Its "transparency" was a baked-in checkerboard:
+  cut out on a circle fitted to 360 edge points of its dark rim (sd 2.8 px), 1.5 px soft edge, 256 px; replaces
+  `stick_knob.png` (OWN_ART hash updated), same opacity and stick logic. Installed on the phone. [likely; not seen on
+  the phone by the user yet]

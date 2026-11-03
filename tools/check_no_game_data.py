@@ -53,7 +53,7 @@ OWN_ART = {
     "android/touch_icons/drift_r.png": "45e1558994abaad8f85966ad7c8ff32ee5cde5ac",
     "android/touch_icons/jump_a.png": "d1ff0d81d64478b89993997059c635d42cd3c331",
     "android/touch_icons/stick_base.png": "7279efbd5b60980cf5af16cb5a1c6666f34a1455",
-    "android/touch_icons/stick_knob.png": "0c95f1650e2502ae0522a3da1351c9961b19b472",
+    "android/touch_icons/stick_knob.png": "181e6e6f4882716c1c743ee5fdd85286224dd6dc",
     "android/touch_icons/tornado_lr.png": "5ab1c2552a4a15757d974abf7aa8e87226a2b441",
 }
 
