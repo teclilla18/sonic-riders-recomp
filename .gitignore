@@ -73,8 +73,8 @@ android/build/
 android/.gradle/
 android/app/build/
 android/local.properties
-# the touch-control pictures (the user's own PNGs; binary files stay out of git: tools/check_no_game_data.py)
-android/touch_icons/
+# the touch-control pictures are the user's own art and are committed:
+# android/touch_icons/: committed (own art, pinned in tools/check_no_game_data.py OWN_ART)
 
 # Caches / IDE
 __pycache__/

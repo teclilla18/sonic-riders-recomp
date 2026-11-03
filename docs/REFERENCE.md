@@ -39,6 +39,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.
 - `SR_SCREENSHOT=<frame>[,...]` / `list` (PC): `build/shot_<frame>.png`, up to 512 frames. `SR_SHOTSTEP`: capture by frame end (from 1).
 - `SR_SHOTS=1` or `SR_SHOTS=a,b,c` (Switch): `shot_<frame>.bmp` at 300 … 7200, or those frames. Off by default.
+- Android only: `SR_TOUCH=0` hides the touch controls (picture compares); `SR_VK_TINYSCISSOR=1` (1-pixel scissor: GPU cost without pixels) and `SR_VK_FULLAREA=1` (whole-EFB render area) are GPU cost tests; `SR_VK_NOPUSH=1` no push descriptors.
 - `SR_INPUT="1500:START,1510:-START,7300:2.START,4000:SX=50,..."`: scripted buttons/stick at VI field counts, port prefix `N.`; up to 1024 steps; PC and Switch (input_script.c).
 - `SR_PADS=N`: connect ports 1..N without gamepads (PC). `SR_CARD=<path>`: memory card image (both targets).
 - `SR_TEST_MENU=1` / `<tab>` / `mods`: start with the settings menu open on that tab.
@@ -250,7 +251,16 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
   `shot_<n>.bmp` in the app folder (the screen, with menu and touch controls). The app must create its folder itself (start it once): a
   folder made from the adb shell first is owned by `shell` and the app cannot read the image in it (seen on the emulator).
   Deterministic compare without a route: `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_RAMHASH=N` and the same
-  `saves/settings.ini` on both machines (widescreen and the Chaos Emerald option change game memory). x28 base register not used yet (generic memory base load).
+  `saves/settings.ini` on both machines (widescreen and the Chaos Emerald option change game memory). x28 base register not used yet (generic memory base load). Vulkan prelude `CLIP_Y 1.0` (not deko3d's -1).
+- Phone vs PC picture compare: on both run `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_SHOTSTEP=<game frames>` (phone
+  also `SR_TOUCH=0`) with the same `saves/settings.ini`; PC writes `build/shot_<n>.png` (window size), the phone
+  `shot_<n>.bmp` (screen size; n can differ by one presented frame). Crop both to the picture rectangle of the aspect
+  and resize before diffing. Vulkan files in the app folder: `vk_pipeline_cache.bin` (driver cache) and
+  `vk_pipeline_keys.bin` (magic "VPK1", count, u64 keys; prebuilt at boot by a helper thread). Log: `[vk] ... ms/frame
+  on the render thread` every 300 frames, then `parts` (copy-in, recording, acquire, submit, present) and `GPU`
+  (timestamps) lines; a slow present means the GPU is behind.
+- Touch pictures `android/touch_icons/*.png` are tracked; the guard allows exactly those paths with the SHA-1 in
+  `tools/check_no_game_data.py` `OWN_ART` (update the hash when a picture changes).
 - Emulator (dev only, not in the setup): emulator 16740729 + `system-images;android-35;google_apis;x86_64` r09
   unpacked into `<tools>/android-sdk` (Google SHA-1 checked), AVD `srtest` in `<tools>/avd` (`ANDROID_AVD_HOME`),
   started with `-no-window -gpu host` (WHPX). Its GLES stops at 3.1 and its GPU is the PC's: no performance numbers.

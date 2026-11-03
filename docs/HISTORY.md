@@ -627,3 +627,28 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   premultiplied atlas header; render_vk.c draws them at 55% (pressed 85%, 7% smaller). Phone self-capture: shown
   over the intro at 60 fps. [confirmed] PAUSE / MENU keep the drawn icons (no pictures given).
 
+
+## 2026-11-03 (late night): Android M3: picture upside down fixed, pipeline prewarm, resume, GPU-bound races
+- **Picture compare** (S23 Ultra, Android 17): `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_SHOTSTEP=<16 game
+  frames>` on the PC and the phone (same settings.ini; new `SR_TOUCH=0` hides the touch controls), cropped to the
+  16:9 picture and diffed. Every game frame was **upside down** on the phone (overlay right way up), races had
+  missing models and smeared blur. Cause: the Vulkan prelude used deko3d's `CLIP_Y -1`; Vulkan's clip -y is row 0,
+  as in GL's flipped storage, so it needs +1. That also inverted face culling and made EFB copies read the wrong
+  rows. After the fix: mean difference 0.2-3.4 levels on all 16 frames (edges; the title rings differ by one frame
+  of animation because the phone saved frame 3300 and the PC 3301). [confirmed]
+- **Pipeline hitches**: pipeline keys recorded in `vk_pipeline_keys.bin` (app folder), prebuilt on a helper thread
+  at boot and handed to the render thread (`pipe_drain`). Second run: 35 of 35 built in 68 ms, none during play.
+  [confirmed] The remaining race-start hitches (~90 ms) are not pipelines: the `[hitch]` line now breaks the render
+  thread's frame down (pipelines, GPU wait, images, copy-in, recording, acquire, submit, present) and shows
+  vkQueuePresentKHR blocking, i.e. the GPU.
+- **GPU-bound 1P races** (new `[vk] GPU x ms/frame` from timestamps): 18-24 ms per 1P race frame at 1x, CPU side ~4 ms;
+  1P demo 55 fps, 2P demo 58 fps; game thread ~5 ms/step. EFB render area limited to the used part (A/B with
+  `SR_VK_FULLAREA=1`: no change). `SR_VK_TINYSCISSOR=1` (1-pixel scissor): 9-10 ms remain, so per-draw/vertex cost
+  (~4.5 KB of uniform blocks per state) is about half. [confirmed numbers, 1 run each] Next: specialized shaders.
+- **Background/resume**: HOME for 15 s, then back: the game stays paused (render thread blocked by SDL), swapchain
+  remade, frame pacer restarts, 59.9 fps at once, intro continues. [confirmed, 1 run]
+- User test by hand: touch works; Xbox Series X pad over Bluetooth works (touch controls hide). Feedback list in
+  STATE.md (stick rings off-centre in the knob picture, START icon, overlay touch unreliable and Close not closing,
+  hide Fullscreen, controls text, app icon, analog trigger click threshold). Not done yet.
+- Scope decision (user): local split screen up to 2 players with pads; 3-4 players only online.
+- Touch pictures committed with the user's OK: guard exception `OWN_ART` (exact paths + SHA-1 + PNG signature).

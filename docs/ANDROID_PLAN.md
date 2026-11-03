@@ -153,6 +153,10 @@ then the ISO is read through its file descriptor if seekable, else copied into t
    temperature); CHANGELOG entry.
 7. **Android extras**, one or two per session (section 7).
 
+Multiplayer scope (user, 2026-11-03): local split screen up to 2 players with controllers (the 2P demo race runs at
+58 fps on the S23 Ultra); 3-4 players only through online play, each phone showing its own player full screen
+(`SR_VIEW`). No 3-4P split-screen work for Android.
+
 ## 7. Android extras (after parity)
 
 Asked for: touch controls overlay (drawn into the existing overlay image; layout and opacity in the menu; hidden

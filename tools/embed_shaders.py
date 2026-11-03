@@ -40,11 +40,12 @@ PROGRAMS_DK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx"
 
 
 # Vulkan (platform/android/render_vk.c): set 0 = the uniform buffers (registers, XF memory; dynamic offsets),
-# set 1 = the 8 textures. Clip depth 0..w (DEPTH_ZERO_ONE in gx.vert), clip +y down like deko3d's upper-left
-# origin. The vk_* programs are the backend's own screen quads (no prelude, no gx_common).
+# set 1 = the 8 textures. Clip depth 0..w (DEPTH_ZERO_ONE in gx.vert). Vulkan's clip -y is framebuffer row 0,
+# so CLIP_Y is +1 as for GL (EFB stored top row first); deko3d's -1 drew the picture upside down and turned
+# face culling around (2026-11-03). The vk_* programs are the backend's own screen quads (no prelude, no gx_common).
 PRELUDE_VK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(n) layout(location = n)\n"
               "#define SAMPLER(n) layout(set = 1, binding = n)\n#define BIND_UBO , set = 0, binding = 0\n"
-              "#define BIND_UBO1 , set = 0, binding = 1\n#define CLIP_Y (-1.0)\n#define DEBUG_SHOW_ALPHA 0\n#define DEBUG_TEV 0\n"
+              "#define BIND_UBO1 , set = 0, binding = 1\n#define CLIP_Y 1.0\n#define DEBUG_SHOW_ALPHA 0\n#define DEBUG_TEV 0\n"
               "#define DEPTH_ZERO_ONE 1\n#define XFM_WORD(i) 0u\n#define gl_VertexID gl_VertexIndex\n")
 PROGRAMS_VK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),

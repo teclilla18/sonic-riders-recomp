@@ -57,6 +57,8 @@ static float g_s = EFB_SCALE;
 static const uint8_t k_xf_image_chunks[XF_IMAGE_CHUNKS] = {0, 1, 2, 3, 16, 17, 20, 21, 22, 23, 24, 25};
 #define IMAGE_POOL (384u << 20)
 #define PIPE_CACHE_FILE "vk_pipeline_cache.bin"
+#define PIPE_KEYS_FILE "vk_pipeline_keys.bin"  /* every pipeline key seen, prebuilt at boot (prewarm_thread) */
+#define PIPE_KEYS_MAGIC 0x314B5056u            /* "VPK1" */
 
 #define VKC(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) rt_fatal("[vk] %s failed: %d", #x, (int)r_); } while (0)
 
@@ -112,6 +114,18 @@ static VkShaderModule g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fi
 static VkPipelineCache g_pcache;
 static unsigned g_pipes_new, g_pipes_total;
 static uint64_t g_pcache_saved_ns;
+static uint64_t* g_keys;          /* the keys in PIPE_KEYS_FILE plus the ones first built this run */
+static uint32_t g_nkeys, g_keys_cap, g_keys_saved;
+/* this frame's render-thread costs, for the [hitch] line */
+static uint64_t g_fr_pipe_ns, g_fr_wait_ns, g_fr_img_ns, g_fr_acq_ns;
+/* frame phases summed over the 300-frame report: copy-in, recording, submit, present */
+static uint64_t g_ph_in, g_ph_rec, g_ph_sub, g_ph_pres, g_ph_acq;
+/* GPU time per frame: a timestamp at the start and the end of each slot's command buffer */
+static VkQueryPool g_qpool;
+static int g_ts_written[2];
+static uint64_t g_gpu_ns_sum, g_gpu_ns_max;
+static unsigned g_gpu_frames, g_passes, g_passes_sum;
+static unsigned g_fr_pipe_n, g_fr_img_n;
 static VkSampler g_samp[36], g_samp_lin, g_samp_near;
 
 /* ---- images ---- */
@@ -213,6 +227,7 @@ static void pool_free(uint32_t off, uint32_t size) {
 }
 
 static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUsageFlags usage, int in_pool) {
+    uint64_t t0 = platform_now_ns();
     memset(t, 0, sizeof *t);
     VkImageCreateInfo ci = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, NULL, 0, VK_IMAGE_TYPE_2D, fmt, {w, h, 1}, 1, 1,
                             VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, usage, VK_SHARING_MODE_EXCLUSIVE, 0, NULL,
@@ -241,6 +256,8 @@ static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUs
     t->h = h;
     t->live = 1;
     t->gen = 0xFFFFFFFFu;
+    g_fr_img_ns += platform_now_ns() - t0;
+    g_fr_img_n++;
 }
 
 static void image_free(VkImg* t) {
@@ -364,8 +381,8 @@ static VkPipeline pipe_build(VkShaderModule vs, VkShaderModule fs, VkPipelineLay
                                        VK_NULL_HANDLE, -1};
     VkPipeline p;
     uint64_t t0 = platform_now_ns();
-    VKC(vkCreateGraphicsPipelines(g_dev, g_pcache, 1, &gi, NULL, &p));
-    g_pipes_new++;
+    VKC(vkCreateGraphicsPipelines(g_dev, g_pcache, 1, &gi, NULL, &p));  /* the cache is internally synchronized */
+    __atomic_fetch_add(&g_pipes_new, 1, __ATOMIC_RELAXED);
     uint64_t dt = platform_now_ns() - t0;
     if (dt > 20000000ull) rt_log("[vk] a pipeline took %.0f ms to make", dt / 1e6);
     return p;
@@ -379,9 +396,7 @@ static VkBlendFactor src1_ok(VkBlendFactor f) {  /* without dual-source blending
 }
 
 /* the pipeline for a GX state: key bits (see gx_pipe) */
-static VkPipeline gx_pipe(uint64_t key) {
-    VkPipeline p = pipe_find(key);
-    if (p) return p;
+static VkPipeline gx_pipe_make(uint64_t key) {
     int ind = key & 1, blend_on = (key >> 1) & 1, revsub = (key >> 2) & 1;
     VkPipelineColorBlendAttachmentState b = {0};
     b.blendEnable = blend_on;
@@ -397,16 +412,13 @@ static VkPipeline gx_pipe(uint64_t key) {
     ds.depthCompareOp = (VkCompareOp)((key >> 29) & 7);
     VkCullModeFlags cull = (VkCullModeFlags)((key >> 32) & 3);
     VkPrimitiveTopology topo = (VkPrimitiveTopology)((key >> 34) & 3);
-    p = pipe_build(g_sm_vs, ind ? g_sm_fs_ind : g_sm_fs, g_pl_gx, 1, topo, &b, &ds, cull, TGT_EFB);
-    pipe_put(key, p);
-    return p;
+    return pipe_build(g_sm_vs, ind ? g_sm_fs_ind : g_sm_fs, g_pl_gx, 1, topo, &b, &ds, cull, TGT_EFB);
 }
 
 /* a screen quad's pipeline: kind (Q_*), target */
-static VkPipeline quad_pipe(int kind, int target, VkColorComponentFlags mask) {
-    uint64_t key = (1ull << 63) | (uint64_t)kind | (uint64_t)target << 4 | (uint64_t)mask << 8;
-    VkPipeline p = pipe_find(key);
-    if (p) return p;
+static VkPipeline quad_pipe_make(uint64_t key) {
+    int kind = (int)(key & 15), target = (int)((key >> 4) & 15);
+    VkColorComponentFlags mask = (VkColorComponentFlags)((key >> 8) & 15);
     VkPipelineColorBlendAttachmentState b = {0};
     b.colorWriteMask = mask;
     if (kind == Q_TEX_OVER || kind == Q_TOUCH) {  /* premultiplied alpha over */
@@ -419,14 +431,124 @@ static VkPipeline quad_pipe(int kind, int target, VkColorComponentFlags mask) {
     }
     VkShaderModule fs = kind == Q_FILL ? g_sm_fill : kind == Q_TOUCH ? g_sm_touch : g_sm_tex;
     VkPipelineDepthStencilStateCreateInfo ds = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-    p = pipe_build(g_sm_qvs, fs, g_pl_quad, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, &b, &ds, VK_CULL_MODE_NONE, target);
+    return pipe_build(g_sm_qvs, fs, g_pl_quad, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, &b, &ds, VK_CULL_MODE_NONE, target);
+}
+
+/* ---- pipeline prewarm: the keys of every pipeline made in earlier runs (PIPE_KEYS_FILE) are built on a
+ * helper thread at boot, so a state's first draw does not wait 50-250 ms for the driver's compiler. The
+ * finished pipelines are handed to the render thread (pipe_drain); a key it needs before the helper got
+ * there is built by the render thread itself, and the helper's copy is dropped. */
+static mtx_t g_pw_lock;
+static PipeEntry* g_pw_done;
+static uint32_t g_pw_ndone, g_pw_cap;
+static volatile int g_pw_running;
+
+static VkPipeline pipe_make(uint64_t key) { return (key >> 63) ? quad_pipe_make(key) : gx_pipe_make(key); }
+
+static void key_note(uint64_t key) {  /* a key first built this run: saved with the pipeline cache */
+    if (g_nkeys == g_keys_cap) {
+        g_keys_cap = g_keys_cap ? g_keys_cap * 2 : 256;
+        g_keys = realloc(g_keys, g_keys_cap * sizeof *g_keys);
+    }
+    g_keys[g_nkeys++] = key;
+}
+
+static void keys_save(void) {
+    if (g_nkeys == g_keys_saved) return;
+    FILE* f = fopen(PIPE_KEYS_FILE, "wb");
+    if (!f) return;
+    uint32_t hd[2] = {PIPE_KEYS_MAGIC, g_nkeys};
+    fwrite(hd, sizeof hd, 1, f);
+    fwrite(g_keys, sizeof *g_keys, g_nkeys, f);
+    fclose(f);
+    g_keys_saved = g_nkeys;
+}
+
+static void pipe_drain(void) {  /* render thread: take the helper's finished pipelines */
+    if (!__atomic_load_n(&g_pw_ndone, __ATOMIC_ACQUIRE)) return;
+    mtx_lock(&g_pw_lock);
+    for (uint32_t i = 0; i < g_pw_ndone; i++) {
+        if (pipe_find(g_pw_done[i].key)) vkDestroyPipeline(g_dev, g_pw_done[i].p, NULL);
+        else pipe_put(g_pw_done[i].key, g_pw_done[i].p);
+    }
+    g_pw_ndone = 0;
+    mtx_unlock(&g_pw_lock);
+}
+
+static uint64_t* g_pw_keys;  /* the helper's own copy of the recorded keys */
+static uint32_t g_pw_nkeys;
+
+static int prewarm_thread(void* arg) {
+    (void)arg;
+    rt_thread_lower_priority();
+    uint64_t t0 = platform_now_ns();
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < g_pw_nkeys; i++) {
+        uint64_t key = g_pw_keys[i];
+        if ((key >> 63) && ((key >> 4) & 15) == TGT_SWAP && g_swap_fmt == VK_FORMAT_UNDEFINED) continue;
+        VkPipeline p = pipe_make(key);
+        mtx_lock(&g_pw_lock);
+        if (g_pw_ndone == g_pw_cap) {
+            g_pw_cap = g_pw_cap ? g_pw_cap * 2 : 64;
+            g_pw_done = realloc(g_pw_done, g_pw_cap * sizeof *g_pw_done);
+        }
+        g_pw_done[g_pw_ndone] = (PipeEntry){key, p};
+        __atomic_store_n(&g_pw_ndone, g_pw_ndone + 1, __ATOMIC_RELEASE);
+        mtx_unlock(&g_pw_lock);
+        n++;
+    }
+    rt_log("[vk] prewarm: %u of %u recorded pipelines built in %.0f ms", n, g_pw_nkeys, (platform_now_ns() - t0) / 1e6);
+    free(g_pw_keys);
+    g_pw_running = 0;
+    return 0;
+}
+
+static void prewarm_start(void) {
+    mtx_init(&g_pw_lock, mtx_plain);
+    FILE* f = fopen(PIPE_KEYS_FILE, "rb");
+    uint32_t hd[2] = {0, 0};
+    if (f && fread(hd, sizeof hd, 1, f) == 1 && hd[0] == PIPE_KEYS_MAGIC && hd[1] < (1u << 20)) {
+        g_keys_cap = hd[1] + 256;
+        g_keys = malloc(g_keys_cap * sizeof *g_keys);
+        g_nkeys = (uint32_t)fread(g_keys, sizeof *g_keys, hd[1], f);
+    }
+    if (f) fclose(f);
+    g_keys_saved = g_nkeys;
+    if (!g_nkeys) {
+        rt_log("[vk] prewarm: no recorded pipelines yet");
+        return;
+    }
+    g_pw_nkeys = g_nkeys;
+    g_pw_keys = malloc(g_nkeys * sizeof *g_pw_keys);
+    memcpy(g_pw_keys, g_keys, g_nkeys * sizeof *g_pw_keys);
+    g_pw_running = 1;
+    rt_thread_start(prewarm_thread, NULL);
+}
+
+/* the pipeline for a key: from the table, else made now (render thread) */
+static VkPipeline pipe_get(uint64_t key) {
+    VkPipeline p = pipe_find(key);
+    if (p) return p;
+    pipe_drain();
+    if ((p = pipe_find(key))) return p;
+    uint64_t t0 = platform_now_ns();
+    p = pipe_make(key);
+    g_fr_pipe_ns += platform_now_ns() - t0;
+    g_fr_pipe_n++;
     pipe_put(key, p);
+    key_note(key);
     return p;
+}
+static VkPipeline gx_pipe(uint64_t key) { return pipe_get(key); }
+static VkPipeline quad_pipe(int kind, int target, VkColorComponentFlags mask) {
+    return pipe_get((1ull << 63) | (uint64_t)kind | (uint64_t)target << 4 | (uint64_t)mask << 8);
 }
 
 static void pcache_save(int force) {
     uint64_t now = platform_now_ns();
-    if (!g_pipes_new || (!force && now - g_pcache_saved_ns < 10000000000ull)) return;
+    if (!force && now - g_pcache_saved_ns < 10000000000ull) return;
+    keys_save();
+    if (!g_pipes_new) return;
     size_t n = 0;
     if (vkGetPipelineCacheData(g_dev, g_pcache, &n, NULL) != VK_SUCCESS || !n) return;
     void* d = malloc(n);
@@ -785,6 +907,11 @@ static void vk_setup(void) {
     VKC(vkQueueSubmit(g_q, 1, &si, VK_NULL_HANDLE));
     VKC(vkQueueWaitIdle(g_q));
     if (!swap_create()) rt_log("[vk] no screen yet");
+    if (g_props.limits.timestampComputeAndGraphics) {
+        VkQueryPoolCreateInfo qi = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, NULL, 0, VK_QUERY_TYPE_TIMESTAMP, 4, 0};
+        if (vkCreateQueryPool(g_dev, &qi, NULL, &g_qpool) != VK_SUCCESS) g_qpool = VK_NULL_HANDLE;
+    }
+    prewarm_start();
     rt_log("[vk] ready: EFB %dx%d, depth format %d, image pool %u MiB", EFB_W, EFB_H, g_depth_fmt, IMAGE_POOL >> 20);
 }
 
@@ -810,8 +937,16 @@ static void efb_begin(void) {
     VkRenderingAttachmentInfoKHR da = {VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR, NULL, g_depth.view,
                                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_RESOLVE_MODE_NONE, VK_NULL_HANDLE,
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, {{{0}}}};
-    VkRenderingInfoKHR ri = {VK_STRUCTURE_TYPE_RENDERING_INFO_KHR, NULL, 0, {{0, 0}, {EFB_W, EFB_H}}, 1, 0, 1, &ca, &da, NULL};
+    /* only the part the internal resolution uses: a tiled GPU loads and stores the whole render area each
+     * time rendering starts again (after every EFB copy) */
+    uint32_t aw = SC(EFB_WIDTH), ah = SC(EFB_HEIGHT);
+    static int full = -1;  /* SR_VK_FULLAREA=1: the whole image (A/B test) */
+    if (full < 0) full = getenv("SR_VK_FULLAREA") != NULL;
+    if (full) aw = EFB_W, ah = EFB_H;
+    VkRenderingInfoKHR ri = {VK_STRUCTURE_TYPE_RENDERING_INFO_KHR, NULL, 0, {{0, 0}, {aw < EFB_W ? aw : EFB_W, ah < EFB_H ? ah : EFB_H}},
+                             1, 0, 1, &ca, &da, NULL};
     p_begin_rendering(g_cmd, &ri);
+    g_passes++;
     g_in_efb = 1;
     g_bound = VK_NULL_HANDLE;
     g_dyn_valid = 0;
@@ -918,6 +1053,9 @@ static void apply_dynamic(const GxUniforms* u) {
     VkRect2D sc = {{(int32_t)SC(x0), (int32_t)SC(y0)}, {SC(x1 > x0 ? x1 - x0 : 0), SC(y1 > y0 ? y1 - y0 : 0)}};
     if (sc.offset.x > EFB_W) sc.offset.x = EFB_W;
     if (sc.offset.y > EFB_H) sc.offset.y = EFB_H;
+    static int tiny = -1;  /* SR_VK_TINYSCISSOR=1 (GPU cost test): one pixel per draw, so only vertex and per-draw work remain */
+    if (tiny < 0) tiny = getenv("SR_VK_TINYSCISSOR") != NULL;
+    if (tiny) sc.extent.width = sc.extent.width ? 1 : 0, sc.extent.height = sc.extent.height ? 1 : 0;
     if (!g_dyn_valid || memcmp(&vp, &g_cur_vp, sizeof vp)) {
         vkCmdSetViewport(g_cmd, 0, 1, &vp);
         g_cur_vp = vp;
@@ -968,7 +1106,9 @@ static int acquire(void) {
         if (!swap_recreate()) return 0;
     }
     uint32_t idx;
+    uint64_t t0 = platform_now_ns();
     VkResult r = vkAcquireNextImageKHR(g_dev, g_swap, 1000000000ull, g_acq[g_slot], VK_NULL_HANDLE, &idx);
+    g_fr_acq_ns += platform_now_ns() - t0;
     if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_ERROR_SURFACE_LOST_KHR) {
         if (!swap_recreate()) return 0;
         r = vkAcquireNextImageKHR(g_dev, g_swap, 1000000000ull, g_acq[g_slot], VK_NULL_HANDLE, &idx);
@@ -1161,7 +1301,19 @@ static int shot_thread(void* arg) {
 /* ---------------------------------------------------------------- one frame */
 static void slot_reclaim(unsigned slot) {
     if (g_fenced[slot]) {
+        uint64_t t0 = platform_now_ns();
         vkWaitForFences(g_dev, 1, &g_fence[slot], VK_TRUE, UINT64_MAX);
+        g_fr_wait_ns += platform_now_ns() - t0;
+        if (g_qpool && g_ts_written[slot]) {
+            uint64_t ts[2];
+            if (vkGetQueryPoolResults(g_dev, g_qpool, slot * 2, 2, sizeof ts, ts, 8, VK_QUERY_RESULT_64_BIT) == VK_SUCCESS && ts[1] > ts[0]) {
+                uint64_t ns = (uint64_t)((double)(ts[1] - ts[0]) * g_props.limits.timestampPeriod);
+                g_gpu_ns_sum += ns;
+                if (ns > g_gpu_ns_max) g_gpu_ns_max = ns;
+                g_gpu_frames++;
+            }
+            g_ts_written[slot] = 0;
+        }
         vkResetFences(g_dev, 1, &g_fence[slot]);
         g_fenced[slot] = 0;
     }
@@ -1228,6 +1380,9 @@ static unsigned g_busy_frames, g_draws_sum;
 
 static void execute(GxFrame* f) {
     uint64_t t_start = platform_now_ns();
+    g_fr_pipe_ns = g_fr_wait_ns = g_fr_img_ns = g_fr_acq_ns = 0;
+    g_fr_pipe_n = g_fr_img_n = 0;
+    pipe_drain();
     slot_reclaim(g_slot);
     g_s = settings_internal_scale();
     g_cmd = g_cb[g_slot];
@@ -1235,6 +1390,11 @@ static void execute(GxFrame* f) {
     if (!g_push_desc) vkResetDescriptorPool(g_dev, g_dpool_frame[g_slot], 0);
     VkCommandBufferBeginInfo bi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
     VKC(vkBeginCommandBuffer(g_cmd, &bi));
+    if (g_qpool) {
+        vkCmdResetQueryPool(g_cmd, g_qpool, g_slot * 2, 2);
+        vkCmdWriteTimestamp(g_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, g_qpool, g_slot * 2);
+    }
+    g_passes = 0;
     g_stage_off = 0;
     g_in_efb = 0;
     g_tex_valid = 0;
@@ -1275,6 +1435,7 @@ static void execute(GxFrame* f) {
             for (int m = 0; m < 8; m++)
                 if (f->cmds[i].tex[m] >= 0) tex_prepare(f->cmds[i].tex[m]);
 
+    uint64_t t_rec = platform_now_ns();
     const GxUniforms* cur = NULL;
     uint32_t cur_regs = ~0u, cur_xtab = ~0u;
     uint32_t dyn[2] = {0, 0};
@@ -1372,12 +1533,18 @@ static void execute(GxFrame* f) {
         shot_request();
         barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
+    if (g_qpool) {
+        vkCmdWriteTimestamp(g_cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_qpool, g_slot * 2 + 1);
+        g_ts_written[g_slot] = 1;
+    }
     VKC(vkEndCommandBuffer(g_cmd));
+    uint64_t t_sub = platform_now_ns();
     VkPipelineStageFlags wst = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, presenting ? 1u : 0u, &g_acq[g_slot], &wst, 1, &g_cmd,
                        presenting ? 1u : 0u, presenting ? &g_sdone[g_swap_idx] : NULL};
     VKC(vkQueueSubmit(g_q, 1, &si, g_fence[g_slot]));
     g_fenced[g_slot] = 1;
+    uint64_t t_pres = platform_now_ns();
     if (presenting) {
         uint32_t idx = (uint32_t)g_swap_idx;
         VkPresentInfoKHR pi = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, NULL, 1, &g_sdone[idx], 1, &g_swap, &idx, NULL};
@@ -1403,13 +1570,32 @@ static void execute(GxFrame* f) {
     g_nretired[g_slot] = f->nretired;
     g_slot ^= 1;
     pcache_save(0);
-    uint64_t busy = platform_now_ns() - t_start;
+    uint64_t t_end = platform_now_ns(), busy = t_end - t_start;
+    g_ph_in += t_rec - t_start;
+    g_ph_rec += t_sub - t_rec - g_fr_acq_ns;
+    g_ph_acq += g_fr_acq_ns;
+    g_ph_sub += t_pres - t_sub;
+    g_ph_pres += t_end - t_pres;
     g_busy_ns += busy;
     g_draws_sum += draws;
-    if (busy > 50000000ull) rt_log("[hitch] render thread: a frame took %.0f ms (%u draws)", busy / 1e6, draws);
+    g_passes_sum += g_passes;
+    if (busy > 50000000ull)
+        rt_log("[hitch] render thread: a frame took %.0f ms (%u draws): %u new pipelines %.0f ms, GPU wait %.0f ms, "
+               "%u new images %.0f ms, %u KB staged; copy-in %.0f, recording %.0f, acquire %.0f, submit %.0f, present %.0f ms%s",
+               busy / 1e6, draws, g_fr_pipe_n, g_fr_pipe_ns / 1e6, g_fr_wait_ns / 1e6, g_fr_img_n, g_fr_img_ns / 1e6,
+               g_stage_off >> 10, (t_rec - t_start) / 1e6, (t_sub - t_rec - g_fr_acq_ns) / 1e6, g_fr_acq_ns / 1e6,
+               (t_pres - t_sub) / 1e6, (t_end - t_pres) / 1e6, g_pw_running ? " (prewarm still running)" : "");
     if (++g_busy_frames == 300) {
         rt_log("[vk] %.2f ms/frame on the render thread, %u draws/frame, %u pipelines, %u frames presented", g_busy_ns / 300 / 1e6,
                g_draws_sum / 300, g_pipes_total, g_presented);
+        rt_log("[vk]   parts, ms/frame: copy-in %.2f, recording %.2f, acquire %.2f, submit %.2f, present %.2f",
+               g_ph_in / 300 / 1e6, g_ph_rec / 300 / 1e6, g_ph_acq / 300 / 1e6, g_ph_sub / 300 / 1e6, g_ph_pres / 300 / 1e6);
+        g_ph_in = g_ph_rec = g_ph_acq = g_ph_sub = g_ph_pres = 0;
+        if (g_gpu_frames)
+            rt_log("[vk]   GPU %.2f ms/frame (max %.2f), %.1f EFB passes/frame", g_gpu_ns_sum / g_gpu_frames / 1e6, g_gpu_ns_max / 1e6,
+                   g_passes_sum / 300.0);
+        g_gpu_ns_sum = g_gpu_ns_max = 0;
+        g_gpu_frames = g_passes_sum = 0;
         g_busy_ns = 0;
         g_draws_sum = 0;
         g_busy_frames = 0;

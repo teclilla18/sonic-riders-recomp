@@ -12,6 +12,7 @@
  * While the menu is open, fingers act on it (overlay_pointer). Using a gamepad hides the controls until
  * the screen is touched again. */
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "overlay.h"
@@ -215,7 +216,9 @@ int touch_shapes(TouchShape* out, int max, int win_w, int win_h) {
     layout(win_w, win_h);
     int n = 0;
     int menu = overlay_menu_open();
-    if (!g_visible && !menu) return 0;
+    static int off = -1;  /* SR_TOUCH=0: never drawn (picture comparisons with PC captures) */
+    if (off < 0) off = getenv("SR_TOUCH") && atoi(getenv("SR_TOUCH")) == 0;
+    if ((!g_visible || off) && !menu) return 0;
     /* the button pictures (android/touch_icons), slightly see-through so the race stays visible; a pressed
      * one is more solid and a little smaller */
     static const int k_img[C_COUNT] = {TOUCH_IMG_JUMP, TOUCH_IMG_BOOST, TOUCH_IMG_DRIFT, TOUCH_IMG_TORNADO, -1, -1};

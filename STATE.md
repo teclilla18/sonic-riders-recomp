@@ -48,26 +48,38 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 
 ## Android port (branch `android`; plan: docs/ANDROID_PLAN.md)
 
-- Milestone 1 (2026-11-03): setup `-Target android` (pinned NDK r27d, build-tools 35, JDK 17, SDL2 source; license
-  must be accepted), probe APK, `tools/android_run.py`. S23 Ultra: GLES 8.06 ms vs Vulkan 2.00 ms CPU per 7,000
-  draws -> Vulkan renderer. [confirmed]
-- Milestone 2 (2026-11-03): the recompiled game runs on the S23 Ultra (Android 17) at 59.9 fps with sound, no
-  picture (`platform/android/render_android.c` recycles frames). `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0
-  SR_RAMHASH=4000` with the PC's settings.ini: phone = PC on all 4,000 frames (into the 1P demo race); x86_64
-  emulator = PC on 1,500. Setup builds the game APK (~26 MB), installs it and pushes the disc image. [confirmed]
-- Milestone 3 (2026-11-03, in progress): `platform/android/render_vk.c` (Vulkan, ported from render_deko.c: dynamic
-  rendering, push descriptors, pipelines cached in `vk_pipeline_cache.bin`, picture/menu/touch as screen quads) and
-  `touch_android.c` (floating stick left; JUMP A, BOOST B, DRIFT R, TORNADO L+R right; PAUSE / MENU top corners; menu
-  taps via `overlay_pointer`; a gamepad hides them; phone Back = menu). Buttons and stick use the user's pictures
-  (`android/touch_icons/*.png`, 55% opaque idle, 85% pressed; atlas by `tools/embed_icons.py`). The PNGs are local
-  only (gitignored: the guard refuses binary files); without them the drawn icons are used. Open question for the
-  user: should they go in the repo (would need their OK for a guard exception)? First phone run: intro FMV renders at 59.9 fps,
-  touch controls drawn (self-capture `SR_SHOTS=300,600`). Screen stays on now (SDL window + SDL_DisableScreenSaver).
-- **Next (continue milestone 3):** (1) let the attract mode reach the title screen and races (`SR_SHOTS` later
-  frames) and diff against PC self-captures of the same frames; (2) first-use pipeline hitches (150-300 ms each):
-  prewarm/record keys; (3) touch controls by hand on the phone (the user tests; ask for feedback), controller check,
-  background/resume; (4) specialized shaders / GPU timing later. Ask the user to plug in the phone.
-  Swapchain uses IDENTITY transform (current is ROTATE_90): the system rotates; pre-rotation is a later optimisation.
+- Milestones 1-2 done (2026-11-03): toolchain + probe APK (Vulkan chosen: 2.00 vs 8.06 ms CPU per 7,000 draws);
+  game boots on the S23 Ultra (Android 17), phone = PC memory on 4,000 det-route frames. [confirmed]
+- Milestone 3 (2026-11-03): `platform/android/render_vk.c` + `touch_android.c`.
+  - **Picture now matches PC** on 16 det-route frames (intro, title, 1P and 2P demo races): mean difference 0.2-3.4
+    levels (edges only, different screen size). The fix: Vulkan prelude `CLIP_Y 1.0` (was deko3d's -1: picture upside
+    down, culling inverted, EFB copies read the wrong rows). [confirmed]
+  - Pipeline hitches fixed: keys recorded in `vk_pipeline_keys.bin`, prebuilt on a helper thread at boot (35 in 68 ms
+    with a warm driver cache); no pipeline built during play on the second run. [confirmed]
+  - **Background/resume works**: HOME 15 s, back: game paused, swapchain remade, 59.9 fps at once. [confirmed, 1 run]
+  - Xbox Series X controller works over Bluetooth (user, port 1; touch controls hide). [confirmed]
+  - Perf (S23 Ultra, Android 17, `SR_PERFTEST`): game thread ~5 ms/step; 1P demo 55 fps, 2P demo 58 fps. The limit is
+    the **GPU**: 18-24 ms per 1P race frame at 1x (`[vk] GPU` line); a 1-pixel scissor (`SR_VK_TINYSCISSOR=1`) still
+    leaves 9-10 ms (per-draw/vertex cost: ~4.5 KB of UBO per state), so both pixel and per-draw cost matter.
+    Render area limited to the used EFB part (no measurable change). First heavy race frame still ~90 ms (GPU).
+  - Scope (user, 2026-11-03): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
+  - Touch pictures `android/touch_icons/*.png` are committed (user's own art; guard exception pinned by SHA-1 in
+    `tools/check_no_game_data.py` OWN_ART: a changed picture needs its new hash there).
+- **Next: the user's touch/controller feedback (2026-11-03), all not done yet:**
+  1. Stick knob: rings centred on the ball (they sit at (141,100) in the 256 px knob, ball centre 128; radii 27/54/81,
+     evenly spaced). A warped candidate is in `build/android/run/user1/knob_new.png` (rings moved to the centre,
+     blended to the original rim from r 92-126): check it, put it in `android/touch_icons/`, update OWN_ART. Base well
+     centre measured ~(188,188) of 384 (base content is 384 x 358, not square): centre the knob on the well.
+  2. Stick home position a little north-east; stick less sensitive in the game's menus (bigger dead zone / curve).
+  3. PAUSE: a circle with "START" written inside, centred.
+  4. Overlay menu by touch is unreliable (taps sometimes ignored); its "Close" does not close the menu (only brings
+     the touch buttons back); hide "Fullscreen" on Android; Controls tab text for touch + any gamepad.
+  5. App icon in the APK, made automatically for every player (as the PC icon from the save icon, make_icon.py); the
+     user's own `.ico` (<home>/Downloads/SonicRidersIcon.ico) as an option (configure/setup `--icon`). Don't commit it
+     unless the user says it is their own art.
+  6. Analog triggers: RT "felt weak", drift sometimes not full. input_sdl.c sets the digital R/L click only above
+     29000 of 32767: log each pad's trigger peak and calibrate the click to ~80-90% of the peak seen.
+  Then: GPU cost (specialized shaders from the shader keys, per-draw UBO size), pre-rotation, 2P with two pads.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
@@ -83,7 +95,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android port (branch `android`): milestone 2 next (see "Android" above).
+1. Android port (branch `android`): milestone 3, the user's touch/controller feedback next (see "Android" above).
 2. Online phase 3/4 (paused, see above).
 3. #12 PC at 13 fps (v0.3.4): read the attached log (GPU? vsync? software GL?).
 4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
