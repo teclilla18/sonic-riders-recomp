@@ -216,10 +216,15 @@ int touch_shapes(TouchShape* out, int max, int win_w, int win_h) {
     int n = 0;
     int menu = overlay_menu_open();
     if (!g_visible && !menu) return 0;
+    /* the button pictures (android/touch_icons), slightly see-through so the race stays visible; a pressed
+     * one is more solid and a little smaller */
+    static const int k_img[C_COUNT] = {TOUCH_IMG_JUMP, TOUCH_IMG_BOOST, TOUCH_IMG_DRIFT, TOUCH_IMG_TORNADO, -1, -1};
     for (int i = 0; i < C_COUNT; i++) {
         if (menu && i != C_MENU) continue;  /* only the button that closes it while the menu is open */
         int pr = (g_pressed >> i) & 1;
-        out[n++] = (TouchShape){g_c[i].cx, g_c[i].cy, g_c[i].r, 0, g_c[i].icon, pr, pr ? 0.95f : 0.6f,
+        float r = g_c[i].r * (pr && k_img[i] >= 0 ? 0.93f : 1.0f);
+        float a = k_img[i] >= 0 ? (pr ? 0.85f : 0.55f) : (pr ? 0.95f : 0.6f);
+        out[n++] = (TouchShape){g_c[i].cx, g_c[i].cy, r, 0, g_c[i].icon, pr, k_img[i], a,
                                 {g_c[i].tint[0], g_c[i].tint[1], g_c[i].tint[2]}};
     }
     if (!menu) {
@@ -231,9 +236,9 @@ int touch_shapes(TouchShape* out, int max, int win_w, int win_h) {
             stick_home(&bx, &by);
         }
         int held = g_stick_finger >= 0;
-        out[n++] = (TouchShape){bx, by, R, 1, 0, held, held ? 0.8f : 0.45f, {0.8f, 0.85f, 1.0f}};
-        float kx = bx + g_stick_vx * R, ky = by + g_stick_vy * R;
-        out[n++] = (TouchShape){kx, ky, 0.075f * (float)win_h, 2, 0, held, held ? 0.9f : 0.5f, {0.8f, 0.85f, 1.0f}};
+        out[n++] = (TouchShape){bx, by, R, 1, 0, held, TOUCH_IMG_STICK_BASE, held ? 0.7f : 0.45f, {0.8f, 0.85f, 1.0f}};
+        float kx = bx + g_stick_vx * R * 0.55f, ky = by + g_stick_vy * R * 0.55f;  /* the knob stays inside the gate */
+        out[n++] = (TouchShape){kx, ky, 0.5f * R, 2, 0, held, TOUCH_IMG_STICK_KNOB, held ? 0.85f : 0.5f, {0.8f, 0.85f, 1.0f}};
     }
     return n;
 }

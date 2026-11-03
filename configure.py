@@ -245,6 +245,13 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_tex.frag", "runtime/shaders/vk_fill.frag",
                        "runtime/shaders/vk_touch.frag"]
         n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, atools.glslc, OUT), description="GLSLC $out")
+        # the touch controls' pictures (android/touch_icons; order = TOUCH_IMG_* in touch_android.h)
+        icons = ["android/touch_icons/%s.png" % k for k in ("stick_base", "stick_knob", "jump_a", "boost_b", "drift_r", "tornado_lr")]
+        icons_h = OUT + "/gen/touch_icons.h"
+        n.rule("icons", "%s tools/embed_icons.py $out $in" % py, description="ICONS $out")
+        # optional: kept out of git (binary); missing -> drawn icons
+        icons = [p for p in icons if os.path.isfile(os.path.join(ROOT, p))] if all(os.path.isfile(os.path.join(ROOT, p)) for p in icons) else []
+        n.build(icons_h, "icons", icons, implicit=["tools/embed_icons.py"])
     elif args.target == "host":
         shader_h = OUT + "/gen/gx_shaders_gl.h"
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")
@@ -266,6 +273,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         shader_h = [shader_h, spec_h]
     else:
         shader_h = [shader_h] if shader_h else []
+        if args.target == "android":
+            shader_h.append(icons_h)
 
     objs = []
     for src in gen_c:

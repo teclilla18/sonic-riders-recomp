@@ -58,7 +58,10 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 - Milestone 3 (2026-11-03, in progress): `platform/android/render_vk.c` (Vulkan, ported from render_deko.c: dynamic
   rendering, push descriptors, pipelines cached in `vk_pipeline_cache.bin`, picture/menu/touch as screen quads) and
   `touch_android.c` (floating stick left; JUMP A, BOOST B, DRIFT R, TORNADO L+R right; PAUSE / MENU top corners; menu
-  taps via `overlay_pointer`; a gamepad hides them; phone Back = menu). First phone run: intro FMV renders at 59.9 fps,
+  taps via `overlay_pointer`; a gamepad hides them; phone Back = menu). Buttons and stick use the user's pictures
+  (`android/touch_icons/*.png`, 55% opaque idle, 85% pressed; atlas by `tools/embed_icons.py`). The PNGs are local
+  only (gitignored: the guard refuses binary files); without them the drawn icons are used. Open question for the
+  user: should they go in the repo (would need their OK for a guard exception)? First phone run: intro FMV renders at 59.9 fps,
   touch controls drawn (self-capture `SR_SHOTS=300,600`). Screen stays on now (SDL window + SDL_DisableScreenSaver).
 - **Next (continue milestone 3):** (1) let the attract mode reach the title screen and races (`SR_SHOTS` later
   frames) and diff against PC self-captures of the same frames; (2) first-use pipeline hitches (150-300 ms each):

@@ -31,6 +31,7 @@
 #include "runtime.h"
 #include "settings.h"
 #include "touch_android.h"
+#include "touch_icons.h"     /* generated: tools/embed_icons.py (android/touch_icons) */
 
 void input_init(void);
 void input_pump(void);
@@ -124,7 +125,7 @@ typedef struct VkImg {
 } VkImg;
 static VkDeviceMemory g_pool_mem;
 static uint32_t g_pool_type = UINT32_MAX;
-static VkImg g_efb, g_depth, g_ov, g_dummy;
+static VkImg g_efb, g_depth, g_ov, g_dummy, g_icons;
 static VkImg* g_tex;
 static int g_tex_cap;
 static unsigned g_ov_version = ~0u;
@@ -748,6 +749,7 @@ static void vk_setup(void) {
     image_make(&g_depth, EFB_W, EFB_H, g_depth_fmt, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0);
     image_make(&g_ov, OVERLAY_W, OVERLAY_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_dummy, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+    image_make(&g_icons, TOUCH_ATLAS_W, TOUCH_ATLAS_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 
     /* first commands: the dummy white, a transparent overlay, the EFB black with depth at the far plane */
     g_cmd = g_cb[0];
@@ -758,6 +760,12 @@ static void vk_setup(void) {
     VkBufferImageCopy r = {0, 0, 0, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {1, 1, 1}};
     vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_dummy.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &r);
     to_layout(&g_dummy, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    /* the touch controls' pictures, once */
+    memcpy(g_smap[0] + OFF_STAGE, k_touch_atlas, sizeof k_touch_atlas);
+    to_layout(&g_icons, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VkBufferImageCopy ir = {OFF_STAGE, 0, 0, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {TOUCH_ATLAS_W, TOUCH_ATLAS_H, 1}};
+    vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_icons.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ir);
+    to_layout(&g_icons, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     VkImageSubresourceRange cr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     to_layout(&g_ov, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkClearColorValue clear0 = {{0, 0, 0, 0}};
@@ -1051,6 +1059,13 @@ static void draw_overlay_and_touch(void) {
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
     for (int i = 0; i < nt; i++) {
         float px[4] = {ts[i].cx - ts[i].r, ts[i].cy - ts[i].r, ts[i].cx + ts[i].r, ts[i].cy + ts[i].r};
+        if (ts[i].image >= 0 && ts[i].image < TOUCH_ICONS) {  /* a picture: premultiplied, faded by its opacity */
+            const uint16_t* ic = k_touch_icon[ts[i].image];
+            float uv[4] = {(float)ic[0] / TOUCH_ATLAS_W, 0, (float)(ic[0] + ic[1]) / TOUCH_ATLAS_W, (float)ic[2] / TOUCH_ATLAS_H};
+            float fade[4] = {ts[i].alpha, ts[i].alpha, ts[i].alpha, ts[i].alpha};
+            quad(Q_TEX_OVER, TGT_SWAP, 15, g_icons.view, g_samp_lin, W, H, px, uv, fade, NULL);
+            continue;
+        }
         float col[4] = {ts[i].tint[0], ts[i].tint[1], ts[i].tint[2], ts[i].alpha};
         float shape[4] = {(float)ts[i].kind, (float)ts[i].icon, (float)ts[i].pressed, 1.0f};
         quad(Q_TOUCH, TGT_SWAP, 15, NULL, NULL, W, H, px, NULL, col, shape);

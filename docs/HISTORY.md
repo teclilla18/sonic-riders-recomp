@@ -620,4 +620,10 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
 - The user reported the screen going to sleep after 10 minutes: M2 never created a window; now SDL's window +
   SDL_DisableScreenSaver (keep screen on). [likely; not timed]
 - Switch dksh all `per_warp_scratch 0` after the gx.vert change (guarded by DEPTH_ZERO_ONE). Host + Switch build.
+- Touch icons from the user (zip of 1024 px PNGs: joystick, A, B, R, L+R): cropped to content, slivers of neighbouring
+  buttons removed (drift, tornado), the joystick split into a base (knob well filled dark) and a knob, 384 px, in
+  `android/touch_icons/` (the user's own art, not from the game; gitignored, since the guard refuses binary files: without
+  them the build uses the drawn icons). `tools/embed_icons.py` (stdlib PNG decoder) makes a
+  premultiplied atlas header; render_vk.c draws them at 55% (pressed 85%, 7% smaller). Phone self-capture: shown
+  over the intro at 60 fps. [confirmed] PAUSE / MENU keep the drawn icons (no pictures given).
 
