@@ -40,8 +40,11 @@ def launcher(flavor):
         "@echo off",
         "rem Sonic Riders native port: builds the %s version from your own disc image (see README-FIRST.txt)" % plat,
         'powershell -NoProfile -ExecutionPolicy Bypass -File "%%~dp0setup\\setup.ps1" -Target %s %%*' % target,
+        # keep setup's exit code for unattended runs (tools/sandbox_test.py sets SR_NOPAUSE=1)
+        "set SR_SETUP_RC=%ERRORLEVEL%",
         "echo.",
-        "pause",
+        "if not defined SR_NOPAUSE pause",
+        "exit /b %SR_SETUP_RC%",
     ]
     return ("\r\n".join(lines) + "\r\n").encode()
 

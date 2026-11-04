@@ -4,6 +4,14 @@
 
 - Android setup: a first build could fail at the very end with "unable to find library -lSDL2" (the game was
   linked before SDL2 was built; running the setup again worked). The link now waits for SDL2 (issue #13).
+- Android setup from the release download failed at the last step ("unrecognized arguments") for everyone in
+  v0.4.0; fixed. An Android-only setup on a fresh PC also stopped at "Dear ImGui not found"; fixed.
+- Setup on a fresh Windows (nothing installed): the code analysis step failed (a missing Visual C++ runtime
+  DLL); the setup now brings its own copy.
+- Setup downloads continue after a dropped connection (up to 5 tries, resuming) instead of stopping.
+- Android setup no longer leaves a background `adb.exe` running.
+- The "Install Sonic Riders" .bat returns the setup's result, so it can be scripted. Releases are now tested by
+  a clean install in Windows Sandbox (PC and Android).
 
 ## v0.4.0 (2026-11-04)
 

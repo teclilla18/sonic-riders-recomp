@@ -226,11 +226,22 @@ function Download([string]$url, [string]$sha256, [string]$userAgent = "") {
     $tmp = "$file.part"
     # Windows' own curl.exe: some package servers (devkitPro's) refuse .NET's web client
     if (Test-Path $curlExe) {
-        $cargs = @("-fsSL", "--retry", "3", "-o", $tmp)
+        # a dropped connection (curl 56, "Connection was reset") is not one of the errors --retry repeats,
+        # and a 1 GB download (the Android NDK) can meet one: try again, resuming the partial file (-C -)
+        if (Test-Path $tmp) { Remove-Item $tmp -Force }
+        $cargs = @("-fsSL", "--retry", "3", "-C", "-", "-o", $tmp)
         if ($userAgent) { $cargs += @("-A", $userAgent) }
-        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-        $out = (& $curlExe @cargs $url 2>&1 | ForEach-Object { "$_" }) -join " "
-        $ErrorActionPreference = $old
+        for ($try = 1; $try -le 5; $try++) {
+            $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+            $out = (& $curlExe @cargs $url 2>&1 | ForEach-Object { "$_" }) -join " "
+            $ErrorActionPreference = $old
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($LASTEXITCODE -eq 33 -and (Test-Path $tmp)) { Remove-Item $tmp -Force }  # server cannot resume
+            if ($try -lt 5) {
+                Log "  interrupted (curl exit code $LASTEXITCODE $out); trying again ($($try + 1) of 5)" "Yellow"
+                Start-Sleep -Seconds (5 * $try)
+            }
+        }
         if ($LASTEXITCODE -ne 0) {
             if (Test-Path $tmp) { Remove-Item $tmp -Force }
             Fail "Download failed: $url (curl exit code $LASTEXITCODE $out)" "Check your internet connection (or a firewall/proxy), then run the setup again; finished downloads are kept."
@@ -307,6 +318,10 @@ $python = Join-Path $pyDir "python.exe"
 $zstdDir = Ensure-Tool $tc.zstandard
 $ninja = Join-Path (Ensure-Tool $tc.ninja) "ninja.exe"
 $dtk = Join-Path (Ensure-Tool $tc.dtk) "dtk.exe"
+# dtk.exe needs the Visual C++ runtime (VCRUNTIME140.dll), which a clean Windows does not have
+# (found by tools/sandbox_test.py). The embeddable Python ships the same DLL: put a copy next to dtk.
+$vcrt = Join-Path (Split-Path $dtk) "vcruntime140.dll"
+if (-not (Test-Path $vcrt)) { Copy-Item (Join-Path $pyDir "vcruntime140.dll") $vcrt }
 $imgui = Ensure-Tool $tc.imgui
 Log "Python, ninja, decomp-toolkit and Dear ImGui ready."
 
@@ -409,7 +424,7 @@ $builtApks = @()
 if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
-        $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore)
+        $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore, "--imgui", $imgui)
         if ($Icon) { $andArgs += @("--icon", $Icon) }  # else the save icon from baserom\_Main.rel
         Run "configure (Android, $a)" $python $andArgs
         Run "build the Android APK ($a; this takes a while)" $ninja @()
@@ -475,7 +490,10 @@ if ($builtApks.Count -gt 0) {
     $phoneApk = $builtApks | Where-Object { $_ -match "arm64-v8a" } | Select-Object -First 1
     if (-not $phoneApk) { $phoneApk = $builtApks[0] }
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-    $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" })
+    # "adb devices" starts the adb server, which keeps running (and holds the tools folder) after the
+    # setup: skip it when the answer is already no, and stop it at the end
+    $devs = @()
+    if ($Install -ne "no") { $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" }) }
     $ErrorActionPreference = $old
     if (-not $Install) {
         if ($devs.Count -eq 1) { $Install = (Ask "Install it on the connected Android device now? (y/n)" "y") -replace "^[yY].*", "yes" -replace "^[nN].*", "no" }
@@ -508,6 +526,11 @@ if ($builtApks.Count -gt 0) {
         Log "Installed. Start 'Sonic Riders' from the phone's app list. Tap the top-left button for the settings menu." "Green"
     } else {
         Log "Android: install $phoneApk with 'adb install -r' (USB debugging on)." "Green"
+    }
+    if ($Install -ne "no") {
+        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        & $adb kill-server 2>&1 | Out-Null
+        $ErrorActionPreference = $old
     }
 }
 if (-not $sdDir -and -not $builtNro -and -not $builtExe -and $builtApks.Count -eq 0) { Log "Done." "Green" }

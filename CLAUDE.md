@@ -67,6 +67,8 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 - First time: `setup\setup.ps1 -Iso <image.iso> -Target both -NoSd -Yes`. Then `python configure.py --target host
   --toolchain mingw --llvm-mingw <tools>\llvm-mingw --sdl <tools>\sdl2` (or `--target switch --devkitpro
   <tools>\devkitpro`), `--imgui <tools>\imgui` once, and `ninja`. Variables: docs/notes/debug-variables.md.
+- **Before every release: the cold Windows Sandbox test, PC and Android** (`tools/sandbox_test.py`, from the
+  release zips, no download cache; ask the user before launching). Procedure: docs/notes/build-and-test.md.
 
 ## End of every session
 

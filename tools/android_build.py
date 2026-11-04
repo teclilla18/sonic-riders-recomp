@@ -173,7 +173,7 @@ def add_common(n, t, py, root, abis):
     n.rule("dex", "%s %s dex %s %s %s $out %s $srcdirs" % (py, ME, t.jdk, t.bt, t.plat, JAVA_PACKAGE_DIR), description="DEX $out")
     n.rule("keystore", "%s %s keystore %s $out" % (py, ME, t.jdk), description="KEYSTORE (local signing key)")
     n.rule("apk", "%s %s apk --jdk %s --build-tools %s --platform %s --manifest android/AndroidManifest.xml.in "
-           "--package $package --label \"$label\" --version-code $vcode --version-name $vname --dex $dex --keystore %s "
+           "--package $package --label \"$label\" --version-code $vcode --version-name \"$vname\" --dex $dex --keystore %s "
            "--strip %s $libs $icon --out $out" % (py, ME, t.jdk, t.bt, t.plat, t.keystore, t.strip), description="APK $out")
     n.build(t.keystore, "keystore")
     sdl_java = t.sdl_src + "/android-project/app/src/main/java"
