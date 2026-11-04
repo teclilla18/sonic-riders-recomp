@@ -226,11 +226,22 @@ function Download([string]$url, [string]$sha256, [string]$userAgent = "") {
     $tmp = "$file.part"
     # Windows' own curl.exe: some package servers (devkitPro's) refuse .NET's web client
     if (Test-Path $curlExe) {
-        $cargs = @("-fsSL", "--retry", "3", "-o", $tmp)
+        # a dropped connection (curl 56, "Connection was reset") is not one of the errors --retry repeats,
+        # and a 1 GB download (the Android NDK) can meet one: try again, resuming the partial file (-C -)
+        if (Test-Path $tmp) { Remove-Item $tmp -Force }
+        $cargs = @("-fsSL", "--retry", "3", "-C", "-", "-o", $tmp)
         if ($userAgent) { $cargs += @("-A", $userAgent) }
-        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-        $out = (& $curlExe @cargs $url 2>&1 | ForEach-Object { "$_" }) -join " "
-        $ErrorActionPreference = $old
+        for ($try = 1; $try -le 5; $try++) {
+            $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+            $out = (& $curlExe @cargs $url 2>&1 | ForEach-Object { "$_" }) -join " "
+            $ErrorActionPreference = $old
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($LASTEXITCODE -eq 33 -and (Test-Path $tmp)) { Remove-Item $tmp -Force }  # server cannot resume
+            if ($try -lt 5) {
+                Log "  interrupted (curl exit code $LASTEXITCODE $out); trying again ($($try + 1) of 5)" "Yellow"
+                Start-Sleep -Seconds (5 * $try)
+            }
+        }
         if ($LASTEXITCODE -ne 0) {
             if (Test-Path $tmp) { Remove-Item $tmp -Force }
             Fail "Download failed: $url (curl exit code $LASTEXITCODE $out)" "Check your internet connection (or a firewall/proxy), then run the setup again; finished downloads are kept."
