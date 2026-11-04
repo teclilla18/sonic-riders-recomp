@@ -115,8 +115,12 @@ own game files, as we do.
 - PCH-2000, firmware 3.65 with Ensō; `ux0:` is a ~120 GB card through YAMT (~13 GB free).
 - Present: libshacccg (extracted with ShaRKF00D to `ur0:data/libshacccg.suprx`), iTLS-Enso, YAMT, PSM runtime
   driver, AutoPlugin 2, VitaGrafix, VitaShell, crash dumps in `ux0:data/` (so core dumps are on).
-- Not visible over USB: `ur0:tai/config.txt` (no `ux0:tai/`), so whether PSVshell, kubridge or vitacompanion are
-  loaded is unknown. vitacompanion is not on the card. VitaShell's own FTP (SELECT, port 1337) works without it.
+- `ur0:tai/config.txt` (read over VitaShell FTP): **kubridge**, **PSVshell**, **lolita500** and NoPowerLimits are
+  loaded (two overclockers at once: the probe must log the clocks it actually got with
+  `scePowerGetArmClockFrequency` / `scePowerGetGpuClockFrequency`); pngshot (PNG screenshots); kuio. On the card
+  but not loaded: **udcd_uvc** (USB screen capture). **vitacompanion: not installed.**
+- VitaShell FTP (SELECT, port 1337) works over Wi-Fi; its connection drops now and then while the Vita stays on:
+  retry instead of assuming it is off.
 
 ## Suggested probe build (like Android milestone 1)
 
@@ -131,8 +135,7 @@ work. Run on hardware only (Vita3K is not a stand-in: it skips DRAM latency and 
    compile time for 50 specialized shaders. Report CPU submit ms and GPU ms at GPU 222 MHz.
 3. **Gate:** continue only if V1a is <= ~45 ms/step at 500 MHz (headroom for savings) and V1b submits 7,000 draws in
    <= ~15 ms on a second core. Otherwise stop and record the numbers.
-4. Prerequisites still open: whether PSVshell and kubridge are in `ur0:tai/config.txt`, vitacompanion (to install), and
-   the Vita's IP.
+4. Prerequisites still open: vitacompanion (to install, with the user's OK) for launch and button presses.
 
 ## Sources (read 2026-11-03)
 
