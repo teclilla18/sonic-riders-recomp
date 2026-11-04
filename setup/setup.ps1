@@ -155,7 +155,7 @@ if (-not $Target) {
     Log "  1) Nintendo Switch (homebrew .nro, copied to your SD card)"
     Log "  2) Windows PC (play natively on this PC, no emulator)"
     Log "  3) Both"
-    Log "  4) Android phone (APK; in development: the game runs, no picture yet)"
+    Log "  4) Android phone (APK, installed over USB; 64-bit phone with Android 11 or newer)"
     Log "  5) All three"
     $c = Ask "Choose 1, 2, 3, 4 or 5" "1"
     switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } "4" { $Target = "android" } "5" { $Target = "all" } default { Fail "Unknown choice '$c'." } }
@@ -505,7 +505,7 @@ if ($builtApks.Count -gt 0) {
             if ($have -notmatch $IsoSha1) { Fail "The disc image on the phone does not match (storage full?)." }
             Log "Disc image on the phone verified." "Green"
         }
-        Log "Installed. Start 'Sonic Riders' from the phone's app list (no picture yet: Android is in development)." "Green"
+        Log "Installed. Start 'Sonic Riders' from the phone's app list. Tap the top-left button for the settings menu." "Green"
     } else {
         Log "Android: install $phoneApk with 'adb install -r' (USB debugging on)." "Green"
     }

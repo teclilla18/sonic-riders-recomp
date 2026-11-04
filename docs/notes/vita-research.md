@@ -140,6 +140,39 @@ work. Run on hardware only (Vita3K is not a stand-in: it skips DRAM latency and 
    <= ~15 ms on a second core. Otherwise stop and record the numbers.
 4. Prerequisites: none left on the Vita side (vitacompanion, kubridge, PSVshell, libshacccg all present).
 
+## Probe V1a results (2026-11-04, the maintainer's PCH-2000) [confirmed]
+
+Code: branch `vita` (`configure.py --target vita --vitasdk <tools>/vitasdk/vitasdk`, VitaSDK snapshot 2026-10-15 +
+the kubridge package; `runtime/src/platform/vita/`). Installed as `SRNP00001` with vitacompanion `promote`; the
+user's own disc at `ux0:data/sonicriders/game.iso`; `env.txt` with `SR_PERFTEST=1`.
+
+- Clocks: the probe asked CPU 444 but got **CPU 500 / bus 222 / GPU 222 / xbar 166** (the user's lolita500 /
+  PSVshell override it; the log states what was granted).
+- Perf test, no renderer (frames recycled), CPU 500: **1P demo** speed 8.9 steps/s, game ms per step mean 52.1,
+  median 54.8, p95 82.8; **2P demo** 14.6 steps/s, mean 43.0, median 38.7, p95 81.6. The GX FIFO (GP) thread
+  needs 42-51 ms per frame as well. Inside the estimate (52-73 ms at 500 MHz).
+- Gate (<= 45 ms/step at 500 MHz): 1P misses, 2P passes. Full speed in the game's 30 fps mode needs ~1.6x less
+  game-thread work and the GP thread off the critical path; 60 fps is out of reach.
+- Memory: the 512 MiB guest window reserves fine through kubridge (`kuKernelMemReserve`/`Commit`, user's kubridge
+  0.3 = bythos14).
+
+Porting lessons (all fixed on `vita`):
+- VitaSDK newlib ships `threads.h` without its machine part: `runtime/include/compat_vita/threads.h` (pthreads).
+- `timespec_get` is declared but missing: defined in platform_vita.c (CLOCK_REALTIME, the clock pthreads uses).
+- VitaSDK's pthread works only on threads it created: host threads via `pthread_create`, not
+  `sceKernelCreateThread` (crash in `pte_osSemaphoreCancellablePend`).
+- **`_Thread_local` is GCC emutls, which runs in single-thread mode (one shared copy) unless `pthread_cancel` is
+  linked** (libgcc's `__gthread_active_p` tests it). Symptom: guest thread handoffs deadlock before frame 1.
+  Fix: reference `pthread_cancel` (and the pthread calls emutls uses); a boot self-test logs "thread-local check".
+- Debugging without a picture: `boot.txt` breadcrumbs, a line-buffered log, the stall watch (`[stall]`, as on the
+  Switch), `SR_VITA_STALLCORE=1` (a deliberate crash dump after a stall: every thread's registers and stack).
+  Crash dumps are read with a small own script (vita-parse-core's layout: notes MODULE_INFO, THREAD_INFO,
+  THREAD_REG_INFO; PC/LR + a stack scan through `arm-vita-eabi-addr2line`).
+- Screen: `udcd_uvc` on (ur0:tai, *KERNEL) makes the Vita a USB camera "PSVita"; one frame with
+  `ffmpeg -f dshow -i video="PSVita" -frames:v 1 shot.png` (OBS must not hold the device). Remote PS+START
+  screenshots worked once only. Synthetic touch does not unlock the lock screen; `launch` works from it.
+- A launch right after a hard restart may silently not start the app; check that `boot.txt` is new.
+
 ## Sources (read 2026-11-03)
 
 - vita.hacks.guide, updating firmware 3.74 / HENlo: <https://vita.hacks.guide/updating-firmware-(3.74)>

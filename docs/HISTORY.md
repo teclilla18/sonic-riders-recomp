@@ -328,3 +328,14 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   precedent, Xita (Xbox → Vita static recomp), reached 12-20 fps and closed. Remote control: vitacompanion (FTP
   1337, commands 1338: launch/press/quit), screen via udcd-uvc over USB. Suggested probe: headless core +
   GXM 7,000-draw microbench on the user's PCH-2000.
+- 2026-11-04: **v0.4.0 released with the Android port.** Before it, the user's phone crashed while screen
+  recording (VK_ERROR_DEVICE_LOST after ~330 ms frames at the first race frame). Reproduced 4/4 (perf test +
+  `adb shell screenrecord`) and once without recording on a warm phone; ruled out EFB rectangle bounds, long
+  submissions (split at 1,500 draws), robustBufferAccess, the acquire wait stage, and pixel cost (1-pixel scissor
+  still crashes). Cause unknown [uncertain]; shipped as a known issue by the user's decision (docs/notes/android.md).
+  PC and Switch built from the merged tree; 390 Switch dksh with per_warp_scratch 0; no hardware run of the merge.
+- 2026-11-04: **Vita probe V1a on hardware** (branch `vita`). Fixed in order: pthreads only on its own threads,
+  `_Thread_local` shared across threads (GCC emutls single-thread mode until `pthread_cancel` is linked: guest
+  handoffs deadlocked), then the perf test ran: CPU 500 (plugin override of 444), game thread 52.1 ms/step 1P /
+  43.0 ms 2P, GP thread 42-51 ms [confirmed]. Remote: vitacompanion 1.08 installed, udcd_uvc enabled (USB camera
+  "PSVita" read with ffmpeg). docs/notes/vita-research.md.
