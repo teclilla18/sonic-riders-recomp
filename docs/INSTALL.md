@@ -43,7 +43,7 @@
 - **A 64-bit Android phone with Android 11 or newer** and Vulkan graphics (almost every phone from the
   last five years). Tested on a Samsung Galaxy S23 Ultra, where races run at 60 fps; other phones are untested.
 - About **2 GB free on the phone** (the game plus your disc image) and about **4 GB more on the PC** for the
-  Android build tools (a 1.1 GB download the first time, kept for updates).
+  Android build tools (a 1.1 GB download the first time, about 3 GB unpacked, kept for updates).
 - A **USB cable** between the phone and the PC, and **USB debugging** turned on (step 1 below).
 
 ## Install on Switch
