@@ -67,8 +67,8 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 ## After Android (user's wish list, 2026-11-03)
 
 Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
-(user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). Next research topic the user
-asked for: PS Vita porting/recomp scene.
+(user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
+memory fits, CPU is the blocker (est. 50-80 ms/step vs 33 needed); next step only a measuring probe (V1a/V1b).
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

@@ -322,3 +322,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - PS4/PS5 research for the user (docs/notes/ps4-ps5-research.md): public PS5 jailbreak to 13.60 (Relapse +
   etaHEN), 14.x not public; an open PS5 Vulkan driver (Mesa RADV port, PS5_Vulkan) is in use by RetroArch,
   Dolphin and recomp ports, so a PS5 build could reuse render_vk.c. PS4 public to 13.52.
+- PS Vita research for the user (docs/notes/vita-research.md, research only, no code): HENlo runs HENkaku on
+  3.65-3.74, Ensō needs 3.65. Guest memory fits easily; the CPU is the blocker: estimated 50-80 ms per game step
+  at 444-500 MHz vs 33 ms needed for the game's 30 fps mode [uncertain, no hardware measurement]. Closest
+  precedent, Xita (Xbox → Vita static recomp), reached 12-20 fps and closed. Remote control: vitacompanion (FTP
+  1337, commands 1338: launch/press/quit), screen via udcd-uvc over USB. Suggested probe: headless core +
+  GXM 7,000-draw microbench on the user's PCH-2000.
