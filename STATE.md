@@ -80,8 +80,8 @@ not 12%; top function 6%) and conversions are only ~2.3% of executed instruction
 dropped. **Fixed memory base** (window reserved at 0x90000000, base a constant; `--vita-base`, default on the
 Vita): 1P 36.4 vs 37.9 ms/step, 2P 33.4 vs 36.6 in an alternating A/B [likely]. Still ~36 ms vs 33 needed for the
 30 fps mode. Next: device-range test on non-stack accesses (unmapped range + kubridge fault handler?), or start
-the renderer (gxm) since only code-generation-wide gains remain. USB camera (udcd_uvc) is on: the Vita does not
-charge over USB. Details: docs/notes/vita-research.md "Exact profile and fixed memory base", "Game-thread
+the renderer (gxm) since only code-generation-wide gains remain. USB camera (udcd_uvc) is off again (line
+commented in ur0:tai/config.txt, 2026-11-04 night): the Vita charges over USB. Details: docs/notes/vita-research.md "Exact profile and fixed memory base", "Game-thread
 profile", "Float-typed locals prototype".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
