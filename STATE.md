@@ -2,7 +2,7 @@
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
-(addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md).
+(addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
 Latest release: **v0.3.4** (2026-10-29). Unreleased on `main`: online-play groundwork (record/replay, lockstep,
 generated online save, own view) and the performance test (`SR_PERFTEST`).
@@ -54,13 +54,13 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   1P race frame (half of it per-draw cost, `SR_VK_TINYSCISSOR=1` leaves 9-10 ms).
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
 - Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
-- **Done 2026-11-03 (night), waiting for the user's test on the phone (installed, app left running):**
-  new knob picture; stick home north-east; menus-only bigger stick dead zone (game mode `8021B8C0`: 1 menus, 8
-  races); PAUSE = circle with START; menu taps and Close fixed (Close redraw bug), no Fullscreen, Controls text;
-  app icon from the save icon (or `--icon` / `-Icon`; the user's box-art .ico stays local, not committable);
-  analog triggers calibrated per pad (85% of the learned peak clicks; `[input] ... trigger: pressed to` log lines).
-- **Next:** read the user's feedback and `[input] ... trigger` / `[touch] game mode` lines from their log (story mode
-  and other modes may use other mode values); then GPU cost (specialized shaders from the shader keys, per-draw UBO
+- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra):** stick (home north-east, calmer in
+  menus via game mode `8021B8C0`), menu taps and Close, START button, triggers in races (log: RT reached 32767 and
+  clicked; LT only light presses, stayed analog). App icon: the user's own .ico, built locally with `--icon`
+  (box art, never committed; default for players is the save icon). Right stick → C-stick: checked in code (same
+  round 25% dead zone, full range, up = higher, sent unchanged in the SI poll); not checked in a game screen that
+  uses the C-stick.
+- **Next:** GPU cost (specialized shaders from the shader keys, per-draw UBO
   size), pre-rotation, 2P with two pads.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
@@ -77,7 +77,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android port (branch `android`): user test of the touch/controller round 2, then GPU cost (see "Android" above).
+1. Android port (branch `android`): GPU cost next (see "Android" above). Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
 2. Online phase 3/4 (paused, see above).
 3. #12 PC at 13 fps (v0.3.4): read the attached log (GPU? vsync? software GL?).
 4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.

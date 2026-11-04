@@ -1,5 +1,7 @@
 # Code map
 
+Build/run commands: [notes/build-and-test.md](notes/build-and-test.md) "Quick commands". Doc index: [REFERENCE.md](REFERENCE.md).
+
 Where things live, so a change starts with `grep -n '<name>' <file>` instead of reading whole files. Names are
 functions or macros (line numbers drift). Sizes are approximate line counts.
 
