@@ -4,13 +4,11 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-Latest release: **v0.4.0** (2026-11-04): the Android port (`android` merged into `main`) plus the online-play
-groundwork and the performance test. Vita probe code lives on branch `vita` (not in the release).
-
-**v0.4.0's Android download is broken for everyone** (APK step: "unrecognized arguments"); fixed on `main`
-with four more clean-install fixes found by the new Windows Sandbox test (`tools/sandbox_test.py`, 2026-11-04):
-cold PC and Android installs PASS on 174b9811 (zips v0.4.1-rc5, not published). **Next: release v0.4.1 once the
-user agrees** (rerun the cold sandbox test on the final commit first; procedure: notes/build-and-test.md).
+Latest release: **v0.4.1** (2026-11-04, tag at c263ebe): setup fixes only (the game is v0.4.0's: the Android
+port, online-play groundwork, perf test). **v0.4.0's GitHub release was deleted** (user's request; its tag stays):
+its Android download failed at the APK step for everyone. v0.4.1's fixes were found by the new Windows Sandbox
+clean-install test (`tools/sandbox_test.py`); cold PC and Android installs PASS on c263ebe, in both
+`C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not yet seen by a user. Vita code: branch `vita` only.
 
 ## Windows host build (the fast test loop)
 

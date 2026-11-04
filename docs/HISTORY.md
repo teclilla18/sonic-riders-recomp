@@ -380,3 +380,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   exit code (`SR_NOPAUSE=1` skips the pause). Final cold runs on commit 174b9811 (zips v0.4.1-rc5): PC and
   Android PASS, each in `C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not tested: playing (no GPU in
   the sandbox), the Switch zip. Procedure: docs/notes/build-and-test.md.
+- 2026-11-04 (f): **v0.4.1 released** (tag c263ebe; PC, Switch and Android zips): the setup fixes of (e). Cold
+  sandbox PC + Android PASS on the tagged commit (both folders) before publishing [confirmed]. The v0.4.0 GitHub
+  release was deleted at the user's request (its Android download was broken); the v0.4.0 tag remains.
