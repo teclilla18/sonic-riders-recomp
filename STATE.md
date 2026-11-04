@@ -1,4 +1,4 @@
-# State (2026-11-04)
+# State (2026-11-04, evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -6,6 +6,11 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 
 Latest release: **v0.4.0** (2026-11-04): the Android port (`android` merged into `main`) plus the online-play
 groundwork and the performance test. Vita probe code lives on branch `vita` (not in the release).
+
+**v0.4.0's Android download is broken for everyone** (APK step: "unrecognized arguments"); fixed on `main`
+with four more clean-install fixes found by the new Windows Sandbox test (`tools/sandbox_test.py`, 2026-11-04):
+cold PC and Android installs PASS on 174b9811 (zips v0.4.1-rc5, not published). **Next: release v0.4.1 once the
+user agrees** (rerun the cold sandbox test on the final commit first; procedure: notes/build-and-test.md).
 
 ## Windows host build (the fast test loop)
 
@@ -37,12 +42,9 @@ groundwork and the performance test. Vita probe code lives on branch `vita` (not
 
 ## Last hardware tests
 
-- **2026-10-30, overclocked Switch, driven over Wi-Fi (switch-remote):**
-  - `SR_DETCLOCK` det route: two Switch runs = two PC runs, identical memory on all 7,700 frames.
-  - A PC input recording replayed on the Switch: identical on all 7,700 frames.
-  - First PC-Switch lockstep session (Switch hosting, PC as player 2): identical up to frame 6917, then a desync at
-    6919 caused by the sign of a NaN (x86 vs ARM). PC-PC and Switch-Switch are not affected.
-  - Perf test record: `perf/results/2026-10-30-switch.json`.
+- **2026-10-30, overclocked Switch (switch-remote):** det route and a replayed PC recording identical to the PC on
+  all 7,700 frames; PC-Switch lockstep desync at 6919 (NaN sign, x86 vs ARM, see Online). Perf record:
+  `perf/results/2026-10-30-switch.json`.
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 

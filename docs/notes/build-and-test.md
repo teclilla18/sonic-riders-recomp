@@ -66,6 +66,32 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 
 **Setup tool and releases (2026-10-22):** `SonicRidersSetup.bat` → `setup/setup.ps1` builds everything from the user's disc image with a SHA-256-pinned toolchain (`setup/toolchain.json`; downloads through Windows' `curl.exe`, since devkitPro's server refuses .NET's web client even with the pacman user agent). PC builds from it use llvm-mingw (`configure.py --toolchain mingw`, output `build/host-mingw/`). `tools/make_release.py --version X` zips the files tracked at HEAD (guard-checked) plus a `VERSION` file; the port logs `[build] <version or git describe>` first (`build/<target>/gen/version.c`, written by configure.py). Hardware performance so far is with an overclock (CPU 1785 / GPU 1152 / MEM 2133); stock clocks run poorly.
 
+**Clean-install release test in Windows Sandbox (2026-11-04)** [confirmed: PC and Android pass, cold]. Run it for PC
+and Android before every release, from the zips users download (not from the repo):
+
+1. `python tools/make_release.py --flavor pc --version <v>` and `--flavor android` (zips in `build/release/`).
+2. `python tools/sandbox_test.py --flavor pc --space --launch` (then `--flavor android`; `--zip` picks another zip;
+   one sandbox at a time). It writes `build/sandbox/<run>/` (the .wsb + logon script; gitignored, the .wsb names
+   the disc image's folder) and an empty `build/sandbox/results/<run>/`, the only writable mapping. The disc image:
+   `--iso`, else a `sandbox-iso: <path>` line in NOTES.local.md, else `baserom/*.iso`; its folder and the zip
+   folder are mapped read-only. 8 GB RAM, networking on, no vGPU (installing is tested, not playing).
+3. Inside, like a new user: the zip is copied to Downloads with a Zone.Identifier (ZoneId=3), extracted with the
+   Explorer shell (the mark reaches the .bat), and "Install Sonic Riders (<Plat>).bat" runs with `-Iso <image>
+   -NoSd -Yes` (Android adds `-AcceptAndroidSdkLicense -Install no`; the .bat adds `-Target`). `SR_NOPAUSE=1`
+   skips the .bat's pause; the .bat returns setup's exit code. `--space` installs a second time into
+   `C:\Sonic Riders Test` (tools are then already downloaded).
+4. PASS = exit code 0 and `build\host-mingw\sonicriders.exe` / `build\android\sonicriders-arm64-v8a.apk`. Results:
+   `RESULT.txt` (always written), `progress.txt`, `setup-N.log` (copied every 30 s); nothing built or from the disc.
+   The sandbox closes itself (`--keep-open` to look inside). Watch `progress.txt` with Monitor.
+- `--launch` starts it minimized without focus (the user can keep using the PC); the VM's priority cannot be
+  lowered without admin. On this PC a cold PC run takes ~1.5 min per install, Android ~3 min (fast network).
+- `--cache <downloads folder>` seeds the tools' downloads read-only: fix-and-rerun loops only; the release check
+  runs cold.
+- Found on its first day (all on `main`, 2026-11-04): dtk.exe needs VCRUNTIME140.dll (copied from the embeddable
+  Python); Android-only setups lacked `--imgui`; every Android build from a release zip failed at the APK step
+  (VERSION "v0.4.0 (commit)" split `--version-name`); a reset connection in the 1 GB NDK download ended the setup
+  (now 5 tries with resume); `adb devices` left an adb server running (Start-Process -Wait hung on it).
+
 **PC program icon (2026-10-23):** [confirmed] `tools/make_icon.py` reads the memory card save icon (32x32 CI8, 8x4 tiles; RGB5A3 palette) from the verified `_Main.rel` at 0x1F7660 (palette at 0x1F7420; found by matching the icon in a real save in `saves/card_a.raw`), writes `build/icon.ico` (PNG entries 16/32/64/128/256: 2x2 average for 16, nearest 2x/4x/8x above) and `configure.py` compiles it in with llvm-mingw's windres when the file exists. SDL2 takes the window/taskbar icon from the program's first icon resource. The setup makes it after step 4 for the PC target (failure only warns). The disc banner (`opening.bnr`, 96x32 logo only) was too wide to read as a square icon.
 
 ## GitHub and pushing
