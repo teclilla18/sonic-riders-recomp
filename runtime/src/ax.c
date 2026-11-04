@@ -73,7 +73,8 @@ enum { MAIN_L, MAIN_R, MAIN_S, AUXA_L, AUXA_R, AUXA_S, AUXB_L, AUXB_R, AUXB_S, N
 static int32_t g_buf[NBUF][FRAME];
 static uint32_t g_compressor_pos;
 
-static int16_t clamp16(int64_t v) { return (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
+/* int32 is enough everywhere: the widest product is int16 * uint16 volume (|v| < 2^31) */
+static inline int16_t clamp16(int32_t v) { return (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
 
 /* ---- the DSP accelerator: sample reads from ARAM with ADPCM decoding and loop handling ---- */
 typedef struct {
@@ -84,7 +85,9 @@ typedef struct {
     PB* pb;
 } Acc;
 
-static uint8_t aram8(uint32_t a) { return *aram_ptr(a); }
+/* ARAM is one 16 MB block (dsp.c): keep its base here instead of a call per byte */
+static uint8_t* s_aram;
+static inline uint8_t aram8(uint32_t a) { return s_aram[a & 0x00FFFFFFu]; }
 
 static uint16_t acc_current_raw(const Acc* a) {
     switch (a->format & 3) {
@@ -107,7 +110,7 @@ static int16_t acc_read_sample(Acc* a) {
         raw &= 0xF;
         int32_t scale = 1 << (a->pred_scale & 0xF);
         if (raw >= 8) raw -= 16;
-        val = clamp16((int64_t)scale * raw + ((0x400 + c1 * a->yn1 + c2 * a->yn2) >> 11));
+        val = clamp16(scale * raw + ((0x400 + c1 * a->yn1 + c2 * a->yn2) >> 11));
         a->yn2 = a->yn1;
         a->yn1 = val;
         a->cur++;
@@ -192,8 +195,12 @@ static void get_input(PB* p, int16_t* out, int count) {
 
 static void mix_add(int32_t* out, const int16_t* in, int count, Vol* v, int16_t* dpop, int ramp) {
     uint16_t vol = v->volume, delta = ramp ? v->delta : 0;
+    if (vol == 0 && delta == 0) {  /* a silent send adds nothing; the last sample (pop) is 0 */
+        if (count > 0) *dpop = 0;
+        return;
+    }
     for (int i = 0; i < count; i++) {
-        int16_t s = clamp16(((int64_t)in[i] * vol) >> 15);
+        int16_t s = clamp16(((int32_t)in[i] * (int32_t)vol) >> 15);
         out[i] += s;
         vol += delta;
         *dpop = s;
@@ -331,6 +338,7 @@ static void output(uint32_t surround_addr, uint32_t lr_addr) {
 
 void ax_process_command_list(uint32_t addr, uint32_t size) {
     if (g_lists++ == 0) rt_log("[ax] first command list at %08X (%u words)", addr, size);
+    s_aram = aram_ptr(0);
     /* SR_AUDIO=0 turns the mixer off (the lists are then only counted). Note that the game needs it:
      * story cutscenes wait for their voices to end (a voice the DSP never stops never ends). */
     static int enabled = -1;
