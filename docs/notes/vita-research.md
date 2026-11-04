@@ -168,7 +168,8 @@ Porting lessons (all fixed on `vita`):
   Switch), `SR_VITA_STALLCORE=1` (a deliberate crash dump after a stall: every thread's registers and stack).
   Crash dumps are read with a small own script (vita-parse-core's layout: notes MODULE_INFO, THREAD_INFO,
   THREAD_REG_INFO; PC/LR + a stack scan through `arm-vita-eabi-addr2line`).
-- Screen: `udcd_uvc` on (ur0:tai, *KERNEL) makes the Vita a USB camera "PSVita"; one frame with
+- Screen: `udcd_uvc` (ur0:tai, *KERNEL) makes the Vita a USB camera "PSVita" but stops USB charging (turned off
+  again 2026-11-04; uncomment its line and reboot to capture); one frame with
   `ffmpeg -f dshow -i video="PSVita" -frames:v 1 shot.png` (OBS must not hold the device). Remote PS+START
   screenshots worked once only. Synthetic touch does not unlock the lock screen; `launch` works from it.
 - A launch right after a hard restart may silently not start the app; check that `boot.txt` is new.
