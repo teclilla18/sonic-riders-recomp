@@ -86,7 +86,15 @@ static int game_thread(void* arg) {
 
 extern const char g_build_version[]; /* build/<target>/gen/version.c, written by configure.py */
 
+#ifdef __ANDROID__
+#include <SDL_main.h>  /* SDLActivity starts the program at SDL_main */
+int platform_android_args(int argc, char** argv);
+#endif
+
 int main(int argc, char** argv) {
+#ifdef __ANDROID__
+    argc = platform_android_args(argc, argv);  /* launch arguments KEY=VALUE -> environment */
+#endif
     platform_init();
     rt_log("[build] %s", g_build_version);
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();

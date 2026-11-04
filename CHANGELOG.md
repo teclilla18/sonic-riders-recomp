@@ -1,7 +1,25 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 (2026-11-04)
 
+- **New: Android phones** (64-bit, Android 11 or newer): a new `SonicRiders-Android-Setup` download builds the
+  game on your PC from your disc image and installs it on your phone over USB (docs/INSTALL.md, "Install on
+  Android"). Tested on a Galaxy S23 Ultra (60 fps races).
+- **Known issue (Android):** the game can crash while you record the screen (rarely also when the phone is very
+  warm): the phone's graphics driver resets it. Reopen the game; a fix is being worked on.
+- Android port (docs/ANDROID_PLAN.md): the setup has a new `-Target android` that
+  downloads the Android tools (pinned and checked), builds the game for your phone, installs it and copies your disc
+  image to it over USB. On Android the game now draws with Vulkan (first picture: the intro movie), with touch
+  controls (stick on the left; jump, boost, drift and tornado on the right; pause and menu buttons in the top corners)
+  and the screen kept awake while playing.
+- Android: the app has an icon (made from the game's save icon on your disc, or your own picture with the setup's
+  `-Icon`); the touch PAUSE button says START; the touch stick sits a little higher and is calmer in menus; the
+  settings menu works reliably by touch (Close really closes it) and its Controls tab explains touch and controllers.
+- Android: races are faster on the phone's graphics chip (the S23 Ultra's demo races now run at a steady 59-60
+  fps), using the same prepared shaders as the Switch.
+- Controllers (PC and Android): analog triggers adapt to each controller, so a full press always clicks L / R
+  (drift) like a GameCube trigger, while a partial press stays analog.
+- Perf test with `SR_DETCLOCK`: the intro skip now lands on the same frame on every machine (runs can be compared).
 - Groundwork for online play (test options for now, see docs/ONLINE.md): record a session's controller
   input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on
   the Switch), and two copies of the game racing in lockstep over the network (`SR_NET`), with a

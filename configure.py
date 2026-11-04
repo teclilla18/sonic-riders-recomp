@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate build.ninja for the port.
 
-usage: python configure.py [--target host|switch]
+usage: python configure.py [--target host|switch|android]
 
 Pipeline (everything under build/ is derived from the game and never committed):
   1. dtk analysis       baserom/main.dol + _Main.rel -> config/GXEE8P/{,_Main/}symbols.txt
@@ -13,6 +13,8 @@ host: --toolchain msvc (default): clang with the MSVC/SDK headers (run `. tools/
       --toolchain mingw: llvm-mingw (--llvm-mingw DIR) with SDL2's MinGW build (--sdl DIR); the setup
       tool (setup/setup.ps1) uses this one
 switch: devkitA64 + libnx + deko3d (devkitPro: $DEVKITPRO, --devkitpro DIR, or C:/devkitPro)
+android: NDK + SDK build-tools + JDK 17 + SDL2 source (the setup downloads them); written by
+      tools/android_build.py (docs/ANDROID_PLAN.md); --android-app probe builds the milestone 1 test APK instead.
 """
 import argparse
 import glob
@@ -23,18 +25,37 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
 from ninja_syntax import Writer  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--target", choices=["host", "switch"], default="host")
+ap.add_argument("--target", choices=["host", "switch", "android"], default="host")
 ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="host compiler setup")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
 ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
+ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-tools, platforms; default $ANDROID_HOME)")
+ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
+ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAVA_HOME)")
+ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
+ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
+ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
+ap.add_argument("--icon", default="", help="your own program icon (.ico; android also .png) instead of the game's save icon "
+                "(PC: build/icon.ico from the setup; android: from baserom/_Main.rel). Keep it out of git unless it is your own art")
+ap.add_argument("--android-app", choices=["game", "probe"], default="game", help="android: the game, or the milestone 1 probe APK")
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+if args.target == "android":
+    import android_build  # noqa: E402
+    if args.android_app == "probe":
+        _py = sys.executable.replace("\\", "/")
+        android_build.write_probe_ninja(args, ROOT, Writer, '"%s"' % _py if " " in _py else _py)
+        sys.exit(0)
+    if args.abi == "both":
+        sys.exit("configure: the game is built for one ABI at a time (--abi arm64-v8a or x86_64)")
+    atools = android_build.Tools(args)
 GEN = "build/gen"
-OUT = "build/%s" % ("host-mingw" if args.target == "host" and args.toolchain == "mingw" else args.target)
+OUT = "build/%s" % ("host-mingw" if args.target == "host" and args.toolchain == "mingw" else
+                    "android-" + args.abi if args.target == "android" else args.target)
 py = sys.executable.replace("\\", "/")
 if " " in py:
     py = '"%s"' % py  # a Python installed under a folder with spaces
@@ -49,9 +70,15 @@ if not gen_c:
 gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/table.c"]
 rt_c = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.c")))
 rt_cpp = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.cpp")))
-plat = "runtime/src/platform/%s" % args.target
-rt_c += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.c")))
-rt_cpp += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.cpp")))
+plats = ["runtime/src/platform/%s" % args.target]
+if args.target == "android":
+    # the desktop's SDL2 layer (paths, threads, audio, input) plus Android's own renderer; not the GL one
+    plats = ["runtime/src/platform/host", "runtime/src/platform/android"]
+for plat in plats:
+    rt_c += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.c")))
+    rt_cpp += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.cpp")))
+if args.target == "android":
+    rt_c = [p for p in rt_c if not p.endswith("/render_gl.c")]
 
 def build_version():
     """the VERSION file that tools/make_release.py puts in the release zip, else the git commit"""
@@ -163,8 +190,20 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32 -lwinmm -lws2_32 -Wl,/MAP:%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/lib/x64/SDL2.dll"
         exe = OUT + "/sonicriders.exe"
+    elif args.target == "android":
+        t = atools
+        sdl_inc, sdl_link = android_build.sdl_flags(t, args.abi)
+        # a shared library loaded by SDLActivity; PIC for everything (the generated code too)
+        andinc = "%s %s -fPIC -ffunction-sections -fdata-sections" % (inc, sdl_inc)
+        n.variable("cc", "%s %s" % (t.clang, t.target(args.abi)))
+        n.variable("cxx", "%s %s" % (t.clangxx, t.target(args.abi)))
+        n.variable("cflags", "-std=gnu11 -g " + andinc)
+        n.variable("cxxflags", "-std=c++20 -g -fno-exceptions -fno-rtti " + andinc)
+        n.variable("ldflags", "-shared -g -Wl,-soname,libmain.so -Wl,--no-undefined -Wl,-z,max-page-size=16384 "
+                   "-Wl,--build-id=sha1 -Wl,--gc-sections -Wl,-Map=%s/sonicriders.map %s -lvulkan -landroid -llog -ldl -lm" % (OUT, sdl_link))
+        exe = OUT + "/libmain.so"
     else:
-        dkp = (args.devkitpro or os.environ.get("DEVKITPRO", "")).replace("\\", "/")
+        dkp =(args.devkitpro or os.environ.get("DEVKITPRO", "")).replace("\\", "/")
         if not os.path.isdir(os.path.join(dkp, "devkitA64")):  # msys-style /opt/devkitpro from a Windows shell
             dkp = "C:/devkitPro"
         if not os.path.isdir(os.path.join(dkp, "devkitA64")):
@@ -202,14 +241,28 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
     shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
                   "runtime/shaders/overlay.vert", "runtime/shaders/overlay.frag", "tools/embed_shaders.py"]
-    if args.target == "host":
+    if args.target == "android":
+        # SPIR-V for the Vulkan backend (platform/android/render_vk.c), compiled with the NDK's glslc
+        shader_h = OUT + "/gen/gx_shaders_spv.h"
+        shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_tex.frag", "runtime/shaders/vk_fill.frag",
+                       "runtime/shaders/vk_touch.frag"]
+        n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, atools.glslc, OUT), description="GLSLC $out")
+        # the touch controls' pictures (android/touch_icons; order = TOUCH_IMG_* in touch_android.h)
+        icons = ["android/touch_icons/%s.png" % k for k in ("stick_base", "stick_knob", "jump_a", "boost_b", "drift_r", "tornado_lr")]
+        icons_h = OUT + "/gen/touch_icons.h"
+        n.rule("icons", "%s tools/embed_icons.py $out $in" % py, description="ICONS $out")
+        # optional: kept out of git (binary); missing -> drawn icons
+        icons = [p for p in icons if os.path.isfile(os.path.join(ROOT, p))] if all(os.path.isfile(os.path.join(ROOT, p)) for p in icons) else []
+        n.build(icons_h, "icons", icons, implicit=["tools/embed_icons.py"])
+    elif args.target == "host":
         shader_h = OUT + "/gen/gx_shaders_gl.h"
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")
     else:
         shader_h = OUT + "/gen/gx_shaders_dksh.h"
         n.rule("shaders", "%s tools/embed_shaders.py dksh $out %s/tools/bin/uam.exe %s/shaders" % (py, dkp, OUT),
                description="UAM $out")
-    n.build(shader_h, "shaders", shader_src)
+    if shader_h:
+        n.build(shader_h, "shaders", shader_src)
     if args.target == "switch":
         # specialized fragment shaders from the recorded keys (game-derived: build/shaderkeys/, not in git)
         key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
@@ -220,8 +273,18 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                                         "runtime/shaders/gx_common.glsl"] + key_files,
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h]
+    elif args.target == "android":
+        # the same specialized fragment shaders as SPIR-V (keys: build/shaderkeys/, game-derived, not in git)
+        key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+        spec_h = OUT + "/gen/gx_spec_spv.h"
+        n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, atools.glslc, OUT),
+               description="SPEC $out")
+        n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
+                                        "runtime/shaders/gx_common.glsl"] + key_files,
+                variables={"in_keys": " ".join(key_files)})
+        shader_h = [shader_h, spec_h, icons_h]
     else:
-        shader_h = [shader_h]
+        shader_h = [shader_h] if shader_h else []
 
     objs = []
     for src in gen_c:
@@ -243,7 +306,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     # optional program icon (PC, llvm-mingw): build/icon.ico if present. It lives in build/ (never
     # committed); the setup or the user puts it there.
-    icon = "build/icon.ico"
+    icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "build/icon.ico"
     if args.target == "host" and args.toolchain == "mingw" and os.path.isfile(os.path.join(ROOT, icon)):
         rc = OUT + "/gen/icon.rc"
         with open(os.path.join(ROOT, rc), "w", encoding="utf-8") as f:
@@ -264,6 +327,17 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
         n.build(OUT + "/SDL2.dll", "copy", sdl_dll)
         n.default(OUT + "/SDL2.dll")
+    if args.target == "android":
+        dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
+        apk = "build/android/sonicriders-%s.apk" % args.abi
+        # the app icon: your own (--icon), else the game's save icon from your disc (like the PC icon)
+        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "baserom/_Main.rel"
+        if not os.path.isfile(os.path.join(ROOT, app_icon)):
+            print("configure: no app icon (%s not found); the APK gets Android's default icon" % app_icon)
+            app_icon = ""
+        android_build.add_apk(n, atools, args.abi, apk, exe, sdl_libs[args.abi], dex, "net.srnative.sonicriders",
+                              "Sonic Riders", "1", build_version()[:40], icon=app_icon)
+        n.default(apk)
     n.build("gen_objs", "phony", objs[:len(gen_c)])
     n.default(exe)
 with open(os.path.join(ROOT, "build.ninja"), encoding="utf-8", errors="replace") as f:

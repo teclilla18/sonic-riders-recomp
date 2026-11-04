@@ -1,7 +1,7 @@
 # Sonic Riders native port
 
-Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch** or a
-**Windows PC**. The game is rebuilt on your own PC from **your own disc image**; this project contains
+Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
+**Windows PC** or an **Android phone**. The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
 > [!IMPORTANT]
@@ -16,13 +16,16 @@ no game files.
 |---|---|---|
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
+| an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
 
 **In short:** extract the zip, double-click the `Install Sonic Riders` file, pick your disc image, and
-wait 10–30 minutes the first time. Both versions are built on a Windows 10/11 PC.
+wait 10–30 minutes the first time (Android: 20–40, then it installs over a USB cable). Every version is
+built on a Windows 10/11 PC.
 
 **You need:** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full 1.4 GB `.iso`) and a
 64-bit Windows 10 (1803+) or 11 PC with internet the first time. Switch: custom firmware with the
-Homebrew Menu. PC: a graphics card with OpenGL 3.3. [All requirements](docs/INSTALL.md#what-you-need)
+Homebrew Menu. PC: a graphics card with OpenGL 3.3. Android: USB debugging turned on, about 2 GB free on
+the phone. [All requirements](docs/INSTALL.md#what-you-need)
 
 ## Playing
 
@@ -33,7 +36,8 @@ Homebrew Menu. PC: a graphics card with OpenGL 3.3. [All requirements](docs/INST
 | START | + | Enter | Start |
 | Settings menu | hold − | hold F1 | hold Back |
 
-Up to 4 players: connect more controllers. [Full controls, settings and multiplayer](docs/PLAYING.md)
+Android: touch controls on screen (top-left button = settings menu) or any controller. Up to 4 players on
+Switch and PC, 2 on one phone: connect more controllers. [Full controls, settings and multiplayer](docs/PLAYING.md)
 
 ## Status
 
@@ -42,6 +46,8 @@ Playable from boot to races, story mode and 4-player Free Race, with sound, on b
 - **PC:** 60 fps on the test PC (RTX 3060), 4 players included.
 - **Switch (stock clocks):** a steady 30 fps in races (1 player tested); 60 fps in lighter scenes with
   the *60 fps* setting.
+- **Android (new in v0.4.0):** 60 fps races on a Galaxy S23 Ultra (other phones untested). Known issue: it
+  can crash while you record the screen.
 - **Switch (overclocked):** 1–2 players mostly 60 fps; 3 players mostly 60 with dips in the busiest
   moments; 4 players about 30 fps.
 - Known issues are tracked in [Issues](../../issues); what changed in each version is in the

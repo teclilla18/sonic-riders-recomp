@@ -54,4 +54,4 @@ with one `NAME=VALUE` per line; on PC, environment variables. For example:
 | `SR_SHOTS=1` | Periodic screenshots |
 | `SR_WATCHDOG=<seconds>` | Dump the game's state after that many seconds |
 
-The full list is in [REFERENCE.md](REFERENCE.md) ("Debug variables").
+The full list is in [notes/debug-variables.md](notes/debug-variables.md).

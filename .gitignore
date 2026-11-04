@@ -59,6 +59,23 @@ fst_listing.txt
 *.dksh
 *.bin
 
+# Android build products (contain recompiled game code; built locally, never distributed)
+*.apk
+*.aab
+*.apks
+*.idsig
+*.so
+*.dex
+*.spv
+*.keystore
+*.jks
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+# the touch-control pictures are the user's own art and are committed:
+# android/touch_icons/: committed (own art, pinned in tools/check_no_game_data.py OWN_ART)
+
 # Caches / IDE
 __pycache__/
 *.pyc

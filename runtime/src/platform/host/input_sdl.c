@@ -4,7 +4,8 @@
  *
  * Keyboard: arrows = main stick, I/J/K/L = C stick, T/F/G/H = D-pad, X = A, Z = B, S = X, A = Y,
  *           Enter = START, Q = L, W = R, E = Z.
- * Gamepad (SDL layout): A/B/X/Y, Start, left stick, right stick = C, triggers = L/R, RB = Z, D-pad.
+ * Gamepad (SDL layout): A/B/X/Y, Start, left stick, right stick = C, triggers = L/R (analog, click calibrated
+ *           per pad: trigger()), RB = Z, D-pad.
  * Testing: SR_INPUT scripts buttons (input_script.c).
  *          SR_PADS=N connects ports 1..N even without gamepads (scripted multiplayer tests). */
 #include <SDL.h>
@@ -72,6 +73,41 @@ void input_init(void) {
 
 static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 
+/* Analog triggers. A GameCube trigger is analog for most of its travel and clicks (the digital L / R
+ * that Sonic Riders' drift reads) only at the bottom. Pads report different maximums (an Xbox Series X
+ * pad over Bluetooth on Android did not always reach the old fixed 29000 of 32767, so a full press
+ * sometimes gave a weak or no drift). So each pad's trigger peak is learned while playing: the analog
+ * value is scaled so the peak is 255, and the click comes at TRIG_CLICK of the peak. Until a peak is
+ * seen, TRIG_PEAK0 is assumed (a full press then always clicks; a deeper one only raises the peak). */
+#define TRIG_PEAK0 26000
+#define TRIG_CLICK 0.85
+static int g_trig_peak[PORTS][2];
+static int g_trig_press[PORTS][2];   /* the deepest point of the press going on (0: released) */
+static int g_trig_logged[PORTS][2];  /* the deepest press logged so far */
+
+static void trigger(int port, int side, int v, uint8_t* analog, uint16_t* buttons, uint16_t click) {
+    int* peak = &g_trig_peak[port][side];
+    int* press = &g_trig_press[port][side];
+    if (*peak < TRIG_PEAK0) *peak = TRIG_PEAK0;
+    if (v > *peak) *peak = v;
+    if (v > 1000 && v > *press) *press = v;
+    if (v <= 1000 && *press) {  /* released: a press deeper than any before goes to the log */
+        if (*press > g_trig_logged[port][side]) {
+            rt_log("[input] port %d %s trigger: pressed to %d of 32767 (peak %d, click from %d)", port + 1,
+                   side ? "right" : "left", *press, *peak, (int)(*peak * TRIG_CLICK));
+            g_trig_logged[port][side] = *press;
+        }
+        *press = 0;
+    }
+    if (v <= 1000) return;
+    int a = (int)((long)v * 255 / *peak);
+    *analog = (uint8_t)(a > 255 ? 255 : a);
+    if (v >= (int)(*peak * TRIG_CLICK)) {
+        *buttons |= click;
+        *analog = 255;  /* as on a GameCube, a click is the bottom of the travel */
+    }
+}
+
 /* one gamepad's state added into *p */
 static void read_gamepad(SDL_GameController* c, int port, GcPad* p) {
     int lx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTX), ly = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTY);
@@ -79,8 +115,8 @@ static void read_gamepad(SDL_GameController* c, int port, GcPad* p) {
     stick8(lx, ly, &p->stick_x, &p->stick_y);
     stick8(rx, ry, &p->c_x, &p->c_y);
     int tl = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERLEFT), tr = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-    if (tl > 1000) { p->trig_l = (uint8_t)(tl * 255 / 32767); if (tl > 29000) p->buttons |= B_L; }
-    if (tr > 1000) { p->trig_r = (uint8_t)(tr * 255 / 32767); if (tr > 29000) p->buttons |= B_R; }
+    trigger(port, 0, tl, &p->trig_l, &p->buttons, B_L);
+    trigger(port, 1, tr, &p->trig_r, &p->buttons, B_R);
     static const struct { SDL_GameControllerButton b; uint16_t m; } map[] = {
         {SDL_CONTROLLER_BUTTON_A, B_A}, {SDL_CONTROLLER_BUTTON_B, B_B}, {SDL_CONTROLLER_BUTTON_X, B_X},
         {SDL_CONTROLLER_BUTTON_Y, B_Y}, {SDL_CONTROLLER_BUTTON_START, B_START},
@@ -118,8 +154,12 @@ static void update_gamepads(void) {
             if (!g_ctl[i] && free_port < 0) free_port = i;
         }
         if (used || free_port < 0) continue;
-        if ((g_ctl[free_port] = SDL_GameControllerOpen(j)))
+        if ((g_ctl[free_port] = SDL_GameControllerOpen(j))) {
             rt_log("[input] port %d: gamepad %s", free_port + 1, SDL_GameControllerName(g_ctl[free_port]));
+            memset(g_trig_peak[free_port], 0, sizeof g_trig_peak[free_port]);  /* a new pad learns its own peaks */
+            memset(g_trig_press[free_port], 0, sizeof g_trig_press[free_port]);
+            memset(g_trig_logged[free_port], 0, sizeof g_trig_logged[free_port]);
+        }
     }
 }
 
@@ -151,6 +191,9 @@ void input_pump(void) {
     }
     update_gamepads();
     GcPad pads[PORTS];
+#ifdef __ANDROID__
+    { void touch_apply(GcPad* p); touch_apply(&p); }  /* the touch controls (platform/android/touch_android.c) */
+#endif
     pads[0] = p;
     for (int i = 1; i < PORTS; i++) pads[i] = k_neutral;
     for (int i = 0; i < PORTS; i++)

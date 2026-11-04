@@ -1,407 +1,11 @@
 # History
 
-Every dated session and hardware-test note from the original NOTES.md, verbatim, oldest first. New entries go at
+Every dated session and hardware-test note, oldest first (2026-10-16 to 2026-10-25: [archive/history-2026-10-16_to_25.md](archive/history-2026-10-16_to_25.md)). New entries go at
 the end. Don't read this file whole: `grep -n '^## ' docs/HISTORY.md` lists the entries; grep a date, an issue
 number (`#11`), an address or an `SR_` variable to find the story behind it. Current status: ../STATE.md; durable
-facts: REFERENCE.md.
+facts: REFERENCE.md (index of docs/notes/).
 
 Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not proven; **[uncertain]** = guess / needs work.
-
-## Original NOTES.md header (2026-10-16 .. 2026-10-30)
-
-The resume block at the top of NOTES.md started like this; its paragraphs are split into the dated entries below
-(procedures and setup went to REFERENCE.md).
-
-## ▶ RESUME HERE (read first in a new session)
-
-Local-only details (machine paths, the test console's SD card, hardware-test logistics) are in `NOTES.local.md`, which is gitignored. Read it too when it exists.
-
-**Latest state and next steps: "STATE 2026-10-18" at the end of this file.** The text below is the history.
-
-## 2026-10-16: session 4 - why the Switch screen was black (fixed)
-
-**Session 4: why the Switch screen was black (fixed)**
-- **uam (deko3d's shader compiler) miscompiles a runtime component index into a uniform-buffer vector.** `xfm[i >> 2][i & 3]` in the vertex stage returned wrong values for components 1–3. Every vertex was therefore transformed by a garbage matrix, and nothing rasterized.
-- The fragment shader's runtime-indexed local arrays (`r[4]`, `cin[16]`, `ain[8]`) also needed **194 KB per-warp scratch memory**, far beyond the queue default.
-- **Rule for the shared GLSL:** never index a vector or a local array with a runtime value. Use explicit selects instead: `pick()` in `gx_common.glsl`, and `comp()`/`cinput()`/`ainput()`/`reg()` in `gx.frag`.
-- Check after shader changes: both dksh files in `build/switch/shaders/` must report `per_warp_scratch 0`. Read it from the DkshProgramHeader at `programs_off`, offset 20.
-- How it was found: a self-test (EFB clear → blit → capture) plus re-rendering one frame with state overrides and tiny debug shaders, bisected inside Eden. That scaffolding was removed after the fix; the method is recorded here.
-
-## 2026-10-16: session 5 changes (from hardware test 3)
-
-**Session 5 changes (from hardware test 3):**
-- **Save creation:** `exi.c` rewrote the whole 512 KB card file after every page program or erase (~1250 per save, about 600 MB of SD writes). On the Switch that outlasted the CARD library's timeout alarms. The card is now written by a background thread once writes have been idle for 0.5 s, and at exit. Verified on PC: a fresh card gets `SONICRIDERS_GAMEDATA_01`.
-- **Texture cache thrash (the main slowdown):** the cache's slot index `(key ^ key >> 21) % 8192` ignored most address bits, so same-size textures evicted each other every frame: hundreds of re-decodes and 1–6 MB/frame of uploads, with "0 same key" in the churn log. It is now a two-way set with a splitmix index. Hashing is also cheaper: a 512-sample hash every frame, plus the full hash every 16th frame (staggered).
-- **GX state:** a state change used to copy 8 KB of registers (about 33 MB/frame in races), and overflowed the deko3d UBO area, silently dropping draws. Now:
-  - the state uniform block is 1.7 KB: BP, XF registers, konst, and a table of XF-memory chunks;
-  - XF memory travels as 64-word chunks, copied only when dirty (`g_gx.xfm_dirty`, set in `gx_fifo.c`), in a per-frame pool. It is read through `XFM_WORD()`: an SSBO on deko3d, a buffer texture on GL;
-  - identical consecutive states are dropped.
-  The vertex shader reads XF registers and memory; the fragment shader reads BP and konst only.
-- **DVD completion is asynchronous:** data is copied at command start, and completion (TSTART clear plus the interrupt) comes **2 ms + len/32 MB/s** later, from a timer thread in `di.c`.
-  - Why: the SDK's `DVDLowRead` (`fn_80012408`) writes DICR and *then* arms its timeout alarm (`OSSetAlarm(AlarmHandlerForTimeout)`).
-  - The theory was that a completion before that (instant, or 200 µs plus a host stall) let the alarm fire later as a drive timeout. **Disproved:** with 2 ms, 1 of 25 Eden runs still hung, and the `[dvd] the SDK's drive timeout alarm fired` diagnostic (`patches.txt`) never logged. The realistic latency is kept anyway.
-- **Widescreen:** recompiler code patches (`config/GXEE8P/patches.txt`, documented in `gcrecomp.py`) are the native form of gamemasterplc's 16:9 Gecko code. Both projection sites multiply the aspect by `g_aspect_scale` (`settings.c`): `fn_800645DC` at entry, and REL text `0x14115C` after the `fmadds`. HUD/2D elements are stretched, as with that code. Muzzarino's code moves the HUD but is known to break on Egg Factory and Sand Ruins.
-- **Settings menu** (`overlay.c`, `settings.c`):
-  - open: hold Minus 0.5 s (Switch), F1 or the controller's Back (PC);
-  - options: Screen (4:3 / 16:9 widescreen / 16:9 stretched) and an FPS counter; saved to `settings.ini` next to the saves;
-  - drawing: software-rendered with `runtime/third_party/stb_easy_font.h` (public domain / MIT), then composited by both backends with `runtime/shaders/overlay.*`;
-  - `SR_TEST_MENU=1` opens it at start (screenshots).
-- **Diagnostics:**
-  - `env.txt` on the Switch SD folder (`KEY=VALUE` lines) sets debug variables such as `SR_WATCHDOG`;
-  - `SR_WATCHDOG_NOTRACE=1` keeps the dump without the function trace, which hides timing races;
-  - the dump shows render-thread handoff state, DI registers, pending OS interrupts and thread suspend counts.
-- **Hang hunting:** run Eden 20–30 times (`hangloop.sh`) with an `env.txt` watchdog dump.
-  - **Still open: the "Now Loading" hang, about 1 in 25 Eden runs.** Both captured dumps stop right after the *same* disc read: DI CMD A8, offset `0x3B83AFDC`, length 0x494C0, into 0x817A8B60–0x817F2020. After it the drive is idle, no interrupts are pending, and the CRI threads keep cycling while loading never continues.
-  - Next ideas: log the DVD command blocks and callbacks around that read; check what the game does with that buffer (the top of MEM1, just below the REL at 0x81800000; is our RAM backing large enough?); look for a cache-coherency assumption (DCInvalidate) in our model.
-  - One other early freeze was seen once: interrupts pending with a delivery queued (`posted 1`) while no guest code ran. Watch for it; suspects are the native thread handoff in `sched.c`, or a host wait while a guest context is current.
-- **PC (GL) only: the race HUD's digits and labels are garbled** (rainbow noise). The Switch build draws them correctly, so it's a GL backend difference (sampler or texture setup) to investigate; the PC build is a development host only.
-- **Eden after these fixes:** the demo race runs at 50–59 fps (was 23–38), and texture uploads are 40–70 KB/frame (were 3.6–4.5 MB).
-
-## 2026-10-16: status after session 5; hardware tests 1-3
-
-**Status after session 5 (2026-10-16):**
-- **Windows host build:** the intro, the opening FMV, the title screen, the save-file menu and **creating a save** (verified with scripted input), with controller input, at 60 fps.
-- **Switch build** (verified in Eden v0.1.1): logos, FMV, title screen, the attract-mode demo race in 3D, the settings menu and widescreen.
-- **Hardware tests so far:**
-  1. Black screen, then `image pool exhausted`. Fixed in session 3.
-  2. Black screen. Fixed in session 4 (the uam miscompile below).
-  3. Picture OK. The user reported:
-     - the title screen is choppy and in slow motion;
-     - black side bars (wants 16:9 and a hold-Minus menu, like SwitchWakerHD);
-     - no sound;
-     - creating a save fails with "not present or corrupted".
-     Everything but sound was addressed in session 5. Test 4 is pending.
-- **Audio is silent everywhere**: the AX stand-in consumes command lists but does not mix yet. **This is the next big task.**
-
-## 2026-10-16: performance in Eden after session 5
-
-**Performance (Eden numbers, not hardware; the `[perf]` line has the breakdown):**
-- **FMV ~42 fps on console and in Eden:** the guest is CPU-bound (guest idle 0 ms). The recompiled Sofdec MPEG decoder is too slow on ARM. Late frames show half-decoded images. Textures, render wait, disc reads and timer lateness are all negligible.
-- **Menus:** 60 fps, but texture lookup costs ~4 ms/frame (the hash of every bound texture every frame).
-- **Demo race:** 28–38 fps, ~4000 draws/frame, 3–4 MB/frame texture re-uploads, texture lookup 5–16 ms/frame, render thread 21–26 ms/frame.
-
-## 2026-10-16: next steps as of session 5 (superseded)
-
-**Next steps, in order:**
-1. **Analyse hardware test 4/5 logs** (`[hitch]`, `[perf]`, `[deko3d]` lines): decide whether the 20 fps is GPU-bound (then an EFB scale option and/or specialized shaders) or CPU-bound, and whether the freezes come from texture decodes (pre-decode/cache), disc reads (async/prefetch) or the GPU. Find the missing race textures (dropped states? stale sampled hashes? a format?).
-2. **Audio (AX HLE)** in `ax.c`, from the AX command-list and parameter-block formats:
-   - command list: PB list, ADPCM/PCM8/PCM16 decode from ARAM, sample-rate conversion, volume and ramps, aux buses, output to the AI DMA buffer;
-   - then host output: SDL audio (PC), audout/audren (Switch).
-3. **The rare loading hang** (see above).
-4. **Switch performance:**
-   - overlap CPU and GPU (`dkQueueWaitIdle` per frame);
-   - EFB scale option (1x or 1.5x for handheld);
-   - batch draws;
-   - profile the FMV decoder (42 fps).
-5. **Renderer accuracy:**
-   - fog (the blue tint);
-   - the file-select background is black;
-   - indirect textures, Z textures, mipmaps, EFB copy formats, EFB→RAM write-back.
-6. Widescreen HUD placement (Muzzarino's approach), only if wanted.
-
-## 2026-10-16: hardware test 4
-
-**Hardware test 4 (2026-10-16), user report:**
-- Working: saving, quitting, reloading, the hold-Minus menu, aspect changes.
-- Problems:
-  1. many textures missing in races;
-  2. a constant ~20 fps and slow motion after the save/load screen;
-  3. frequent short freezes.
-- The user prefers a prepared/cached approach for freezes if that's the cause, like SwitchWakerHD's one-time cache.
-- **The files in `build/switch/` were still test 3's** (00:44–00:52, no `[settings]` line), so test 4's log has not been analysed yet.
-
-## 2026-10-16: hardware test 4/5 analysis
-
-**Hardware test 4/5 analysis** (logs kept locally):
-- **~20 fps is GPU-bound.** Render-thread frames take ~50 ms, of which ~46 ms is waiting for the GPU, with 0 KB of uploads. That's at 2x internal resolution (1280x1056) with the big ubershader on every pixel.
-  - Answer so far: a Resolution menu option (1x default, 1.5x, 2x; `settings.resolution`). It renders into the top-left of the 2x-sized EFB, so it needs no reallocation.
-  - If 1x is still slow, the next step is ahead-of-time specialized shaders: collect TEV configs, generate GLSL, compile with uam into a shipped cache, and keep the ubershader as the fallback. The user asked for this approach ("one-time cache built in advance", as in SwitchWakerHD).
-- **Freezes:**
-  - 1.5 s + 0.7 s during an autosave were the per-card-command `rt_log` lines, each flushed to the SD card. Now one summary line per card file write, and a fully buffered log flushed ≤1/s.
-  - ~10 freezes of 100–260 ms are "game code" with no disc, texture or card activity. The hitch line now also separates guest idle and GX draw processing.
-  - Frame 11 = 29.8 s at boot is probably the console being suspended, since the AX frame count matches Eden's.
-  - Test 4's screenshot freezes: 7 per launch, at frames 300 … 7200.
-- **Missing race textures** (Splash Canyon / another stage; grey translucent slabs, missing HUD block, a black box behind the item icon): there were no undecodable textures and no dropped draws. The Metal City demo uses no indirect textures, fog or Z textures, and one colour EFB copy per frame (format code 4). New `[perf]` counters (unimplemented features, EFB copies by source and format) will show what the user's stages use.
-
-## 2026-10-16: logging since test 4
-
-**Logging since test 4:**
-- Screenshots are off unless `SR_SHOTS=1` (`env.txt`); the user asked for that default.
-- The previous launch's log is kept as `sonicriders.prev.log`.
-- `[hitch]` lines for every frame over 50 ms:
-  - game side: game code, disc, new textures, render wait, card writes;
-  - render side: GPU wait and uploads.
-  - A screenshot's own line names its cost.
-- A warning when a frame has more states than the UBO area holds (raised to 24 MB, ~14000 states).
-- In Eden, the large GPU waits at new scenes are the emulator compiling host shaders: not representative of hardware.
-
-## 2026-10-16: hardware test 6
-
-**Hardware test 6 (2026-10-16; OLED, overclocked CPU 1785 / GPU 1152 / MEM 2133; logs in `build/switch/hw6/`):**
-- User report:
-  - 1x: Splash Canyon water areas ~30 fps (slow motion), light areas 45–60;
-  - 1.5x: ~30–35;
-  - 2x: 20;
-  - menus 58–60 at 1x/1.5x, 30 at 2x.
-- **30 fps is a cliff, not a slope.** At 1x in dense race sections the render thread took ~16.5 ms per frame: ~12 ms GPU plus ~4.5 ms CPU recording ~3500 draws, serialized by `dkQueueWaitIdle`. That's just over the 16.7 ms vsync budget, so the frame waits for the next retrace and the game runs at exactly 30.0. The game advances one step per frame, so 30 fps means half speed.
-  - Fix: **CPU/GPU overlap**. Per-slot `DkFence`; the slot's memory and retired textures are reclaimed when its fence passes (`slot_reclaim`), and the per-frame WaitIdle is gone. In Eden the render thread went from ~15–20 to ~4–5 ms per frame.
-- **The GPU cost is per-pixel ubershader cost:** a ~120-draw menu at 2x took 33 ms of GPU. That points to ahead-of-time specialized shaders (still to do).
-- **Boot stall of 10–30 s (frame 11, busy "game code"), and probably the race freezes and the rare Eden "Now Loading" hang:**
-  - `di_timer` (DVD completion, since session 5) and `card_writer` were unpinned, so they landed on core 0 with the game thread.
-  - Horizon does not time-slice equal priorities, and the guest's CRI idle threads spin, so DVD completions waited seconds.
-  - Both are now pinned to core 2 with the other device threads. **Rule: every host helper thread must be pinned off core 0.**
-- **Splash Canyon's missing water:** 1 draw/frame uses **indirect texturing**, now implemented in `gx.frag`:
-  - indirect lookups `.abg`, format mask, bias, static matrices 1–3 (scale 2^(s−17), offsets in texels), wrap, add-prev;
-  - dynamic S/T matrices and bump alpha are not implemented;
-  - the indirect stages' maps are bound via RAS1_IREF in `gx_render.c`.
-  It costs 56→76 GPRs, so deko3d has two fragment variants (`gx_frag`, `gx_frag_ind`; `embed_shaders.py` `PROGRAMS_DK`), bound per state by genmode's indirect stage count. Not yet verified visually.
-- Race start: ~280 ms hitch decoding ~100 new textures (3 MB) in Eden. On hardware the biggest burst was 36 textures (2.7 MB) in 7 ms, so a texture cache isn't urgent.
-- **"Now Loading" hang reproduced on PC** (1 of ~4 scripted runs, with the watchdog trace on). Same signature as in Eden: the last DI read is the tail of `/TSTS` (offset 0x80800, 0x494C0 bytes), then nothing; the drive is idle and no interrupt is pending.
-  - Fixed regardless: device interrupts now re-raise when their mask is enabled while the status bit is still set (DSP CSR: ARAM and AI DMA; DI DISR), since the hardware line is status & mask.
-  - A `[dsp] ARAM DMA ... completed with its interrupt masked` log line was added; it never fired in 6 clean PC runs, so the root cause is still unproven.
-  - The `env.txt` / `SR_WATCHDOG` dump now includes the DSP CSR and the last ARAM DMA.
-- **RTC:** saves made on the Switch showed "01/01/00" because `mktime` failed there. `exi.c` now builds seconds-since-2000 from `platform_local_time()` (Switch: the time service's calendar time) with days_from_civil.
-- Testing on PC with the user's save: `nav.ps1` in the scratchpad (a fresh copy of `build/user_card.raw` per run, `SR_INPUT` steps, screenshot). File select → Game Data 1 → "start with Game Data 01?" Yes (A at 2450, 2700, 3050 after the title STARTs).
-
-## 2026-10-16: hardware test 7
-
-**Hardware test 7 (2026-10-16, logs in `build/switch/hw7/`):** races at 30 fps at *any* resolution, 60 fps when the camera faces a wall; water, the Metal City floor and racer faces missing; startup a few seconds slower.
-- Render thread 3–5 ms, GPU wait ≈ 0 (pipelining works): **the bottleneck is the game thread.** About 30 fps whenever there are more than ~2500 draws/frame.
-- **PC CPU profile of a race** (`SR_PROFILE=1`, `tools/profile_report.py`; lld map `build/host/sonicriders.map`):
-  - 75% is `SelectThread` (the guest's idle spin: the PC is fast);
-  - of the busy rest, ~60% is the runtime: gx_draw, memcpy of state snapshots, timing calls, psq slow paths, FIFO parsing;
-  - the game's own functions are each <0.5%.
-- **Done after test 7:**
-  - `rt_ticks` uses `platform_now_ns()` (Switch: `armGetSystemTick`; Windows: QPC). On the Switch it used `CLOCK_REALTIME` via `timespec_get`, possibly the time service, on every mftb/OSGetTime and twice per draw. This may be the main Switch CPU cost; **verify on hardware.**
-  - A "Save screenshot" menu item.
-  - The FIFO parser skips re-parsing incomplete commands.
-  - `[perf]` shows draw processing ms and vertices per frame.
-  - An event ring (thread suspend/resume via `patches.txt` hooks, DVD start/done/irq) in watchdog dumps.
-- **Next for CPU:**
-  1. ~~Split GxUniforms~~ **done:** GxUniforms is bp/xfr/konst only, pushed when `g_gx.regs_dirty` (set in `load_bp` and XF-register loads) and different. GxXTab (128 B) is a uniform block at binding 1 (vertex stage). A STATE command carries (regs index, xtab index) and is pushed only if either changed. deko3d uploads both arrays once per frame; GL uploads them packed. Eden demo race: draw processing still ~6 ms/frame for ~87K vertices, so **vertex decode** (`decode_vertex`: 160-byte GxVertex, memset, per-attribute branches) is the next CPU target.
-  2. **Indexed draws, done:** each vertex is decoded once into `GxFrame.verts`; quads, strips and fans become `GxFrame.idx` (u32); DRAW = (first index, count); `glDrawElements` / `dkCmdBufDrawIndexed`. The demo race drops from ~87K expanded vertex copies to ~40K decoded vertices per frame. Decode is still ~5.5 ms/frame in Eden (~140 ns/vertex): next, precompute a per-draw decode plan from VCD/VAT instead of per-vertex register reads, and drop the 160-byte memset.
-  2. psq fast paths.
-  3. Cheaper vertex decode.
-- **Loading hang:** still ~1 in 4 race loads on PC; the stuck read is always the last chunk of a file into the buffer ending ≈0x817F2xxx. Lead: the game's loader thread `81A93B68` (REL `fn_1_14DE38`) suspends itself and is resumed by `fn_1_14B8A0` (file state machine). A resume arriving before the suspend is lost (count clamped at 0). Capture a hang with the new filtered event dump: `pcloop3.sh` in the scratchpad, PC route into a race with the user's save copied to `build/user_card.raw`.
-- **Lighting:** CPU replication of the model lighting matches GX formulas and gives plausible values, so the dark Player Entry Sonic is unproven as a bug. Racer faces and floors need the user's screenshots (menu "Save screenshot").
-
-## Session 2026-10-16 (b): game-thread CPU cost
-- Split GX state (regs vs XF chunk table), indexed draws, per-draw vertex decode plan: PC race profile `gx_draw` 3.5% -> 0.05%, state memcpy gone.
-- Native `memcpy` (80003540), `memset` (80003458), `memmove` (8003A354) in `hle_misc.c`; fall back to the game's code for anything outside MEM1 / locked cache.
-- Eden demo race (JIT, indicative only): 33-51 fps before, 57-59 fps after.
-- PC: two full-route race loads, no loading hang this time.
-- **Open: EFB Z peeks.** The game reads `C85xxxxx` (EFB Z, bit 22) during races, probably lens-flare occlusion; mmio returns 0 (= nearest, so always occluded). Fix: queue peek coordinates, read depth back on the render thread, answer with last frame's value.
-- Next hardware test: race fps with the FPS counter, screenshots ("Save screenshot") of missing water / Metal City floor / racer faces.
-
-## Session 2026-10-16 (c)
-- **Face culling was inverted in both backends** (the cause of missing floors/water, see-through walls, dark characters). Proof: in a race frame's `SR_GXDEBUG` dump, every camera-facing triangle (by its vertex normals) is clockwise on screen, so GX front = CW. GL: `glFrontFace(GL_CCW)` (EFB stored upside down in GL window space); deko3d: `DkFrontFace_CW`.
-- **Guest memory helpers forced inline** (`PPC_ALWAYS_INLINE` in ppc.h): GCC had left ~130K `ld32`/`st32`/... call sites as real calls in the Switch build (clang inlined them on PC, so the PC profile never showed it). NRO 18 -> 30 MB.
-- Hardware test 8 (before both fixes): race frame = game code ~23 ms + draw processing ~8 ms -> 30 fps.
-- Disc DMA now lands at command completion (on the di_timer thread), as on hardware.
-- **Loading hang (still open, PC, ~1 in 3 runs, more when the PC is busy):** not the disc. The last read of a short stream file completes, the loader (81A93B68) idles at 8194DF20, the stream consumer thread 81A93E80 (prio 31) spins forever in its loop at 8194DD4C calling the stream parser f_819594F4, which keeps returning "not ready"; the game thread waits for the stream in 8194CCBC/8194BEC0. DVD library state is clean (executing NULL, no fatal). In both captured hangs the pump thread 81A93850 resumed the loader between the read's completion (TCINT set by di_timer) and the interrupt's delivery. Next: what f_819594F4 waits for (status byte at stream struct +0x22, r29 = 81A8F3A0), and whether delivering TCINT atomically with the interrupt (from a guest-side irq callback) changes the rate.
-- Test windows: PC `SR_MINIMIZED` (build/run.ps1 sets it); Eden starts `-WindowStyle Hidden` (minimized crashes Eden: zero-size surface).
-- Open: EFB Z peeks return 0 (lens flare occlusion).
-
-## Hardware test 9 (2026-10-16) and follow-up
-- User: characters fully modeled (blue tinge), HUD color glitches, water renders but drops to 30 fps, Metal City floor fine, still 30 fps all race, tunnel walls partly see-through, "Now Loading" ~10 s.
-- Log: races 35-58 fps (30 in stretches); game thread has ~1.4 ms idle; draw processing 5-7 ms; loading reads ~1 MB/s because the game thread is busy (CPU-bound); boot stall 11-28 s in one frame (frame ~11-14) on hardware only (Eden 0.2 s, PC 66 ms).
-- Recompiler: callee-saved registers stay in locals across calls (EABI); exceptions by name in gcrecomp.py NO_ABI_NAMES (+ OSSaveContext/OSLoadContext hooks, _restfpr_N). RECOMP_CALLEE_SAVED=0 disables.
-- Switch profiler: SR_PROFILE=1 in env.txt -> "[profile]" every 10 s: last guest function entered + its return address (map with config/GXEE8P/symbols.txt), tags F0000000 idle / F0000001 draw processing / F0000002 GX FIFO. Leaf bias: time in a caller after a call returns is charged to the callee. Eden: boot window 50% "8000BB10 from 8002653C" = after the DSP interrupt handler (fn_8002612C, interrupt 7) returns, i.e. a call-free loop it interrupted.
-- [perf] "devices:" line: ARAM DMA volume/time (now bulk memcpy) and disc completion lateness.
-
-## Hardware test 10 (2026-10-16)
-- User: boot ~35 s, Splash Canyon mostly OK with 30 fps pockets, water fine, Metal City 30 fps throughout, in-race HUD discolored.
-- **Boot stall found and fixed:** `fn_8001A5CC` = SDK `__AI_SRC_INIT`, timing two AI sample counter (AISCNT, 0xCC006C08) steps with OSGetTime; it accepts a gap < ~28.5 us or 34.5-39 us and retries otherwise. Our exact 32 kHz counter gives 31.25 us; only host jitter let it pass (38 s on hardware). AISCNT now returns the next step when a read would repeat the last value.
-- **Metal City race profile (hardware, 32-35 fps):** draw processing 19-24% (~7 ms/frame), GX FIFO 7-13%, idle ~30-35% (the "8000BB10 from 8002653C" share is SelectThread's idle spin after the DSP interrupt; deliver() now restores the interrupted function so it shows as SelectThread), game code ~35%, flat. So the game frame is ~22 ms of work, ~10 ms of it GX emulation on the game thread.
-- **Next: run the GX FIFO parser + draw processing on its own core** (like the real GP, Dolphin's dual core): game thread only appends FIFO bytes; sync points: draw-done/PE token/finish interrupts raised by the GP thread, CP read pointer reads, EFB peeks/copies to RAM, frame submit.
-- User side requests (later): Chaos Emerald gear unlocked from the start (nothing else); Shadow allowed to use it with Super abilities (no Super Shadow assets exist in the game).
-
-## Session 2026-10-17: GP thread, Chaos Emerald, Super Sonic
-- **GP thread** (gx_fifo.c): the game thread appends pipe bytes to a 16 MB SPSC ring; a GP thread (core 2, one priority step below the device threads: rt_thread_lower_priority) parses and does draw processing. PE finish/token raised by it; PE regs under a lock. SR_GX_SYNC=1 = old path. Eden demo race: steady 59.9 fps, game core ~50% idle.
-- **Chaos Emerald unlock** (setting, default on): unlock data at 0x81AAD348 (REL bss; GameCube 806A9048): one status byte per gear (0 locked, 1 default gear, 2 owned); characters at 0x81AAD3A0. Gear 18 = Chaos Emerald (confirmed by the user in a race). Side effect seen by the user: it shows in the gear shop for 0 rings.
-- **Gear table**: 0x819EA240 (REL data, identical to the file at 0x1EA240), 41 records x 0x1D0: +0x00 character mask (gear 18: 0x801), +0x10 top speed modifier, per-level blocks at +0x64/+0x80/+0x9C (boost at +0x18). Speeds x216 = speedometer. **Faster Super Sonic** option (default on): gear 18 top speed mod 20 -> 70, boosts -> 350.
-- **Player array**: 0x81A0D740, 8 x 0x1080; +0x1034 gear id, +0x1E4 position, per-level stats copied at +0x8DC/+0x914/+0x94C.
-- **Camera** (for the C-stick look-back request): block at 0x81A05D74 (0x38-byte entries per viewport), eye at +0x14, target at +0x20; view matrix at 0x81A0583C. The writer of the view matrix / eye is not found yet; the game frustum-culls, so look-back must move the game's camera, not only the view matrix. Next: a PC debug build with a store watchpoint in st32 to find the writers.
-- SR_PEEK / SR_POKE / SR_DUMPRAM / SR_SCREENSHOT=list debug options (desktop).
-
-## Hardware test 11 (2026-10-17) and follow-up
-- User: Super Sonic cruise 230-231 (the +50 worked), boost unchanged (wanted 350); Metal City half smooth, half 30 fps.
-- Log: at 30 fps the game core was ~45% idle waiting for the GP thread; draw processing 8-10 ms + parsing on the GP thread; "GX FIFO" on the game core ~18% (per-store ring push).
-- Changes: 32-byte write-gather bursts (pipe_write -> burst_out; flushed on PI/CP/PE access and in the scheduler's idle wait, otherwise the game can wait on a command still in the buffer); unchanged BP/konst/XF writes no longer dirty state; [perf] "GP thread busy"; Super Sonic: the transformation makes him character Sonic+14 (f_8188BE1C plays the voice), his live level stats are not from the gear table, so game_mods_frame sets the racer's boost fields (+0x8DC+0x38*l+0x34) to 350 for gear-18 racers when they look like boost speeds.
-- **Boot hang fixed:** latched DSP-side interrupts were delivered after the game had acknowledged them; the SDK DSP handler (fn_8002612C) then waits for mail with interrupts off forever (polls 80025E5C). os_irq.c now asks dsp_irq_asserted() before delivering ids 5-7. Also the Chaos Emerald byte is only written after OSLink (before it, that memory is the OS arena).
-- SR_LOGSYNC=1 flushes every log line (find where a hang stops).
-
-## 2026-10-17: Super Sonic speed changes removed at the user's request
-- The gear-table edit and the per-frame racer boost writes (game_mods.c) are gone; the setting key super_sonic_fast is ignored if present. The data notes above stay for later work (Super Shadow).
-- Hardware test 12: Metal City and Sand Ruins at 60 fps about 90% of the time; a little see-through wall/floor left.
-- **What went wrong with the speed changes (user's observation, keep for Super Shadow):** Super Sonic's cruise rose to 231 (gear 18 record +0x10 change reached him) but his boost stayed 250; regular Sonic on the Blue Star kept his normal cruise but his boost became 350. So the per-frame racer write (racers with player +0x1034 == 18) hit the wrong racer and/or the boost fields at +0x8DC+0x38*l+0x34 are not what drives Super Sonic's boost. Before any Super Shadow change: verify on a live race (RAM dump with a known character/gear per racer) which field is the gear id and where the super form's boost comes from.
-- See-through investigation (PC, Metal City race start): forcing depth-writing src-alpha draws opaque (SR_NOALPHABLEND) gives a clean tunnel; vertex alphas are 1, textures decode correctly (SR_DUMPTEX), SR_SHOWALPHA shows the floor (~0.7) and light beams translucent — the reflective floor is intended; a dark translucent dome over the start gate is unexplained. Waiting for the user's screenshots of what looks wrong. Note: the shader replaces the *blend source* alpha with the constant alpha / 1.0 for EFB formats without alpha (BP 0x42/0x43); on hardware those only affect the stored alpha — to fix separately.
-- PC screenshots looked "washed out" because the PNG kept the EFB alpha; now saved opaque.
-- Switch screenshots: copied out of the uncached buffer with one memcpy and written by a background thread (was 7-10 s of hitch).
-
-## 2026-10-17: see-through surfaces fixed (dual-source blending); Dolphin as reference
-- **Root cause of see-through walls/floors, dark "blue tinge" and ghosting:** the game enables the "destination alpha" register (BP 0x42 = 0x18C: constant alpha 0x8C stored in the EFB) for almost all scene draws. The shader replaced the TEV alpha with that constant, so blending (SRCALPHA/INVSRCALPHA) used 0.55 for nearly everything. On hardware the constant only sets the stored alpha. Now: gx.frag writes the stored alpha to output 0 and the TEV alpha to output 1 (layout index 1); both backends map SRCALPHA factors to SRC1_ALPHA, DSTALPHA reads 1 when the EFB format (BP 0x43 & 7) is not RGBA6, and with constant alpha the alpha channel is written as is (blend factors ONE/ZERO).
-- **Dolphin 2609a** (official, from the dolphin-emu.org update API) installed portable in build/ext/dolphin (gitignored). scratchpad gen_dtm.py builds an input movie (DTMHeader 256 bytes; 8-byte ControllerState per frame, is_connected bit) and dolphin_run.ps1 runs it hidden and unthrottled with a copy of the user's card from the baserom ISO, dumping frames (an AVI in User/Dump/Frames; frames extracted with ffmpeg from the imageio-ffmpeg package). Dolphin plays the intro FMV, so the route's presses land elsewhere; the attract-mode demo races (Metal City at Dolphin frames ~9000-12400) are a reference matched by the race timer.
-- Remaining differences vs Dolphin (Metal City demo): darker screen corners (vignette), weaker white speed streaks (screen-copy effect), a few billboards slightly see-through.
-
-## 2026-10-18: 4-player multiplayer; 4P stage-load crash fixed (progressive disc DMA)
-- **Input, 4 ports.** Switch (`platform/switch/input_hid.c`): `padConfigureInput(4, NpadStandard)`, one PadState per player (player 1 = No1 + Handheld, players 2-4 = No2-No4), Joy-Con hold type horizontal. Pro Controller / Joy-Con pair / handheld use the old mapping; a **single sideways Joy-Con** is remapped by hand (the system does not rotate it; same mapping as RetroArch's Switch driver): face buttons by position (right=A, bottom=B, left=Y, top=X), its +/- = START (held 0.5 s = settings menu), SL/SR = L/R, stick click = Z, stick rotated (left Joy-Con: x=-y, y=x; right: x=y, y=-x). **Untested on hardware.** New menu item "Controllers: N connected (A: set up)" shows the system controller applet (`hidLaShowControllerSupportForSystem`, falls back to `hidLaShowControllerSupport`; up to 4 players, Joy-Con dual allowed) to pair/split Joy-Cons. `si.c`: port 1 always connected; ports 2-4 connected while `input_connected(ch)` (hot-plug works through the game's PAD library). Desktop (`input_sdl.c`): keyboard + first gamepad = port 1, more gamepads = ports 2-4; `SR_PADS=N` connects ports 1..N without gamepads; `SR_INPUT` steps take a port prefix (`7300:2.START`); script limit raised to 1024 steps.
-- **Menus:** Free Race lets players 2-4 join at Player Entry with their own buttons (verified on PC with scripted input). Stage files by player count: `1` (1P), `1V` (2P), `1M` (3-4P); suffix table at REL rodata 0x2DA8+8 = "VMM", indexed by the player count at 8021B8C8.
-- **The 4P crash:** loading Metal City's `1M` pack, model setup (REL fn_1_46EA8 via fn_1_3EA50) read entry 7 of the pack at 806B57C0 and found texture data instead of "NGIF", so a count read through a null pointer ("GXEE" from 80000000) made memset run past MEM1. Cause: the stage pack is decompressed by CRI's streaming loader (`f_819594F4`, on the lowest-priority thread 81A93E80) **while the disc read is still in progress**; it spins on an "available" counter at 81A8FBAC and relies on data arriving during the transfer. Our DI model copied each read only at completion, so the decompressor consumed stale memory (deterministically: same bad bytes every run). **Fix (di.c):** a read's data now arrives in 16 KB pieces at the modelled 32 MB/s during the transfer (DIMAR/DILEN advance), completion unchanged. 3/3 4P runs load and race; 4P Metal City: ~10,400 draws/frame (1P ~4,000), 60 fps on PC, GP thread 7.4 ms/frame. **This may also be the old rare "Now Loading" hang (same decompressor spinning "not ready")** - watch for it.
-- **Debug tools added (desktop):** `[crash]` handler (exception, address, guest-window offset, trace/threads dump); `[mmio] ... is not a device or EFB address` dumps the function trace once (with SR_WATCHDOG); `SR_WATCH=ADDR,VALUE` / `ADDR,~VALUE` (stops holding VALUE) / `ADDR,*[,A2,A3,A4]` (log every change with the VI field) - a spinning thread that also samples every host thread's RIP (`[sample] thread N at exe+OFF`, map with build/host/sonicriders.map); `SR_DVDLOG=1` logs every disc read by FST file name + offset, completions, and ARAM DMAs; trace ring 4096 entries (dump shows the last 256).
-- **Today's Switch log (hw test before this session, no user report):** slow race sections are now **GPU-bound** at 1x: render thread up to 33 ms/frame of which ~30 ms waiting for the GPU (hw14 log too). So the ahead-of-time specialized shader cache (plan above) is the next performance step, and it matters more for 2P/4P (2.5x the draws).
-
-## Hardware test 15 (2026-10-18), user report and follow-up (logs in build/switch/hw15/)
-- Multiple controllers work. With 3-4 players: 30 fps. Log (3 players, Metal City): ~7,500 draws/frame; render thread 6.5 ms, GPU wait 0; GP thread busy 12.5 ms; game thread only ~1.5 ms idle -> **the game thread (game code for 3-4 viewports + GX pipe stores) is the limit, not the GPU**. PC profile is useless here (PC 90% idle). Next: SR_PROFILE=1 on hardware during a 3-4 player race (env.txt with SR_PROFILE=1 is on the SD card now).
-- **Sideways Joy-Con bug:** player 1 used one PadState for No1 + Handheld, so a single left Joy-Con on player 1 reported style 0xA (JoyLeft + Handheld) and got the two-handed mapping. Fixed (commit 924c7df): handheld is a separate PadState used only when No1 has no controller; a JoyDual npad with only one half connected (attributes IsLeft/IsRightConnected) is also treated as a sideways single Joy-Con. Log line shows attributes and "(single Joy-Con, sideways)". Untested on hardware.
-- The 10 s / 24 s hitches in the log coincide with the system Controllers screen being open (the game is paused while it is up).
-- **NSP for the home screen (user request):** plan = forwarder NSP: nx-hbloader (build/ext/nx-hbloader, patched: DEFAULT_NRO = sdmc:/switch/sonicriders/sonicriders.nro, exit instead of reloading after the game returns; npdm config sonicriders.json, title id 0x010053520D9A0000) packed with hacBrewPack (source mirror rlaphoenix/hacBrewPack in build/ext) using the user's own keys, plus a NACP (nacptool) and a 256x256 JPEG icon. **Built 2026-10-18** after the user granted permissions: SonicRiders.nsp (forwarder, 199 KB) on the SD card at switch/sonicriders/. Rebuild: tools/nsp/ (nx-hbloader-forwarder.patch on switchbrew/nx-hbloader, sonicriders.json for npdmtool, build_nsp.ps1 compiles hacBrewPack from the rlaphoenix mirror with `pip install ziglang` / zig cc and packs with the user's keys). The launcher must be built from a path without spaces (make) with TMP set. **First NSP crashed at launch on hardware** (Eden: 'Failed to load ROM (Error 32)', unparseable kernel metadata): the npdm config was nx-hbloader's Album-applet one. Fixed in tools/nsp/sonicriders.json: application_type 1, address_space_type 3 (39-bit; the guest window is above 36 bits), no map_region, no debug_flags (newer force_debug encoding breaks older parsers). Verified in Eden: the forwarder starts the NRO (code-memory window, intro runs). Re-test on hardware pending. Note: the s_ranOnce edit to nx-hbloader's main.c did not apply yet (whitespace mismatch; file may have CRLF) - redo it.
-  - **2026-10-18 (later): the user explicitly asked for the NSP** (icon: steamgriddb .ico they linked). Done: build/nsp/control/icon_AmericanEnglish.dat (256x256 JPEG from that icon) and build/nsp/control/control.nacp (nacptool, "Sonic Riders", title id 010053520D9A0000). The auto-mode classifier blocked editing/building the downloaded nx-hbloader again; per the rules, stopped and asked the user to allow it (permission rule or approve prompts).
-  - Remaining steps: (1) patch nx-hbloader main.c (exit after the first NRO returns); (2) build it with devkitPro make (CONFIG_JSON=sonicriders.json) -> exefs/main (the .nso) + exefs/main.npdm; (3) build hacBrewPack from build/ext/hacBrewPack (clang, with its bundled mbedtls); (4) `hacbrewpack -k <prod.keys> --exefsdir exefs --controldir control --noromfs --nologo --titleid 010053520D9A0000`; (5) copy the NSP to <sd>\switch\sonicriders\ (never commit it or the keys).
-
-## Hardware test 16 (2026-10-19): forwarder NSP works; multiplayer still 30 fps
-- Profile (4 players, build/switch/hw16): 36% SelectThread idle loop ('8000D460 from 80010574' = OSEnableInterrupts in the idle loop) + 6% idle tag, 23% GX FIFO, rest game code: the frame is ~19 ms of work, just over 16.7 ms, so vsync halves it. Change: GP thread woken per 32 KB batch and at pipe flushes instead of per 32-byte burst (futex call per burst), plus 0.5 ms timed wait in the GP thread; Eden GX FIFO share 4% -> 2%. Needs a hardware profile again.
-
-## 2026-10-19 (night): story-mode crash fixed; SOUND works
-- **Story mode crash (hw17, crash report build/switch/hw17/crash.log):** interrupt handlers ran with r1 = SP - 0x1000 (sched.c make_irq_cpu). CRI's loader threads have 4 KB stacks (81A93E80 at 81A8D2F8 etc.), so handlers ran below the stack and overwrote REL bss 8CF14 = the loading-screen text table (fn_1_13CB00 -> fn_8000777C/800077A8); the next text draw read a null table ("GXEE") -> crash on Switch (data abort) / garbage on PC. Fix: handlers start SP - 0x100; functions that keep r1 in a C local hand it over at loop interrupt checks (PPC_LOOP_R1, gcrecomp.py). PC story route (skip with START) reaches the race.
-- **Sound:** ax.c is a native AX microcode (Dolphin-format, ucode hash 0x3DAF59B9): PB list, ADPCM/PCM8/PCM16 from ARAM, linear SRC, vol env, LPF, 1 ms updates, mixer-control bits, AUX A/B, compressor, OUTPUT. Host output takes each mixed frame from OUTPUT (audio_frame), not from the AI DMA address (that repeated/skipped frames when the game's AI handler ran late). Verified: title music (S24.ADX decoded from the disc in Python, scratchpad adx.py) correlates 0.95-0.99 with the output, real time. Windows: AI clock uses platform_sleep_ns (high-res waitable timer); it ran at 1/3 speed. Host: SDL queue (SR_NOAUDIO=1 for silent tests), Switch: audout 48 kHz (2:3 linear resample). SR_AUDIO=0 disables the mixer; SR_WAVOUT=file records.
-- **Story cutscenes need the mixer:** with no mixer, voices never ended and the cutscene path stayed black; with it the route reaches the race.
-- **Multiplayer (hw17 profile):** GX FIFO share 23% -> 3% after the wake batching, but still 30 fps: at 30 fps the game core is 55-58% idle, GP thread busy 12-14 ms, render 6 ms, GPU wait 0 -> the game and the GP thread are serialized (the game waits for GP sync points, probably per viewport). Next: find the sync points (PE token / draw done / EFB copies) and overlap, or cut draw-processing cost.
-- Eden is muted now (user/config/sdl2-config.ini volume 0, muted; .bak kept) so tests never play sound.
-
-## STATE 2026-10-18 - for the next session
-
-(Open items were updated 2026-10-19 .. 2026-10-22; superseded by STATE.md.)
-
-**Hardware test 15 (to ask the user):** connect 2-4 controllers; check that each player's controller drives its own racer in Free Race; try single Joy-Cons held sideways (and the menu's "Controllers" item to split a pair); report 2P/4P race fps and whether 1P races/loads still behave (the disc change touches every load).
-
-**Open items, in order (updated 2026-10-19 morning):**
-1. **Hardware test 18** (build 319438E0 on the SD card): sound on the Switch (first time on hardware: audout, levels, crackle?), story mode both ways (watch the cutscenes / skip with START), a 3-4 player race with the profiler (env.txt SR_PROFILE=1 is on the card) -> read the new "[perf] game core:" line and the profile ("resumed thread" entries are now separate).
-2. **Multiplayer 30 fps** (see "2026-10-22: multiplayer frame analysis": critical path = submission + GP tail + logic; decode now faster, needs a hardware number): game core ~50-58% idle-loop at 30 fps, GP thread 12-14 ms, render 6 ms, GPU 0: the critical path (game work + the GP's tail after the game's last flush + present) is just over 16.7 ms. Levers: draw processing cost on the GP thread (11.5 ms for 56K vertices on Switch), KICK_BYTES (32 KB) latency, GP thread priority on core 2.
-3. Specialized shader cache (1P GPU-bound sections: Egg Factory, Splash Canyon).
-4. Speed-blur screen effect much weaker than Dolphin's (see build/rainbow_cmp.png from scratch); attract demo diverges from Dolphin's (ring counts/positions differ: timing/RNG?).
-5. Story cutscene monitor ("these players, they're hot...", frame ~18000 on the story route): looks garbled (tiny text + noise lines); the profile textures themselves decode fine. Unverified against Dolphin.
-6. Menus/HUD discoloration on Switch (need a screenshot); Splash Canyon rainbow road (not located in the demo yet); pause dialog solid red.
-7. Smaller: darker screen corners vs Dolphin, faint see-through billboards, EFB Z peeks return 0 (lens flare), PC-only HUD garble.
-
-**Test routes (scratchpad, recreate if missing):** route1p.txt (race), route2p/route4p.txt (Free Race 2/4 players, SR_PADS), routestory.txt / routestory2.txt (story, A presses through cutscenes), routestory3.txt (story, START skips); mp.ps1 -Keys -Shots -Secs -Pads [-Watchdog] (sets SR_NOAUDIO=1, SR_MINIMIZED=1); loop4p.ps1; cmpadx.py + adx.py (ADX decode and correlation against a WAV).
-
-**Dolphin reference status:** installed and works for attract-mode demos (no input needed). Input movies (-m) do NOT take effect in 2609a here; if menu comparisons are needed, try a DSU (cemuhook UDP) fake controller with BackgroundInput.
-
-## 2026-10-22: multiplayer frame analysis; faster vertex decode
-- **Frame structure (4 players, PC timeline with `SR_GPTL=<field>`):** per frame the game (1) waits on GXDrawDone for the previous frame right after the retrace (instant when the GP is done), (2) submits the whole frame's FIFO (~295 KB, ~3 ms on PC), (3) ends the frame in `fn_8000610C`: GXCopyDisp (`800312F0`) -> **GXDrawDone (`80030464`, waits for the GP thread to process everything)** -> GXInvalidateVtxCache -> VISetNextFrameBuffer/VIFlush, then (4) runs the next frame's logic. Draw sync token 0xB00B (GXSetDrawSync, `800303B0`) is set just before. Only 1 draw-done and 1 token pair per frame (not per viewport).
-- So the critical path is: game submission + the GP thread's tail + next frame's logic. On the Switch the GP thread is busy 12-14 ms of a 4P frame (10.7 ms draw processing), which pushes the frame just over 16.7 ms: the game misses a retrace and waits for the next, hence **exactly 30.0 fps with the game core ~50% idle** (hw17). Not skipping the GXDrawDone wait: the game may then overwrite vertex data the GP thread is still reading. The lever is GP-thread cost.
-- The game has its own 30 fps mode in `fn_8000610C` (flag 0x8021BB7C = r13-0x7D44, set via `fn_8184D3CC`; alternate frames shown, `flag+1` used as the physics time-step multiplier). It never turns on in our runs (watched on PC at 60 and at 20 fps with `SR_GPSLOW=5`), so it is not the cause.
-- **Vertex decode rewritten** (`decode_fast` in gx_render.c): per-attribute readers chosen once per draw, colour tables, only present texture coordinates decoded. Bit-identical to the old decoder (`SR_DECODECHECK=1` runs both: 271M vertices, 0 mismatches on the 4P route). PC 4P race start (82,648 vertices/frame): vertex decode 2.87 -> 1.76 ms/frame, draw processing 5.1 -> 4.2 ms. Needs a Switch measurement (hardware test: 3-4 player race, compare "GP thread busy" and fps with hw17).
-- Next GP-thread costs: per-draw overhead ~2.3 ms/frame on PC for 10.4K draws (texture lookups 0.73 ms: palette textures hash their TLUT on every draw; plan setup; command records), state snapshots only 0.13 ms.
-- New debug options: `SR_GPTL=<field>` (timeline of game idle / PE finish / tokens / retraces with queued bytes, 4096 events), `SR_GPSLOW=<factor>` (GP thread takes factor x as long: imitates the Switch on PC), `SR_DECODECHECK=1`; `[perf]` line "draw processing parts" (decode, state snapshots).
-- **Characters look flat/dark (user: "tinted blue"):** Dolphin's Sonic at the Metal City demo countdown has light-blue highlights and shading; ours is flatter and darker with almost no highlights -> suspect GX lighting (specular/attenuation or the lit channel) rather than a colour swap. The demos diverge before the countdown (different racers beside Sonic), so a matched comparison is still needed (character select / Player Entry close-ups, or a scene both reach identically).
-
-## 2026-10-22 (night): wrong UI colours fixed (palette address bits); palette loads captured at issue time
-- **Rainbow trick-rank letters ("RANK", A/AA/S...) and likely other wrong UI colours:** the game issues some TLUT loads with bit 27 set in the source address (BP 0x64 -> 088B6AC0 for the palette at 008B6AC0, right before the rank texture 008B6CC0). We used the address unmasked, so the load was skipped as out of range and the texture was decoded with whatever palette that TMEM slot held before. Fix: `GX_PHYS_MASK` (0x01FFFFFF, as Dolphin) on TLUT sources, texture image addresses and EFB copy destinations. Verified on PC against Dolphin (Metal City demo, first trick: silver "RANK", pink chrome "A").
-  - [confirmed] on hardware (overclocked Switch, build from ce755b5): rank letters, track-select previews, results screen, pause and end-of-race menus correct; the white icon boxes and the 4P UI flicker are gone too (issue #5 closed). Still open on hardware: 4P at 30 fps (#2) and the blue character tint (#11), which is therefore not a palette problem.
-- How it was found: the frame's draws with `SR_GXDEBUG`+`SR_GXDEBUG_ALL`, textures with `SR_DUMPTEX`, then `SR_TEXWATCH=<hex texture address>` (logs the palette slot, the RAM address it was last loaded from and its first entries at each lookup) and `SR_GLTEXDUMP=<hex texture address>` (writes the GL texture actually bound for that draw to build/gltex_<id>.tga; it matched the decode, which ruled out upload problems).
-- Also: palette loads now copy the palette when the game issues the load (game thread, gx_fifo.c `tlut_watch`: the SDK writes BP regs as a 1-byte 0x61 store + a 4-byte store) and the GP thread uses that copy for the matching immediate-mode load (checked by register values, falls back to RAM; `SR_NOTLUTSNAP=1` disables). The real GP loads within microseconds; our GP thread can be most of a frame behind. `[perf]` "palette loads/frame". Not the cause of the rank letters, but removes a real timing hazard (worse on the Switch).
-- Specialized shaders are not the cause of the UI colour bugs: hw21 (SR_NOSPEC=1) looked the same.
-- Not verified yet: the track-select preview box (the PC route moves on before it shows), the results screen / pause menu colours, the white box around results icons; the 4P UI flicker. Check on hardware with this build.
-
-## 2026-10-23: Switch sleep-mode freeze (user report), PC menu controllers row removed
-- **User report:** putting the Switch to sleep while the game runs leaves it frozen after waking. Cause not found yet (no hardware log). [uncertain] suspects: the CPU tick counter (our only clock: `platform_now_ns` = armGetSystemTick) jumping by the sleep length, so the VI retrace thread and the AI audio clock thread each try to replay every missed retrace / audio block; or a host wait (render thread in appletMainLoop / deko3d, game thread waiting for a free frame) that never returns after resume.
-- Changes (Switch, untested on hardware): the VI thread resyncs when more than 30 fields behind and the AI thread when more than 0.5 s behind (log `[vi]` / `[dsp] ... resynchronized`); applet messages are logged (`[applet]` focus / resume / operation mode, with seconds since the previous one, log flushed); a monitor thread logs `[clock]` when the tick counter moves over 3 s during a 1 s wait (answers whether it runs during sleep) and `[stall]` + mmio/sched dump (threads, render handoff, irq, DSP, DI) when no frame is presented for 5 s while the game has focus. Eden boot: no false `[stall]`.
-- **Existing hardware log of a sleep (build ce755b5, the SD card's sonicriders.log 2026-10-23, handheld):** sleep ~30 s after boot (title), `[hitch] frame 1784 took 108898 ms: game code ...` and `timer late avg 99024 ms` -> [confirmed] the tick counter (and so our guest time base) keeps running during sleep. After waking the game **kept running at 59.9 fps** (render thread executing frames, GPU wait 0) for ~5 more minutes and went into the attract demo (draws 120 -> 2000-4600/frame), which it does only without input. So the game did not hang: either no input reached it or the picture stopped updating. No `[input]` line after waking. Added: `[input] first buttons after wake/focus` (input_hid.c, armed by the applet hook on resume / focus regained).
-- Next: a hardware log of sleep -> wake. If `[stall]` shows the render thread stuck in deko3d or appletMainLoop, look there; if the clocks resynced and it runs, done.
-- **PC stick too sensitive in menus (user report, Xbox One S pad):** measured on PC with scripted stick values (new `SR_INPUT` steps `FIELD:SX=n` / `FIELD:SY=n`, offsets from centre, port prefix as for buttons; the log notes the presented frame of each step) at the main menu (user card, route: START 1500/1800/2100, A 2450/2700/3050/3400; the menu takes input from about field 3930): SY=-14 and -16 never move the cursor, -24 does, and a held direction (stick or D-pad) repeats about every 3-4 frames after the first move - the game's own menu logic. [confirmed] So the game's menu threshold is ~20 of 100, i.e. 20% of the throw with the old mapping (square dead zone 4000/32767 = 12%, then linear, so values jumped 0 -> 12). Fix: round dead zone 25% with the rest rescaled from 0 (`stick8` in input_sdl.c): menu threshold now at ~40% throw, full push still 100 (diagonal 71/71 like a GC gate). Not yet tried by the user. Also: `SR_SCREENSHOT` takes up to 512 frames (was 32).
-- **PC settings menu:** the "Controllers: N connected (A: set up)" row is Switch-only now (it opened the system controller applet; on PC it did nothing). Menu box height follows the item count.
-
-## 2026-10-23: PC controllers
-
-**PC controllers (2026-10-23):** [confirmed] an Xbox One S controller was detected (`[input] port 1: gamepad ...`) but every button/stick read idle; keyboard fine. Cause: `SDL_Init(VIDEO|GAMECONTROLLER|AUDIO)` ran on the main thread while the window and `SDL_PollEvent` live on the render thread; on Windows SDL's controller backends deliver input as messages to the thread that initialised them, which never pumped messages (device enumeration still worked). Fix: the main thread starts only audio; `render_thread` calls `SDL_InitSubSystem(VIDEO|GAMECONTROLLER)` before creating the window. Found with new log lines (`[input] port N buttons ...`, first 40 changes; `[input] menu button (F1 / Back) down/up`). Tested by the user with a real controller: menus, racing, analog triggers. The settings menu needs F1/Back *held* 0.5 s (by design, like Minus on the Switch).
-
-## 2026-10-23: setup without tar.exe (v0.2.2)
-
-**Setup without tar.exe (2026-10-23, v0.2.2):** [confirmed] a player's setup failed with `Error opening archive: Can't initialize filter; unable to run program "xz -d -qq"`. Windows' `System32\tar.exe` (bsdtar) is built with liblzma/libzstd only on recent Windows 11 builds (here: bsdtar 3.8.4 on 26200); older ones fall back to running `xz`/`zstd` from PATH. It worked on the dev PC only because devkitPro's MSYS2 (`usr\bin`: xz, zstd, git) is on PATH. Fix: the Python embeddable zip is unpacked with .NET `ZipFile`; everything else with `tools/setup_extract.py` on that Python (zipfile; tarfile+lzma for `.tar.xz`; the pinned PyPI `zstandard` cp312 wheel for devkitPro's `.tar.zst`, decompressed to a temporary `.tar` so tarfile can copy symlink targets; `\?\` destination paths). The setup also clears PYTHONHOME/PYTHONPATH/PYTHONSTARTUP and sets PYTHONNOUSERSITE=1 (the embedded 3.12 would otherwise see a user's own 3.12 site-packages). Tested from the release zip in a folder with spaces, with a stripped environment (PATH = System32, Windows, Wbem, WindowsPowerShell only; no inherited variables) and an empty tools folder: all downloads unpack, both targets build. Windows Sandbox was not available on the dev PC (feature not enabled), so a real old-Windows run is still [unproven].
-
-## 2026-10-23: hardware test 22 (sleep fix works; 3P profile); audio mixing moved off the game thread
-- **Sleep [confirmed] fixed on hardware** (build 0035e70 = "v0.2.1-7-g847f122c-dirty", logs build/switch/hw22/run.log): two sleeps during a 3-player race (17 s, 47 s); `[vi]`/`[dsp] ... resynchronized` and `[clock] ... moved 47.5 s` fired; the race continued where it was and controllers reconnected. So the freeze was the clock jump: after a sleep the VI/AI threads replayed every missed retrace / audio block. Open: **no `[applet]` line was logged at all** (hook never called? check libnx appletHook dispatch); `[stall]` fired once while the system controller screen was open (expected, harmless); log lines from different threads sometimes run together (rt_log not serialized).
-- **3-player Metal City (overclocked):** mostly 55-60 fps, dips to 30-40 where frames have ~5,500-7,400 draws (countdown, mid-track, end). In those dips the GP thread is busy only 8-10.5 ms/frame and the render thread 5-6 ms (GPU wait 0), but the profile shows **39-46% of game-core samples in the game's idle loop (`8000D460` OSEnableInterrupts from `80010574`, SelectThread)**: the game's own work is ~16-17 ms/frame there, just over a retrace, so it waits for the next one (half rate). At 60 fps parts (~4,000 draws) idle is ~20%, i.e. ~13 ms of work. Our `[perf]` "no ready thread" idle (host-level) does not see this guest idle spin. [likely] The lever is game-core time, not the GP thread.
-- Game-core costs that are ours: `F0000002` GX FIFO 4-5% (pipe stores), and **`80025E84` from `8001D944` 4-7%**: 80025E84 is DSPCheckMailToDSP; the profiler charges the caller's following code to it, and that code's mailbox write ran our whole AX mix synchronously (dsp.c `dsp_mail_from_cpu` -> `ax_process_command_list`, inside the game's AI interrupt, ~3.3x per frame).
-- **Change:** command lists are queued to a worker thread (dsp.c `ax_thread`, pinned to core 1 with the render thread; core 2 has the GP thread), which mixes and then pushes DSP_YIELD + the DSP interrupt, as the real DSP runs in parallel. The game's AX code does not wait for the mix (it polls only whether the DSP took the mail). DSP reset bumps a generation so a stale list does not yield. `SR_DSP_SYNC=1` restores the old path. `[perf] devices: ... audio mixing X ms/frame` (worker time).
-- Tests (PC): 4P route to the race (60 fps, 9.4K draws, screenshot normal); title music recorded with `SR_WAVOUT` async vs sync: correlation 1.0000 (offset 640 samples of start-up timing), same RMS and transient count; story route (cutscenes need voices to end) reaches the race (pause screen at frame 25500). PC mixing cost is only 0.07 ms/frame, so the Switch gain is probably well under 1 ms/frame [uncertain]; hardware will tell (compare the dips with hw22).
-- Next levers if needed: the GX pipe store path (game thread copies each 32-byte burst twice: FIFO RAM + ring; per-store call chain mmio.c -> gx_pipe_write -> pipe_write), then recompiled-code hot spots.
-
-## 2026-10-23: hardware test 23 (audio worker); GX FIFO cache-line separation
-- **hw23** (build fd0a143+audio worker, 3 players again, Metal City, logs build/switch/hw23/): `audio mixing` = **1.6-2.6 ms/frame on the Switch** (0.07 on PC), now off the game core. By draw load (fps averaged over 2 s blocks, hw22 -> hw23): 4,500-5,500 draws 55.4 -> 58.7 (blocks under 50 fps: 6 -> 0); 5,500-6,500 draws 36.9 -> 52.9 (18 of 19 -> 5 of 17); 6,500+ 38.7 -> 47.7. [confirmed] `80025E84` is gone from the profile. Remaining dips at 6,000-8,000 draws (countdown, a few spots): idle loop 24-36%, our GX FIFO 4.4-6% is now the top cost of ours; the rest is small unnamed game functions.
-- **False sharing in gx_fifo.c** (found with `nm -n` on the Switch object): `g_ring_head`/`g_kicked_at` (game thread, every burst) were within 32 bytes of `g_ring_tail`/`g_gp_sleeping` (GP thread), and the write-gather buffer `g_wg`/`g_pi_wptr` (every store) beside `g_need`/`g_pend*`/`g_gp_busy` (GP thread, every batch); `g_gx.fifo_bytes` (game, every burst, unused) sat next to `g_gx.draws` (GP, every draw). Fix: the GP thread's per-batch variables live in one 64-byte-aligned struct (`g_gpside`, names kept by macros), the producer reads the consumer's ring position only when the ring looks full (`g_tail_seen`), `fifo_bytes` write removed. PC 4P race fine (60 fps, 10.4K draws). Gain on the Switch unknown until measured (compare GX FIFO share and the dips with hw23).
-
-## 2026-10-23: hardware test 24 (GX FIFO cache lines); v0.2.4
-- hw24 (build 5101690, 3 players, Metal City, shorter run, logs build/switch/hw24/): GX FIFO share of the game core 5.4% -> 4.8% (avg over race profile reports; range 4.2-6.4 -> 4.0-5.4) [likely] a small real gain. Fps by draw band within run-to-run noise of hw23 (5,500-6,500: 52.9 -> 48.8 over 12 blocks; 6,500+: 47.7 -> 41.6 over 4) - different race moments; not worse in a measurable way. Remaining dips at 6,000-7,500 draws: game core ~17 ms of work.
-- Released v0.2.4 (menu row, stick dead zone, sleep fix, audio worker, FIFO cache lines). Next for #2: 4-player measurement; then game-core costs (pipe store path, vertex decode on the GP thread is 4-5 ms but off the critical path).
-
-## 2026-10-23: characters' missing highlights (#11, "blue tint") - specular light was NaN
-- **Cause [confirmed]:** Sonic's body material is stage 0 = TEX0 x lit colour 0 (C0C0C0 material, ambient 393939, light 0 spot with flat coefficients) and **stage 1 = PREV + RASC from colour channel 1** (order 080: no texture, channel COLOR1A1; cenv 08AFF0). Channel 1 (ctrl 0x20A) is the specular channel: light 1, attenuation Spec, diffuse None, light 1 = cosatt (0,0,1), distatt (16,0,-15) (GXInitLightShininess 32), **pos (0,0,0)**, dir = half-angle. gx.vert's Spec branch used `l = normalize(lp)`: NaN for lp = 0, so the back-face test failed and the specular term was always 0 -> no highlights at all, flat dark-blue characters. Dolphin (LightingShaderGen.cpp, checked): `ldir = normalize(lpos - pos)`; same attenuation formula (distatt normalized only when diffuse != None). Fix: `normalize(lp - pos)`.
-- The earlier lead (TEX1 = 0x896B60, a light-streaks CMPR) was the board's/other material's shine texture (stage 1 order 049); on the body, stage 1 has no texture at all, which is why `SR_TEVDEBUG=2` drew Sonic black.
-- Found with new PC-only debug views (`SR_TEVDEBUG`, uniform u_tev_debug, compiled out on deko3d): 1 lit colour 0, 2 stage 1's texture sample, 3 stage 0 only, 6 stage 1 coordinates as colour, 7 the old specular direction, 8 lit colour 1 (on draws with channel 1 lit); `cycle` (0-3) or `cycle:a,b,...` switches mode every frame so consecutive screenshots show one moment several ways (separate runs of the attract demo drift apart; `SR_GXDEBUG` per-draw state as before). Full-screen passes (EFB copies drawn back) are also affected by modes 1/8, so read those on the characters only.
-- Verified: PC before/after on consecutive frames (`SR_TEVDEBUG=cycle:0,7`): quills gain light-blue highlights and shading, close to Dolphin (Dolphin 2609a portable, attract demo dumped with the idle movie; the dump was an unfinalized AVI that ffmpeg still reads; frames matched by the race timer, Dolphin index 1674/1684). Switch shaders: per_warp_scratch 0 (all five dksh), Eden boots. Not yet seen on hardware.
-- Still different from Dolphin: the whole picture is darker (screen corners / vignette, item 7 in Open items) and the speed-blur screen effect is weaker (#3).
-
-## 2026-10-23 (night): the dark, blue-tinted picture (#11) and weak speed blur (#3): copies sampled at a larger size
-- **User report after the specular fix:** characters still blue-tinted on hardware (Splash Canyon screenshots: dark, saturated, greenish/blue characters).
-- **Matched comparison with Dolphin, new tool `SR_DFF=<frame>[,<count>]`** (gx_dff.c): records presented frames as a Dolphin FIFO log (build/frame_<frame>.dff): registers + TMEM at the start, every immediate-stream command, memory the GP read at the time it read it (display lists, indexed XF loads, TLUT loads), all of RAM as the first update (record with `SR_GX_SYNC=1` so it matches), the game's CPU FIFO bounds (Dolphin's player streams through them; 0 made it overflow), loader version 5 (our REL sits above 24 MB: Dolphin needs `Core.RAMOverrideEnable=True`, `Core.MEM1Size=29360128`). 2-3 frames so later frames find the earlier ones' EFB copies. Played in Dolphin 2609a (`Dolphin.exe -b -e frame.dff`, frame dump; scratchpad dolphin_dff.ps1): **Dolphin drew our frame like we did** (dark edges included), so the input to the renderer, not the shader maths, was wrong.
-- **Found with `SR_SKIPSAME=<frame>,<n>`** (render_gl.c, new): the same frame drawn again without each block of n draws (build/same_<frame>_<k>.png). One block lifted corners 39 -> 94 and centre 67 -> 107: the speed-blur overlays (prev-frame copy drawn over the screen edges, alpha up to 1 at the edge).
-- **Cause [confirmed]:** the game copies the frame at half size (320x240, RGB565) to 0x01106980 laid out 512 pixels wide and samples it as a **512x256** texture. `gx_texture_lookup` matched copies only at the exact copy size, so it decoded the stale RAM at that address (never written: our copies stay on the GPU): the overlays painted dark, wrong colours over the edges every frame, and the feedback darkened and tinted the whole picture, characters included.
-- **Fix:** a copy sampled at a larger size gets a padded texture of that size with the copy in its top-left corner (gx_texture.c `g_padded`), refreshed by a new backend command `GXC_TEXBLIT` (copy -> padded texture, before the draw; draws now look up textures before pushing the draw command) when the copy's sequence number changed. GL: framebuffer blit; deko3d: dkCmdBufBlitImage. PC frame 16200 mean RGB 55/63/45 -> 106/114/81 (Dolphin's own run of this stage: ~95/105/90); Metal City and Splash Canyon look like Dolphin, speed blur visible. Eden (deko3d): same. Switch shaders per_warp_scratch 0. Not yet seen on hardware.
-- **Fog implemented** (gx.frag, after the alpha test, Dolphin's WriteFog: perspective/orthographic depth, linear/exp/exp2/backward curves, fog colour BP 0xF2; range adjustment BP 0xE8-0xED not done). Races use it on nearly every draw (2,000-7,000 draws/frame); the `[perf]` fog counter read BP 0xEE instead of the fog type in BP 0xF1, so it always said 0. Effect here is mild (~10% haze toward B2D6E5 at Splash Canyon), but it was missing everywhere.
-- Debug views added on PC (`SR_TEVDEBUG`): 9 no fog, 10 fog amount, 11 fog inputs. Switch: `SR_SHOTS=a,b,c` saves those frames (k_shots otherwise).
-- **Hardware test 25 (4 players, build with the specular fix only, logs build/switch/hw25/):** races at 6,000-10,500 draws/frame run at a steady 30 fps; game-core idle loop 42-50% of a 33 ms frame -> ~17-19 ms of work per frame, just over a retrace. GP thread busy 10-15 ms (vertex decode 5-7 ms), render thread 6-9 ms, audio mixing 1.4-2.4 ms (off the game core). New `[perf]` line "draw done reached by the GP thread X ms after the game issued it" (BP 0x45 seen in the pipe -> PE finish on the GP thread): the GP thread's share of the end-of-frame wait. Next 4-player hardware log decides between speeding up the GP thread (vertex decode) and the game core.
-
-## 2026-10-23 (night): mods, layer 1 (file mods); README split into docs/
-- **User request:** make the PC version mod friendly (character swaps, stats, custom tracks); plan agreed: own format first, restart to apply, PC first but Switch-ready; priorities tracks, character swaps, stats. Plan and roadmap: docs/MODDING.md.
-- **Layer 1 done** (runtime/src/mods.c): `<mods dir>/mods.ini` (order, `#` = off, unknown folders appended and the file rewritten), `<Mod>/mod.ini` ([mod] name/author/version/description), `<Mod>/files/<disc path>`. disc_open rebuilds the FST (`mods_build_fst`): replaced/added files get offsets from 0x60000000 (32 KB aligned), `disc_read` serves that range from the mod files (`mods_read`; first read of each logged). Case-insensitive paths; new files only in existing folders; _Main.rel refused (precompiled). platform_mods_dir: PC `mods` (install folder), Switch `sdmc:/switch/sonicriders/mods` (untested). [confirmed] PC 4P route with a local test mod (PS* copied over PT*): player 2 picked Tails and rode as Sonic; log shows PT00/PT00M read from the mod. `/mods/` gitignored.
-- **Disc layout notes** (docs/MODDING.md "What's on the disc"): all 1,669 files in the root; `P<letter><nn>` + `M` per character (S Sonic, T Tails [confirmed by the swap]); numbered stage files with M/V/TE/TJ variants [likely]. tools/disc_files.py lists/extracts files from the user's image.
-- Settings-menu **Mods page** done (overlay.c page 1: rows per mod with On/Off from mods.c `mods_count/mods_title/mods_enabled/mods_set_enabled`, which rewrites mods.ini; "Restart the game to apply"; 8 rows visible, scrolls). `SR_TEST_MENU=mods` opens it (debugging). Main menu rows 32 px when more than 8 (Switch: 9 rows in the 360-line overlay). Toggling not yet exercised interactively.
-- **Stat mods done** (runtime/src/mods_data.c): `[gear.<Name|0-40>]` fields from Sewer56.SonicRiders' ExtremeGear (PC) layout, **[confirmed] identical on GC** by reading _Main.rel (level blocks 0x68/0x84/0xA0: Default gear max air 100000, drain 16, drift 166, boost cost 25000, tornado 25000, boost speed 0.926 = 200 km/h; note game_mods.c/NOTES' older "+0x64" block offset is off by 4); `_kmh` aliases divide by 216; `[memory]` ADDRESS = hex (2/4/8 digits); `[gecko]` 00/02/04 (+01/03/05) applied every frame; original GC addresses inside _Main.rel (803FBD00 .. 805FB080 + bss size) relocated by +0x01404300. Applied at OSLink (game_mods_linked) / each frame. [confirmed] by SR_PEEK of the table with a test mod. Not yet verified that a race uses the changed values (expected: the table is the source, as Tweakbox edits it on PC).
-- Next for mods: stats by name (gear table, GAME_GEAR_TABLE in game_addrs.h) and Gecko-style writes, then track research.
-- README restructured (user: "really long and cluttered"): README ~100 lines (what/get it/controls/status/links/legal/credits); details in docs/INSTALL.md, PLAYING.md, REPORTING-BUGS.md, BUILDING.md, MODDING.md.
-
-## 2026-10-25: frame rate modes - full game speed when a frame is late (the game's own 30 fps mode)
-- **Why 30 fps was slow motion here and not in Wind Waker:** Wind Waker's logic runs at 30 steps a second by design (WWHD/SwitchWakerHD draw 60 by interpolation). Sonic Riders runs one simulation step per loop iteration at 60 a second, and the frame end (`fn_8000610C`) waits for the next retrace and presents; a frame that needs 17 ms waits for the retrace after, so the game runs at 30 fps and half speed. [confirmed]
-- **The game has an unused 30 fps mode** [confirmed]: `0x8021BB7C` (u32) != 0 turns it on; the frame end then XORs `0x8021BB80` with it each iteration. While `BB80` != 0 the draw functions return early (~336 read sites, mostly `if (BB80) skip`) and the frame end returns without a present or a retrace wait; the next iteration draws, waits until two retraces after the previous present, and presents. `0x8021BBF4` (f32) = mode + 1, multiplied into effect/animation steps of ~30 functions that run on drawn frames (scene resets in the REL compute it as (mode + 1) x `0x8021B8EC`). The only setter in the game (`fn_1_4D310`, which also calls `SISetSamplingRate`) is called with 0.
-- **Measured (PC, attract demo, `SR_POKE=8021BB7F,1`):** the race timer advances 8.33-8.34 s per 500 VI fields (8.34 s of real time) at 29.9 fps: full speed. Profile of the same race section (new `SR_PROFILE_WINDOW`): busy game-thread work ~29% of samples at 60 fps, ~16% in 30 fps mode: skipping a frame's drawing skips most of the game thread's cost (draw submission, GX pipe), so the mode roughly halves game-thread time per second. The demo replay diverges in the mode (different positions), as it already does between our runs and Dolphin.
-- **Implemented** (`runtime/src/frame_pacing.c`, hle.txt hooks on `8000610C` frame end and `80017038` VIWaitForRetrace; setting "Frame rate", `settings.ini` `framerate=`, `SR_FRAMERATE=0/1/2` for tests):
-  - `60 fps (original)`.
-  - `30 fps (full speed)`: the game's mode as it is.
-  - `Auto (keep speed)` (default), modelled on WWHD's "Keep game speed": a schedule of one step per retrace; a drawn frame that finishes after its retrace presents at once (VIWaitForRetrace skipped, as WWHD's "flip when ready", issue #125), and when the game is a retrace or more behind, the next iteration does not draw (the game's own skip path; at most 2 in a row, then it slows down; more than 8 retraces behind restarts the schedule: loads). The multiplier is set to 1 + skipped iterations for the drawn frame (2 during an undrawn one, as the game's mode).
-  - Bug found on the way: the CRI/sound threads (prio 12/13) also call VIWaitForRetrace in loops; a global "skip the wait" made them spin while the main thread blocked in GXDrawDone -> boot hang. The skip applies only to the guest thread that set it (`OS_CURRENT_THREAD`).
-- **Tests (PC, `SR_TEST_GAME_LOAD_MS=DRAW[:LOGIC]` busy-waits on the game thread to imitate a slow console; `[pace]` log line every 600 fields):** load 12:4 -> 60 fps mode 30.0 steps/s (the slow motion reproduced), 30 fps mode 59.9 steps/s / 30 fps, Auto 59.9 steps/s / 47-57 fps; load 17:5 -> 30 fps mode 59.9 / 30, Auto 59.9 / 34-38; load 26:8 -> Auto 53-58 steps/s / 19 fps (skip limit); no load -> Auto 59.9 / 59.9 (unchanged). Race screenshots in Auto look normal (timer, HUD, speed blur, rank letters); intro FMV and title fine. Not yet on hardware or Eden.
-- Also: `[gl] screenshot` lines give the VI field; `tools/profile_report.py` reads the llvm-mingw build's map; `SR_PROFILE_WINDOW=FROM,TO` / `SR_PROFILE_OUT=path` (PC profiler).
-
-## 2026-10-25: faster recompiled code (ideas from SwitchWakerHD), handheld GPU profile
-Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD docs/performance.md. Measured here on PC/Eden only; **hardware numbers still needed** (Switch at stock clocks).
-- **Single-precision tracking** (`tools/recomp/singleflow.py`, `RECOMP_SINGLE=0` off): fmuls/fmadds/paired multiplies round their multiplier operand with `round25`, the identity on values already single precision. A forward dataflow per function over the generated C text (lfs/psq_l/to_single results single; moves/neg/abs/merges copy the state; other writes unknown; after a direct ABI call only ps0 of f14-f31 kept; patched instructions and unreachable code know nothing) drops it for **14,543 of 15,142 operands**. Checking build `RECOMP_SINGLE_CHECK=1` (`ppc_single_chk` logs any operand that was not single): boot, intro FMV, title and attract race on PC with 0 reports [confirmed].
-- **Stack / small-data accesses without the device test** (ppc2c.py `ram_suffix`, `RECOMP_STACKRAM=0` off): loads/stores based on r1 or r13 (r13 is set once at start-up, 80003334) use `ld32r`/`st32r`/... (no MMIO range check): ~30% of the 272K static accesses. r2 is not used: the exception vector stubs use it as scratch.
-- **Static GQR0/1** (gcrecomp.py `static_float_gqrs`): the scan saw `mtspr GQR0/1` and marked no GQR static (`PPC_GQR_STATIC_FLOAT 0x00`), so all 5,406 paired loads/stores tested the GQR type at run time. The writes are the OS's start-up clear (`li r3,0` then mtspr GQR0-7, 8000A33C), OSLoadContext (native) and `TRKRestoreExtended1Block` (MetroTRK stub, never runs): now ignored -> `0x03`, 4,539 sites lose the test.
-- **Quantized paired loads/stores inline** (ppc.h `psq_load_q`/`psq_store_q`): the ~860 sites with GQR2-7 handle u8/s8/u16/s16 in RAM inline (one device test per pair). In a PC boot+FMV+race run `psq_store_slow_l` + `psq_load_slow_l` were 9.3% of all samples (~37% of busy game-thread time; Sofdec's video decoder, the intro FMV that ran ~42 fps on the console); after: gone from the top, busy game-thread samples 25.4% -> 19.6% of the run.
-- **Switch: guest memory base in x28** (as SwitchWakerHD's -DWWHD_SWITCH_BASE_REG; `configure.py --no-base-reg` off): generated code reads the base from x28 (GCC global register variable, `PPC_GEN_CODE`), everything we compile has `-ffixed-x28`, and the two guest-thread entries (main.c `game_thread`, sched.c `thread_main`; never return) set it (`ppc_enter_guest_thread`); interrupts run on the guest threads; the runtime keeps its adrp+ldr. Eden boots and races.
-- **Hot functions first** (`config/GXEE8P/hot_functions.txt` from `tools/hot_functions.py`: PC profiles of boot/FMV/attract race + the `[profile]` lines of hardware tests 15-25; `RECOMP_HOT=0` off): 785 functions emitted first, hottest first, into their own files, so race code sits together (I-cache/TLB on the A57). Addresses only; re-make the list from new profiles when the code changes much.
-- Result: **Switch game code 28.5 MB -> 20.1 MB** (`aarch64-none-elf-size` text; most of it is the x28 base). PC and Eden: FMV, title, attract race render correctly; Eden FMV now 60 fps (was ~42 fps CPU-bound). `-fomit-frame-pointer` is already GCC 16's default at -O2 (checked).
-- **Handheld GPU profile** (platform_switch.c): `apmSetPerformanceConfiguration(Normal, 0x00020004)` = Nintendo's 384 MHz handheld configuration (CPU 1020, memory 1331 stay; system default 0x00020003 = 307 MHz), restored at exit; needs title mode; `SR_HANDHELD_GPU=0` in env.txt skips it. Not an overclock. Eden: `rc 0x0`.
-- Looked at and left: PGO (SwitchWakerHD +3-7%, needs a profiling build on the console; later), Dusklight's clkrst clock control (that is an overclock; the goal is stock clocks), UnleashedRecomp-NX (nothing new; it also recommends overclocking).
-- Profiler on PC (`SR_PROFILE_WINDOW`) of the race alone: busy time is spread over many game functions; ours: gx_pipe_write 1.5%, draw_impl 1%, platform_now_ns+rt_ticks 1.2%, decode 0.8%.
-
-## 2026-10-25 (evening): hardware test 27 - stock clocks, handheld; crackling sound in Auto
-- User: 30 fps mode ran at normal speed; on Auto the sound had a lot of issues. Logs: build/switch/hw27/ (build 1c2a425 + the recompiler changes, handheld, GPU 384 MHz profile active, presumably stock CPU). Menus 59.9 steps/s; races in Auto 59.8-60.0 steps/s (full speed) at 30-58 drawn fps.
-- **Audio** [likely cause]: command lists the game sent (`ax_list_count`, 200/s = one per 5 ms) fell to **~178/s in Auto races and ~182/s in 30 fps races**; menus and every earlier (overclocked) log stay at 199-200 even in slow races -> ~10% of audio frames dropped. The game sends the next list only when the DSP finished the previous one; our mixer thread (`ax_thread`) shared core 1 with the render thread at the same priority, and Horizon does not time-slice equal priorities: in heavy race frames the render thread records for ~7 ms per frame (of 32 ms, the rest is a sleeping GPU wait), so mixes started late. Fix: the mixer runs one priority step above (`rt_thread_raise_priority`, Switch prio - 1, PC THREAD_PRIORITY_ABOVE_NORMAL). New `[perf] devices` fields: "N mixes started late (longest wait X ms)" (queued -> started > 5 ms). Eden: 0 late (not representative). **Needs the next hardware log** (the count should be ~0, list rate 200/s in races).
-- **Stock handheld races are GPU-bound**: render thread 27-32 ms/frame of which 22-26 ms waiting for the GPU at 4,000-5,300 draws, 1x. GP thread 18-20 ms per drawn frame (vertex decode 5-6 ms). Specialized shaders covered ~90% of states; the 16 keys the console logged (sdmc shader_keys.txt) are added locally (build/shaderkeys/switch_hw27.txt; 66 -> 82 specialized shaders).
-- deko3d: `apply_state` re-emitted viewport, scissor, depth, colour, blend, colour-write and rasteriser state at every register change (almost every draw); now each is compared with the last one emitted and skipped when equal (`g_st`, cleared at frame start, EFB copies, overlay); the per-draw transform table UBO is bound only when it changes. Eden race renders the same.
-- Next GPU levers if still GPU-bound: more shader keys, then find the expensive passes (fog on every draw, speed-blur full-screen copies), dynamic resolution (SwitchWakerHD round 20).
-
-## 2026-10-25 (night): settings menu rebuilt with Dear ImGui (SwitchWakerHD's layout, Sonic colours)
-- User request: SwitchWakerHD's menu design and options. Theirs (runtime/src/overlay/overlay.cpp, platform/overlay_switch.cpp; MPL-2.0): Dear ImGui with a custom style (deep sea blue, teal accents, gold NavCursor, rounding 5-10, SeparatorText headings in an accent colour, grey notes, orange warnings, tooltips per option), a centred panel (<= 960x620) with a tab bar, L/R switch tabs, B closes, Quit Game (confirm, Cancel focused) on every tab; the Switch system font (`plGetSharedFontByType`, 17 px); a deko3d ImGui renderer (gfx/deko/overlay_dk.cpp).
-- Ours (`runtime/src/menu.cpp`, replaces overlay.c + stb_easy_font): same structure, Sonic palette (navy, Sonic blue, ring gold for headings/checkmarks/cursor, red Quit), 19 px; tabs Display / Performance / Controls / Gameplay / Mods / About. Dear ImGui v1.92.9b (MIT) is **not in the repository**: imgui.cpp (980 KB) and imgui_widgets.cpp exceed the game-data guard's 512 KB limit and a comment in imgui.cpp about the Home and End keys trips its home-folder-path check, and the guard must not be weakened (CLAUDE.md). The setup downloads the tag's GitHub archive pinned by SHA-256 (setup/toolchain.json "imgui"); `configure.py --imgui DIR` copies the needed files to build/ext/imgui-1.92.9b (default location; ninja paths cannot contain spaces). `IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS` (libnx has no execvp/waitpid).
-- **Drawn in software** (`runtime/src/menu_raster.cpp`) into the overlay image, now 1280x720 premultiplied RGBA, so neither backend needed an ImGui pipeline (or new uam shaders): both composite with ONE / ONE_MINUS_SRC_ALPHA; PC draws it in a centred 16:9 viewport (it was stretched over the 4:3 window). Rect fast path (glyphs, frames), triangles by per-row spans with a top-left rule (rounded rectangles are fans of large triangles: bounding-box scanning took 11 ms), opaque window/page backgrounds, `AntiAliasedLinesUseTex = false` (needs filtered sampling). The image is drawn again only when ImGui's draw data hash changes (the menu runs an ImGui frame per presented frame while open; the FPS counter only when its value changes). Cost per redraw: PC 3-4 ms, Eden 21-25 ms (hardware unknown; the render thread pays it once per change).
-- New: `OV_TAB_L/R` (Switch L/ZL, R/ZR, sideways Joy-Con SL/SR; PC Q/E, PageUp/Down, shoulders), left-stick navigation on the Switch, `overlay_take_quit_request` (render loops exit as on HOME / window close), setting `handheld_gpu` (the 384 MHz apm profile, switchable live; `SR_HANDHELD_GPU=0` still forces it off), `SR_TEST_MENU=<tab>`. PC link: `-static-libstdc++ -static-libgcc` (otherwise the exe needs llvm-mingw's libc++.dll/libunwind.dll). Switch screenshots are now taken after the overlay (SR_SHOTS frames show the menu/FPS counter; the menu's Save screenshot closes it first).
-- Not done (their options we could add): picture grading sliders (exposure/contrast/saturation/gamma: needs a present-pass shader change on both backends), dynamic resolution, rumble/gyro (game has neither), per-mode resolution (docked/handheld).
-
 ## 2026-10-26: GPU cost at stock clocks is the vertex shader (XF memory reads)
 - **Dynamic resolution did not help [confirmed, hardware]:** at 0.5x internal resolution race frames still took 18-20 ms of GPU time, and the picture was much worse. Removed (with Auto's settle-on-30), see the commit "Remove dynamic resolution".
 - **GPU cost test (`SR_GPU_AB=1`, render_deko.c) [confirmed, hardware, stock clocks, 1x, handheld GPU 384 MHz]:** per-frame GPU timestamps plus vertex/fragment shader invocation and primitive counters (`dkCmdBufReportCounter`). Race, ~25-35k vertex shader runs and ~2M fragment shader runs per frame: normal 11.7 ms; vertex shader with positions only (no lighting, no texgen) 5.2 ms; flat-colour fragment shader 10.9 ms; both 3.4 ms; no draws 1.1 ms. So about half the GPU time is the vertex shader's lighting/texgen, not pixels. Eden reports zero for all counters.
@@ -564,3 +168,174 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   outside net_frame (keepalive not called), harmless that time; open item in docs/ONLINE.md.
 - Switch-remote notes: HOME tiles wrap (LEFT from the first tile goes to All Software); the game tile asks "Who is
   using the software?" first (A picks the first user); presses can be dropped, so check with a screenshot.
+
+## 2026-11-03: Android port planned (branch `android`); online play paused
+- Online work recorded as paused in STATE.md on `main` (phase 3 next steps: PC-PC and Switch-Switch sessions, then
+  the phase 4 NaN-sign fix on x86). Branch `android` created from it.
+- `.gitignore` and `tools/check_no_game_data.py` refuse Android outputs: `*.apk`, `*.aab`, `*.apks`, `*.idsig`,
+  `*.so`, `*.dex`, `*.spv`, keystores (`*.keystore`, `*.jks`), `android/app/build/`, `.gradle/`. [confirmed: guard
+  test on sample names]
+- docs/ANDROID_PLAN.md from reading the code: SDL2 covers window, audio, input, lifecycle and paths on Android;
+  `platform_host.c`'s POSIX branch, `memory.c`'s mmap branch and `netplay.c`'s POSIX sockets carry over
+  [confirmed by reading]; `profile_win.c` is Windows only. Recommended renderer: Vulkan ported from `render_deko.c`
+  with SPIR-V built from the shared GLSL [likely; to be confirmed by M1's GLES vs Vulkan draw-cost measurement].
+  Nothing built or run for Android yet.
+
+## 2026-11-03 (later): Android milestone 1: toolchain, probe APK, GLES vs Vulkan on the S23 Ultra
+- Setup `-Target android|all` (`-Abi`, `-Install`, `-AcceptAndroidSdkLicense`; `-Yes` never accepts the license):
+  Google's packages straight from dl.google.com (SHA-1 matched Google's manifest, SHA-256 pinned), Temurin JDK 17,
+  SDL2 2.32.10 source. `configure.py --target android` hands off to `tools/android_build.py` (no Gradle). The probe
+  APK (`tools/android/probe/probe.c`) reports system/CPU/GPU facts, plays a tone, logs input and measures draws.
+  [confirmed] setup run end to end; host-mingw and switch still build.
+- Emulator (x86_64, headless, WHPX): probe runs; ES 3.2 context refused (EGL_BAD_CONFIG), so the probe falls back
+  to 3.1/3.0. [confirmed]
+- **S23 Ultra, Android 17** [confirmed, one run]: GLES 8.06 ms vs Vulkan 2.00 ms CPU per frame of 7,000 draws ->
+  Vulkan is the renderer. dualSrcBlend, EDS1/2, push descriptors, dynamic rendering present. Swapchain transform
+  ROTATE_90 (pre-rotation needed). 120 Hz panel (8.3 ms frames: the port needs setFrameRate(60) or pacing).
+  Page size 4 KB on this phone (16 KB alignment kept anyway). No input events were logged (nobody touched it).
+- Gotcha: build.ninja is per target; a stale Switch build.ninja failed without DEVKITPRO set. Unproven: the
+  probe's audio was not listened to; controllers untested.
+
+## 2026-11-03 (evening): Android milestone 2: the game boots on the phone; memory identical to PC
+- `configure.py --target android` builds the game: build/gen + runtime with NDK clang (aarch64/x86_64-linux-android30,
+  PIC), platform = `platform/host` (POSIX branch) + new `platform/android/render_android.c` (no picture; frames recycled,
+  SDL events pumped). minSdk raised to 30: bionic has C11 `<threads.h>` from API 30. `main.c` uses SDL_main on
+  Android and turns KEY=VALUE launch words into environment variables; `platform_host.c` chdirs to the app folder,
+  rotates the log, reads env.txt; `rt_log` also writes logcat (tag `sonicriders`). Built first time, 168 MB with debug
+  info; the APK step now strips (26 MB). [confirmed]
+- S23 Ultra, Android 17: boots from the pushed ISO, 59.9 fps, AX sound through SDL (OpenSL ES, 32 kHz). [confirmed log;
+  sound not listened to]
+- Det compare phone vs PC first differed at step 2 (settings: PC widescreen + Chaos Emerald "as in the save" vs phone
+  defaults; block 26 = REL data the options patch), then at step 1494: the phone got perftest's START a frame earlier.
+  Cause: `perftest_pad` timed START by `vi_field_count()`, which is not deterministic during the intro even with
+  SR_DETCLOCK (SR_INPUT uses `ppc_detclock_steps()`). Fixed to use the step count under SR_DETCLOCK. After it: phone =
+  PC on all 4,000 steps (28 MB each), x86_64 emulator = PC on 1,500. [confirmed] Not compared directly with a Switch run.
+- Gotchas: stripped .so files kept a temp name in the APK at first (`libc++_shared.so not found`); a folder created by
+  `adb shell mkdir` before the app's first start is unreadable for the app (emulator): the setup starts the app once.
+
+## 2026-11-03 (night): Android milestone 3 started: Vulkan renderer and touch controls; first picture on the phone
+- Research for the touch layout: Sonic Riders' controls (sonicriders.org glossary): A jump (hold = charge), B/X boost,
+  L/R drift, L+R tornado, START pause; virtual-joystick guidance (floating stick, dead zone, activation zone). Layout
+  mockup shown to the user (scratchpad); same numbers in touch_android.c.
+- `render_vk.c` (~1,200 lines) and `touch_android.c` built first time; `render_android.c` (M2 stand-in) removed.
+  S23 Ultra, Android 17: Adreno 740 Vulkan 1.3.128, dual-source + push descriptors used; intro FMV on screen at
+  59.9 fps with the FPS counter and touch controls in the self-capture. [confirmed, one run] First pipelines took
+  150-300 ms each (hitches at boot). Not yet seen: title screen, races, EFB copies, touch by hand, resume.
+- The user reported the screen going to sleep after 10 minutes: M2 never created a window; now SDL's window +
+  SDL_DisableScreenSaver (keep screen on). [likely; not timed]
+- Switch dksh all `per_warp_scratch 0` after the gx.vert change (guarded by DEPTH_ZERO_ONE). Host + Switch build.
+- Touch icons from the user (zip of 1024 px PNGs: joystick, A, B, R, L+R): cropped to content, slivers of neighbouring
+  buttons removed (drift, tornado), the joystick split into a base (knob well filled dark) and a knob, 384 px, in
+  `android/touch_icons/` (the user's own art, not from the game; gitignored, since the guard refuses binary files: without
+  them the build uses the drawn icons). `tools/embed_icons.py` (stdlib PNG decoder) makes a
+  premultiplied atlas header; render_vk.c draws them at 55% (pressed 85%, 7% smaller). Phone self-capture: shown
+  over the intro at 60 fps. [confirmed] PAUSE / MENU keep the drawn icons (no pictures given).
+
+
+## 2026-11-03 (late night): Android M3: picture upside down fixed, pipeline prewarm, resume, GPU-bound races
+- **Picture compare** (S23 Ultra, Android 17): `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_SHOTSTEP=<16 game
+  frames>` on the PC and the phone (same settings.ini; new `SR_TOUCH=0` hides the touch controls), cropped to the
+  16:9 picture and diffed. Every game frame was **upside down** on the phone (overlay right way up), races had
+  missing models and smeared blur. Cause: the Vulkan prelude used deko3d's `CLIP_Y -1`; Vulkan's clip -y is row 0,
+  as in GL's flipped storage, so it needs +1. That also inverted face culling and made EFB copies read the wrong
+  rows. After the fix: mean difference 0.2-3.4 levels on all 16 frames (edges; the title rings differ by one frame
+  of animation because the phone saved frame 3300 and the PC 3301). [confirmed]
+- **Pipeline hitches**: pipeline keys recorded in `vk_pipeline_keys.bin` (app folder), prebuilt on a helper thread
+  at boot and handed to the render thread (`pipe_drain`). Second run: 35 of 35 built in 68 ms, none during play.
+  [confirmed] The remaining race-start hitches (~90 ms) are not pipelines: the `[hitch]` line now breaks the render
+  thread's frame down (pipelines, GPU wait, images, copy-in, recording, acquire, submit, present) and shows
+  vkQueuePresentKHR blocking, i.e. the GPU.
+- **GPU-bound 1P races** (new `[vk] GPU x ms/frame` from timestamps): 18-24 ms per 1P race frame at 1x, CPU side ~4 ms;
+  1P demo 55 fps, 2P demo 58 fps; game thread ~5 ms/step. EFB render area limited to the used part (A/B with
+  `SR_VK_FULLAREA=1`: no change). `SR_VK_TINYSCISSOR=1` (1-pixel scissor): 9-10 ms remain, so per-draw/vertex cost
+  (~4.5 KB of uniform blocks per state) is about half. [confirmed numbers, 1 run each] Next: specialized shaders.
+- **Background/resume**: HOME for 15 s, then back: the game stays paused (render thread blocked by SDL), swapchain
+  remade, frame pacer restarts, 59.9 fps at once, intro continues. [confirmed, 1 run]
+- User test by hand: touch works; Xbox Series X pad over Bluetooth works (touch controls hide). Feedback list in
+  STATE.md (stick rings off-centre in the knob picture, START icon, overlay touch unreliable and Close not closing,
+  hide Fullscreen, controls text, app icon, analog trigger click threshold). Not done yet.
+- Scope decision (user): local split screen up to 2 players with pads; 3-4 players only online.
+- Touch pictures committed with the user's OK: guard exception `OWN_ART` (exact paths + SHA-1 + PNG signature).
+- Later: the user supplied a new joystick cap picture (rings centred). Its "transparency" was a baked-in checkerboard:
+  cut out on a circle fitted to 360 edge points of its dark rim (sd 2.8 px), 1.5 px soft edge, 256 px; replaces
+  `stick_knob.png` (OWN_ART hash updated), same opacity and stick logic. Installed on the phone. [likely; not seen on
+  the phone by the user yet]
+
+## 2026-11-03 (night): Android touch/controller feedback round 2, app icon, trigger calibration
+- **Menu "Close" did not close** (user): a touch on Close runs `close_menu()` inside the ImGui frame, so the picture
+  made in that frame still showed the menu, and with the FPS counter on (steady 60.0) nothing drew it again. Fix:
+  `overlay_image` compares the open state before the frame and redraws once more. Found by reading the code;
+  checked on the phone with `adb shell input tap`: Close hides the menu, touch buttons back. [confirmed]
+- **Taps on the menu**: a burst of 5 synthetic taps on different tabs landed every one (the last tab ended
+  selected); tabs and Close respond. The user's "taps sometimes ignored" was probably the stale picture above
+  (tapping a menu that was already closed). [likely; real-finger test by the user pending]
+- Android menu: no Fullscreen option; Controls tab explains the touch controls and any Bluetooth/USB pad; hint row
+  "Tap to choose. Controller: LB / RB tabs, A choose, B back". [confirmed on the phone]
+- **Stick**: home position moved north-east (0.36 H from the left, 0.31 H above the bottom); dead zone now applied in
+  `touch_apply` by game mode: 12% in races, 35% with a squared curve in menus (cursor moves from ~64% of the throw
+  instead of ~30%). **Game mode variable `8021B8C0`**: found by phone RAM dumps (det route: intro, title, title
+  again vs 1P and 2P demo races; 75 candidate words), then checked on a PC menu route: 1 through intro, title and
+  Player Entry, 8 from the Free Race intro (step 6825; screenshots). Only mode 1 counts as menus, so unknown modes
+  keep the race feel. [confirmed for those screens; story/other modes unchecked]
+- **PAUSE**: a circle with START in block letters (vk_touch.frag), radius 0.05 → 0.065 H. Looked at on the phone:
+  centred and readable. [confirmed]
+- **App icon**: `tools/android_icon.py` (adaptive icon, made at build time) from the save icon in `_Main.rel`, or
+  `configure.py --icon` / setup `-Icon` (.ico with PNG or 32-bit BMP images, or .png; also the PC .exe icon). The
+  user's `SonicRidersIcon.ico` is the game's box art (SEGA's artwork), so it is a local option only, never
+  committed. `aapt2 dump badging` shows `res/mipmap-anydpi-v26/ic_launcher.xml`. [confirmed in the APK; launcher look
+  not checked]
+- **Triggers**: input_sdl.c learns each pad's deepest trigger press (start 26000), scales the analog value to it and
+  clicks the digital L/R from 85% of it; each new deepest press is logged. Replaces the fixed 29000 click that an Xbox
+  Series X pad on Android did not always reach. [uncertain: needs the user's pad; read the `[input] ... trigger` lines]
+- Builds: Android, Switch and Windows (mingw) all build.
+- Session hygiene (user asked how to spend fewer tokens): docs/MAP.md (code map), REFERENCE "Quick commands",
+  CLAUDE.md "Token budget", old test outputs moved to `build/old/`.
+
+## 2026-11-03 (late): user test accepted; docs split into notes; working rules from LostOdysseyRecomp
+- **User test on the S23 Ultra: accepted** — stick feel, menu taps and Close, START button, triggers in races. Log:
+  RT pressed to 32767 (clicked), LT only light presses (5349, 8328: analog, no click), as designed. The APK on the
+  phone now uses the user's own icon (local `--icon`, box art, not committed). Right stick → C-stick checked in code:
+  stick8 (round 25% dead zone, full ±100, up = higher) into `GcPad.c_x/c_y`, sent unchanged by si.c's poll
+  response. [confirmed in code; no in-game C-stick screen checked]
+- Docs (ideas from LostOdysseyRecomp's AI_WORKFLOW.md and docs/notes): REFERENCE.md split into `docs/notes/`
+  (build-and-test, android, debug-variables, game-addresses, architecture) with REFERENCE.md as an index of
+  Reference / Historical notes; recon and the superseded decomp plan to `docs/archive/recon-2026-10.md`; HISTORY
+  entries 2026-10-16..25 to `docs/archive/history-2026-10-16_to_25.md` (verbatim). CLAUDE.md: four status words
+  (implemented / tested / accepted / released), "partial test ≠ full validation", "not reproduced ≠ fixed", and
+  revert-first for release regressions. Local hooks (`.claude/settings.local.json`, not tracked): a session-start
+  reminder and an end-of-session checklist before `git commit`.
+
+## 2026-11-03 (late night, user away): Android specialized fragment shaders
+- What: the Switch's ahead-of-time specialized fragment shaders, ported to Vulkan: `gen_shaders.py --vk` (glslc,
+  same keys from build/shaderkeys/), `spec_bits()` in render_vk.c puts the shader in the pipeline key, misses go to
+  `shader_keys.txt` in the app folder, `SR_NOSPEC=1` turns it off.
+- Tested on the S23 Ultra (Android 17), same APK, `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_TOUCH=0`, off vs on:
+  1P demo 55.13 → 59.29 fps, 2P demo 58.37 → 59.81 fps; GPU per frame title 9.3-11.4 → 1.6-1.8 ms, 1P race
+  13.7-18.2 → 11.1-14.1 ms, 2P race 13.0-17.7 → 12.0-13.9 ms. All demo states hit (32 keys). Captures at game frames
+  2900, 5300, 10500: identical except the FPS counter's digits (<0.015% of pixels, all in its box). [confirmed, 1
+  run each; not accepted by the user yet]
+- Not done: the vertex format (160 bytes per vertex) is the next GPU lead; first race frame after a new build
+  still builds its new pipelines (178 ms hitch once, then prewarmed).
+- Hook fix: the commit checklist hook fired on every Bash call (`if` filter ignored); it now greps the command.
+- Later the same night: a packed Vulkan vertex (116 vs 160 bytes) A/B'd on the phone: no change in fps or GPU time,
+  identical pictures; reverted (vertex fetch is not the cost). USCALED8 is not a vertex format on Adreno. [confirmed]
+- PS4/PS5 research for the user (docs/notes/ps4-ps5-research.md): public PS5 jailbreak to 13.60 (Relapse +
+  etaHEN), 14.x not public; an open PS5 Vulkan driver (Mesa RADV port, PS5_Vulkan) is in use by RetroArch,
+  Dolphin and recomp ports, so a PS5 build could reuse render_vk.c. PS4 public to 13.52.
+- PS Vita research for the user (docs/notes/vita-research.md, research only, no code): HENlo runs HENkaku on
+  3.65-3.74, Ensō needs 3.65. Guest memory fits easily; the CPU is the blocker: estimated 50-80 ms per game step
+  at 444-500 MHz vs 33 ms needed for the game's 30 fps mode [uncertain, no hardware measurement]. Closest
+  precedent, Xita (Xbox → Vita static recomp), reached 12-20 fps and closed. Remote control: vitacompanion (FTP
+  1337, commands 1338: launch/press/quit), screen via udcd-uvc over USB. Suggested probe: headless core +
+  GXM 7,000-draw microbench on the user's PCH-2000.
+- 2026-11-04: **v0.4.0 released with the Android port.** Before it, the user's phone crashed while screen
+  recording (VK_ERROR_DEVICE_LOST after ~330 ms frames at the first race frame). Reproduced 4/4 (perf test +
+  `adb shell screenrecord`) and once without recording on a warm phone; ruled out EFB rectangle bounds, long
+  submissions (split at 1,500 draws), robustBufferAccess, the acquire wait stage, and pixel cost (1-pixel scissor
+  still crashes). Cause unknown [uncertain]; shipped as a known issue by the user's decision (docs/notes/android.md).
+  PC and Switch built from the merged tree; 390 Switch dksh with per_warp_scratch 0; no hardware run of the merge.
+- 2026-11-04: **Vita probe V1a on hardware** (branch `vita`). Fixed in order: pthreads only on its own threads,
+  `_Thread_local` shared across threads (GCC emutls single-thread mode until `pthread_cancel` is linked: guest
+  handoffs deadlocked), then the perf test ran: CPU 500 (plugin override of 444), game thread 52.1 ms/step 1P /
+  43.0 ms 2P, GP thread 42-51 ms [confirmed]. Remote: vitacompanion 1.08 installed, udcd_uvc enabled (USB camera
+  "PSVita" read with ffmpeg). docs/notes/vita-research.md.

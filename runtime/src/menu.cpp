@@ -313,7 +313,7 @@ void tab_display() {
         }
     }
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
-#else
+#elif !defined(__ANDROID__)  /* phones are always full screen */
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
         settings_apply();
@@ -362,6 +362,17 @@ void tab_controls() {
     heading("Buttons");
     note("A B X Y = A B X Y,  + = START,  ZL / ZR = L / R,  R = Z,  sticks = control stick and C-stick, "
          "D-pad = D-pad. A single Joy-Con held sideways works as a small controller.");
+#elif defined(__ANDROID__)
+    heading("Touch screen");
+    note("Left half: the control stick (it appears where your thumb lands). Right side: JUMP (A, hold to charge), "
+         "BOOST (B), DRIFT (R, hold), TORNADO (L + R). Top right: START (pause). Top left: this menu. "
+         "Slide your thumb between buttons without lifting it.");
+    heading("Controllers");
+    note("Any Bluetooth or USB controller works (Xbox, PlayStation, Switch Pro and others): it is player 1, more "
+         "controllers are players 2 to 4. Using one hides the touch controls; touch the screen to bring them back.");
+    note("A B X Y = A B X Y,  Start = START,  left stick = control stick,  right stick = C-stick,  "
+         "triggers = L / R (pressed fully they click, as on a GameCube),  right shoulder = Z,  D-pad = D-pad. "
+         "Hold Back (View / Select / Share) or press the phone's Back to open this menu.");
 #else
     heading("Keyboard");
     note("WASD = control stick,  J / K / L / I = A / B / X / Y,  Enter = START,  U / O = L / R,  P = Z,  "
@@ -411,7 +422,11 @@ void tab_about() {
 void quit_row() {
     const float w_close = ImGui::CalcTextSize("Close").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::PushStyleColor(ImGuiCol_Text, kNote);
+#ifdef __ANDROID__
+    ImGui::TextUnformatted("Tap to choose.   Controller: LB / RB tabs, A choose, B back");
+#else
     ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
+#endif
     ImGui::PopStyleColor();
 #ifdef __SWITCH__
     /* no Quit Game: games on the Switch are closed from the HOME menu */
@@ -633,6 +648,28 @@ int overlay_take_screenshot_request(void) {
     return r;
 }
 
+int overlay_menu_open(void) { return g_open; }
+
+/* a touch control's menu button: open or close at once (no hold) */
+void overlay_menu_toggle(void) {
+    if (g_open) {
+        close_menu();
+        return;
+    }
+    g_open = g_just_opened = true;
+    if (g_ready) ImGui::GetIO().ClearInputKeys();
+}
+
+/* a finger on the open menu, in overlay pixels (OVERLAY_W x OVERLAY_H); down = 0 when lifted */
+void overlay_pointer(float x, float y, int down) {
+    init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+    io.AddMousePosEvent(x, y);
+    io.AddMouseButtonEvent(0, down != 0);
+    if (!down) io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  /* no hover left behind after the finger lifts */
+}
+
 int overlay_take_quit_request(void) {
     int r = g_quit_request;
     g_quit_request = 0;
@@ -712,8 +749,11 @@ const uint8_t* overlay_image(unsigned* version, int box[4]) {
     /* the menu runs every frame while open (navigation, tooltips); the counter only when it changes */
     collect();
     /* a picture left waiting because the helper was busy is made again too */
+    bool open_before = g_open;
     if (g_open || fps_changed || banner_changed || was_open != g_open || g_retry) frame();
-    was_open = g_open;
+    /* a touch on Close (or Quit) closes the menu inside frame(): that picture still shows the menu,
+     * so the next call draws again without it */
+    was_open = open_before;
     *version = g_version;
     if (box) memcpy(box, g_box[g_front], sizeof g_box[g_front]);
     return shown && g_had_image ? g_img[g_front] : nullptr;
