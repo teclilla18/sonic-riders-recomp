@@ -315,7 +315,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                description="RC $out")
         n.build(OUT + "/obj/icon.res.o", "rc", rc, implicit=[icon])
         objs.append(OUT + "/obj/icon.res.o")
-    n.build(exe, "link", objs)
+    # Android: libSDL2.so comes from the SDL2 step; without the dependency a fresh build could link first
+    n.build(exe, "link", objs, implicit=[android_build.sdl_lib(args.abi)] if args.target == "android" else None)
     if args.target == "switch":
         n.rule("nacp", "%s/tools/bin/nacptool.exe --create \"Sonic Riders\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,
                description="NACP $out")
