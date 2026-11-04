@@ -63,3 +63,20 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - S23 Ultra facts (Android 17, SM8550): CPUs 0-2 A510 2016 MHz (capacity 266), 3-6 2803 MHz (811), 7 X3 3360 MHz
   (1024); affinity and nice -16/-19 allowed for apps; APerformanceHint, AThermal, ANativeWindow_setFrameRate
   present; SDL audio uses OpenSL ES at 32 kHz, 512 frames; display 3088x1440 at 120 Hz (frames of 8.3 ms).
+
+## Specialized fragment shaders (2026-11-03)
+
+- As on the Switch: `tools/gen_shaders.py --vk` compiles one SPIR-V fragment shader per recorded state key (TEV
+  setup folded into constants) with the NDK's glslc into `build/android-<abi>/gen/gx_spec_spv.h`; keys come from
+  `build/shaderkeys/*.txt` (game-derived, never committed; the Switch's files work unchanged).
+- render_vk.c: `spec_bits()` per state change (binary search by key hash) → pipeline key bits 36-59 (low 24 bits
+  of the hash) + bit 60; `gx_pipe_make` picks the module. A key from an older table that no longer matches keeps the
+  ubershader. Misses go to `shader_keys.txt` in the app folder: pull it (`--pull shader_keys.txt`) into
+  `build/shaderkeys/android_<date>.txt` and rebuild to cover them. `SR_NOSPEC=1`: ubershader only (A/B).
+- Log: `[vk] ... specialized shaders for N of M states` every 300 frames.
+- A/B on the S23 Ultra (Android 17), same build, `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0`: 1P demo 55.1 → 59.3
+  fps, 2P demo 58.4 → 59.8 fps; GPU per frame: title 9-11 → 1.6-1.8 ms, 1P race 13.7-18.2 → 11.9-13.2 ms (first
+  heavy frame 23.7 → 18.6), 2P race 13.0-17.7 → 12.0-13.9 ms. All demo states hit (32 keys from the Switch files).
+- Next GPU lead: the vertex format (`GxVertex`, 160 bytes, ten float4 attributes, fetched twice on a tiler: binning
+  and rendering). A compact Vulkan-only layout (colours unorm8, matrix indices u8, normals half) would cut it ~35%.
+

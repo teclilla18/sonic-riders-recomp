@@ -50,8 +50,9 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
   background/resume, touch controls, Xbox Series X pad over Bluetooth. [confirmed]
-- Perf (S23 Ultra, Android 17): 1P demo 55 fps, 2P demo 58 fps; game thread ~5 ms/step; **GPU-bound**: 18-24 ms per
-  1P race frame (half of it per-draw cost, `SR_VK_TINYSCISSOR=1` leaves 9-10 ms).
+- Perf (S23 Ultra, Android 17, `SR_PERFTEST`): **specialized fragment shaders** (2026-11-03, tested by A/B on the
+  phone, not yet seen by the user): 1P demo 55.1 → 59.3 fps, 2P demo 58.4 → 59.8 fps; GPU 1P race ~12-13 ms/frame
+  (was 14-18), title 1.7 ms (was ~10). Pictures identical to the ubershader. Game thread ~5 ms/step.
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
 - Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
 - **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra):** stick (home north-east, calmer in
@@ -60,7 +61,7 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   (box art, never committed; default for players is the save icon). Right stick → C-stick: checked in code (same
   round 25% dead zone, full range, up = higher, sent unchanged in the SI poll); not checked in a game screen that
   uses the C-stick.
-- **Next:** GPU cost (specialized shaders from the shader keys, per-draw UBO
+- **Next:** GPU: compact Vulkan vertex format (160-byte GxVertex; notes/android.md), per-draw UBO
   size), pre-rotation, 2P with two pads.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)

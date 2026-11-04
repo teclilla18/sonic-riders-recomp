@@ -273,10 +273,18 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                                         "runtime/shaders/gx_common.glsl"] + key_files,
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h]
+    elif args.target == "android":
+        # the same specialized fragment shaders as SPIR-V (keys: build/shaderkeys/, game-derived, not in git)
+        key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+        spec_h = OUT + "/gen/gx_spec_spv.h"
+        n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, atools.glslc, OUT),
+               description="SPEC $out")
+        n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
+                                        "runtime/shaders/gx_common.glsl"] + key_files,
+                variables={"in_keys": " ".join(key_files)})
+        shader_h = [shader_h, spec_h, icons_h]
     else:
         shader_h = [shader_h] if shader_h else []
-        if args.target == "android":
-            shader_h.append(icons_h)
 
     objs = []
     for src in gen_c:

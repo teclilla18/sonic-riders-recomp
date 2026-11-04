@@ -304,3 +304,16 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   (implemented / tested / accepted / released), "partial test ≠ full validation", "not reproduced ≠ fixed", and
   revert-first for release regressions. Local hooks (`.claude/settings.local.json`, not tracked): a session-start
   reminder and an end-of-session checklist before `git commit`.
+
+## 2026-11-03 (late night, user away): Android specialized fragment shaders
+- What: the Switch's ahead-of-time specialized fragment shaders, ported to Vulkan: `gen_shaders.py --vk` (glslc,
+  same keys from build/shaderkeys/), `spec_bits()` in render_vk.c puts the shader in the pipeline key, misses go to
+  `shader_keys.txt` in the app folder, `SR_NOSPEC=1` turns it off.
+- Tested on the S23 Ultra (Android 17), same APK, `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_TOUCH=0`, off vs on:
+  1P demo 55.13 → 59.29 fps, 2P demo 58.37 → 59.81 fps; GPU per frame title 9.3-11.4 → 1.6-1.8 ms, 1P race
+  13.7-18.2 → 11.1-14.1 ms, 2P race 13.0-17.7 → 12.0-13.9 ms. All demo states hit (32 keys). Captures at game frames
+  2900, 5300, 10500: identical except the FPS counter's digits (<0.015% of pixels, all in its box). [confirmed, 1
+  run each; not accepted by the user yet]
+- Not done: the vertex format (160 bytes per vertex) is the next GPU lead; first race frame after a new build
+  still builds its new pipelines (178 ms hitch once, then prewarmed).
+- Hook fix: the commit checklist hook fired on every Bash call (`if` filter ignored); it now greps the command.

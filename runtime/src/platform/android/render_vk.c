@@ -27,6 +27,8 @@
 #include "gx.h"
 #include "gx_render.h"
 #include "gx_shaders_spv.h"  /* generated: tools/embed_shaders.py spv */
+#include "gx_shader_key.h"
+#include "gx_spec_spv.h"     /* generated: tools/gen_shaders.py --vk (specialized fragment shaders) */
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
@@ -111,6 +113,15 @@ static uint32_t g_stage_off;
 static VkDescriptorSetLayout g_dsl_ubo, g_dsl_tex, g_dsl_one;
 static VkPipelineLayout g_pl_gx, g_pl_quad;
 static VkShaderModule g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch;
+/* Specialized fragment shaders (as on the Switch): one per recorded state key, with the TEV setup folded
+ * into constants. A GX pipeline key carries SPEC_FLAG and the low 24 bits of the state's key hash in
+ * bits 36-59; states without one use the ubershader, and their keys go to shader_keys.txt in the app
+ * folder for the next build (tools/gen_shaders.py, build/shaderkeys/). SR_NOSPEC=1: ubershader only. */
+#define SPEC_FLAG (1ull << 60)
+#define SPEC_SHIFT 36
+static VkShaderModule g_spec_sm[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];
+static int g_spec_on = 1;
+static unsigned long long g_spec_hits, g_spec_misses;  /* states, for the log */
 static VkPipelineCache g_pcache;
 static unsigned g_pipes_new, g_pipes_total;
 static uint64_t g_pcache_saved_ns;
@@ -412,7 +423,13 @@ static VkPipeline gx_pipe_make(uint64_t key) {
     ds.depthCompareOp = (VkCompareOp)((key >> 29) & 7);
     VkCullModeFlags cull = (VkCullModeFlags)((key >> 32) & 3);
     VkPrimitiveTopology topo = (VkPrimitiveTopology)((key >> 34) & 3);
-    return pipe_build(g_sm_vs, ind ? g_sm_fs_ind : g_sm_fs, g_pl_gx, 1, topo, &b, &ds, cull, TGT_EFB);
+    VkShaderModule fs = ind ? g_sm_fs_ind : g_sm_fs;
+    if (key & SPEC_FLAG) {  /* a key from an older table that no longer matches keeps the ubershader */
+        uint32_t tag = (uint32_t)(key >> SPEC_SHIFT) & 0xFFFFFFu;
+        for (int i = 0; i < GX_SPEC_COUNT; i++)
+            if ((uint32_t)(k_spec_keys[i] & 0xFFFFFFu) == tag && g_spec_sm[i]) { fs = g_spec_sm[i]; break; }
+    }
+    return pipe_build(g_sm_vs, fs, g_pl_gx, 1, topo, &b, &ds, cull, TGT_EFB);
 }
 
 /* a screen quad's pipeline: kind (Q_*), target */
@@ -734,6 +751,13 @@ static void vk_setup(void) {
     g_sm_tex = shader(k_vk_tex_frag_spv, sizeof k_vk_tex_frag_spv);
     g_sm_fill = shader(k_vk_fill_frag_spv, sizeof k_vk_fill_frag_spv);
     g_sm_touch = shader(k_vk_touch_frag_spv, sizeof k_vk_touch_frag_spv);
+    if (getenv("SR_NOSPEC") && atoi(getenv("SR_NOSPEC"))) g_spec_on = 0;
+    for (int i = 0; i < GX_SPEC_COUNT; i++) {
+        int dup = 0;  /* two keys with the same low 24 bits: the second is left out */
+        for (int j = 0; j < i; j++) dup |= (k_spec_keys[j] & 0xFFFFFFu) == (k_spec_keys[i] & 0xFFFFFFu);
+        if (!dup) g_spec_sm[i] = shader(k_spec_spv + k_spec_off[i], (size_t)k_spec_words[i] * 4);
+    }
+    rt_log("[vk] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
 
     /* descriptor layouts */
     VkDescriptorSetLayoutBinding ub[2] = {
@@ -1003,6 +1027,26 @@ static void quad(int kind, int target, VkColorComponentFlags mask, VkImageView t
 
 /* ---------------------------------------------------------------- per-draw state */
 static float f32(uint32_t u) { float f; memcpy(&f, &u, 4); return f; }
+
+/* the specialized shader's pipeline-key bits for a state (0: the ubershader) */
+static uint64_t spec_bits(const GxUniforms* u) {
+    if (!g_spec_on || !GX_SPEC_COUNT) return 0;
+    GxFragKey k;
+    gx_frag_key(u->bp, &k);
+    int lo = 0, hi = GX_SPEC_COUNT - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        if (k_spec_keys[mid] == k.hash) {
+            if (!g_spec_sm[mid]) break;
+            g_spec_hits++;
+            return SPEC_FLAG | (k.hash & 0xFFFFFFull) << SPEC_SHIFT;
+        }
+        if (k_spec_keys[mid] < k.hash) lo = mid + 1; else hi = mid - 1;
+    }
+    g_spec_misses++;
+    gx_frag_key_record(&k, "shader_keys.txt");
+    return 0;
+}
 
 static uint64_t state_key(const GxUniforms* u, int prim) {
     uint32_t cm = u->bp[0x41];
@@ -1438,6 +1482,7 @@ static void execute(GxFrame* f) {
     uint64_t t_rec = platform_now_ns();
     const GxUniforms* cur = NULL;
     uint32_t cur_regs = ~0u, cur_xtab = ~0u;
+    uint64_t cur_spec = 0;
     uint32_t dyn[2] = {0, 0};
     int sets_bound = 0;
     unsigned draws = 0;
@@ -1455,6 +1500,7 @@ static void execute(GxFrame* f) {
             if (c->a != cur_regs) {
                 cur_regs = c->a;
                 cur = &f->unis[c->a];
+                cur_spec = spec_bits(cur);
                 dyn[0] = OFF_UBO + c->a * ustride;
                 sets_bound = 0;
             }
@@ -1470,7 +1516,7 @@ static void execute(GxFrame* f) {
                 g_tex_valid = 0;
                 sets_bound = 0;
             }
-            uint64_t key = state_key(cur, c->prim);
+            uint64_t key = state_key(cur, c->prim) | cur_spec;
             if (!g_bound || key != g_cur_key) {
                 VkPipeline p = gx_pipe(key);
                 if (p != g_bound) {
@@ -1586,8 +1632,10 @@ static void execute(GxFrame* f) {
                g_stage_off >> 10, (t_rec - t_start) / 1e6, (t_sub - t_rec - g_fr_acq_ns) / 1e6, g_fr_acq_ns / 1e6,
                (t_pres - t_sub) / 1e6, (t_end - t_pres) / 1e6, g_pw_running ? " (prewarm still running)" : "");
     if (++g_busy_frames == 300) {
-        rt_log("[vk] %.2f ms/frame on the render thread, %u draws/frame, %u pipelines, %u frames presented", g_busy_ns / 300 / 1e6,
-               g_draws_sum / 300, g_pipes_total, g_presented);
+        rt_log("[vk] %.2f ms/frame on the render thread, %u draws/frame, %u pipelines, %u frames presented; "
+               "specialized shaders for %llu of %llu states", g_busy_ns / 300 / 1e6,
+               g_draws_sum / 300, g_pipes_total, g_presented, g_spec_hits, g_spec_hits + g_spec_misses);
+        g_spec_hits = g_spec_misses = 0;
         rt_log("[vk]   parts, ms/frame: copy-in %.2f, recording %.2f, acquire %.2f, submit %.2f, present %.2f",
                g_ph_in / 300 / 1e6, g_ph_rec / 300 / 1e6, g_ph_acq / 300 / 1e6, g_ph_sub / 300 / 1e6, g_ph_pres / 300 / 1e6);
         g_ph_in = g_ph_rec = g_ph_acq = g_ph_sub = g_ph_pres = 0;

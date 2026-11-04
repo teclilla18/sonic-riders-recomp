@@ -10,6 +10,8 @@
 - Android: the app has an icon (made from the game's save icon on your disc, or your own picture with the setup's
   `-Icon`); the touch PAUSE button says START; the touch stick sits a little higher and is calmer in menus; the
   settings menu works reliably by touch (Close really closes it) and its Controls tab explains touch and controllers.
+- Android: races are faster on the phone's graphics chip (the S23 Ultra's demo races now run at a steady 59-60
+  fps), using the same prepared shaders as the Switch.
 - Controllers (PC and Android): analog triggers adapt to each controller, so a full press always clicks L / R
   (drift) like a GameCube trigger, while a partial press stays analog.
 - Perf test with `SR_DETCLOCK`: the intro skip now lands on the same frame on every machine (runs can be compared).

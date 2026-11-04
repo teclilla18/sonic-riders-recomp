@@ -35,7 +35,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | PC + Android input (SDL pads, keyboard, triggers) | host/input_sdl.c (260) | `stick8`, `trigger`, `read_gamepad`, `input_pump` |
 | PC renderer (GL) | host/render_gl.c (930) | |
 | PC/Android platform glue | host/platform_host.c | |
-| Android renderer (Vulkan) | android/render_vk.c (1720) | `vk_setup`, `execute`, `pipe_get`, `pcache_save`, `draw_overlay_and_touch`, `picture_rect`, `shot_request`, `pump`, `render_thread` |
+| Android renderer (Vulkan) | android/render_vk.c (1720) | `vk_setup`, `execute`, `spec_bits` (specialized shaders), `pipe_get`, `pcache_save`, `draw_overlay_and_touch`, `picture_rect`, `shot_request`, `pump`, `render_thread` |
 | Android touch controls | android/touch_android.c (270) | `layout` (positions), `stick_home`, `stick_value` (dead zones), `game_in_race`, `touch_event`, `touch_apply`, `touch_shapes` |
 | Touch control drawing (shader) | `runtime/shaders/vk_touch.frag` | `icon()` (per-button strokes) |
 | Android Java activity | `android/java/net/srnative/sonicriders/SonicRidersActivity.java` | |
