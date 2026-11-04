@@ -61,8 +61,14 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   (box art, never committed; default for players is the save icon). Right stick → C-stick: checked in code (same
   round 25% dead zone, full range, up = higher, sent unchanged in the SI poll); not checked in a game screen that
   uses the C-stick.
-- **Next:** GPU: compact Vulkan vertex format (160-byte GxVertex; notes/android.md), per-draw UBO
+- **Next:** GPU needs a profiler now (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
   size), pre-rotation, 2P with two pads.
+
+## After Android (user's wish list, 2026-11-03)
+
+Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement), then a **PS5** port: an open
+PS5 Vulkan driver (Mesa RADV port) exists, so render_vk.c could carry over (docs/notes/ps4-ps5-research.md). Ask
+the user for their PS5/PS4 model and firmware first (public PS5 jailbreak: ≤ 13.60).
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

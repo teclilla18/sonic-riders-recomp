@@ -317,3 +317,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Not done: the vertex format (160 bytes per vertex) is the next GPU lead; first race frame after a new build
   still builds its new pipelines (178 ms hitch once, then prewarmed).
 - Hook fix: the commit checklist hook fired on every Bash call (`if` filter ignored); it now greps the command.
+- Later the same night: a packed Vulkan vertex (116 vs 160 bytes) A/B'd on the phone: no change in fps or GPU time,
+  identical pictures; reverted (vertex fetch is not the cost). USCALED8 is not a vertex format on Adreno. [confirmed]
+- PS4/PS5 research for the user (docs/notes/ps4-ps5-research.md): public PS5 jailbreak to 13.60 (Relapse +
+  etaHEN), 14.x not public; an open PS5 Vulkan driver (Mesa RADV port, PS5_Vulkan) is in use by RetroArch,
+  Dolphin and recomp ports, so a PS5 build could reuse render_vk.c. PS4 public to 13.52.

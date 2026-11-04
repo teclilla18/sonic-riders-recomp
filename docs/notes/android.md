@@ -77,6 +77,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - A/B on the S23 Ultra (Android 17), same build, `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0`: 1P demo 55.1 → 59.3
   fps, 2P demo 58.4 → 59.8 fps; GPU per frame: title 9-11 → 1.6-1.8 ms, 1P race 13.7-18.2 → 11.9-13.2 ms (first
   heavy frame 23.7 → 18.6), 2P race 13.0-17.7 → 12.0-13.9 ms. All demo states hit (32 keys from the Switch files).
-- Next GPU lead: the vertex format (`GxVertex`, 160 bytes, ten float4 attributes, fetched twice on a tiler: binning
-  and rendering). A compact Vulkan-only layout (colours unorm8, matrix indices u8, normals half) would cut it ~35%.
-
+- Tried and dropped (2026-11-03): a packed Vulkan vertex (116 instead of 160 bytes: unorm8 colours, half-float
+  matrix indices, normal without w; Adreno has no uscaled8 vertex format). Same APK A/B: no change in fps or GPU
+  time (race frames 12-14 ms either way), identical pictures. Vertex fetch is not the cost; reverted.
+- Remaining GPU leads (untested): per-draw cost on the tiler (4 EFB passes per race frame: each copy ends a render
+  pass, so tiles are stored and reloaded), the vertex shader's XF reads, render resolution. Needs a GPU profiler
+  (Android GPU Inspector / Snapdragon Profiler) before more guessing.
