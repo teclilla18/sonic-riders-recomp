@@ -12,6 +12,7 @@
  * reservation goes through kubridge (kuKernelMemReserve / kuKernelMemCommit, kubridge 0.2+ loaded in
  * ur0:tai/config.txt *KERNEL). */
 #include <dirent.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,8 @@
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/sysmem.h>
 #include <psp2/kernel/threadmgr.h>
+#include <psp2/io/fcntl.h>
+#include <psp2/io/stat.h>
 #include <psp2/power.h>
 #include <psp2/rtc.h>
 #include <kubridge.h>
@@ -58,7 +61,24 @@ int timespec_get(struct timespec* ts, int base) {
 
 void platform_set_handheld_gpu(int on) { (void)on; }
 
+/* Start-up breadcrumbs: one line per step, written and closed at once (the log may never open), so
+ * boot.txt shows over FTP how far a run got even without a picture. */
+void vita_mark(const char* what) {
+    SceUID fd = sceIoOpen(BASE_DIR "/boot.txt", SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 0777);
+    if (fd < 0) return;
+    char line[160];
+    int n = snprintf(line, sizeof line, "%llu us: %s\n", (unsigned long long)sceKernelGetProcessTimeWide(), what);
+    sceIoWrite(fd, line, n > 0 ? (SceSize)n : 0);
+    sceIoClose(fd);
+}
+__attribute__((constructor)) static void vita_boot_mark(void) {
+    sceIoMkdir(BASE_DIR, 0777);
+    sceIoRemove(BASE_DIR "/boot.txt");
+    vita_mark("process started (static constructors)");
+}
+
 void platform_init(void) {
+    vita_mark("platform_init");
     mkdir(BASE_DIR, 0777);
     mkdir(BASE_DIR "/saves", 0777);
     remove(BASE_DIR "/sonicriders.prev.log");
@@ -66,7 +86,8 @@ void platform_init(void) {
     if (freopen(BASE_DIR "/sonicriders.log", "w", stderr)) {
         /* a large buffer: rt_log flushes at most once a second (per-line writes cost milliseconds here) */
         static char logbuf[64 * 1024];
-        setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);
+        /* probe: line buffered, so a crash loses no line (costs time per line; perf runs log little) */
+        setvbuf(stderr, logbuf, _IOLBF, sizeof logbuf);
     }
     rt_log("[vita] Sonic Riders native port (probe); log started");
     FILE* f = fopen(BASE_DIR "/env.txt", "r");
@@ -83,6 +104,7 @@ void platform_init(void) {
         fclose(f);
     }
     set_clocks();
+    vita_mark("platform_init done (log open, clocks set)");
 }
 
 const char* platform_disc_path(void) {
@@ -122,22 +144,25 @@ void platform_local_time(int* year, int* month, int* day, int* hour, int* minute
     *hour = t.hour; *minute = t.minute; *second = t.second;
 }
 
-/* ---- threads: the kernel's own, for the stack size and the core masks ---- */
+/* ---- threads: pthreads (VitaSDK's pthread library only works on threads it created itself: the
+ * runtime's mutexes and condition variables go through it); core masks are set by rt_thread_pin ---- */
 typedef struct { int (*fn)(void*); void* arg; } Start;
-static int trampoline(SceSize len, void* argp) {
-    (void)len;
-    Start s = **(Start**)argp;
-    free(*(Start**)argp);
+static void* trampoline(void* p) {
+    Start s = *(Start*)p;
+    free(p);
     s.fn(s.arg);
-    return sceKernelExitDeleteThread(0);
+    return NULL;
 }
 void rt_thread_start(int (*fn)(void*), void* arg) {
     Start* s = malloc(sizeof *s);
     s->fn = fn;
     s->arg = arg;
-    SceUID t = sceKernelCreateThread("sr_thread", trampoline, 0x10000100, 4 << 20, 0, SCE_KERNEL_CPU_MASK_USER_ALL, NULL);
-    if (t < 0) rt_fatal("sceKernelCreateThread failed (0x%X)", t);
-    if (sceKernelStartThread(t, sizeof s, &s) < 0) rt_fatal("sceKernelStartThread failed");
+    pthread_attr_t a;
+    pthread_attr_init(&a);
+    pthread_attr_setstacksize(&a, 4 << 20);
+    pthread_t t;
+    if (pthread_create(&t, &a, trampoline, s)) rt_fatal("cannot create a thread");
+    pthread_attr_destroy(&a);
 }
 
 static void change_priority(int delta) {
@@ -158,6 +183,7 @@ void rt_thread_pin(int core) {
 /* ---- guest memory window (ppc_mem_base_var is defined in memory.c) ---- */
 #define WINDOW_SIZE 0x20010000u
 void mem_init(void) {
+    vita_mark("mem_init: reserving the guest window");
     void* w = NULL;
     SceUID blk = kuKernelMemReserve(&w, WINDOW_SIZE, SCE_KERNEL_MEMBLOCK_TYPE_USER_RW);
     if (blk < 0) rt_fatal("kuKernelMemReserve of %u MiB failed (0x%X): kubridge 0.2+ loaded?", WINDOW_SIZE >> 20, blk);
@@ -168,6 +194,7 @@ void mem_init(void) {
         memset((uint8_t*)w + r[i].start, 0, r[i].size);
     }
     ppc_mem_base_var = (uint8_t*)w;
+    vita_mark("mem_init done");
     rt_log("[mem] guest window at %p (kubridge reservation, %u MiB)", w, WINDOW_SIZE >> 20);
 }
 
