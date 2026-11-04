@@ -119,6 +119,9 @@ own game files, as we do.
   loaded (two overclockers at once: the probe must log the clocks it actually got with
   `scePowerGetArmClockFrequency` / `scePowerGetGpuClockFrequency`); pngshot (PNG screenshots); kuio. On the card
   but not loaded: **udcd_uvc** (USB screen capture). **vitacompanion: not installed.**
+- **vitacompanion 1.08 installed (2026-11-03, user's request):** `version`/`help` answer on TCP 1338, FTP on 1337
+  works. A synthetic PS + START took one system screenshot (960x544 PNG in `ux0:picture/SCREENSHOT/`, readable over
+  FTP); three more tries a minute later did not [uncertain why]. Use the port's own captures for frame checks.
 - VitaShell FTP (SELECT, port 1337) works over Wi-Fi; its connection drops now and then while the Vita stays on:
   retry instead of assuming it is off.
 
@@ -135,7 +138,7 @@ work. Run on hardware only (Vita3K is not a stand-in: it skips DRAM latency and 
    compile time for 50 specialized shaders. Report CPU submit ms and GPU ms at GPU 222 MHz.
 3. **Gate:** continue only if V1a is <= ~45 ms/step at 500 MHz (headroom for savings) and V1b submits 7,000 draws in
    <= ~15 ms on a second core. Otherwise stop and record the numbers.
-4. Prerequisites still open: vitacompanion (to install, with the user's OK) for launch and button presses.
+4. Prerequisites: none left on the Vita side (vitacompanion, kubridge, PSVshell, libshacccg all present).
 
 ## Sources (read 2026-11-03)
 
