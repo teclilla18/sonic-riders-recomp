@@ -20,7 +20,6 @@
 void cpu_dump_trace(void);
 void mmio_dump(void);
 void sched_dump(void);
-extern int g_ppc_trace;
 
 /* a host crash (usually a bad guest pointer reaching host code): log where, then the guest's recent
  * function entries (with SR_WATCHDOG) and its threads */

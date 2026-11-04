@@ -26,8 +26,21 @@ static unsigned long long g_frames;
 
 void gx_state_dirty(void) { g_state_dirty = 1; }
 
+/* fixed (not heap) vertex arrays a platform gave the frames (Vita: uncached memory, null_vita.c): never
+ * passed to realloc; a frame that outgrows its array moves to the heap for good */
+uint8_t *g_fixed_verts_lo, *g_fixed_verts_hi;
 static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
     if (need <= *cap) return p;
+    if ((uint8_t*)p >= g_fixed_verts_lo && (uint8_t*)p < g_fixed_verts_hi) {
+        uint32_t n = *cap;
+        while (n < need) n *= 2;
+        void* q = malloc((size_t)n * elem);
+        if (!q) rt_fatal("out of memory (frame)");
+        memcpy(q, p, (size_t)*cap * elem);
+        rt_log("[gx] a frame outgrew its fixed vertex array (%u vertices): on the heap from now on", need);
+        *cap = n;
+        return q;
+    }
     uint32_t n = *cap ? *cap : 256;
     while (n < need) n *= 2;
     p = realloc(p, n * elem);

@@ -76,7 +76,9 @@ session's fixes (clock reads, 64-bit divide, log) 1P 21 steps/s, game thread ~40
 ms), 2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP thread 51-65 ms per drawn race
 frame. Profile flat (PSMTX/PSVEC ~12%, OSEnableInterrupts 8%). V1b GXM microbench: 7,000 draws submit in 9.2 ms
 (15.7 ms with a program switch per draw); libshacccg 78 ms per shader. A lost cnd_wait wake-up (hang) fixed by
-bounded waits. Next: native PSMTX/PSVEC, the GP thread's draw processing, ARAM DMA (13 ms/frame). Details:
+bounded waits. Per-thread CPU (session 3): core 0 (guest code) is saturated, ~39-46 ms of CPU per step;
+GP thread ~0.4 s/s, decode helper and audio ~0.3 s/s each; run-to-run noise ~±10%. Next: vertex decode (~2.4 us
+per vertex, 160-byte vertices), float-typed single-precision values in the recompiler (game thread). Details:
 docs/notes/vita-research.md "Game-thread profile" and "Probe V1b results".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)

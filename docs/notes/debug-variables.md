@@ -35,7 +35,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 
 **Profiling and performance**
 - `SR_PROFILE=1`: PC sampling profiler (`tools/profile_report.py`); Switch `[profile]` lines every 10 s ("last function entered": a caller's work after a call is charged to the callee). `SR_PROFILE_WINDOW=FROM,TO`, `SR_PROFILE_OUT=<path>` (PC).
-- Vita (env.txt): `SR_PROFILE=1` as on the Switch (core 1, 40 entries + PROF tag shares; `SR_PROFILE_SECS=N` report period); `SR_GX_TIMERS=1` turns on the per-draw `[perf]` timers (off there: a clock read costs ~0.7 us); `SR_VITA_CPU`, `SR_VITA_STALLCORE` (docs/notes/vita-research.md).
+- Vita (env.txt): `SR_PROFILE=1` as on the Switch (core 1, 40 entries + PROF tag shares; `SR_PROFILE_SECS=N` report period); `SR_GX_TIMERS=1` turns on the per-draw `[perf]` timers (off there: a clock read costs ~0.7 us); `SR_VITA_UNCACHED=0` (frame vertex arrays on the heap, not uncached memory), `SR_VITA_CPU`, `SR_VITA_STALLCORE` (docs/notes/vita-research.md).
 - `SR_PERFTEST=1` (+ `SR_PERFTEST_OUT=<path>`): the standard performance test, see docs/PERF.md.
 - `SR_GPU_AB=1` (Switch): GPU timestamps and shader counters, alternating XF paths per frame.
 

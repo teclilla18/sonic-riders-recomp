@@ -13,7 +13,6 @@
 
 static Cpu g_main_cpu;
 
-extern int g_ppc_trace;
 void cpu_dump_trace(void);
 void mmio_dump(void);
 void sched_dump(void);

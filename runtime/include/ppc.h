@@ -91,16 +91,26 @@ double ppc_frsqrte(double x);
 
 #define MUSTTAIL __attribute__((musttail))
 
-/* optional guest function-entry trace (runtime switch, see runtime/src/trace.cpp) */
-extern int g_ppc_trace;
+/* The globals every function entry touches, in one struct: on 32-bit ARM each separate global costs its own
+ * address load (movw + movt) at every entry; together they share one (cpu.c). The old names stay as macros. */
+typedef struct PpcHot {
+    volatile uint32_t cur_fn, cur_lr;  /* g_ppc_cur_fn, g_ppc_cur_lr: see below */
+    int trace;                         /* g_ppc_trace */
+    volatile int preempt[3];           /* g_core_preempt */
+} PpcHot;
+extern PpcHot g_ppc_hot;
+#define g_ppc_cur_fn (g_ppc_hot.cur_fn)
+#define g_ppc_cur_lr (g_ppc_hot.cur_lr)
+#define g_ppc_trace (g_ppc_hot.trace)
+#define g_core_preempt (g_ppc_hot.preempt)
+/* optional guest function-entry trace (runtime switch, see runtime/src/trace.cpp): g_ppc_trace */
 void ppc_trace_enter(uint32_t addr);
 /* GameCube: g_core_preempt[0] is set while an interrupt is pending (sched.c). Checked at every function
    entry and loop back-edge; ppc_preempt delivers it if this context has MSR.EE set. */
-extern volatile int g_core_preempt[3];
 void ppc_preempt(Cpu* c);
 /* the guest function entered last, or a PROF_* tag (runtime.h) while the runtime works: what the
    Switch's sampling profiler reads (SR_PROFILE) */
-extern volatile uint32_t g_ppc_cur_fn, g_ppc_cur_lr;  /* and its return address */
+/* g_ppc_cur_fn, g_ppc_cur_lr (above): and its return address */
 #define PPC_ENTER(a) do {                                                     \
         g_ppc_cur_fn = (a);                                                   \
         g_ppc_cur_lr = c->lr;                                                 \

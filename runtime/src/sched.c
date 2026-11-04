@@ -26,7 +26,7 @@
 #include "gx.h"
 #include "runtime.h"
 
-volatile int g_core_preempt[3];  /* [0]: an interrupt is pending */
+/* g_core_preempt[0] (ppc.h, in g_ppc_hot): an interrupt is pending */
 
 /* ---- guest threads ---- */
 typedef struct GThread {

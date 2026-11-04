@@ -12,6 +12,7 @@
  * reservation goes through kubridge (kuKernelMemReserve / kuKernelMemCommit, kubridge 0.2+ loaded in
  * ur0:tai/config.txt *KERNEL). */
 #include <dirent.h>
+#include <stdatomic.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -233,10 +234,17 @@ void platform_local_time(int* year, int* month, int* day, int* hour, int* minute
 
 /* ---- threads: pthreads (VitaSDK's pthread library only works on threads it created itself: the
  * runtime's mutexes and condition variables go through it); core masks are set by rt_thread_pin ---- */
+/* every host thread we start, for the per-thread CPU time in the 10 s [vita] line (runClocks: microseconds
+ * the thread ran): grouped by start function, so the guest threads (sched.c thread_main) add up */
+#define MAX_THREADS 64
+static struct { SceUID tid; void* fn; } g_threads[MAX_THREADS];
+static _Atomic int g_nthreads;
 typedef struct { int (*fn)(void*); void* arg; } Start;
 static void* trampoline(void* p) {
     Start s = *(Start*)p;
     free(p);
+    int i = atomic_fetch_add(&g_nthreads, 1);
+    if (i < MAX_THREADS) { g_threads[i].tid = sceKernelGetThreadId(); g_threads[i].fn = (void*)s.fn; }
     s.fn(s.arg);
     return NULL;
 }
@@ -306,6 +314,28 @@ static int stall_thread(void* arg) {
             unsigned r = g_rt_ticks_reads;
             rt_log("[vita] %u s: %llu frames presented, retrace %u, clock reads %u/s", ticks, f, vi_field_count(), (r - reads0) / 10);
             reads0 = r;
+            /* CPU ms per second by start function (resolve the addresses with the map / nm) */
+            static uint64_t prev[MAX_THREADS];
+            struct { void* fn; uint64_t us; } g[MAX_THREADS];
+            int ng = 0, n = atomic_load(&g_nthreads);
+            if (n > MAX_THREADS) n = MAX_THREADS;
+            for (int i = 0; i < n; i++) {
+                SceKernelThreadInfo info;
+                memset(&info, 0, sizeof info);
+                info.size = sizeof info;
+                if (sceKernelGetThreadInfo(g_threads[i].tid, &info) < 0) continue;
+                uint64_t now = info.runClocks, d = now - prev[i];
+                prev[i] = now;
+                int k = 0;
+                while (k < ng && g[k].fn != g_threads[i].fn) k++;
+                if (k == ng) { g[ng].fn = g_threads[i].fn; g[ng].us = 0; ng++; }
+                g[k].us += d;
+            }
+            char line[512];
+            int len = 0;
+            for (int k = 0; k < ng && len < (int)sizeof line - 32; k++)
+                if (g[k].us >= 10000) len += snprintf(line + len, sizeof line - len, " %p:%u", g[k].fn, (unsigned)(g[k].us / 10000));
+            rt_log("[vita] CPU ms/s by thread start function:%s", len ? line : " (none)");
         }
         if (f != last) {
             if (reported) rt_log("[stall] frames again after %u s", still);

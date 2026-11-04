@@ -201,8 +201,9 @@ plugins), `SR_PERFTEST=1`, probe without renderer. Run-to-run spread is ~5-10%.
   144.1k instructions; Switch-style asm load 150.3k (re-emitted per block); `const` global 148.2k (more spills).
   Kept the plain global. 64-bit code in the generated game code is rare (carry adds, `mulhw`: cheap on ARM);
   `ppc_cr_pack8` (mfcr) now uses two 32-bit multiplies on ARM.
-- Block copy, 2 MB: newlib `memcpy` 463 MB/s, `sceClibMemcpy` 242, `sceDmacMemcpy` 161. ARAM DMA runs at ~167
-  MB/s on the game thread (2.2 MB, 13 ms per race frame): not the copy routine; look at transfer sizes next.
+- Block copy, 2 MB: newlib `memcpy` 463 MB/s, `sceClibMemcpy` 242, `sceDmacMemcpy` 161. ARAM DMA is not a
+  cost: the `[perf]` "ARAM DMA N KB in M ms" figures are totals over the 120-frame report (~0.12 ms per frame);
+  the game streams 4 KB blocks RAM -> ARAM (SR_DVDLOG).
 - Thread-local (emutls) access: 12 ns, not a cost.
 - **GX FIFO decode is already off the game thread** (the GP thread, core 2). The game thread's share for pipe
   stores is 4-6% of race samples (`PROF_PIPE`).
@@ -217,6 +218,31 @@ plugins), `SR_PERFTEST=1`, probe without renderer. Run-to-run spread is ~5-10%.
   renderer", renderer waiting, a frame pending). A lost wake-up in VitaSDK's pthread condition variable
   [likely]. Fix: `cnd_wait` in compat_vita/threads.h wakes every 5 ms (callers re-check their condition);
   r7 then ran through. Stall dumps now show the GP thread's phase, the decode helper and the null renderer.
+
+## Per-thread CPU, uncached vertex arrays, grouped globals (2026-11-04, session 3)
+
+Same Vita and clocks (CPU 500 / GPU 222). **Run-to-run noise is ~±10% in steps/s** (two runs of one build and
+setting: 1P 23.9 and 21.4 steps/s), so single A/B runs below are [uncertain].
+
+- **Per-thread CPU** (`[vita] CPU ms/s by thread start function` every 10 s, from `runClocks`; addresses ->
+  names with `arm-vita-eabi-nm` of the same ELF, minus the load offset). Race demos: guest code (game_thread +
+  the other guest threads' thread_main) **~980 ms/s: core 0 is saturated**, = ~39-46 ms of CPU per step (that
+  includes the game idling in guest code while it waits for the GP). GP thread 390-470 ms/s (core 2), decode
+  helper 290-350 and audio mixer 220-330 (both core 1). 30 steps/s needs <= ~33 ms per step.
+- **Vertex decode is ~2.4 us per vertex** (SR_GX_TIMERS run: 31,864 vertices in 23 ms on the GP thread + 53 ms
+  on the helper; texture lookups 15.6 ms, state snapshots 2.4 ms per 4,381-draw frame). Each vertex is a
+  160-byte GxVertex written into a ~5 MB frame array (L2 is 512 KB).
+- **Uncached frame vertex arrays** (null_vita.c, default; `SR_VITA_UNCACHED=0` for the heap): what GPU vertex
+  memory will be. A/B on one build: 1P 21.3 -> 23.9 steps/s, guest CPU 46.0 -> 40.9 ms/step; a repeat gave
+  21.4 [uncertain]. A frame that outgrows its 64K vertices moves to the heap (logged).
+- **Grouped entry globals** (`g_ppc_hot` in ppc.h: cur_fn, cur_lr, trace, preempt): one address load per
+  function entry instead of four (8 -> 2 instructions), code -0.8%. Speed change not measurable through the
+  noise [uncertain]. PC perf test unchanged (full speed, 59.9 fps both demos; a first PC run at 27 fps 2P was the
+  PC being busy: an older build gave 43.7 fps then, the repeat 59.9).
+- `OSEnableInterrupts`' 8% in the profile is mostly its callers' code (samples go to the last function
+  entered); the runtime path there is a few loads. PSMTX/PSVEC code is already register-allocated C; its
+  helpers (`psq_load_l` fast path, `ppc_frsqrte`) are cheap. Bigger game-thread gains need recompiler work
+  (single-precision values kept as float instead of double + two conversions per operation).
 
 ## Probe V1b results (2026-11-04) [confirmed]
 

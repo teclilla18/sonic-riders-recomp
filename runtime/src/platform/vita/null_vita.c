@@ -2,7 +2,10 @@
  * PC's SR_HEADLESS mode does (render_gl.c), so the game thread's own work can be measured (SR_PERFTEST);
  * the controller is port 0 with nothing pressed, plus SR_INPUT scripts (input_script.c). */
 #include <stdatomic.h>
+#include <stdlib.h>
 #include <threads.h>
+
+#include <psp2/kernel/sysmem.h>
 
 #include "gx_render.h"
 #include "runtime.h"
@@ -39,6 +42,28 @@ static int render_thread(void* arg) {
 void render_start(void) {
     mtx_init(&g_lock, mtx_plain);
     cnd_init(&g_cv);
+    /* the frames' vertex arrays in uncached memory, as GPU vertex memory would be (writes are combined; no read
+     * of each cache line before it is written: ~4-12% more steps/s in the demos, 2026-11-04); 64K vertices per
+     * frame (races peak near 46K). SR_VITA_UNCACHED=0: on the heap, as before */
+    const char* unc = getenv("SR_VITA_UNCACHED");
+    if (!unc || atoi(unc) != 0) {
+        enum { CAP = 65536 };
+        unsigned size = (unsigned)(2 * CAP * sizeof(GxVertex) + 0xFFFFF) & ~0xFFFFFu;
+        SceUID uid = sceKernelAllocMemBlock("verts", SCE_KERNEL_MEMBLOCK_TYPE_USER_RW_UNCACHE, size, NULL);
+        void* base = NULL;
+        if (uid >= 0 && sceKernelGetMemBlockBase(uid, &base) >= 0) {
+            extern uint8_t *g_fixed_verts_lo, *g_fixed_verts_hi;
+            g_fixed_verts_lo = base;
+            g_fixed_verts_hi = (uint8_t*)base + size;
+            for (int i = 0; i < 2; i++) {
+                g_frames[i].verts = (GxVertex*)base + i * CAP;
+                g_frames[i].cap_verts = CAP;
+            }
+            rt_log("[vita] frame vertex arrays in uncached memory (%u KB; SR_VITA_UNCACHED=0 for the heap)", size >> 10);
+        } else {
+            rt_log("[vita] uncached vertex arrays: allocation failed (0x%X), heap instead", uid);
+        }
+    }
     g_free[0] = &g_frames[0];
     g_free[1] = &g_frames[1];
     g_nfree = 2;

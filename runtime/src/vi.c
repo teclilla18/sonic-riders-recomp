@@ -90,7 +90,6 @@ static unsigned g_det_n[6];  /* [det] log: delivered, fallback, main running, di
 static _Thread_local int g_det_at_loop;  /* the game thread is in vi_det_loop_point */
 static int det_quiet(void) {
     extern _Atomic int g_irq_running;
-    extern volatile int g_core_preempt[3];
     if (atomic_load(&g_irq_running) || g_core_preempt[0]) return 0;
     uint32_t cur = ld32(0x800000E4u);
     if (cur == 0) return ld32(OS_CURRENT_CONTEXT) == OS_IDLE_CONTEXT;
@@ -190,7 +189,6 @@ static int det_idle_tick(void) {  /* game thread (sched.c det_idle via vi_det_id
      * comes at the same point in the game every run. */
     int di_det_busy(void); int gx_det_pending(void);
     size_t gx_gp_backlog(void);
-    extern volatile int g_core_preempt[3];
     int idle = ld32(OS_CURRENT_THREAD) == 0 && det_quiet() && ld32(OS_RUNQUEUE_BITS) == 0 && !di_det_busy() &&
                !gx_gp_backlog() && !gx_det_pending() && !g_core_preempt[0];
     if (!idle) return 0;
@@ -249,7 +247,6 @@ void vi_det_keepalive(void) { atomic_store(&g_det_last_tick, rt_ticks()); }
  * While the CPU idles only the game thread hands things over, in one order; the retrace thread just
  * counts retraces due. 1: something was handed over or game time moved. */
 int vi_det_idle(void) {
-    extern volatile int g_core_preempt[3];
     if (g_det_waiting) {
         mtx_lock(&g_det_lock);
         det_raise();
@@ -343,7 +340,6 @@ static int vi_thread(void* arg) {
                 extern volatile int g_det_bt_req;
                 g_det_bt_req = (int)ld32(0x800000E4u);  /* that thread logs its call chain (sched.c) */
                 int di_det_busy(void); int gx_det_pending(void); size_t gx_gp_backlog(void); int gx_det_parts(void);
-                extern volatile int g_core_preempt[3];
                 rt_log("[det] backstop: running thread %08X in %08X (lr %08X); main %08X state %u, waiting %d vwait %d end %d due %d; "
                        "ready %08X disc %d gp %d pe %d irq %d ctx %08X",
                        ld32(0x800000E4u), g_ppc_cur_fn, g_ppc_cur_lr, g_det_main, g_det_main ? ld16(g_det_main + 0x2C8) : 0,

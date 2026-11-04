@@ -351,3 +351,10 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   (found with new stall-dump lines for the GP thread phase); `cnd_wait` now wakes every 5 ms, next run clean
   [likely the VitaSDK pthread cond; only one clean run since]. V1b GXM microbench: 7,000 draws submit in 9.2 ms
   (15.7 with a program switch per draw), libshacccg 78 ms per shader [confirmed]. docs/notes/vita-research.md.
+- 2026-11-04 (c): **Vita: per-thread CPU, uncached vertex arrays, grouped entry globals** (branch `vita`; CPU 500
+  / GPU 222). New 10 s line with each thread's CPU time (`runClocks`): guest code saturates core 0 (~980 ms/s,
+  39-46 ms per step) [confirmed]. The `[perf]` ARAM figure is a 120-frame total, not per frame: ARAM is ~0.12
+  ms/frame (corrects session 2's note). Vertex decode ~2.4 us per vertex. Frame vertex arrays now in uncached
+  memory (as GPU memory will be): one A/B +12% 1P, a repeat did not show it [uncertain]; the four globals every
+  function entry touches are one struct (`g_ppc_hot`, 8 -> 2 instructions per entry) [uncertain speed, PC
+  unchanged: 59.9 fps both demos]. Noise between identical Vita runs is ~±10%: compare guest CPU per step.
