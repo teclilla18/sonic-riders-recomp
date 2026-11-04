@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Template: tools/android_pkg.py fills in @PACKAGE@, @LABEL@, @VERSION_CODE@ and @VERSION_NAME@.
-     No resources (no R class): SDL's Java code uses none; the label is literal text. -->
+<!-- Template: tools/android_build.py fills in @PACKAGE@, @LABEL@, @VERSION_CODE@, @VERSION_NAME@ and @ICON@.
+     The only resources are the app icon (tools/android_icon.py, made at build time); no R class is needed:
+     SDL's Java code uses none, and the label is literal text. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="@PACKAGE@"
     android:versionCode="@VERSION_CODE@"
@@ -16,7 +17,7 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <application android:label="@LABEL@"
+    <application android:label="@LABEL@" @ICON@
         android:allowBackup="false"
         android:hasCode="true"
         android:extractNativeLibs="false"

@@ -656,3 +656,33 @@ Sources: SwitchWakerHD docs/switch-port.md rounds 5-18 and 29, docs/pgo.md; WWHD
   cut out on a circle fitted to 360 edge points of its dark rim (sd 2.8 px), 1.5 px soft edge, 256 px; replaces
   `stick_knob.png` (OWN_ART hash updated), same opacity and stick logic. Installed on the phone. [likely; not seen on
   the phone by the user yet]
+
+## 2026-11-03 (night): Android touch/controller feedback round 2, app icon, trigger calibration
+- **Menu "Close" did not close** (user): a touch on Close runs `close_menu()` inside the ImGui frame, so the picture
+  made in that frame still showed the menu, and with the FPS counter on (steady 60.0) nothing drew it again. Fix:
+  `overlay_image` compares the open state before the frame and redraws once more. Found by reading the code;
+  checked on the phone with `adb shell input tap`: Close hides the menu, touch buttons back. [confirmed]
+- **Taps on the menu**: a burst of 5 synthetic taps on different tabs landed every one (the last tab ended
+  selected); tabs and Close respond. The user's "taps sometimes ignored" was probably the stale picture above
+  (tapping a menu that was already closed). [likely; real-finger test by the user pending]
+- Android menu: no Fullscreen option; Controls tab explains the touch controls and any Bluetooth/USB pad; hint row
+  "Tap to choose. Controller: LB / RB tabs, A choose, B back". [confirmed on the phone]
+- **Stick**: home position moved north-east (0.36 H from the left, 0.31 H above the bottom); dead zone now applied in
+  `touch_apply` by game mode: 12% in races, 35% with a squared curve in menus (cursor moves from ~64% of the throw
+  instead of ~30%). **Game mode variable `8021B8C0`**: found by phone RAM dumps (det route: intro, title, title
+  again vs 1P and 2P demo races; 75 candidate words), then checked on a PC menu route: 1 through intro, title and
+  Player Entry, 8 from the Free Race intro (step 6825; screenshots). Only mode 1 counts as menus, so unknown modes
+  keep the race feel. [confirmed for those screens; story/other modes unchecked]
+- **PAUSE**: a circle with START in block letters (vk_touch.frag), radius 0.05 → 0.065 H. Looked at on the phone:
+  centred and readable. [confirmed]
+- **App icon**: `tools/android_icon.py` (adaptive icon, made at build time) from the save icon in `_Main.rel`, or
+  `configure.py --icon` / setup `-Icon` (.ico with PNG or 32-bit BMP images, or .png; also the PC .exe icon). The
+  user's `SonicRidersIcon.ico` is the game's box art (SEGA's artwork), so it is a local option only, never
+  committed. `aapt2 dump badging` shows `res/mipmap-anydpi-v26/ic_launcher.xml`. [confirmed in the APK; launcher look
+  not checked]
+- **Triggers**: input_sdl.c learns each pad's deepest trigger press (start 26000), scales the analog value to it and
+  clicks the digital L/R from 85% of it; each new deepest press is logged. Replaces the fixed 29000 click that an Xbox
+  Series X pad on Android did not always reach. [uncertain: needs the user's pad; read the `[input] ... trigger` lines]
+- Builds: Android, Switch and Windows (mingw) all build.
+- Session hygiene (user asked how to spend fewer tokens): docs/MAP.md (code map), REFERENCE "Quick commands",
+  CLAUDE.md "Token budget", old test outputs moved to `build/old/`.

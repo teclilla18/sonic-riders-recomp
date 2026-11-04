@@ -95,8 +95,18 @@ def step_apk(a):
     os.makedirs(work)
     with open(a.manifest, encoding="utf-8") as f:
         text = f.read()
+    res_inputs = []
+    if a.icon:  # the app icon (tools/android_icon.py), compiled by aapt2 into the APK's resources
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import android_icon
+        res = os.path.join(work, "res")
+        android_icon.make_res(a.icon, res)
+        flat = os.path.join(work, "res.zip")
+        run([os.path.join(a.build_tools, "aapt2"), "compile", "--dir", res, "-o", flat])
+        res_inputs = [flat]
     for k, v in (("@PACKAGE@", a.package), ("@LABEL@", a.label), ("@VERSION_CODE@", a.version_code),
-                 ("@VERSION_NAME@", a.version_name)):
+                 ("@VERSION_NAME@", a.version_name),
+                 ("@ICON@", 'android:icon="@mipmap/ic_launcher"' if a.icon else "")):
         text = text.replace(k, v)
     man = os.path.join(work, "AndroidManifest.xml")
     with open(man, "w", encoding="utf-8") as f:
@@ -104,7 +114,7 @@ def step_apk(a):
     base = os.path.join(work, "base.apk")
     tools = a.build_tools
     run([os.path.join(tools, "aapt2"), "link", "-o", base, "--manifest", man, "-I", os.path.join(a.platform, "android.jar"),
-         "--min-sdk-version", str(MIN_SDK), "--target-sdk-version", str(TARGET_SDK)])
+         "--min-sdk-version", str(MIN_SDK), "--target-sdk-version", str(TARGET_SDK)] + res_inputs)
     with zipfile.ZipFile(base, "a") as z:
         z.write(a.dex, "classes.dex", compress_type=zipfile.ZIP_DEFLATED)
         for spec in a.lib:  # ABI=FILE; stored, so they load straight from the APK (extractNativeLibs false)
@@ -164,7 +174,7 @@ def add_common(n, t, py, root, abis):
     n.rule("keystore", "%s %s keystore %s $out" % (py, ME, t.jdk), description="KEYSTORE (local signing key)")
     n.rule("apk", "%s %s apk --jdk %s --build-tools %s --platform %s --manifest android/AndroidManifest.xml.in "
            "--package $package --label \"$label\" --version-code $vcode --version-name $vname --dex $dex --keystore %s "
-           "--strip %s $libs --out $out" % (py, ME, t.jdk, t.bt, t.plat, t.keystore, t.strip), description="APK $out")
+           "--strip %s $libs $icon --out $out" % (py, ME, t.jdk, t.bt, t.plat, t.keystore, t.strip), description="APK $out")
     n.build(t.keystore, "keystore")
     sdl_java = t.sdl_src + "/android-project/app/src/main/java"
     rootf = root.replace("\\", "/")
@@ -181,10 +191,13 @@ def add_common(n, t, py, root, abis):
     return dex, libs
 
 
-def add_apk(n, t, abi, apk, so, sdl_libs, dex, package, label, vcode, vname):
+def add_apk(n, t, abi, apk, so, sdl_libs, dex, package, label, vcode, vname, icon=""):
+    """icon: the app icon's source for tools/android_icon.py (_Main.rel, an .ico or a .png), or none"""
     libs = " ".join("--lib %s=%s" % (abi, p) for p in sdl_libs + [so])
-    n.build(apk, "apk", [dex, so] + sdl_libs, implicit=[t.keystore, "android/AndroidManifest.xml.in", ME],
-            variables={"package": package, "label": label, "vcode": vcode, "vname": vname, "dex": dex, "libs": libs})
+    implicit = [t.keystore, "android/AndroidManifest.xml.in", ME] + ([icon, "tools/android_icon.py"] if icon else [])
+    n.build(apk, "apk", [dex, so] + sdl_libs, implicit=implicit,
+            variables={"package": package, "label": label, "vcode": vcode, "vname": vname, "dex": dex, "libs": libs,
+                       "icon": '--icon "%s"' % icon if icon else ""})
 
 
 def sdl_flags(t, abi):
@@ -245,6 +258,7 @@ def main():
             ap.add_argument("--" + k, required=True)
         ap.add_argument("--lib", action="append", default=[])
         ap.add_argument("--strip", default="", help="llvm-strip: remove debug info from the .so files")
+        ap.add_argument("--icon", default="", help="app icon source (tools/android_icon.py)")
         step_apk(ap.parse_args(rest))
     else:
         sys.exit("unknown step %s" % cmd)

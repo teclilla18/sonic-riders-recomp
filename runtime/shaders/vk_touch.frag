@@ -1,7 +1,7 @@
 // Vulkan backend: one touch control (platform/android/touch_android.c) on a square quad, drawn from
 // distance functions so it stays sharp at any screen resolution. Premultiplied alpha out.
 // shape.x: 0 button, 1 stick base, 2 stick knob; shape.y: icon (1 jump, 2 boost, 3 drift, 4 tornado,
-// 5 pause, 6 menu); shape.z: 1 while pressed. color: tint (rgb) and overall opacity (a).
+// 5 pause (the word START), 6 menu); shape.z: 1 while pressed. color: tint (rgb) and overall opacity (a).
 // Shared-GLSL rules apply (no runtime index into a vector or array).
 layout(location = 0) in vec2 v_uv;
 layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; } pc;
@@ -35,9 +35,31 @@ float icon(vec2 p, float id) {  // distance to the icon's strokes (y grows downw
     d = min(d, seg(p, vec2(-0.40, -0.30), vec2(0.40, -0.30)));
     d = min(d, seg(p, vec2(-0.24, 0.0), vec2(0.28, 0.0)));
     d = min(d, seg(p, vec2(-0.06, 0.30), vec2(0.16, 0.30)));
-  } else if (id < 5.5) {  // pause: two bars
-    d = min(d, seg(p, vec2(-0.18, -0.34), vec2(-0.18, 0.34)));
-    d = min(d, seg(p, vec2(0.18, -0.34), vec2(0.18, 0.34)));
+  } else if (id < 5.5) {  // pause: the word START, centred (block letters 0.17 wide, 0.30 high)
+    const float w = 0.17, h = 0.15;
+    float x = -0.535;      // S
+    d = min(d, seg(p, vec2(x + w, -h), vec2(x, -h)));
+    d = min(d, seg(p, vec2(x, -h), vec2(x, 0.0)));
+    d = min(d, seg(p, vec2(x, 0.0), vec2(x + w, 0.0)));
+    d = min(d, seg(p, vec2(x + w, 0.0), vec2(x + w, h)));
+    d = min(d, seg(p, vec2(x + w, h), vec2(x, h)));
+    x += 0.225;            // T
+    d = min(d, seg(p, vec2(x, -h), vec2(x + w, -h)));
+    d = min(d, seg(p, vec2(x + 0.5 * w, -h), vec2(x + 0.5 * w, h)));
+    x += 0.225;            // A
+    d = min(d, seg(p, vec2(x, h), vec2(x + 0.5 * w, -h)));
+    d = min(d, seg(p, vec2(x + 0.5 * w, -h), vec2(x + w, h)));
+    d = min(d, seg(p, vec2(x + 0.22 * w, 0.04), vec2(x + 0.78 * w, 0.04)));
+    x += 0.225;            // R
+    d = min(d, seg(p, vec2(x, h), vec2(x, -h)));
+    d = min(d, seg(p, vec2(x, -h), vec2(x + w, -h)));
+    d = min(d, seg(p, vec2(x + w, -h), vec2(x + w, 0.0)));
+    d = min(d, seg(p, vec2(x + w, 0.0), vec2(x, 0.0)));
+    d = min(d, seg(p, vec2(x + 0.35 * w, 0.0), vec2(x + w, h)));
+    x += 0.225;            // T
+    d = min(d, seg(p, vec2(x, -h), vec2(x + w, -h)));
+    d = min(d, seg(p, vec2(x + 0.5 * w, -h), vec2(x + 0.5 * w, h)));
+    return d - 0.032;      // thinner strokes for letters
   } else {                // menu: three lines
     d = min(d, seg(p, vec2(-0.36, -0.28), vec2(0.36, -0.28)));
     d = min(d, seg(p, vec2(-0.36, 0.0), vec2(0.36, 0.0)));

@@ -3,11 +3,12 @@
  * Sonic Riders' controls (GameCube): stick = steer / tricks in the air, A = jump (hold to charge),
  * B or X = boost, L or R = drift (held), L+R = tornado (or leave turbulence), START = pause.
  * Layout, in units of the screen height H (so it scales with the phone), mirrored for the thumbs:
- *   left half: a floating stick that appears where the thumb lands (base radius 0.16 H, 12% dead zone),
+ *   left half: a floating stick that appears where the thumb lands (base radius 0.16 H; dead zone 12% in
+ *     races, 35% with a gentler start in the game's menus: stick_value),
  *     and whose base follows the thumb when it is dragged far past the edge;
  *   right: JUMP (the largest, where the thumb rests), BOOST to its left, DRIFT above it, TORNADO between;
  *     a thumb can slide from one to another without lifting (the button under it is the one pressed);
- *   top corners: PAUSE (START) on the right, MENU (the settings overlay) on the left, small and out of the
+ *   top corners: PAUSE (a circle with START in it) on the right, MENU (the settings overlay) on the left, small and out of the
  *     way; both clear of the camera cutout (side margin 0.09 H).
  * While the menu is open, fingers act on it (overlay_pointer). Using a gamepad hides the controls until
  * the screen is touched again. */
@@ -15,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "game_addrs.h"
 #include "overlay.h"
 #include "touch_android.h"
 
@@ -37,7 +39,7 @@ static Finger g_f[MAX_FINGERS];
 static int g_visible = 1;
 static int g_stick_finger = -1;
 static float g_base_x, g_base_y;       /* the stick's centre while held */
-static float g_stick_vx, g_stick_vy;   /* -1..1, y down */
+static float g_stick_vx, g_stick_vy;   /* thumb from the base, in base radii (up to 1.6), y down */
 static unsigned g_pressed;             /* bit per control */
 static uint64_t g_start_until;         /* PAUSE held at least this long (the game polls once a frame) */
 static float g_ov[4] = {0, 0, 1, 1};   /* the menu image on screen */
@@ -52,15 +54,15 @@ static void layout(int w, int h) {
     g_c[C_BOOST] = (Control){jx - 0.28f * H, H - 0.13f * H, 0.09f * H, 2, B_B, {1.0f, 0.70f, 0.25f}};
     g_c[C_DRIFT] = (Control){jx + 0.01f * H, jy - 0.28f * H, 0.09f * H, 3, B_R, {0.55f, 1.0f, 0.55f}};
     g_c[C_TORNADO] = (Control){jx - 0.25f * H, jy - 0.24f * H, 0.065f * H, 4, B_L | B_R, {0.85f, 0.60f, 1.0f}};
-    g_c[C_PAUSE] = (Control){W - mx - 0.05f * H, 0.085f * H, 0.05f * H, 5, B_START, {0.9f, 0.9f, 0.9f}};
+    g_c[C_PAUSE] = (Control){W - mx - 0.065f * H, 0.09f * H, 0.065f * H, 5, B_START, {0.9f, 0.9f, 0.9f}};
     g_c[C_MENU] = (Control){mx + 0.05f * H, 0.085f * H, 0.05f * H, 6, 0, {0.9f, 0.9f, 0.9f}};
     rt_log("[touch] layout for %dx%d", w, h);
 }
 
 static float stick_r(void) { return 0.16f * (float)g_h; }
-static void stick_home(float* x, float* y) {  /* where the base is shown while no thumb is on it */
-    *x = 0.09f * (float)g_h + 0.22f * (float)g_h;
-    *y = (float)g_h - 0.25f * (float)g_h;
+static void stick_home(float* x, float* y) {  /* where the base is shown while no thumb is on it (user: a */
+    *x = 0.09f * (float)g_h + 0.27f * (float)g_h;    /* little north-east of the first layout, 2026-11-03) */
+    *y = (float)g_h - 0.31f * (float)g_h;
 }
 
 /* the control under a point (generous: 1.25 x its radius), nearest centre first; -1 if none */
@@ -98,18 +100,38 @@ static void stick_update(float x, float y) {
         g_base_y = y - dy / m * 1.6f * R;
         dx = x - g_base_x;
         dy = y - g_base_y;
-        m = 1.6f * R;
     }
-    float v = m / R;
-    const float dead = 0.12f;
-    if (v <= dead) {
-        g_stick_vx = g_stick_vy = 0;
-        return;
+    g_stick_vx = dx / R;  /* in base radii; the dead zone is applied in touch_apply */
+    g_stick_vy = dy / R;
+}
+
+/* the game's menus vs everything else (races, and modes not identified yet keep the race behaviour) */
+static int game_in_race(void) {
+    uint32_t m = ld32(GAME_TOP_MODE);
+    static uint32_t last = 0xFFFFFFFFu;
+    if (m != last) {
+        rt_log("[touch] game mode %u (%s)", m, m == GAME_TOP_MODE_MENUS ? "menus: bigger stick dead zone" : "race");
+        last = m;
     }
-    float s = (v - dead) / (1.0f - dead);
+    return m != GAME_TOP_MODE_MENUS;
+}
+
+/* The stick's dead zone, in base radii. Races: 12%, so steering answers at once. The game's menus move
+ * the cursor from about 20 of 100 and repeat while held, so there a thumb resting on the stick wandered
+ * through them (user, 2026-11-03): 35% there, and the first part of the travel past it counts less. */
+#define STICK_DEAD_RACE 0.12f
+#define STICK_DEAD_MENU 0.35f
+static void stick_value(float* ox, float* oy) {
+    float m = sqrtf(g_stick_vx * g_stick_vx + g_stick_vy * g_stick_vy);
+    int menus = !game_in_race();
+    float dead = menus ? STICK_DEAD_MENU : STICK_DEAD_RACE;
+    *ox = *oy = 0;
+    if (m <= dead) return;
+    float s = (m - dead) / (1.0f - dead);
     if (s > 1.0f) s = 1.0f;
-    g_stick_vx = dx / m * s;
-    g_stick_vy = dy / m * s;
+    if (menus) s = s * s;  /* gentle near the dead zone, full at the edge */
+    *ox = g_stick_vx / m * s;
+    *oy = g_stick_vy / m * s;
 }
 
 static int finger_slot(SDL_FingerID id, int make) {
@@ -204,8 +226,10 @@ void touch_apply(GcPad* p) {
         if (pressed & (1u << i)) p->buttons |= g_c[i].buttons;
     if (p->buttons & B_L) p->trig_l = 0xFF;
     if (p->buttons & B_R) p->trig_r = 0xFF;
-    if (g_stick_finger >= 0 && (g_stick_vx != 0 || g_stick_vy != 0)) {
-        int sx = 0x80 + (int)lroundf(g_stick_vx * 100.0f), sy = 0x80 - (int)lroundf(g_stick_vy * 100.0f);
+    float vx, vy;
+    if (g_stick_finger >= 0) stick_value(&vx, &vy);
+    if (g_stick_finger >= 0 && (vx != 0 || vy != 0)) {
+        int sx = 0x80 + (int)lroundf(vx * 100.0f), sy = 0x80 - (int)lroundf(vy * 100.0f);
         p->stick_x = (uint8_t)(sx < 1 ? 1 : sx > 255 ? 255 : sx);
         p->stick_y = (uint8_t)(sy < 1 ? 1 : sy > 255 ? 255 : sy);
     }
@@ -240,7 +264,9 @@ int touch_shapes(TouchShape* out, int max, int win_w, int win_h) {
         }
         int held = g_stick_finger >= 0;
         out[n++] = (TouchShape){bx, by, R, 1, 0, held, TOUCH_IMG_STICK_BASE, held ? 0.7f : 0.45f, {0.8f, 0.85f, 1.0f}};
-        float kx = bx + g_stick_vx * R * 0.55f, ky = by + g_stick_vy * R * 0.55f;  /* the knob stays inside the gate */
+        float kvx = g_stick_vx, kvy = g_stick_vy, km = sqrtf(kvx * kvx + kvy * kvy);
+        if (km > 1.0f) kvx /= km, kvy /= km;  /* the knob follows the thumb and stays inside the gate */
+        float kx = bx + kvx * R * 0.55f, ky = by + kvy * R * 0.55f;
         out[n++] = (TouchShape){kx, ky, 0.5f * R, 2, 0, held, TOUCH_IMG_STICK_KNOB, held ? 0.85f : 0.5f, {0.8f, 0.85f, 1.0f}};
     }
     return n;

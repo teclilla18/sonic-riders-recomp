@@ -38,6 +38,8 @@ ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAV
 ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
 ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
+ap.add_argument("--icon", default="", help="your own program icon (.ico; android also .png) instead of the game's save icon "
+                "(PC: build/icon.ico from the setup; android: from baserom/_Main.rel). Keep it out of git unless it is your own art")
 ap.add_argument("--android-app", choices=["game", "probe"], default="game", help="android: the game, or the milestone 1 probe APK")
 args = ap.parse_args()
 
@@ -296,7 +298,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     # optional program icon (PC, llvm-mingw): build/icon.ico if present. It lives in build/ (never
     # committed); the setup or the user puts it there.
-    icon = "build/icon.ico"
+    icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "build/icon.ico"
     if args.target == "host" and args.toolchain == "mingw" and os.path.isfile(os.path.join(ROOT, icon)):
         rc = OUT + "/gen/icon.rc"
         with open(os.path.join(ROOT, rc), "w", encoding="utf-8") as f:
@@ -320,8 +322,13 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     if args.target == "android":
         dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
         apk = "build/android/sonicriders-%s.apk" % args.abi
+        # the app icon: your own (--icon), else the game's save icon from your disc (like the PC icon)
+        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "baserom/_Main.rel"
+        if not os.path.isfile(os.path.join(ROOT, app_icon)):
+            print("configure: no app icon (%s not found); the APK gets Android's default icon" % app_icon)
+            app_icon = ""
         android_build.add_apk(n, atools, args.abi, apk, exe, sdl_libs[args.abi], dex, "net.srnative.sonicriders",
-                              "Sonic Riders", "1", build_version()[:40])
+                              "Sonic Riders", "1", build_version()[:40], icon=app_icon)
         n.default(apk)
     n.build("gen_objs", "phony", objs[:len(gen_c)])
     n.default(exe)

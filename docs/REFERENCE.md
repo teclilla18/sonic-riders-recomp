@@ -91,6 +91,9 @@ Environment variables read by `tools/recomp/gcrecomp.py` when generating code (a
 
 ## Known game addresses
 
+- `8021B8C0` (.sdata, `GAME_TOP_MODE`): 1 = intro / title / attract / menus (Player Entry seen), 8 = races (demo
+  and Free Race seen). Found 2026-11-03 by RAM dumps on the phone + a PC menu route; other modes unchecked.
+
 Guest addresses as the port sees them (REL linked at 0x81800000; original GameCube REL addresses + 0x01404300).
 `fn_`/`f_` names are dtk's. Where they were found: grep the address in HISTORY.md.
 
@@ -220,6 +223,30 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 
 **PC program icon (2026-10-23):** [confirmed] `tools/make_icon.py` reads the memory card save icon (32x32 CI8, 8x4 tiles; RGB5A3 palette) from the verified `_Main.rel` at 0x1F7660 (palette at 0x1F7420; found by matching the icon in a real save in `saves/card_a.raw`), writes `build/icon.ico` (PNG entries 16/32/64/128/256: 2x2 average for 16, nearest 2x/4x/8x above) and `configure.py` compiles it in with llvm-mingw's windres when the file exists. SDL2 takes the window/taskbar icon from the program's first icon resource. The setup makes it after step 4 for the PC target (failure only warns). The disc banner (`opening.bnr`, 96x32 logo only) was too wide to read as a square icon.
 
+## Quick commands (copy-paste; `<tools>` = %LOCALAPPDATA%/SonicRidersSetup/tools)
+
+build.ninja holds one target at a time: configure, then ninja. From Git Bash use `<tools>/ninja/ninja.exe` (the
+`ninja` on PATH is devkitPro's), `T=$(cygpath -m "$LOCALAPPDATA/SonicRidersSetup/tools")`.
+- Android: `python configure.py --target android --android-sdk $T/android-sdk --jdk $T/jdk17 --sdl-src $T/sdl2-src
+  --abi arm64-v8a --keystore $T/android/sonicriders-local.keystore [--icon <file>]` → `build/android/sonicriders-arm64-v8a.apk`.
+- Switch: `DEVKITPRO=$T/devkitpro python configure.py --target switch --devkitpro $T/devkitpro --imgui $T/imgui`
+  (keep `DEVKITPRO` exported for ninja) → `build/switch/sonicriders.nro`.
+- PC: `python configure.py --target host --toolchain mingw --llvm-mingw build/ext/llvm-mingw-20261006-ucrt-x86_64
+  --sdl build/ext/SDL2-2.32.10-mingw` → `build/host-mingw/sonicriders.exe`. A PC run logs to **stdout** (redirect
+  it); `sonicriders.log` in the root is not written by test runs started this way.
+- Phone run: `MSYS_NO_PATHCONV=1 python tools/android_run.py --apk build/android/sonicriders-arm64-v8a.apk --package
+  net.srnative.sonicriders --args "SR_..." --wait "<regex>" --pull <file> --out C:/.../build/android/run/<name>
+  [--keep-running] > build/android/run/<name>.txt` (Windows paths as `C:/...` with MSYS_NO_PATHCONV). Screen
+  3088x1440; touch layout in units of H = 1440; the menu's 16:9 rect is x 264-2824 (overlay px x2 + 264).
+- Synthetic touch on the phone: `adb shell input tap X Y` / `input swipe X0 Y0 X1 Y1 MS`; menu button (202, 122).
+- `SR_RAMHASH=<N>` is a **step limit** (hashing and `SR_RAMDUMPAT` dumps happen only for steps < N); with
+  `SR_RAMHASH_BLOCKS=none SR_RAMHASH_KEY=<addr>` it logs one u32 per step cheaply (watch a variable over a run).
+- Find a game variable: dumps at known steps (`SR_RAMDUMPAT`), keep words equal within each group and different
+  between groups (e.g. menus vs races). Det-route steps (`SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0`): intro ~1500,
+  title ~2900, 1P demo race 3304-7183 (e.g. 5300), title 8000, 2P demo race from 9013 (e.g. 10500).
+- PC menu route from an empty card (`SR_CARD=<new file>`): START at 300/600/900/1200, A every 250 from 1500 to 6500
+  → Player Entry; then START + A at 6800/7100/... → Free Race at Metal City (mode 8 from step ~6825).
+
 ## Android: build, install, test (branch `android`, 2026-11-03)
 
 - Plan and milestones: docs/ANDROID_PLAN.md. Tools (setup `-Target android -AcceptAndroidSdkLicense`, pins in
@@ -264,6 +291,18 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 - Emulator (dev only, not in the setup): emulator 16740729 + `system-images;android-35;google_apis;x86_64` r09
   unpacked into `<tools>/android-sdk` (Google SHA-1 checked), AVD `srtest` in `<tools>/avd` (`ANDROID_AVD_HOME`),
   started with `-no-window -gpu host` (WHPX). Its GLES stops at 3.1 and its GPU is the PC's: no performance numbers.
+- Touch controls (2026-11-03, second round): stick home a little north-east (`stick_home`); dead zone 12% in races,
+  35% with a squared start in the game's menus (`stick_value`, by `GAME_TOP_MODE`; the log says `[touch] game mode N`
+  when it changes); PAUSE is a circle with START drawn in vk_touch.frag (radius 0.065 H). Menu by touch: Close and
+  Quit inside the ImGui frame now trigger a redraw (`overlay_image`, `open_before`); no Fullscreen on Android;
+  Controls tab text for touch + pads.
+- App icon: `tools/android_icon.py` makes an adaptive icon (foreground 432 px with the picture in the middle 288 px,
+  background of its edge colour) at APK build time from `baserom/_Main.rel` (the save icon without its 2-px frame,
+  whole-pixel scaled), or from `configure.py --icon <.ico|.png>` / setup `-Icon` (also used for the PC .exe icon).
+  aapt2 compiles it (`res.zip`) and the manifest gets `android:icon` through `@ICON@`.
+- Triggers (PC and Android, input_sdl.c `trigger`): per pad, the deepest press is learned (start 26000 of 32767);
+  analog = value scaled to that peak; digital L/R click from 85% of the peak (analog 255 while clicked). Log:
+  `[input] port N left/right trigger: pressed to V of 32767 (peak P, click from C)` for each new deepest press.
 - S23 Ultra facts (Android 17, SM8550): CPUs 0-2 A510 2016 MHz (capacity 266), 3-6 2803 MHz (811), 7 X3 3360 MHz
   (1024); affinity and nice -16/-19 allowed for apps; APerformanceHint, AThermal, ANativeWindow_setFrameRate
   present; SDL audio uses OpenSL ES at 32 kHz, 512 frames; display 3088x1440 at 120 Hz (frames of 8.3 ms).

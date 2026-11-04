@@ -19,6 +19,7 @@ Parameters (all optional; asked for when missing):
   -NoSd              build only, do not copy to an SD card
   -CopyIso yes|no    also copy the disc image to the SD card (the Switch build needs it there once)
   -DesktopShortcut yes|no   PC: also put a "Sonic Riders" shortcut on the desktop
+  -Icon PATH         PC / Android: your own program icon (.ico; Android also .png) instead of the game's save icon
   -ToolsDir PATH     where the downloaded toolchain is kept (default %LOCALAPPDATA%\SonicRidersSetup\tools)
   -Yes               no questions: use the defaults (needs -Iso and -Target; -Sd or -NoSd)
 
@@ -36,6 +37,7 @@ param(
     [ValidateSet("", "yes", "no")][string]$CopyIso = "",
     [ValidateSet("", "yes", "no")][string]$DesktopShortcut = "",
     [string]$ToolsDir,
+    [string]$Icon,
     [switch]$Yes
 )
 
@@ -389,7 +391,9 @@ if ($doSwitch) {
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
 }
 if ($doPc) {
-    Run "configure (PC)" $python @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
+    $pcArgs = @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
+    if ($Icon) { $pcArgs += @("--icon", $Icon) }
+    Run "configure (PC)" $python $pcArgs
     Run "build the PC test build" $ninja @()
     $builtExe = Join-Path $Root "build\host-mingw\sonicriders.exe"
     if (-not (Test-Path $builtExe)) { Fail "The build finished but build\host-mingw\sonicriders.exe is missing." }
@@ -405,7 +409,9 @@ $builtApks = @()
 if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
-        Run "configure (Android, $a)" $python @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore)
+        $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore)
+        if ($Icon) { $andArgs += @("--icon", $Icon) }  # else the save icon from baserom\_Main.rel
+        Run "configure (Android, $a)" $python $andArgs
         Run "build the Android APK ($a; this takes a while)" $ninja @()
         $apk = Join-Path $Root "build\android\sonicriders-$a.apk"
         if (-not (Test-Path $apk)) { Fail "The build finished but build\android\sonicriders-$a.apk is missing." }

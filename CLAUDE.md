@@ -39,9 +39,19 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 - **docs/REFERENCE.md**: architecture, HLE/device boundary, build/install/test, `SR_*` and `RECOMP_*` variables,
   Eden/Dolphin, game addresses, SDK map, recon. `grep -n '^## ' docs/REFERENCE.md`, then read that section.
 - **docs/HISTORY.md**: every dated session and hardware test, oldest first. Grep a date, `#issue`, address or `SR_`.
+- **docs/MAP.md**: where each topic lives (file + function names). Use it before opening code.
+- docs/REFERENCE.md "Quick commands": configure/build/run lines for every target, phone run, RAM tools.
 - docs/ONLINE.md (online play), docs/PERF.md (perf test), docs/MODDING.md, docs/BUILDING.md, CONTRIBUTING.md.
 - Code: `tools/recomp/` recompiler, `config/GXEE8P/` (`hle.txt`, `patches.txt`), `runtime/src/` devices and runtime,
   `runtime/src/platform/{switch,host}/`, `runtime/shaders/` shared GX shader.
+
+## Token budget
+
+- Search first (`grep -n`, MAP.md), then read only those lines; never read a whole file over ~200 lines.
+- Cap every output (`| head`, `| tail`, `grep -c`, `cut -c1-120`); no raw logs or big directory listings.
+- Long runs go to a file in the background; read only the result lines. Look at images only when the picture is
+  what is being checked, shrunk or cropped first.
+- Keep `build/` tidy: old test outputs go to `build/old/`. Two or three related items per session.
 
 ## Build and test (the PC build is the fast test loop)
 

@@ -10,7 +10,11 @@ import zlib
 
 
 def read_png(path):
-    data = open(path, "rb").read()
+    return decode_png(open(path, "rb").read(), path)
+
+
+def decode_png(data, path="PNG", premultiply=True):
+    """(w, h, RGBA bytes); premultiplied alpha unless premultiply is False"""
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         sys.exit("%s: not a PNG" % path)
     pos, idat, w = 8, b"", 0
@@ -53,7 +57,9 @@ def read_png(path):
             r, g, bl = line[x * bpp], line[x * bpp + 1], line[x * bpp + 2]
             al = line[x * bpp + 3] if bpp == 4 else 255
             o = (y * w + x) * 4  # premultiplied (the overlay blend is ONE, ONE_MINUS_SRC_ALPHA)
-            out[o:o + 4] = bytes(((r * al + 127) // 255, (g * al + 127) // 255, (bl * al + 127) // 255, al))
+            if premultiply:
+                r, g, bl = (r * al + 127) // 255, (g * al + 127) // 255, (bl * al + 127) // 255
+            out[o:o + 4] = bytes((r, g, bl, al))
         prev = line
     return w, h, out
 

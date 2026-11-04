@@ -7,6 +7,11 @@
   image to it over USB. On Android the game now draws with Vulkan (first picture: the intro movie), with touch
   controls (stick on the left; jump, boost, drift and tornado on the right; pause and menu buttons in the top corners)
   and the screen kept awake while playing.
+- Android: the app has an icon (made from the game's save icon on your disc, or your own picture with the setup's
+  `-Icon`); the touch PAUSE button says START; the touch stick sits a little higher and is calmer in menus; the
+  settings menu works reliably by touch (Close really closes it) and its Controls tab explains touch and controllers.
+- Controllers (PC and Android): analog triggers adapt to each controller, so a full press always clicks L / R
+  (drift) like a GameCube trigger, while a partial press stays analog.
 - Perf test with `SR_DETCLOCK`: the intro skip now lands on the same frame on every machine (runs can be compared).
 - Groundwork for online play (test options for now, see docs/ONLINE.md): record a session's controller
   input and replay it exactly (`SR_RECORD`, `SR_REPLAY`; a recording made on PC replays identically on

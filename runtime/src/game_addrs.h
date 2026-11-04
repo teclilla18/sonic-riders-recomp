@@ -27,6 +27,11 @@
 #define GAME_PLAYER_SIZE     0x1080u
 #define GAME_GEAR_TABLE      0x819EA240u  /* _Main.rel data: 41 Extreme Gear records of 0x1D0 bytes (game_mods.c) */
 
+/* main.dol .sdata: the game's top-level mode. 1 on the intro, title, attract screens and menus (Player Entry
+ * seen), 8 in races (demo and Free Race seen; 2026-11-03). Other modes not looked at yet. */
+#define GAME_TOP_MODE        0x8021B8C0u
+#define GAME_TOP_MODE_MENUS  1u
+
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */
 #define DVD_PAUSE_FLAG       0x8021BD8Cu
