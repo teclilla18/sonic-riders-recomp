@@ -490,7 +490,10 @@ if ($builtApks.Count -gt 0) {
     $phoneApk = $builtApks | Where-Object { $_ -match "arm64-v8a" } | Select-Object -First 1
     if (-not $phoneApk) { $phoneApk = $builtApks[0] }
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-    $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" })
+    # "adb devices" starts the adb server, which keeps running (and holds the tools folder) after the
+    # setup: skip it when the answer is already no, and stop it at the end
+    $devs = @()
+    if ($Install -ne "no") { $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" }) }
     $ErrorActionPreference = $old
     if (-not $Install) {
         if ($devs.Count -eq 1) { $Install = (Ask "Install it on the connected Android device now? (y/n)" "y") -replace "^[yY].*", "yes" -replace "^[nN].*", "no" }
@@ -523,6 +526,11 @@ if ($builtApks.Count -gt 0) {
         Log "Installed. Start 'Sonic Riders' from the phone's app list. Tap the top-left button for the settings menu." "Green"
     } else {
         Log "Android: install $phoneApk with 'adb install -r' (USB debugging on)." "Green"
+    }
+    if ($Install -ne "no") {
+        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        & $adb kill-server 2>&1 | Out-Null
+        $ErrorActionPreference = $old
     }
 }
 if (-not $sdDir -and -not $builtNro -and -not $builtExe -and $builtApks.Count -eq 0) { Log "Done." "Green" }

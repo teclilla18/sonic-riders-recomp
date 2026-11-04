@@ -90,7 +90,10 @@ try {
                 param($src, $dst)
                 while ($true) { Start-Sleep -Seconds 30; try { Copy-Item $src $dst -Force } catch {} }
             }
-            $p = Start-Process cmd.exe -ArgumentList "/d /s /c `"$line`"" -Wait -PassThru -NoNewWindow
+            # wait for cmd itself: Start-Process -Wait also waits for children left running (the adb server)
+            $p = [Diagnostics.Process]::Start((New-Object Diagnostics.ProcessStartInfo -Property @{
+                FileName = "cmd.exe"; Arguments = "/d /s /c `"$line`""; UseShellExecute = $false }))
+            $p.WaitForExit()
             Stop-Job $logJob; Remove-Job $logJob -Force
             $code = $p.ExitCode
             $missing = @($cfg.outputs | Where-Object { -not (Test-Path (Join-Path $top $_)) })
