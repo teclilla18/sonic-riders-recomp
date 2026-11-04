@@ -58,12 +58,8 @@ clean-install test (`tools/sandbox_test.py`); cold PC and Android installs PASS 
   (was 14-18), title 1.7 ms (was ~10). Pictures identical to the ubershader. Game thread ~5 ms/step.
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
 - Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
-- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra):** stick (home north-east, calmer in
-  menus via game mode `8021B8C0`), menu taps and Close, START button, triggers in races (log: RT reached 32767 and
-  clicked; LT only light presses, stayed analog). App icon: the user's own .ico, built locally with `--icon`
-  (box art, never committed; default for players is the save icon). Right stick → C-stick: checked in code (same
-  round 25% dead zone, full range, up = higher, sent unchanged in the SI poll); not checked in a game screen that
-  uses the C-stick.
+- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**; details in notes/android.md.
+  App icon: the user's own .ico, built locally with `--icon` (never committed).
 - **Next after the crash:** GPU needs a profiler (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
   size), pre-rotation, 2P with two pads.
 
@@ -72,16 +68,16 @@ clean-install test (`tools/sandbox_test.py`); cold PC and Android installs PASS 
 Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
 (user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
 **Vita probe (branch `vita`, 2026-11-04)** [confirmed, CPU 500 / GPU 222]: V1a headless runs the demos; after this
-session's fixes (clock reads, 64-bit divide, log) 1P 21 steps/s, game thread ~40 ms/step (was 10.5 steps/s, 49
-ms), 2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP thread 51-65 ms per drawn race
-frame. Profile flat (PSMTX/PSVEC ~12%, OSEnableInterrupts 8%). V1b GXM microbench: 7,000 draws submit in 9.2 ms
-(15.7 ms with a program switch per draw); libshacccg 78 ms per shader. A lost cnd_wait wake-up (hang) fixed by
-bounded waits. Per-thread CPU (session 3): core 0 (guest code) is saturated, ~39-46 ms of CPU per step;
-GP thread ~0.4 s/s, decode helper and audio ~0.3 s/s each; run-to-run noise ~±10%. Session 4: float-typed
-single-precision locals in the recompiler implemented but **off** (`RECOMP_FLOATLOC=1` + `-DPPC_FLOAT_LOCALS=1`):
-not bit-exact yet (PC det route differs from step 3547); next: find why, then measure on the Vita; then the audio
-mixer's cheap wins (listed in the note). USB camera (udcd_uvc) is on: the Vita does not charge over USB. Details:
-docs/notes/vita-research.md "Game-thread profile", "Probe V1b results", "Float-typed locals prototype".
+session's fixes (clock reads, 64-bit divide, log) 1P 21 steps/s, game thread ~40 ms/step (was 10.5 steps/s, 49 ms),
+2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP thread 51-65 ms per drawn race frame.
+Run-to-run noise ~±10%. Session 5: float-typed single-precision locals are now **bit-exact** (PC det route 0 of
+11,305 steps differ; cause was float-only expressions such as ps_madd) but give **no measurable gain** on the Vita
+(1P ~38 ms/step either way; GCC already narrows most single ops, conversions drop only 2.5%), so they stay off.
+Audio mixer cheap wins: bit-exact (WAV identical), Vita mixing 7.4 -> 6.6 ms/frame, audio thread -9% [confirmed].
+Next for speed: the game thread is the limit (~790 ms/s busy, ~38 ms/step vs 33 needed for 30 fps): storing FPR
+halves as float in the register struct, or the PSMTX/PSVEC hot paths. USB camera (udcd_uvc) is on: the Vita does
+not charge over USB. Details: docs/notes/vita-research.md "Game-thread profile", "Probe V1b results", "Float-typed
+locals prototype".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

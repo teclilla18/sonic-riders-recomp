@@ -383,3 +383,12 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - 2026-11-04 (f): **v0.4.1 released** (tag c263ebe; PC, Switch and Android zips): the setup fixes of (e). Cold
   sandbox PC + Android PASS on the tagged commit (both folders) before publishing [confirmed]. The v0.4.0 GitHub
   release was deleted at the user's request (its Android download was broken); the v0.4.0 tag remains.
+- 2026-11-04 (g): **Vita: float-typed locals bit-exact; mixer wins** (branch `vita`; PCH-2000 at CPU 500 / bus 222
+  / GPU 222). Float locals differed from step 3547 because C evaluates all-float expressions in float (ps_madd's
+  `to_single(a * c + b)` rounded the product); found by two checking builds (`RECOMP_FLOATLOC_CHECK=1`: typed reads
+  all single; `RECOMP_FLOAT_CHECK=1`: every PPC_SOP exact), fixed by reading typed locals as double (`PPC_FD`).
+  PC det route: 0 of 11,305 steps differ [confirmed]. Vita A/B same session: no gain beyond noise (1P 38.9 off vs
+  38.2 / 35.1 on) [confirmed]; GCC already narrows single ops (conversions -2.5% only). Left off. Mixer: int32
+  clamp/ADPCM, cached ARAM base, silent sends skipped: WAV identical on the PC det route; Vita mixing 7.4 -> 6.6
+  ms/frame, audio thread 214 -> 195 ms/s [confirmed]. The det-route RAM hash flakes once in a while in blocks
+  00000006 (old code too) [likely harness noise]. One Vita run stopped logging at 140 s (no dump) [uncertain].

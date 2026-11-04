@@ -260,7 +260,7 @@ vertex stream + two vec4 vertex uniforms per draw, shaders compiled on the devic
 - vitacompanion's FTP refused logins after `promote`; its `reboot` command fixed it. `vita-elf-create` crashed
   (0xC0000374) on this program linked without `--gc-sections`.
 
-## Float-typed locals prototype (2026-11-04, session 4) [WIP, off by default]
+## Float-typed locals prototype (2026-11-04, sessions 4-5) [bit-exact; off: no measurable gain]
 
 Goal: on 32-bit ARM every single-precision instruction is double math plus two conversions (to_single). The
 existing singleflow.py already knows, per instruction, which FPR halves hold singles (round25 removal) and had an
@@ -274,20 +274,35 @@ old `RECOMP_FLOAT=1` that wrote `(double)((float)A op (float)B)`, but GCC kept t
   `PPC_FLOAT_LOCALS=1`, else double/to_single (the old code). report.txt: "FPR halves in locals: 23050,
   typed ppc_fs: 7727"; 7,150 PPC_SOP; 401 psq_load_lv.
 - **Off by default**: `RECOMP_FLOATLOC=1` (recompile) and `-DPPC_FLOAT_LOCALS=1` (compile) turn it on.
-- **Not bit-exact yet** [confirmed]: PC det route (`SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_RAMHASH=11500
-  SR_RAMHASH_REF=<baseline log>`) with it forced on (build/old/build.ninja.hostfl: build/host-fl, cflags
-  -DPPC_FLOAT_LOCALS=1) first differs at step 3547 (1P demo race), blocks 0401F80E. Next: find the function
-  (candidates: a half read inside the same statement after its write, fused ops fmadds/ps_madd that mix float
-  locals, `fres`/`frsqrte`/`fsel`/`fctiw` paths, NaN/denormal handling in float, a reload after a call that the
-  "kept" mask trusts). Bisect by limiting typing to a range of functions (an env list in leaflocal) and compare
-  with SR_RAMHASH_REF; or `RECOMP_FLOAT_CHECK`-style runtime compare of each float half against a double shadow.
-- Not measured on the Vita yet (static vcvt counts and guest CPU per step are the next numbers to take once exact).
+- **Bit-exact since session 5** [confirmed]: the PC det route (`SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0
+  SR_RAMHASH=11500 SR_RAMHASH_REF=<baseline log>`) with it forced on: 0 of 11,305 steps differ. The cause of the
+  old difference (from step 3547): C does an expression whose operands are all `float` in float, so ps_madd's
+  `to_single(a * c + b)` rounded the product to float first. Reads of `ppc_fs` locals are now `PPC_FD(x)` =
+  `(double)x` (gcrecomp.py, singleflow.fs_reads); inside PPC_SOP the round trip is exact and compiled away.
+  Found with two checking builds (compile without PPC_FLOAT_LOCALS): `RECOMP_FLOATLOC_CHECK=1` (every read of a
+  typed local must survive a float round trip, ppc.h `ppc_fs_rd`: no report) and `RECOMP_FLOAT_CHECK=1` (each
+  PPC_SOP compared with the explicit float form: no report), which left only mixed expressions. Bisect aid:
+  `RECOMP_FLOATLOC_RANGE=<lo>-<hi>` (hex; only functions starting in the range are typed).
+- The det-route RAM hash shows an occasional single-step difference in blocks 00000006 (MB 1-2) with old and new
+  code alike (more often when runs overlap): harness noise, not a code difference [likely].
+- **Vita, same session, CPU 500 / bus 222 / GPU 222** (perf test, game ms per step mean / median): off 1P 38.9 /
+  31.9, 2P 36.8 / 28.3; on (two runs) 1P 38.2 / 31.4 and 35.1 / 28.4, 2P 37.8 / 28.7 and 37.4 / 29.7. Game thread
+  CPU ~795 vs ~783 ms/s. Within the ±10% noise: **no measurable gain** [confirmed]. Why: double<->single
+  conversions in the ELF drop only 64,847 -> 63,225 (-2.5%); GCC already narrows `(float)((double)a op
+  (double)b)` to float arithmetic (the base build has ~20,000 f32 ops), and most conversions are loads and
+  stores of the register struct's doubles (`c->f[n]`), which typed locals do not touch. Left off by default.
+  A real gain would need the struct's FPR halves stored as float where known single (a bigger change).
 
-Audio mixer (task 3, not started in code): cheap bit-exact wins seen in runtime/src/ax.c: `clamp16(int64_t)`
-used everywhere (int32 is enough: products fit); ADPCM `(int64_t)scale * raw`; `aram8()` calls the
-out-of-line `aram_ptr()` in dsp.c for every byte (cache `aram_ptr(0)` and mask with ARAM_SIZE-1, 16 MB);
-`mix_add` could skip vol == 0 && delta == 0 sends (still setting *dpop = 0). Check: SR_WAVOUT WAV identical
-on the PC det route before/after; Vita: the `[perf]` "audio mixing ms/frame" and the per-thread CPU line.
+Audio mixer cheap wins (session 5, runtime/src/ax.c) [confirmed]: `clamp16` takes int32 (the widest product,
+int16 sample * uint16 volume, stays under 2^31), ADPCM `scale * raw` in int32, `aram8` reads a cached ARAM base
+with a mask (no out-of-line `aram_ptr` per byte), `mix_add` returns at once for volume 0 without a ramp (the pop
+value is still set to 0). PC det route: SR_WAVOUT WAV identical to the old mixer (SHA-1 2a0c8b61, 6 runs).
+Vita, same session, CPU 500 / bus 222 / GPU 222: `[perf]` audio mixing 7.47 / 7.34 -> 6.63 / 6.54 ms per frame
+(-11%), audio thread CPU 215 / 213 -> 194 / 195 ms/s (-9%); game ms per step unchanged (its own thread). With
+float locals too (one run): 1P 35.7 ms, 2P 38.4 ms per step, mixing 6.66 ms/frame.
+Vita runner (local, build/old/fl/): vita_run.py <eboot> <outdir> (quit all, FTP upload, launch, wait for
+"[perftest] done", pull log/json) and vita_sum.py <elf> <run> (scenes + CPU per named thread via nm). One run
+(float off) stopped logging at 140 s with no crash dump; the next runs were fine [uncertain why].
 
 ## Sources (read 2026-11-03)
 
