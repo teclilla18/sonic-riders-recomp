@@ -30,6 +30,9 @@
 #ifdef __SWITCH__
 #define OUT_DEFAULT "sdmc:/switch/sonicriders/perftest.json"
 #define PLATFORM "switch"
+#elif defined(__vita__)
+#define OUT_DEFAULT "ux0:data/sonicriders/perftest.json"
+#define PLATFORM "vita"
 #else
 #define OUT_DEFAULT "build/perftest.json"
 #define PLATFORM "pc"

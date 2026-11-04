@@ -152,6 +152,8 @@ static void auto_restart_schedule(void) {
  * block that differ show where they diverged. */
 #ifdef __SWITCH__
 #define DUMP_DIR "sdmc:/switch/sonicriders/"  /* RAM dumps next to the log */
+#elif defined(__vita__)
+#define DUMP_DIR "ux0:data/sonicriders/"
 #else
 #define DUMP_DIR "build/"
 #endif

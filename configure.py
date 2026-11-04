@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate build.ninja for the port.
 
-usage: python configure.py [--target host|switch|android]
+usage: python configure.py [--target host|switch|android|vita]
 
 Pipeline (everything under build/ is derived from the game and never committed):
   1. dtk analysis       baserom/main.dol + _Main.rel -> config/GXEE8P/{,_Main/}symbols.txt
@@ -15,6 +15,8 @@ host: --toolchain msvc (default): clang with the MSVC/SDK headers (run `. tools/
 switch: devkitA64 + libnx + deko3d (devkitPro: $DEVKITPRO, --devkitpro DIR, or C:/devkitPro)
 android: NDK + SDK build-tools + JDK 17 + SDL2 source (the setup downloads them); written by
       tools/android_build.py (docs/ANDROID_PLAN.md); --android-app probe builds the milestone 1 test APK instead.
+vita: probe V1a only (no picture or sound): VitaSDK (--vitasdk DIR or $VITASDK) + the kubridge package;
+      build/vita/sonicriders.vpk (docs/notes/vita-research.md).
 """
 import argparse
 import glob
@@ -25,7 +27,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
 from ninja_syntax import Writer  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--target", choices=["host", "switch", "android"], default="host")
+ap.add_argument("--target", choices=["host", "switch", "android", "vita"], default="host")
+ap.add_argument("--vitasdk", default="", help="vita: VitaSDK folder ($VITASDK; kubridge package installed)")
 ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="host compiler setup")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
@@ -202,6 +205,24 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("ldflags", "-shared -g -Wl,-soname,libmain.so -Wl,--no-undefined -Wl,-z,max-page-size=16384 "
                    "-Wl,--build-id=sha1 -Wl,--gc-sections -Wl,-Map=%s/sonicriders.map %s -lvulkan -landroid -llog -ldl -lm" % (OUT, sdl_link))
         exe = OUT + "/libmain.so"
+    elif args.target == "vita":
+        # probe V1a (docs/notes/vita-research.md): VitaSDK (GCC, ARMv7-A Thumb-2, hard float) + kubridge
+        vsdk = (args.vitasdk or os.environ.get("VITASDK", "")).replace("\\", "/")
+        if not os.path.isfile(os.path.join(vsdk, "bin", "arm-vita-eabi-gcc.exe")) and not os.path.isfile(os.path.join(vsdk, "bin", "arm-vita-eabi-gcc")):
+            sys.exit("VitaSDK not found (--vitasdk DIR or $VITASDK)")
+        if " " in vsdk:
+            sys.exit("the VitaSDK folder must not contain spaces: %s" % vsdk)
+        arch = "-march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb -ffunction-sections -fdata-sections"
+        n.variable("cc", vsdk + "/bin/arm-vita-eabi-gcc")
+        n.variable("cxx", vsdk + "/bin/arm-vita-eabi-g++")
+        vinc = "-Iruntime/include/compat_vita -I%s/arm-vita-eabi/include %s" % (vsdk, inc)
+        n.variable("cflags", "-std=gnu11 -g %s %s" % (arch, vinc))
+        n.variable("cxxflags", "-std=gnu++20 -g %s %s -fno-rtti -fno-exceptions" % (arch, vinc))
+        # -Wl,-q keeps the relocations vita-elf-create needs
+        n.variable("ldflags", "-g %s -Wl,-q -Wl,--gc-sections -Wl,-Map,%s/sonicriders.map -lkubridge_stub -lScePower_stub "
+                   "-lSceRtc_stub -lSceNet_stub -lSceNetCtl_stub -lSceSysmodule_stub -lSceAppMgr_stub -lSceKernelThreadMgr_stub "
+                   "-lpthread -lm" % (arch, OUT))
+        exe = OUT + "/sonicriders.elf"
     else:
         dkp =(args.devkitpro or os.environ.get("DEVKITPRO", "")).replace("\\", "/")
         if not os.path.isdir(os.path.join(dkp, "devkitA64")):  # msys-style /opt/devkitpro from a Windows shell
@@ -257,6 +278,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     elif args.target == "host":
         shader_h = OUT + "/gen/gx_shaders_gl.h"
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")
+    elif args.target == "vita":
+        shader_h = ""  # no renderer in the probe
     else:
         shader_h = OUT + "/gen/gx_shaders_dksh.h"
         n.rule("shaders", "%s tools/embed_shaders.py dksh $out %s/tools/bin/uam.exe %s/shaders" % (py, dkp, OUT),
@@ -323,6 +346,17 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("nro", "%s/tools/bin/elf2nro.exe $in $out --nacp=%s/sonicriders.nacp" % (dkp, OUT), description="NRO $out")
         n.build(OUT + "/sonicriders.nro", "nro", exe, implicit=[OUT + "/sonicriders.nacp"])
         n.default(OUT + "/sonicriders.nro")
+    if args.target == "vita":
+        # the app: eboot.bin + param.sfo (title id SRNP00001), packed as a .vpk for VitaShell
+        n.rule("velf", "%s/bin/vita-elf-create $in $out" % vsdk, description="VELF $out")
+        n.build(OUT + "/sonicriders.velf", "velf", exe)
+        n.rule("fself", "%s/bin/vita-make-fself -c $in $out" % vsdk, description="FSELF $out")
+        n.build(OUT + "/eboot.bin", "fself", OUT + "/sonicriders.velf")
+        n.rule("sfo", "%s/bin/vita-mksfoex -s TITLE_ID=SRNP00001 \"Sonic Riders probe\" $out" % vsdk, description="SFO $out")
+        n.build(OUT + "/param.sfo", "sfo")
+        n.rule("vpk", "%s/bin/vita-pack-vpk -s %s/param.sfo -b %s/eboot.bin $out" % (vsdk, OUT, OUT), description="VPK $out")
+        n.build(OUT + "/sonicriders.vpk", "vpk", [OUT + "/eboot.bin", OUT + "/param.sfo"])
+        n.default(OUT + "/sonicriders.vpk")
     if args.target == "host":
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
         n.build(OUT + "/SDL2.dll", "copy", sdl_dll)

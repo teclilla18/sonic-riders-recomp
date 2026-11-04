@@ -8,7 +8,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif !defined(__SWITCH__)
+#elif !defined(__SWITCH__) && !defined(__vita__)
 #include <sys/mman.h>
 #endif
 
@@ -16,7 +16,7 @@ uint8_t* ppc_mem_base_var;
 
 #define WINDOW_SIZE (LOCKED_CACHE_PHYS + LOCKED_CACHE_SIZE)
 
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(__vita__)  /* those platforms map it themselves */
 void mem_init(void) {
 #ifdef _WIN32
     uint8_t* w = VirtualAlloc(NULL, WINDOW_SIZE, MEM_RESERVE, PAGE_NOACCESS);
