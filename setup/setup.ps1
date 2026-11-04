@@ -307,6 +307,10 @@ $python = Join-Path $pyDir "python.exe"
 $zstdDir = Ensure-Tool $tc.zstandard
 $ninja = Join-Path (Ensure-Tool $tc.ninja) "ninja.exe"
 $dtk = Join-Path (Ensure-Tool $tc.dtk) "dtk.exe"
+# dtk.exe needs the Visual C++ runtime (VCRUNTIME140.dll), which a clean Windows does not have
+# (found by tools/sandbox_test.py). The embeddable Python ships the same DLL: put a copy next to dtk.
+$vcrt = Join-Path (Split-Path $dtk) "vcruntime140.dll"
+if (-not (Test-Path $vcrt)) { Copy-Item (Join-Path $pyDir "vcruntime140.dll") $vcrt }
 $imgui = Ensure-Tool $tc.imgui
 Log "Python, ninja, decomp-toolkit and Dear ImGui ready."
 
