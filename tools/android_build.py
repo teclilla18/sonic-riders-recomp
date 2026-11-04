@@ -200,6 +200,11 @@ def add_apk(n, t, abi, apk, so, sdl_libs, dex, package, label, vcode, vname, ico
                        "icon": '--icon "%s"' % icon if icon else ""})
 
 
+def sdl_lib(abi):
+    """the libSDL2.so that ndk-build makes for this ABI (a link must wait for it: fresh builds)"""
+    return "%s/sdl/%s/libs/%s/libSDL2.so" % (OUT, abi, abi)
+
+
 def sdl_flags(t, abi):
     """compile and link flags for code that uses SDL2 (the game's runtime, the probe)"""
     return ("-I%s/include" % t.sdl_src, "-L%s/sdl/%s/libs/%s -lSDL2" % (OUT, abi, abi))

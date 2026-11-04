@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Android setup: a first build could fail at the very end with "unable to find library -lSDL2" (the game was
+  linked before SDL2 was built; running the setup again worked). The link now waits for SDL2 (issue #13).
+
 ## v0.4.0 (2026-11-04)
 
 - **New: Android phones** (64-bit, Android 11 or newer): a new `SonicRiders-Android-Setup` download builds the
