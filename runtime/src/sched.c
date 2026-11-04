@@ -336,8 +336,8 @@ static void det_idle(Cpu* c) {
 void sched_interrupts_enabled(Cpu* c) {
     if (g_det_bt_req && (uint32_t)g_det_bt_req == ld32(0x800000E4u)) { g_det_bt_req = 0; det_bt_log(c); }
     {
-        uint64_t now = rt_ticks();
         if (ld32(OS_RUNQUEUE_BITS) == 0) {
+            uint64_t now = rt_ticks();  /* only here: a clock read is slow on some hosts (Vita ~0.7 us) */
             if (g_spin_last && now - g_spin_last < 40500) {  /* consecutive idle checks (< 1 ms apart) */
                 g_spin_idle += now - g_spin_last;
                 if (gx_gp_backlog()) g_spin_idle_gp += now - g_spin_last;

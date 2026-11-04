@@ -339,3 +339,15 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   handoffs deadlocked), then the perf test ran: CPU 500 (plugin override of 444), game thread 52.1 ms/step 1P /
   43.0 ms 2P, GP thread 42-51 ms [confirmed]. Remote: vitacompanion 1.08 installed, udcd_uvc enabled (USB camera
   "PSVita" read with ffmpeg). docs/notes/vita-research.md.
+- 2026-11-04 (b): **Vita: profile, cheap wins, V1b** (branch `vita`; PCH-2000 at CPU 500 / GPU 222). A boot
+  microbench showed a clock read costs 682 ns and `rt_ticks` 1,299 ns (64-bit division in software); the
+  renderer's per-draw `[perf]` timers read it ~10 times per draw. Fixes: microsecond `rt_ticks`, per-draw timers
+  off on the Vita (`SR_GX_TIMERS=1`), clock read in `sched_interrupts_enabled` only when idle, fully buffered
+  log, no `[hitch]` lines in perf runs (also a `%u` with a 64-bit value). 1P demo 10.5 -> 21.2 steps/s, game
+  thread 48.9 -> 40.8 ms/step; 2P 17.2 -> 22.1 steps/s, 39.4 -> 40.4 ms [confirmed, one run each; spread ~5-10%].
+  -O3: 3-5% [uncertain]; `-mcpu=cortex-a9` identical code; the base pointer in a register costs more spills on
+  32-bit ARM (not kept). New `SR_PROFILE` on the Vita: flat, PSMTX/PSVEC ~12%, OSEnableInterrupts 8%. With the
+  profiler on, a hang at a scene change in 3 of 3 runs: the null renderer missed a condition-variable broadcast
+  (found with new stall-dump lines for the GP thread phase); `cnd_wait` now wakes every 5 ms, next run clean
+  [likely the VitaSDK pthread cond; only one clean run since]. V1b GXM microbench: 7,000 draws submit in 9.2 ms
+  (15.7 with a program switch per draw), libshacccg 78 ms per shader [confirmed]. docs/notes/vita-research.md.

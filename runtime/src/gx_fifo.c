@@ -27,6 +27,8 @@
 #define OS_INTERRUPT_PI_PE_FINISH 19
 
 GxState g_gx;
+/* what the GP thread is doing, for stall dumps (gx_gp_dump below) */
+volatile int g_gp_phase;
 
 /* ---- PI FIFO ---- */
 static uint32_t g_pi_base, g_pi_end, g_pi_wptr;  /* physical; wptr bit 26 = wrapped */
@@ -163,7 +165,9 @@ static void pe_finish(void) {
             if (d > atomic_load(&g_dd_max)) atomic_store(&g_dd_max, d);
         }
     }
+    g_gp_phase = 5;
     mtx_lock(&g_pe_lock);
+    g_gp_phase = 1;
     gx_tl('F', 0);
     int ppc_detclock(void);
     if (ppc_detclock()) {  /* SR_DETCLOCK: the status and the interrupt wait for gx_det_deliver */
@@ -180,7 +184,9 @@ static void pe_finish(void) {
 
 static void pe_token(uint16_t token, int irq) {
     gx_decode_sync();
+    g_gp_phase = 6;
     mtx_lock(&g_pe_lock);
+    g_gp_phase = 1;
     gx_tl('T', token | (unsigned)irq << 16);
     int ppc_detclock(void);
     if (ppc_detclock()) {  /* SR_DETCLOCK: the register, status and interrupt wait for gx_det_deliver */
@@ -420,6 +426,16 @@ size_t gx_gp_backlog(void) {
     return atomic_load_explicit(&g_ring_head, memory_order_relaxed) - atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
 }
 
+/* what the GP thread is doing, for stall dumps (gx_gp_dump): 0 waiting for bytes, 1 parsing, 2 waiting
+ * for the vertex decode helper (gx_render.c) */
+void gx_gp_dump(void) {
+    rt_log("[gx] GP ring: written %llu, parsed %llu (backlog %u), GP thread %s, sleeping flag %d, write-gather %d bytes",
+           (unsigned long long)atomic_load(&g_ring_head), (unsigned long long)atomic_load(&g_ring_tail), (unsigned)gx_gp_backlog(),
+           g_gp_phase == 0 ? "waiting for bytes" : g_gp_phase == 1 ? "parsing" : g_gp_phase == 2 ? "waiting for the decode helper" :
+           g_gp_phase == 3 ? "waiting for a free frame" : g_gp_phase == 4 ? "handing a frame to the renderer" : "waiting for the PE lock",
+           atomic_load(&g_gp_sleeping), g_wg_n);
+}
+
 #define KICK_BYTES 32768u
 static size_t g_kicked_at;  /* ring head at the last wake check (game thread only) */
 static void ring_kick(void);
@@ -475,6 +491,7 @@ static int gp_thread(void* arg) {
         size_t tail = atomic_load_explicit(&g_ring_tail, memory_order_relaxed);
         size_t head = atomic_load_explicit(&g_ring_head, memory_order_acquire);
         if (head == tail) {
+            g_gp_phase = 0;
             mtx_lock(&g_gp_lock);
             atomic_store(&g_gp_sleeping, 1);
             /* a short timed wait: the producer wakes this thread only per batch and at sync points */
@@ -493,6 +510,7 @@ static int gp_thread(void* arg) {
         if (n > RING_SIZE - off) n = RING_SIZE - off;  /* up to the end of the ring; the rest next time */
         if (n > 65536) n = 65536;
         uint64_t t0 = rt_ticks();
+        g_gp_phase = 1;
         gp_feed(g_ring + off, n);
         if (gp_slow > 1.0) {  /* SR_GPSLOW: emulate a slower CPU (the Switch) on the PC */
             uint64_t until = t0 + (uint64_t)((rt_ticks() - t0) * gp_slow);

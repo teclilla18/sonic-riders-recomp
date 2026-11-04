@@ -303,9 +303,16 @@ static inline uint32_t ppc_divwu(uint32_t a, uint32_t b) { return b ? a / b : 0;
 
 /* eight CR bytes (0/1, little-endian host) to eight bits, the first byte in the top bit */
 static inline uint32_t ppc_cr_pack8(const uint8_t* p) {
+#if defined(__arm__)  /* 32-bit host: two 32-bit multiplies instead of a 64-bit one (same bits) */
+    uint32_t lo, hi;
+    memcpy(&lo, p, 4);
+    memcpy(&hi, p + 4, 4);
+    return (((lo & 0x01010101u) * 0x80402010u) >> 28) << 4 | (((hi & 0x01010101u) * 0x80402010u) >> 28);
+#else
     uint64_t x;
     memcpy(&x, p, 8);
     return (uint32_t)(((x & 0x0101010101010101ull) * 0x8040201008040201ull) >> 56);
+#endif
 }
 static inline __attribute__((always_inline)) uint32_t ppc_mfcr(const Cpu* c) {
     return ppc_cr_pack8(c->cr) << 24 | ppc_cr_pack8(c->cr + 8) << 16 | ppc_cr_pack8(c->cr + 16) << 8 | ppc_cr_pack8(c->cr + 24);

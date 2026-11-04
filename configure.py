@@ -34,6 +34,7 @@ ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --too
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
 ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
+ap.add_argument("--gen-opt", default="2", choices=["2", "3", "s"], help="optimization level of the generated game code (-O2 default; comparisons)")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
 ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-tools, platforms; default $ANDROID_HOME)")
 ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
@@ -131,7 +132,7 @@ if os.path.normcase(os.path.abspath(_imgui_src)) != os.path.normcase(os.path.joi
             shutil.copyfile(src, dst)
 inc = "-Iruntime/include -Iruntime/src -I%s -DIMGUI_DISABLE_DEMO_WINDOWS -DIMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS -I%s -I%s/gen" % (IMGUI, GEN, OUT)
 # generated code: no FMA contraction (Gekko rounds the product of fmadds; ppc.h models it exactly)
-gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
+gen_flags = "-O%s -ffp-contract=off -fno-strict-aliasing -fwrapv -w" % args.gen_opt
 
 def cmd_path(p, program=False):
     """A path for a build command: relative to the repository when it can be (no spaces from the
@@ -220,7 +221,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("cxxflags", "-std=gnu++20 -g %s %s -fno-rtti -fno-exceptions" % (arch, vinc))
         # -Wl,-q keeps the relocations vita-elf-create needs
         n.variable("ldflags", "-g %s -Wl,-q -Wl,--gc-sections -Wl,-Map,%s/sonicriders.map -lkubridge_stub -lScePower_stub "
-                   "-lSceRtc_stub -lSceNet_stub -lSceNetCtl_stub -lSceSysmodule_stub -lSceAppMgr_stub -lSceKernelThreadMgr_stub "
+                   "-lSceRtc_stub -lSceKernelDmacMgr_stub -lSceNet_stub -lSceNetCtl_stub -lSceSysmodule_stub -lSceAppMgr_stub -lSceKernelThreadMgr_stub "
                    "-lpthread -lm" % (arch, OUT))
         exe = OUT + "/sonicriders.elf"
     else:

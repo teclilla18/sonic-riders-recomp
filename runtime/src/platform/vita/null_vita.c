@@ -13,6 +13,7 @@ static GxFrame g_frames[2];
 static GxFrame* g_free[2];
 static int g_nfree;
 static GxFrame* g_pending;
+static volatile int g_rphase;  /* stall dumps: 0 waiting for a frame, 1 freeing its textures, 2 handing it back */
 
 static int render_thread(void* arg) {
     (void)arg;
@@ -22,12 +23,15 @@ static int render_thread(void* arg) {
         while (!g_pending) cnd_wait(&g_cv, &g_lock);
         GxFrame* f = g_pending;
         mtx_unlock(&g_lock);
+        g_rphase = 1;
         for (uint32_t i = 0; i < f->nretired; i++) gx_texture_free(f->retired[i]);
+        g_rphase = 2;
         mtx_lock(&g_lock);
         g_pending = NULL;
         g_free[g_nfree++] = f;
         cnd_broadcast(&g_cv);
         mtx_unlock(&g_lock);
+        g_rphase = 0;
     }
     return 0;
 }
@@ -59,7 +63,13 @@ void render_submit(GxFrame* f) {
 }
 
 int render_poll_quit(void) { return 0; }
-void render_dump(void) {}
+void gx_gp_dump(void);
+void gx_decode_dump(void);
+void render_dump(void) {
+    gx_gp_dump();
+    gx_decode_dump();
+    rt_log("[vita] null renderer: phase %d, free frames %d, frame pending %d", g_rphase, g_nfree, g_pending != NULL);
+}  /* stall dumps: where the GP thread is */
 double platform_gpu_frame_ms(void) { return -1.0; }
 
 void platform_audio_push(const int16_t* lr, unsigned frames) { (void)lr; (void)frames; }

@@ -31,7 +31,18 @@ static inline int mtx_trylock(mtx_t* m) { return pthread_mutex_trylock(m) ? thrd
 static inline void mtx_destroy(mtx_t* m) { pthread_mutex_destroy(m); }
 
 static inline int cnd_init(cnd_t* c) { return pthread_cond_init(c, NULL) ? thrd_error : thrd_success; }
-static inline int cnd_wait(cnd_t* c, mtx_t* m) { return pthread_cond_wait(c, m) ? thrd_error : thrd_success; }
+/* A bounded wait: on the Vita a wake-up was lost (2026-11-04, probe with SR_PROFILE: the null renderer stayed
+ * in cnd_wait after a broadcast, the GP thread waited for it, the game hung at the same scene in 3 of 3
+ * runs). C11 allows spurious wake-ups and every caller re-checks its condition in a loop, so waking every
+ * 5 ms turns a lost wake-up into a short delay instead of a hang. */
+static inline int cnd_wait(cnd_t* c, mtx_t* m) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_nsec += 5000000;
+    if (ts.tv_nsec >= 1000000000) { ts.tv_sec++; ts.tv_nsec -= 1000000000; }
+    int r = pthread_cond_timedwait(c, m, &ts);
+    return r == 0 || r == ETIMEDOUT ? thrd_success : thrd_error;
+}
 static inline int cnd_timedwait(cnd_t* c, mtx_t* m, const struct timespec* abs) {
     int r = pthread_cond_timedwait(c, m, abs);  /* CLOCK_REALTIME deadline, as timespec_get(TIME_UTC) */
     return r == ETIMEDOUT ? thrd_timedout : r ? thrd_error : thrd_success;

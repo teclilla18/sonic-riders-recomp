@@ -173,6 +173,66 @@ Porting lessons (all fixed on `vita`):
   screenshots worked once only. Synthetic touch does not unlock the lock screen; `launch` works from it.
 - A launch right after a hard restart may silently not start the app; check that `boot.txt` is new.
 
+## Game-thread profile and cheap wins (2026-11-04, session 2) [confirmed unless marked]
+
+All numbers: the maintainer's PCH-2000, CPU 500 / bus 222 / GPU 222 / xbar 166 MHz (granted by the overclock
+plugins), `SR_PERFTEST=1`, probe without renderer. Run-to-run spread is ~5-10%.
+
+| Run | 1P demo steps/s | 1P game ms/step (mean / median) | 2P steps/s | 2P ms/step |
+|---|---|---|---|---|
+| r1 baseline (old behaviour: per-line log flush) | 10.5 | 48.9 / 51.6 | 17.2 | 39.4 / 34.0 |
+| r2 cheap wins, -O2 | **21.2** | 40.8 / 33.7 | **22.1** | 40.4 / 30.2 |
+| r3 cheap wins, generated code -O3 | 21.6 | 39.7 / 33.1 | 23.1 | 38.5 / 28.9 |
+
+- **The clock was the big cost.** `sceKernelGetProcessTimeWide` costs **682 ns** a call; `rt_ticks()` cost
+  **1,299 ns** (a 64-bit division: 32-bit ARM has no divide instruction, `__aeabi_uldivmod`). The renderer's
+  `[perf]` timers read it ~10 times per draw (4,000-6,000 draws per race frame): tens of ms per frame on the GP
+  thread. Fixes: `rt_ticks` on the Vita = microseconds x 81 / 2 (746 ns); the per-draw timers (`gx_ticks()` in
+  gx_render.c) are off on the Vita unless `SR_GX_TIMERS=1`; `sched_interrupts_enabled` reads the clock only
+  when the run queue is empty. Clock reads: ~10-13k/s after (logged every 10 s as `clock reads N/s`).
+- Log: full buffering (flushed once a second; `SR_LOGSYNC=1` for per-line), no `[hitch]` lines in perf runs
+  (they printed a 64-bit counter with `%u`, which garbled the line on 32-bit ARM: fixed).
+- Race frames after (r2): GP thread busy 51-65 ms per drawn frame (was 123-145), audio mixing 6 ms/frame (was
+  42), Auto pacing ~25 steps/s with ~10.6 drawn frames/s. Throughput is now limited by both threads.
+- **-O3** for generated code: +6.5% code, 3-5% faster [uncertain: inside the run-to-run spread]; option
+  `configure.py --gen-opt 3`, default stays -O2. **`-mcpu=cortex-a9`**: byte-identical code to the current
+  `-march=armv7-a -mtune=cortex-a9` (dropped).
+- **Memory base in a register does not pay on 32-bit ARM** (static count on one generated file): plain global
+  144.1k instructions; Switch-style asm load 150.3k (re-emitted per block); `const` global 148.2k (more spills).
+  Kept the plain global. 64-bit code in the generated game code is rare (carry adds, `mulhw`: cheap on ARM);
+  `ppc_cr_pack8` (mfcr) now uses two 32-bit multiplies on ARM.
+- Block copy, 2 MB: newlib `memcpy` 463 MB/s, `sceClibMemcpy` 242, `sceDmacMemcpy` 161. ARAM DMA runs at ~167
+  MB/s on the game thread (2.2 MB, 13 ms per race frame): not the copy routine; look at transfer sizes next.
+- Thread-local (emutls) access: 12 ns, not a cost.
+- **GX FIFO decode is already off the game thread** (the GP thread, core 2). The game thread's share for pipe
+  stores is 4-6% of race samples (`PROF_PIPE`).
+- **Profile** (`SR_PROFILE=1`: platform_vita.c samples `g_ppc_cur_fn` every 1 ms from core 1, report every
+  10 s or `SR_PROFILE_SECS`), race windows of both demos (r7): flat. PSMTX/PSVEC paired-single routines
+  (8004C58C-8004D09C) ~12%; `OSEnableInterrupts` 8.2% (the runtime's interrupt checks run there); GX pipe 5%;
+  idle 2%; thread switches 1.2%; then the same hot list as on the Switch (`config/GXEE8P/hot_functions.txt`).
+  Next targets: native float versions of the PSMTX/PSVEC routines (bit-exact with the generated code), the
+  interrupt-enable path, the GP thread's draw processing (vertex decode writes 160-byte vertices).
+- **Hang found and fixed:** with the profiler thread on core 1 the game hung in 3 of 3 runs at a scene change:
+  the null renderer stayed in `cnd_wait` after a broadcast (stall dump: GP thread "handing a frame to the
+  renderer", renderer waiting, a frame pending). A lost wake-up in VitaSDK's pthread condition variable
+  [likely]. Fix: `cnd_wait` in compat_vita/threads.h wakes every 5 ms (callers re-check their condition);
+  r7 then ran through. Stall dumps now show the GP thread's phase, the decode helper and the null renderer.
+
+## Probe V1b results (2026-11-04) [confirmed]
+
+`tools/vita/gxmbench/` (own code, `python tools/vita/gxmbench/build.py --vitasdk <dir>`, title SRNP00002,
+log `ux0:data/gxmbench/log.txt`). CPU 500 / GPU 222 / xbar 166. One scene of 7,000 draws, 8 vertices each, own
+vertex stream + two vec4 vertex uniforms per draw, shaders compiled on the device with libshacccg (SDK 3.0.0):
+
+- Mode A (uniforms + stream + draw): **CPU submit 9.2 ms** (max 9.5), GPU idle 4.4 ms after EndScene.
+- Mode B (A + a fragment program switch every draw): **CPU submit 15.7 ms**, GPU idle 5.8 ms after.
+- libshacccg: **78 ms per shader** (50 variants in 3.9 s): specialized shaders must be compiled ahead (a
+  cache on ux0) or in the background, never on demand in a race.
+- Gate (<= ~15 ms submit on a second core): passes with few state changes, borderline with heavy churn. The
+  picture was not checked (no textures, small quads): GPU fill cost of real frames is still unknown.
+- vitacompanion's FTP refused logins after `promote`; its `reboot` command fixed it. `vita-elf-create` crashed
+  (0xC0000374) on this program linked without `--gc-sections`.
+
 ## Sources (read 2026-11-03)
 
 - vita.hacks.guide, updating firmware 3.74 / HENlo: <https://vita.hacks.guide/updating-firmware-(3.74)>

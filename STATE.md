@@ -71,10 +71,13 @@ groundwork and the performance test. Vita probe code lives on branch `vita` (not
 
 Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
 (user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
-**Probe V1a run on the user's PCH-2000 (2026-11-04)** [confirmed]: the game boots and plays headless; at CPU 500
-the game thread needs 52 ms/step (1P demo) / 43 ms (2P), GP thread 42-51 ms: ~1.6x too slow for the game's 30 fps
-mode. Remote control: vitacompanion (FTP 1337, commands 1338), screen via udcd_uvc + ffmpeg. Next: V1b (GXM draw
-microbench), game-thread profile on the Vita. Details: docs/notes/vita-research.md "Probe V1a results".
+**Vita probe (branch `vita`, 2026-11-04)** [confirmed, CPU 500 / GPU 222]: V1a headless runs the demos; after this
+session's fixes (clock reads, 64-bit divide, log) 1P 21 steps/s, game thread ~40 ms/step (was 10.5 steps/s, 49
+ms), 2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP thread 51-65 ms per drawn race
+frame. Profile flat (PSMTX/PSVEC ~12%, OSEnableInterrupts 8%). V1b GXM microbench: 7,000 draws submit in 9.2 ms
+(15.7 ms with a program switch per draw); libshacccg 78 ms per shader. A lost cnd_wait wake-up (hang) fixed by
+bounded waits. Next: native PSMTX/PSVEC, the GP thread's draw processing, ARAM DMA (13 ms/frame). Details:
+docs/notes/vita-research.md "Game-thread profile" and "Probe V1b results".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

@@ -43,6 +43,17 @@ static unsigned long long g_verts_total;  /* vertices emitted (after primitive e
 static uint64_t g_draw_total;              /* time in gx_draw (decode, state, lookups) */
 static uint64_t g_decode_ticks, g_state_ticks;  /* parts of it: vertex decode, state snapshots ([perf]) */
 static unsigned g_state_pushes;
+/* the per-draw timers above (and the helper's): a clock read costs ~0.7 us on the Vita (about ten per
+ * draw, 4,000+ draws per race frame), so there they run only with SR_GX_TIMERS=1 and read 0 otherwise */
+#if defined(__vita__)
+static int g_gx_timers = -1;
+static inline uint64_t gx_ticks(void) {
+    if (__builtin_expect(g_gx_timers < 0, 0)) g_gx_timers = getenv("SR_GX_TIMERS") != NULL;
+    return g_gx_timers ? rt_ticks() : 0;
+}
+#else
+static inline uint64_t gx_ticks(void) { return rt_ticks(); }
+#endif
 static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using unimplemented features */
 static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
 static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
@@ -50,7 +61,7 @@ static uint32_t g_feat_copy_fmts;                                   /* their tar
 static GxFrame* frame(void) {
     if (!g_frame) {
         uint64_t t = rt_ticks();
-        g_frame = render_take_free_frame();
+        { extern volatile int g_gp_phase; int ph = g_gp_phase; g_gp_phase = 3; g_frame = render_take_free_frame(); g_gp_phase = ph; }
         { uint64_t d = rt_ticks() - t; g_wait_ticks += d; g_wait_total += d; }
         g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = g_frame->nxtabs = 0;
         g_frame->nidx = 0;
@@ -430,11 +441,11 @@ static int dj_run_one(int helper) {
     do {
         if (i >= atomic_load_explicit(&g_dj_pub, memory_order_acquire)) return 0;
     } while (!atomic_compare_exchange_weak_explicit(&g_dj_next, &i, i + 1, memory_order_acq_rel, memory_order_relaxed));
-    uint64_t t = helper ? rt_ticks() : 0;
+    uint64_t t = helper ? gx_ticks() : 0;
     const DecJob* j = &g_dj[i];
     const uint8_t* p = g_dj_bytes + j->src;
     for (uint32_t k = 0; k < j->count; k++) decode_fast(&p, &j->fp, j->out + k);
-    if (helper) atomic_fetch_add_explicit(&g_dj_helper_ticks, rt_ticks() - t, memory_order_relaxed);
+    if (helper) atomic_fetch_add_explicit(&g_dj_helper_ticks, gx_ticks() - t, memory_order_relaxed);
     atomic_fetch_add_explicit(&g_dj_done, 1, memory_order_release);
     return 1;
 }
@@ -460,13 +471,23 @@ static int dj_thread(void* arg) {
     return 0;
 }
 
+/* the decode helper's counters, for stall dumps (null_vita.c) */
+void gx_decode_dump(void) {
+    rt_log("[gx] decode helper: jobs published %u, claimed %u, finished %u, helper sleeping %d",
+           (unsigned)atomic_load(&g_dj_pub), (unsigned)atomic_load(&g_dj_next), (unsigned)atomic_load(&g_dj_done),
+           atomic_load(&g_dj_sleeping));
+}
+
 /* every queued draw decoded (GP thread): the ones not started here, then wait for the helper's */
 void gx_decode_sync(void) {
     uint32_t pub = atomic_load_explicit(&g_dj_pub, memory_order_relaxed);
     if (!pub) return;
     uint64_t t = rt_ticks();
     while (dj_run_one(0)) {}
+    extern volatile int g_gp_phase;
+    g_gp_phase = 2;
     while (atomic_load_explicit(&g_dj_done, memory_order_acquire) != pub) {}  /* the helper's one job in progress: short */
+    g_gp_phase = 1;
     g_decode_ticks += rt_ticks() - t;
     atomic_store(&g_dj_pub, 0);
     atomic_store(&g_dj_next, 0);
@@ -517,9 +538,9 @@ static int dj_queue(const FastPlan* fp, GxVertex* out, uint32_t count, const uin
 
 /* the texture bound to `map` for this draw (timed for [perf] and [hitch]) */
 static void lookup_map(GxCmd* c, int map) {
-    uint64_t t = rt_ticks();
+    uint64_t t = gx_ticks();
     c->tex[map] = gx_texture_lookup(map);
-    uint64_t d = rt_ticks() - t;
+    uint64_t d = gx_ticks() - t;
     g_tex_ticks += d;
     g_tex_total += d;
 }
@@ -538,9 +559,9 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     if (!count) return;
     if (g_state_dirty) {
-        uint64_t ts = rt_ticks();
+        uint64_t ts = gx_ticks();
         push_state();
-        g_state_ticks += rt_ticks() - ts;
+        g_state_ticks += gx_ticks() - ts;
         g_state_pushes++;
     }
     GxFrame* f = frame();
@@ -564,7 +585,7 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     fast_plan_init(&fplan, &plan);
     static int check = -1;
     if (check < 0) check = getenv("SR_DECODECHECK") != NULL;
-    uint64_t td = rt_ticks();
+    uint64_t td = gx_ticks();
     if (!check) {
         if (!dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
             for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
@@ -587,7 +608,7 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
         if ((checked & ~0xFFFFFull) != ((checked - count) & ~0xFFFFFull))
             rt_log("[decodecheck] %llu vertices compared, %llu mismatches", checked, bad);
     }
-    g_decode_ticks += rt_ticks() - td;
+    g_decode_ticks += gx_ticks() - td;
     f->idx = grow(f->idx, &f->cap_idx, f->nidx + out_n, sizeof(uint32_t));
     uint32_t* o = f->idx + f->nidx;
     const uint32_t v0 = f->nverts;
@@ -657,9 +678,9 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
 /* BP 0x52: copy the EFB (or a part) to an XFB or a texture, optionally clearing it */
 /* draws: decoded on the thread writing the GX FIFO (the game's), timed for [hitch] and [perf] */
 void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
-    uint64_t t = rt_ticks();
+    uint64_t t = gx_ticks();
     draw(prim, vat, count, vertices, vertex_size);
-    g_draw_total += rt_ticks() - t;
+    g_draw_total += gx_ticks() - t;
 }
 
 static void efb_copy(uint32_t v) {
@@ -705,7 +726,7 @@ static void efb_copy(uint32_t v) {
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         uint64_t ts = rt_ticks();
-        render_submit(g_frame);
+        { extern volatile int g_gp_phase; int ph = g_gp_phase; g_gp_phase = 4; render_submit(g_frame); g_gp_phase = ph; }
         { uint64_t d = rt_ticks() - ts; g_wait_ticks += d; g_wait_total += d; }
         g_frame = NULL;
         g_frames++;
@@ -718,14 +739,15 @@ static void efb_copy(uint32_t v) {
             uint64_t now = rt_ticks();
             unsigned long long dec, decb;
             gx_texture_decode_stats(&dec, &decb);
-            if (last && now - last > 40500000ull / 20) {
+            int perftest_on(void);
+            if (last && now - last > 40500000ull / 20 && !perftest_on()) {  /* perf runs: no log writes */
                 double ms = 1000.0 / 40500000.0;
                 double total = (now - last) * ms, disc = (di_read_ticks() - disc_t0) * ms, tex = (g_tex_total - tex0) * ms;
                 double wait = (g_wait_total - wait0) * ms;
                 double drw = (g_draw_total - draw0) * ms - tex, idle = (sched_idle_total() - idle0) * ms;
                 rt_log("[hitch] frame %u took %.0f ms: game code %.0f ms, guest idle %.0f ms, GX draws %.1f ms, disc %.1f ms "
                        "(%llu KB), %llu new textures (%llu KB RGBA, lookups %.1f ms), waiting for the render thread %.1f ms, "
-                       "card file writes %u", g_frames, total, total - disc - tex - wait - drw - idle, idle, drw, disc,
+                       "card file writes %u", (unsigned)g_frames, total, total - disc - tex - wait - drw - idle, idle, drw, disc,
                        (di_bytes_read() - disc_b0) >> 10, dec - dec0, (decb - decb0) >> 10, tex, wait,
                        exi_card_file_writes() - card0);
             }

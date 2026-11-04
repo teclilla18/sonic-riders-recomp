@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include <psp2/kernel/clib.h>
+#include <psp2/kernel/dmac.h>
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/sysmem.h>
 #include <psp2/kernel/threadmgr.h>
@@ -113,6 +115,52 @@ static void tls_check(void) {
            (void*)&g_probe_key, g_probe_tid_main, g_probe_tid_new);
 }
 
+/* what the clocks and the emulated thread-locals cost (the renderer's [perf] timers read the clock
+ * ~10 times per draw) */
+static void clock_bench(void) {
+    enum { N = 100000 };
+    volatile uint64_t sink = 0;
+    SceUInt64 t0 = sceKernelGetProcessTimeWide();
+    for (int i = 0; i < N; i++) sink += sceKernelGetProcessTimeWide();
+    SceUInt64 t1 = sceKernelGetProcessTimeWide();
+    for (int i = 0; i < N; i++) sink += sceKernelGetSystemTimeWide();
+    SceUInt64 t2 = sceKernelGetProcessTimeWide();
+    for (int i = 0; i < N; i++) sink += rt_ticks();
+    SceUInt64 t3 = sceKernelGetProcessTimeWide();
+    for (int i = 0; i < N; i++) { t_tls_probe++; __asm__ __volatile__("" ::: "memory"); }
+    SceUInt64 t4 = sceKernelGetProcessTimeWide();
+    for (int i = 0; i < N; i++) sink += platform_now_ns() / 2000u;
+    SceUInt64 t5 = sceKernelGetProcessTimeWide();
+    (void)sink;
+    rt_log("[vita] cost per call (ns): sceKernelGetProcessTimeWide %.0f, sceKernelGetSystemTimeWide %.0f, rt_ticks %.0f, "
+           "thread-local increment %.0f, clock + 64-bit division %.0f", (t1 - t0) * 1e3 / N, (t2 - t1) * 1e3 / N,
+           (t3 - t2) * 1e3 / N, (t4 - t3) * 1e3 / N, (t5 - t4) * 1e3 / N);
+    /* block copies (ARAM DMA moves ~2 MB per race frame): newlib's memcpy, the system's, the DMA engine */
+    enum { SZ = 2 << 20, REP = 8 };
+    uint8_t* a = malloc(SZ);
+    uint8_t* b = malloc(SZ);
+    if (!a || !b) { free(a); free(b); return; }
+    for (int i = 0; i < SZ; i++) a[i] = (uint8_t)(i * 7 + (i >> 11));
+    double mbs[3];
+    int ok[3];
+    for (int k = 0; k < 3; k++) {
+        memset(b, 0, SZ);
+        SceUInt64 c0 = sceKernelGetProcessTimeWide();
+        for (int r = 0; r < REP; r++) {
+            if (k == 0) memcpy(b, a, SZ);
+            else if (k == 1) sceClibMemcpy(b, a, SZ);
+            else sceDmacMemcpy(b, a, SZ);
+        }
+        SceUInt64 c1 = sceKernelGetProcessTimeWide();
+        mbs[k] = (double)SZ * REP / (double)(c1 - c0 + 1);  /* bytes per us = MB/s */
+        ok[k] = memcmp(a, b, SZ) == 0;
+    }
+    rt_log("[vita] copy 2 MB: memcpy %.0f MB/s%s, sceClibMemcpy %.0f MB/s%s, sceDmacMemcpy %.0f MB/s%s", mbs[0],
+           ok[0] ? "" : " (WRONG)", mbs[1], ok[1] ? "" : " (WRONG)", mbs[2], ok[2] ? "" : " (WRONG)");
+    free(a);
+    free(b);
+}
+
 void platform_init(void) {
     vita_mark("platform_init");
     mkdir(BASE_DIR, 0777);
@@ -120,10 +168,10 @@ void platform_init(void) {
     remove(BASE_DIR "/sonicriders.prev.log");
     rename(BASE_DIR "/sonicriders.log", BASE_DIR "/sonicriders.prev.log");
     if (freopen(BASE_DIR "/sonicriders.log", "w", stderr)) {
-        /* a large buffer: rt_log flushes at most once a second (per-line writes cost milliseconds here) */
+        /* a large buffer: rt_log flushes at most once a second (per-line writes cost milliseconds here);
+         * SR_LOGSYNC=1 in env.txt flushes every line (log.c), boot.txt keeps the start-up steps */
         static char logbuf[64 * 1024];
-        /* probe: line buffered, so a crash loses no line (costs time per line; perf runs log little) */
-        setvbuf(stderr, logbuf, _IOLBF, sizeof logbuf);
+        setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);
     }
     rt_log("[vita] Sonic Riders native port (probe); log started");
     FILE* f = fopen(BASE_DIR "/env.txt", "r");
@@ -141,6 +189,7 @@ void platform_init(void) {
     }
     set_clocks();
     tls_check();
+    clock_bench();
     vita_mark("platform_init done (log open, clocks set)");
 }
 
@@ -166,6 +215,7 @@ const char* platform_settings_path(void) { return BASE_DIR "/settings.ini"; }
 const char* platform_mods_dir(void) { return BASE_DIR "/mods"; }
 
 uint64_t platform_now_ns(void) { return (uint64_t)sceKernelGetProcessTimeWide() * 1000u; }  /* microseconds */
+uint64_t platform_now_us(void) { return sceKernelGetProcessTimeWide(); }  /* rt_ticks (cpu.c) */
 void platform_sleep_ns(uint64_t ns) {
     SceUInt us = (SceUInt)(ns / 1000u);
     sceKernelDelayThread(us ? us : 1);
@@ -250,7 +300,13 @@ static int stall_thread(void* arg) {
     for (;;) {
         sceKernelDelayThread(1000000);
         unsigned long long f = gx_frames_presented();
-        if (++ticks % 10 == 0) rt_log("[vita] %u s: %llu frames presented, retrace %u", ticks, f, vi_field_count());
+        if (++ticks % 10 == 0) {
+            extern unsigned g_rt_ticks_reads;
+            static unsigned reads0;
+            unsigned r = g_rt_ticks_reads;
+            rt_log("[vita] %u s: %llu frames presented, retrace %u, clock reads %u/s", ticks, f, vi_field_count(), (r - reads0) / 10);
+            reads0 = r;
+        }
         if (f != last) {
             if (reported) rt_log("[stall] frames again after %u s", still);
             last = f; still = 0; reported = 0;
@@ -271,6 +327,70 @@ static int stall_thread(void* arg) {
     }
     return 0;
 }
-void profile_start(void) { rt_thread_start(stall_thread, NULL); }
+/* Sampling profiler (SR_PROFILE=1 in env.txt), as on the Switch (platform_switch.c): a thread on core 1
+ * reads g_ppc_cur_fn (the guest function entered last on the game thread, or a PROF_* tag for runtime
+ * work) every millisecond and logs the 40 most frequent every 10 s (SR_PROFILE_SECS). A sample is charged
+ * to the last function entered, so a caller's own code after a call returns counts for the callee. */
+#define PROF_BUCKETS 16384u
+static struct { uint32_t fn, lr, count; } g_prof[PROF_BUCKETS];
+static uint32_t g_prof_samples, g_prof_overflow;
+
+static void prof_report(unsigned secs) {
+    uint32_t n = g_prof_samples;
+    if (!n) return;
+    rt_log("[profile] %u samples over the last %u s: last function entered on the game thread, and its return address:", n, secs);
+    uint32_t tags[5] = {0};
+    for (uint32_t i = 0; i < PROF_BUCKETS; i++)
+        if (g_prof[i].count && g_prof[i].fn >= PROF_IDLE && g_prof[i].fn <= PROF_RESUMED) tags[g_prof[i].fn - PROF_IDLE] += g_prof[i].count;
+    rt_log("[profile]   tags: idle %.1f%%, draw %.1f%%, GX FIFO %.1f%%, thread switch %.1f%%, resumed %.1f%%", 100.0 * tags[0] / n,
+           100.0 * tags[1] / n, 100.0 * tags[2] / n, 100.0 * tags[3] / n, 100.0 * tags[4] / n);
+    for (int k = 0; k < 40; k++) {
+        uint32_t best = 0, bi = 0;
+        for (uint32_t i = 0; i < PROF_BUCKETS; i++)
+            if (g_prof[i].count > best) { best = g_prof[i].count; bi = i; }
+        if (!best) break;
+        uint32_t fn = g_prof[bi].fn, lr = g_prof[bi].lr;
+        if (fn >= PROF_IDLE) rt_log("[profile]   %5.1f%%  %08X (tag)", 100.0 * best / n, fn);
+        else rt_log("[profile]   %5.1f%%  %08X  from %08X", 100.0 * best / n, fn, lr);
+        g_prof[bi].count = 0;
+    }
+    if (g_prof_overflow) rt_log("[profile]   (%u samples lost: table full)", g_prof_overflow);
+    memset(g_prof, 0, sizeof g_prof);
+    g_prof_samples = g_prof_overflow = 0;
+}
+
+static int prof_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(1);
+    rt_thread_raise_priority();
+    rt_thread_raise_priority();
+    const char* e = getenv("SR_PROFILE_SECS");
+    unsigned secs = e && atoi(e) > 0 ? (unsigned)atoi(e) : 10;
+    SceUInt64 next_report = sceKernelGetProcessTimeWide() + secs * 1000000ull;
+    for (;;) {
+        sceKernelDelayThread(1000);
+        uint32_t fn = g_ppc_cur_fn, lr = fn >= 0xF0000000u ? 0 : g_ppc_cur_lr;
+        uint32_t h = ((fn ^ (lr * 31u)) * 2654435761u) >> 18;
+        for (uint32_t probe = 0;; probe++) {
+            uint32_t i = (h + probe) & (PROF_BUCKETS - 1);
+            if (g_prof[i].fn == fn && g_prof[i].lr == lr && g_prof[i].count) { g_prof[i].count++; break; }
+            if (!g_prof[i].count) { g_prof[i].fn = fn; g_prof[i].lr = lr; g_prof[i].count = 1; break; }
+            if (probe == 64) { g_prof_overflow++; break; }
+        }
+        g_prof_samples++;
+        if (sceKernelGetProcessTimeWide() >= next_report) {
+            prof_report(secs);
+            next_report = sceKernelGetProcessTimeWide() + secs * 1000000ull;
+        }
+    }
+    return 0;
+}
+
+void profile_start(void) {
+    rt_thread_start(stall_thread, NULL);
+    if (!getenv("SR_PROFILE")) return;
+    rt_log("[profile] sampling the game thread every 1 ms (SR_PROFILE)");
+    rt_thread_start(prof_thread, NULL);
+}
 void profile_dump(void) {}
 void platform_sample_threads(void) {}

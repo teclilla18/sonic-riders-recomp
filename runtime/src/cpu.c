@@ -64,7 +64,16 @@ static uint64_t g_t0;
 /* a cheap monotonic clock (platform_now_ns): the game reads the time base constantly (mftb, OSGetTime)
  * and the renderer times its work; on the Switch, CLOCK_REALTIME went through the time service */
 static uint64_t host_ns(void) { return platform_now_ns(); }
+#if defined(__vita__)
+/* 32-bit ARM has no 64-bit divide (a library call per read; rt_ticks runs ~10 times per draw): the Vita's
+ * clock counts microseconds, and ticks = us * 40.5 */
+uint64_t platform_now_us(void);
+static uint64_t g_t0_us;
+unsigned g_rt_ticks_reads;  /* counted for the 10 s [vita] line (racy across threads: an estimate) */
+uint64_t rt_ticks(void) { g_rt_ticks_reads++; return (platform_now_us() - g_t0_us) * 81 >> 1; }
+#else
 uint64_t rt_ticks(void) { return (host_ns() - g_t0) * 81 / 2000; }  /* ns * 40.5e6 / 1e9 */
+#endif
 /* SR_DETCLOCK=1 (online play groundwork, docs/ONLINE.md): the time the game reads follows the game, not
  * the host clock. Each game frame end (frame_pacing.c) moves it on by one 60 Hz frame; within a frame,
  * each guest thread has its own count that moves on one tick per read, so a thread's readings depend
@@ -124,6 +133,9 @@ void cpu_init(Cpu* c) {
     memset(c, 0, sizeof *c);
     c->msr = 0x00002032;  /* FP, IR, DR set; EE clear (as at boot) */
     g_t0 = host_ns();
+#if defined(__vita__)
+    g_t0_us = platform_now_us();
+#endif
 }
 
 /* the single-precision tracking's checking build (ppc.h ppc_single_chk): log the first reports */
