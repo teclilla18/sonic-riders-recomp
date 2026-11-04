@@ -77,6 +77,32 @@ __attribute__((constructor)) static void vita_boot_mark(void) {
     vita_mark("process started (static constructors)");
 }
 
+/* GCC's emulated TLS (libgcc emutls, used for _Thread_local here) treats the program as single-threaded,
+ * one copy shared by every thread, unless the weak symbol pthread_cancel resolves (its "threads active"
+ * test); nothing else here calls it, so it would not be linked. Referencing it, and the other pthread
+ * calls emutls makes through weak references, gives each thread its own copy (tls_check logs it). */
+__attribute__((used)) static void* const k_emutls_needs[] = {
+    (void*)pthread_cancel, (void*)pthread_once, (void*)pthread_getspecific, (void*)pthread_setspecific,
+    (void*)pthread_key_create, (void*)pthread_mutex_init, (void*)pthread_mutex_lock, (void*)pthread_mutex_unlock,
+};
+
+/* _Thread_local is emulated (GCC emutls over pthread keys) here; the scheduler's t_self must differ per
+ * host thread or guest thread handoffs deadlock. Checked once at start. */
+static _Thread_local int t_tls_probe;
+static void* tls_probe_thread(void* arg) {
+    *(int*)arg = t_tls_probe;  /* a new thread must see 0, not the main thread's 1 */
+    t_tls_probe = 2;
+    return NULL;
+}
+static void tls_check(void) {
+    t_tls_probe = 1;
+    int seen = -1;
+    pthread_t t;
+    if (pthread_create(&t, NULL, tls_probe_thread, &seen) == 0) pthread_join(t, NULL);
+    rt_log("[vita] thread-local check: new thread saw %d, main thread keeps %d (%s)", seen, t_tls_probe,
+           seen == 0 && t_tls_probe == 1 ? "per thread: ok" : "SHARED: guest thread switches will hang");
+}
+
 void platform_init(void) {
     vita_mark("platform_init");
     mkdir(BASE_DIR, 0777);
@@ -104,6 +130,7 @@ void platform_init(void) {
         fclose(f);
     }
     set_clocks();
+    tls_check();
     vita_mark("platform_init done (log open, clocks set)");
 }
 
@@ -199,6 +226,41 @@ void mem_init(void) {
 }
 
 void profile_register_thread(void) {}
-void profile_start(void) {}
+/* stall watch (as on the Switch): no new frame for 5 s -> where every guest thread and device is, once
+ * per stall; also a once-a-minute line with the frame count while booting slowly */
+void sched_dump(void);
+void mmio_dump(void);
+unsigned long long gx_frames_presented(void);
+static int stall_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(2);
+    unsigned long long last = gx_frames_presented();
+    unsigned still = 0, ticks = 0;
+    int reported = 0;
+    for (;;) {
+        sceKernelDelayThread(1000000);
+        unsigned long long f = gx_frames_presented();
+        if (++ticks % 10 == 0) rt_log("[vita] %u s: %llu frames presented, retrace %u", ticks, f, vi_field_count());
+        if (f != last) {
+            if (reported) rt_log("[stall] frames again after %u s", still);
+            last = f; still = 0; reported = 0;
+            continue;
+        }
+        if (++still == 5 && !reported) {
+            reported = 1;
+            rt_log("[stall] no new frame for 5 s (frame %llu, retrace %u): state follows", f, vi_field_count());
+            mmio_dump();
+            sched_dump();
+            fflush(stderr);
+            if (getenv("SR_VITA_STALLCORE")) {  /* a core dump with every thread's registers (vita-research.md) */
+                rt_log("[stall] SR_VITA_STALLCORE: stopping with a crash dump");
+                fflush(stderr);
+                *(volatile int*)0 = 0;
+            }
+        }
+    }
+    return 0;
+}
+void profile_start(void) { rt_thread_start(stall_thread, NULL); }
 void profile_dump(void) {}
 void platform_sample_threads(void) {}
