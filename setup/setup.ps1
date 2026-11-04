@@ -413,7 +413,7 @@ $builtApks = @()
 if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
-        $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore)
+        $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore, "--imgui", $imgui)
         if ($Icon) { $andArgs += @("--icon", $Icon) }  # else the save icon from baserom\_Main.rel
         Run "configure (Android, $a)" $python $andArgs
         Run "build the Android APK ($a; this takes a while)" $ninja @()
