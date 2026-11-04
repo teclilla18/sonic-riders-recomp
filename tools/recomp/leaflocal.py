@@ -84,17 +84,92 @@ def eligible(stmts):
     return True
 
 
-def transform(stmts):
+
+# ---------------------------------------------------------------- float-typed halves
+# A register half becomes a `ppc_fs` local (float on the Vita, ppc.h PPC_FLOAT_LOCALS; double elsewhere)
+# when every value the function reads from it is known to be single precision (singleflow.py's
+# per-statement states): its explicit reads and the write-backs to the Cpu struct (calls, exits,
+# loop-head syncs). The local then holds the exact value wherever it is used, so results are
+# identical; a value the function assigns but never uses again may be rounded, which is invisible.
+_F_WRITE = re.compile(r"\s*=(?!=)")
+FLOAT_STATS = {"halves": 0, "float": 0}
+
+
+def _half_reads(s):
+    """Register halves the struct-form statement reads."""
+    out = set()
+    for m in _F.finditer(s):
+        if not _F_WRITE.match(s, m.end()):
+            out.add((int(m.group(1)), int(m.group(2))))
+    for m in _PSQ_STORE.finditer(s):
+        n = int(m.group(1))
+        out |= {(n, 0), (n, 1)}
+    return out
+
+
+class _FloatHalves:
+    def __init__(self, stmts, states):
+        self.on = states is not None and len(states) == len(stmts) + 1  # + the fall-off-the-end state
+        self.bad = set()
+        if not self.on:
+            return
+        for s, st in zip(stmts, states):
+            if st is not None:
+                self.bad |= {h for h in _half_reads(s) if not st[0] & (1 << (2 * h[0] + h[1]))}
+
+    def sync(self, regs, state):
+        """registers `regs` (FPR numbers) are written back where `state` holds"""
+        if self.on:
+            for n in regs:
+                for k in (0, 1):
+                    if not state & (1 << (2 * n + k)):
+                        self.bad.add((n, k))
+
+    def decl(self, fprs):
+        """the prologue's declarations, and the registers with a float half"""
+        halves = [(n, k) for n in sorted(fprs) for k in (0, 1)]
+        fl = [h for h in halves if self.on and h not in self.bad]
+        db = [h for h in halves if h not in fl]
+        FLOAT_STATS["halves"] += len(halves)
+        FLOAT_STATS["float"] += len(fl)
+        lines = []
+        for ty, hs in (("double", db), ("ppc_fs", fl)):
+            if hs:
+                lines.append("%s %s;" % (ty, ", ".join("f%d_%d = c->f[%d].ps%d" % (n, k, n, k) for n, k in hs)))
+        return lines, {n for n, _ in fl}
+
+    @staticmethod
+    def psq(stmts, fregs):
+        """psq loads into a register with a float half go through doubles (ppc.h psq_load_lv)"""
+        if not fregs:
+            return stmts
+        r = re.compile(r"\bpsq_load_l\(c, &f(\d+)_0, ")
+        return [r.sub(lambda m: ("psq_load_lv(c, &f%s_0, " if int(m.group(1)) in fregs else "psq_load_l(c, &f%s_0, ")
+                      % m.group(1), s) for s in stmts]
+
+
+def transform(stmts, states=None):
     """stmts: the function's statements (after PPC_ENTER). Returns (prologue, new statements,
     write-back for falling off the end into the next function)."""
     gprs, fprs = set(), set()
     out = []
+    fh = _FloatHalves(stmts, states)
     for s in stmts:
         s = _PSQ_LOAD.sub(lambda m: (fprs.add(int(m.group(1))), "psq_load_l(c, &f%s_0, &f%s_1, " % (m.group(1), m.group(1)))[1], s)
         s = _PSQ_STORE.sub(lambda m: (fprs.add(int(m.group(1))), "psq_store_l(c, f%s_0, f%s_1, " % (m.group(1), m.group(1)))[1], s)
         s = _R.sub(lambda m: (gprs.add(int(m.group(1))), "r%s" % m.group(1))[1], s)
         s = _F.sub(lambda m: (fprs.add(int(m.group(1))), "f%s_%s" % (m.group(1), m.group(2)))[1], s)
         out.append(s)
+    if fh.on:
+        # every used register is written back at returns (RET_FPR), tail exits and the end (all)
+        for i, s in enumerate(out):
+            if states[i] is not None:
+                if _RET.search(s):
+                    fh.sync(fprs & RET_FPR, states[i][1])
+                if _TAIL.search(s):
+                    fh.sync(fprs, states[i][1])
+        if states[-1] is not None:
+            fh.sync(fprs, states[-1])  # falling off the end into the next function
     crs = set()
     localized = localize_cr(out)
     if localized:
@@ -108,7 +183,9 @@ def transform(stmts):
     if gprs:
         prologue.append("uint32_t %s;" % ", ".join("r%d = c->r[%d]" % (n, n) for n in sorted(gprs)))
     if fprs:
-        prologue.append("double %s;" % ", ".join("f%d_0 = c->f[%d].ps0, f%d_1 = c->f[%d].ps1" % (n, n, n, n) for n in sorted(fprs)))
+        lines, fregs = fh.decl(fprs)
+        prologue += lines
+        out = _FloatHalves.psq(out, fregs)
 
     def wb(gset, fset, cset):
         parts = ["c->r[%d] = r%d;" % (n, n) for n in sorted(gset)]
@@ -246,7 +323,7 @@ def _touch(name):
     return SUMMARY.get(name)
 
 
-def transform_nonleaf(stmts, addrs):
+def transform_nonleaf(stmts, addrs, states=None):
     """stmts: the statements (site calls already prefixed to theirs), addrs: their guest addresses.
     Returns (prologue, statements, write-back for falling off the end), or None to keep the struct
     form. A forward analysis over the function's jumps tracks which registers may differ from the
@@ -255,6 +332,7 @@ def transform_nonleaf(stmts, addrs):
         return None
     gprs, fprs = set(), set()
     out = []
+    fh = _FloatHalves(stmts, states)
     for s in stmts:
         s = _PSQ_LOAD.sub(lambda m: (fprs.add(int(m.group(1))), "psq_load_l(c, &f%s_0, &f%s_1, " % (m.group(1), m.group(1)))[1], s)
         s = _PSQ_STORE.sub(lambda m: (fprs.add(int(m.group(1))), "psq_store_l(c, f%s_0, f%s_1, " % (m.group(1), m.group(1)))[1], s)
@@ -335,6 +413,10 @@ def transform_nonleaf(stmts, addrs):
         return rl(gprs & g, fprs & f)
     ret_regs = RET_GPR | {32 + r for r in RET_FPR}
     final = []
+
+    def fsync(i, regs, after):
+        if fh.on and states[i] is not None:
+            fh.sync({r - 32 for r in regs if r >= 32}, states[i][1 if after else 0])
     for i, s in enumerate(out):
         d = set(d_in[i])
         exit_dirty = set(d)  # for returns and tail calls in this statement: a superset is safe
@@ -349,6 +431,7 @@ def transform_nonleaf(stmts, addrs):
                 keep = sum(1 << r for r in t)
                 call = "{ PpcSumSave sv_; ppc_sum_poison(c, 0x%016Xull, &sv_); %s ppc_sum_check(c, 0x%016Xull, &sv_, 0x%08Xu); }" % (
                     keep, call, keep, addrs[i])
+            fsync(i, d if t is None else d & t, False)
             pieces.append("{ %s %s %s }" % (wb(d if t is None else d & t), call, reload_after(m.group(1))))
             pos = m.end()
             d = set() if t is None else d - t
@@ -359,12 +442,19 @@ def transform_nonleaf(stmts, addrs):
         # the write-backs are built only for statements that jump or exit (most do neither)
         if "goto L_" in s:
             sync = wb(exit_dirty)
+            if sync and any(int(g, 16) in index and index[int(g, 16)] in heads and index[int(g, 16)] > i
+                            for g in _GOTO.findall(s)):
+                fsync(i, exit_dirty, True)
             if sync:
                 s = _GOTO.sub(lambda m: "{ %s %s }" % (sync, m.group(0))
                               if int(m.group(1), 16) in index and index[int(m.group(1), 16)] in heads and index[int(m.group(1), 16)] > i
                               else m.group(0), s)
         if "return" in s:
             ret_wb, all_wb = wb(exit_dirty & ret_regs), wb(exit_dirty)
+            if _RET.search(s):
+                fsync(i, exit_dirty & ret_regs, True)
+            if _TAIL.search(s):
+                fsync(i, exit_dirty, True)
             if POISON:
                 # checking build: the volatile registers this function sets get garbage at its returns
                 g_set = {r for r in exit_dirty if r < 32 and r not in RET_GPR}
@@ -382,6 +472,7 @@ def transform_nonleaf(stmts, addrs):
                     t = _touch(calls[i][k].group(1))
                     d_end = set() if t is None else d_end - t
             if d_end:
+                fsync(i, d_end, True)
                 s += " " + wb(d_end)
         final.append(s)
     # falling off the end continues in the next function: what is dirty after the last statement
@@ -391,9 +482,13 @@ def transform_nonleaf(stmts, addrs):
         if k < len(calls[-1]):
             t = _touch(calls[-1][k].group(1))
             last = set() if t is None else last - t
+    if last and fh.on and states[-1] is not None:
+        fh.sync({r - 32 for r in last if r >= 32}, states[-1])
     prologue = []
     if gprs:
         prologue.append("uint32_t %s;" % ", ".join("r%d = c->r[%d]" % (r, r) for r in sorted(gprs)))
     if fprs:
-        prologue.append("double %s;" % ", ".join("f%d_0 = c->f[%d].ps0, f%d_1 = c->f[%d].ps1" % (r, r, r, r) for r in sorted(fprs)))
+        lines, fregs = fh.decl(fprs)
+        prologue += lines
+        final = _FloatHalves.psq(final, fregs)
     return prologue, final, wb(last)

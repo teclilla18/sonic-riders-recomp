@@ -365,6 +365,21 @@ static inline double round25(double d) {
     return u64_as_f64(v);
 }
 static inline double to_single(double d) { return (double)(float)d; }
+/* Register halves that only ever hold single-precision values (tools/recomp/leaflocal.py) are ppc_fs
+ * locals, and single-precision + - * / on them is PPC_SOP (tools/recomp/singleflow.py). With
+ * PPC_FLOAT_LOCALS (meant for the Vita: 32-bit ARM pays two conversions per double round trip) they
+ * are float and the arithmetic is done in float; the results are the same bit for bit (the operands
+ * are singles, and double has more than 2 * 24 + 2 bits). Elsewhere: double and to_single, as before. */
+#ifndef PPC_FLOAT_LOCALS
+#define PPC_FLOAT_LOCALS 0  /* prototype: not bit-exact yet; also needs RECOMP_FLOATLOC=1 */
+#endif
+#if PPC_FLOAT_LOCALS
+typedef float ppc_fs;
+#define PPC_SOP(a, op, b) ((double)((float)(a) op (float)(b)))
+#else
+typedef double ppc_fs;
+#define PPC_SOP(a, op, b) to_single((a) op (b))
+#endif
 /* checking build of the single-precision tracking (RECOMP_SINGLE_CHECK=1, tools/recomp/singleflow.py):
  * an operand the recompiler left without round25 must be single precision already */
 void ppc_single_report(uint32_t addr, double v);
@@ -612,6 +627,9 @@ static inline __attribute__((always_inline)) void psq_store_l(Cpu* c, double v0,
 static inline __attribute__((always_inline)) void psq_load(Cpu* c, int fd, uint32_t ea, int w, int i) {
     psq_load_l(c, &c->f[fd].ps0, &c->f[fd].ps1, ea, w, i);
 }
+/* psq_load_l into locals of any type (a register with a ppc_fs half) */
+#define psq_load_lv(c, p0, p1, ea, w, i) \
+    do { double t0_, t1_; psq_load_l((c), &t0_, &t1_, (ea), (w), (i)); *(p0) = t0_; *(p1) = t1_; } while (0)
 static inline __attribute__((always_inline)) void psq_store(Cpu* c, int fs, uint32_t ea, int w, int i) {
     psq_store_l(c, c->f[fs].ps0, c->f[fs].ps1, ea, w, i);
 }

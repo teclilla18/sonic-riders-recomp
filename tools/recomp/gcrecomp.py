@@ -347,13 +347,16 @@ class GcRecompiler:
             body = [(a, w, crlive.rewrite(s, fields[i], live_after[i], CR_CHECK, a)) for i, (a, w, s) in enumerate(body)]
             self.cr_stats[0] += sum(1 for f in fields if f is not None)
         del jts
+        fstates = None
         if singleflow.ENABLED and not plain:
             def call_keeps(a, w):
                 t = branch_target(a, w & ~1)  # the call's target (branch_target skips linking branches)
                 return (t is not None and t in self.entries and t not in self.hooks
                         and "f_%08X" % t not in leaflocal.NO_ABI)
-            body, seen, done = singleflow.analyze_and_rewrite(body, self.cur_start, self.cur_end, branch_target,
-                                                              call_keeps, self.patches)
+            body, seen, done, fstates = singleflow.analyze_and_rewrite(body, self.cur_start, self.cur_end,
+                                                                       branch_target, call_keeps, self.patches)
+            if not singleflow.FLOATLOC:
+                fstates = None
             self.single_stats[0] += seen
             self.single_stats[1] += done
         fname = "f_%08X_orig" % start if hooked else "f_%08X" % start
@@ -364,12 +367,12 @@ class GcRecompiler:
         tail_wb = ""
         stmts = [s for _, _, s in body]
         if LEAF and not plain and leaflocal.eligible(stmts):
-            prologue, stmts, tail_wb = leaflocal.transform(stmts)
+            prologue, stmts, tail_wb = leaflocal.transform(stmts, fstates)
             body = [(a, w, s) for (a, w, _), s in zip(body, stmts)]
             out += ["    %s" % p for p in prologue]
             self.leaf_count += 1
         elif NONLEAF and not plain:
-            done = leaflocal.transform_nonleaf(stmts, [a for a, _, _ in body])
+            done = leaflocal.transform_nonleaf(stmts, [a for a, _, _ in body], fstates)
             if done:
                 prologue, stmts, tail_wb = done
                 body = [(a, w, s) for (a, w, _), s in zip(body, stmts)]
@@ -514,6 +517,8 @@ class GcRecompiler:
             f.write("functions with a register summary (calls to them sync only those): %d\n" % self.summary_count)
             f.write("round25 multiplier operands: %d, left out as already single precision: %d%s\n" % (
                 self.single_stats[0], self.single_stats[1], " (checking build)" if singleflow.CHECK else ""))
+            f.write("FPR halves in locals: %d, typed ppc_fs (float with PPC_FLOAT_LOCALS): %d\n" % (
+                leaflocal.FLOAT_STATS["halves"], leaflocal.FLOAT_STATS["float"]))
             f.write("unhandled instruction kinds (op=0: zero/data words inside function ranges, never run):\n")
             for k, v in self.unhandled.most_common():
                 f.write("  %6d  %s\n" % (v, k))

@@ -260,6 +260,35 @@ vertex stream + two vec4 vertex uniforms per draw, shaders compiled on the devic
 - vitacompanion's FTP refused logins after `promote`; its `reboot` command fixed it. `vita-elf-create` crashed
   (0xC0000374) on this program linked without `--gc-sections`.
 
+## Float-typed locals prototype (2026-11-04, session 4) [WIP, off by default]
+
+Goal: on 32-bit ARM every single-precision instruction is double math plus two conversions (to_single). The
+existing singleflow.py already knows, per instruction, which FPR halves hold singles (round25 removal) and had an
+old `RECOMP_FLOAT=1` that wrote `(double)((float)A op (float)B)`, but GCC kept the locals double (no gain).
+
+- Implemented (tools/recomp): singleflow.py returns per-statement states (single halves before/after, plus a
+  fall-off-the-end state) and writes `PPC_SOP(A, op, B)` for + - * / on two known-single halves.
+  leaflocal.py (`_FloatHalves`) types a half `ppc_fs` when every read of it is known single: explicit reads,
+  write-backs at calls (dirty set), returns (RET_FPR), tail exits, loop-head syncs and falling off the end.
+  psq loads into such registers go through `psq_load_lv` (ppc.h). ppc.h: `ppc_fs`/`PPC_SOP` are float with
+  `PPC_FLOAT_LOCALS=1`, else double/to_single (the old code). report.txt: "FPR halves in locals: 23050,
+  typed ppc_fs: 7727"; 7,150 PPC_SOP; 401 psq_load_lv.
+- **Off by default**: `RECOMP_FLOATLOC=1` (recompile) and `-DPPC_FLOAT_LOCALS=1` (compile) turn it on.
+- **Not bit-exact yet** [confirmed]: PC det route (`SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0 SR_RAMHASH=11500
+  SR_RAMHASH_REF=<baseline log>`) with it forced on (build/old/build.ninja.hostfl: build/host-fl, cflags
+  -DPPC_FLOAT_LOCALS=1) first differs at step 3547 (1P demo race), blocks 0401F80E. Next: find the function
+  (candidates: a half read inside the same statement after its write, fused ops fmadds/ps_madd that mix float
+  locals, `fres`/`frsqrte`/`fsel`/`fctiw` paths, NaN/denormal handling in float, a reload after a call that the
+  "kept" mask trusts). Bisect by limiting typing to a range of functions (an env list in leaflocal) and compare
+  with SR_RAMHASH_REF; or `RECOMP_FLOAT_CHECK`-style runtime compare of each float half against a double shadow.
+- Not measured on the Vita yet (static vcvt counts and guest CPU per step are the next numbers to take once exact).
+
+Audio mixer (task 3, not started in code): cheap bit-exact wins seen in runtime/src/ax.c: `clamp16(int64_t)`
+used everywhere (int32 is enough: products fit); ADPCM `(int64_t)scale * raw`; `aram8()` calls the
+out-of-line `aram_ptr()` in dsp.c for every byte (cache `aram_ptr(0)` and mask with ARAM_SIZE-1, 16 MB);
+`mix_add` could skip vol == 0 && delta == 0 sends (still setting *dpop = 0). Check: SR_WAVOUT WAV identical
+on the PC det route before/after; Vita: the `[perf]` "audio mixing ms/frame" and the per-thread CPU line.
+
 ## Sources (read 2026-11-03)
 
 - vita.hacks.guide, updating firmware 3.74 / HENlo: <https://vita.hacks.guide/updating-firmware-(3.74)>

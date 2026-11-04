@@ -77,9 +77,11 @@ ms), 2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP 
 frame. Profile flat (PSMTX/PSVEC ~12%, OSEnableInterrupts 8%). V1b GXM microbench: 7,000 draws submit in 9.2 ms
 (15.7 ms with a program switch per draw); libshacccg 78 ms per shader. A lost cnd_wait wake-up (hang) fixed by
 bounded waits. Per-thread CPU (session 3): core 0 (guest code) is saturated, ~39-46 ms of CPU per step;
-GP thread ~0.4 s/s, decode helper and audio ~0.3 s/s each; run-to-run noise ~±10%. Next: vertex decode (~2.4 us
-per vertex, 160-byte vertices), float-typed single-precision values in the recompiler (game thread). Details:
-docs/notes/vita-research.md "Game-thread profile" and "Probe V1b results".
+GP thread ~0.4 s/s, decode helper and audio ~0.3 s/s each; run-to-run noise ~±10%. Session 4: float-typed
+single-precision locals in the recompiler implemented but **off** (`RECOMP_FLOATLOC=1` + `-DPPC_FLOAT_LOCALS=1`):
+not bit-exact yet (PC det route differs from step 3547); next: find why, then measure on the Vita; then the audio
+mixer's cheap wins (listed in the note). USB camera (udcd_uvc) is on: the Vita does not charge over USB. Details:
+docs/notes/vita-research.md "Game-thread profile", "Probe V1b results", "Float-typed locals prototype".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

@@ -39,7 +39,10 @@ import re
 
 ENABLED = os.environ.get("RECOMP_SINGLE", "1") != "0"
 CHECK = os.environ.get("RECOMP_SINGLE_CHECK", "0") == "1"
-FLOAT = os.environ.get("RECOMP_FLOAT", "0") == "1"  # off: GCC kept the doubles (see the docstring)
+FLOAT = os.environ.get("RECOMP_FLOAT", "0") == "1"  # old form: always (double)((float)A op (float)B)
+# PPC_SOP(A, op, B) (ppc.h): float arithmetic where the locals are float (PPC_FLOAT_LOCALS, the Vita),
+# else the old to_single(A op B); leaflocal.py types the halves that only ever hold singles as ppc_fs
+FLOATLOC = os.environ.get("RECOMP_FLOATLOC", "0") == "1"  # prototype, off: not bit-exact yet (det route step 3547)
 FLOAT_CHECK = os.environ.get("RECOMP_FLOAT_CHECK", "0") == "1"
 _HALF_PAT = r"(?:\((c->f\[(\d+)\]\.ps([01]))\)|(c->f\[(\d+)\]\.ps([01])))"  # (half) or half, balanced
 R_BINOP = re.compile(r"to_single\(" + _HALF_PAT + r" ([-+*/]) " + _HALF_PAT + r"\)")
@@ -157,7 +160,7 @@ def transfer(s, state):
 
 def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
     """body: list of (addr, word, c_source). call_keeps(addr, word) -> True when a call there keeps
-    the callee-saved ps0 halves. Returns (new body, operands seen, operands rewritten)."""
+    the callee-saved ps0 halves. Returns (new body, operands seen, operands rewritten, per-statement states)."""
     n = len(body)
     index = {a: i for i, (a, _, _) in enumerate(body)}
     succ = [[] for _ in range(n)]
@@ -165,7 +168,7 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
     for i, (a, w, s) in enumerate(body):
         op = w >> 26
         lk = w & 1
-        fall = i + 1 < n
+        fall = True
         if op == 18 and not lk:
             fall = False
         elif op == 16 and not lk and ((w >> 21) & 0x14) == 0x14:
@@ -175,7 +178,9 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
         if lk and op in (16, 18, 19):
             after_call[i] = CALLEE_PS0 if (op != 19 and call_keeps(a, w)) else 0
         tg = [index[int(t, 16)] for t in R_GOTO.findall(s) if int(t, 16) in index]
-        succ[i] = ([i + 1] if fall else []) + tg
+        if i + 1 == n:
+            last_falls = fall
+        succ[i] = ([i + 1] if fall and i + 1 < n else []) + tg
     # reachability from the entry
     reach = [False] * n
     stack = [0] if n else []
@@ -221,7 +226,7 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
     seen = done = 0
     out = []
     for i, (a, w, s) in enumerate(body):
-        if FLOAT and "to_single(" in s and reach[i] and a not in patched:
+        if (FLOAT or FLOATLOC) and "to_single(" in s and reach[i] and a not in patched:
             state = st_in[i]
 
             def frep(m, state=state, a=a):
@@ -230,7 +235,10 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
                 op = m.group(7)
                 if not (state & bit(int(an), int(ak)) and state & bit(int(bn), int(bk))):
                     return m.group(0)
-                fl = "((double)((float)%s %s (float)%s))" % (ax, op, bx)
+                if FLOAT:
+                    fl = "((double)((float)%s %s (float)%s))" % (ax, op, bx)
+                else:
+                    fl = "PPC_SOP(%s, %s, %s)" % (ax, op, bx)
                 if FLOAT_CHECK:
                     return "ppc_float_chk(to_single(%s %s %s), %s, 0x%08Xu)" % (ax, op, bx, fl, a)
                 return fl
@@ -249,4 +257,9 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
             seen += s.count("round25(")
             s = R_R25.sub(rep, s)
         out.append((a, w, s))
-    return out, seen, done
+    # per statement: (single halves before, after), None where unreachable; patched code knows nothing
+    states = [None if not reach[i] else (0, 0) if body[i][0] in patched else (st_in[i], st_out[i])
+              for i in range(n)]
+    # and one more: the state where the last statement falls off the end (None: it cannot)
+    states.append(states[-1][1] if n and last_falls and states[-1] is not None else None)
+    return out, seen, done, states

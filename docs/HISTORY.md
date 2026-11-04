@@ -358,3 +358,14 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   memory (as GPU memory will be): one A/B +12% 1P, a repeat did not show it [uncertain]; the four globals every
   function entry touches are one struct (`g_ppc_hot`, 8 -> 2 instructions per entry) [uncertain speed, PC
   unchanged: 59.9 fps both demos]. Noise between identical Vita runs is ~±10%: compare guest CPU per step.
+- 2026-11-04 (d): **Issues #13 and #12 answered; Vita float-locals prototype (off: not bit-exact yet).**
+  #13 (Android setup, v0.4.0): `ld.lld: unable to find library -lSDL2` on a first build: the libmain.so link had
+  no dependency on the SDL2 ndk-build step (a race; existing builds already had SDL2). Fix on `main` (b22670f):
+  the link waits for `android_build.sdl_lib(abi)`; a fresh worktree build ran SDL2 first and linked last
+  [likely the user's cause: the failure depends on timing]. #12 (PC 13 fps, v0.3.4): Intel UHD 620; game work
+  ~10 ms/frame, render wait 26-70 ms with 2,500-5,800 draws: GPU/driver bound [confirmed from the log]; the PC
+  always renders at 2x (render_gl.c EFB_SCALE), the menu's resolution choice is Switch-only. Vita: USB camera
+  (udcd_uvc) back on. Float-typed single-precision locals in the recompiler (`RECOMP_FLOATLOC=1` +
+  `-DPPC_FLOAT_LOCALS=1`, both off by default): 7,727 of 23,050 FPR halves typed float, 7,150 operations as
+  `PPC_SOP`; PC det route with it forced on differs from step 3547 (1P demo race) [confirmed not bit-exact];
+  cause not found yet. Details: docs/notes/vita-research.md "Float-typed locals prototype".
