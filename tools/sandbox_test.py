@@ -119,6 +119,23 @@ try {
 '''
 
 
+MINIMIZE_PS1 = r'''
+Add-Type -Name W -Namespace SR -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c);'
+Start-Process "C:\Windows\System32\WindowsSandbox.exe" -ArgumentList ('"' + '@WSB@' + '"') -WindowStyle Minimized
+$min = 0; $pri = 0
+for ($i = 0; $i -lt 60; $i++) {   # the client window can be re-created while the sandbox boots
+    Start-Sleep -Seconds 1
+    foreach ($p in Get-Process WindowsSandbox* -ErrorAction SilentlyContinue) {
+        if ($p.MainWindowHandle -ne 0) { [void][SR.W]::ShowWindow($p.MainWindowHandle, 7); $min++ }  # SW_SHOWMINNOACTIVE
+    }
+    foreach ($p in Get-Process vmmem* -ErrorAction SilentlyContinue) {
+        try { $p.PriorityClass = "BelowNormal"; $pri++ } catch {}
+    }
+}
+"window minimized: $($min -gt 0); VM priority below normal: $($pri -gt 0)"
+'''
+
+
 def notes_iso():
     path = os.path.join(ROOT, "NOTES.local.md")
     if os.path.exists(path):
@@ -218,8 +235,10 @@ def main():
                                        ", WARM (cache)" if a.cache else ", cold"))
     print("  results: %s (RESULT.txt, progress.txt, setup-N.log)" % resdir)
     if a.launch:
-        subprocess.Popen([SANDBOX_EXE, wsbpath])
-        print("  launched Windows Sandbox")
+        # minimized without focus, the VM below normal priority: the PC stays usable during the run
+        ps = MINIMIZE_PS1.replace("@WSB@", wsbpath.replace("'", "''"))
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True)
+        print("  launched Windows Sandbox: %s" % (out.stdout.strip() or out.stderr.strip()[:200]))
     return 0
 
 
