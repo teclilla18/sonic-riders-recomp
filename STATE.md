@@ -66,9 +66,9 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
 
 ## After Android (user's wish list, 2026-11-03)
 
-Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement), then a **PS5** port: an open
-PS5 Vulkan driver (Mesa RADV port) exists, so render_vk.c could carry over (docs/notes/ps4-ps5-research.md). Ask
-the user for their PS5/PS4 model and firmware first (public PS5 jailbreak: ≤ 13.60).
+Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
+(user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). Next research topic the user
+asked for: PS Vita porting/recomp scene.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
