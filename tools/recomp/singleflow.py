@@ -42,8 +42,30 @@ CHECK = os.environ.get("RECOMP_SINGLE_CHECK", "0") == "1"
 FLOAT = os.environ.get("RECOMP_FLOAT", "0") == "1"  # old form: always (double)((float)A op (float)B)
 # PPC_SOP(A, op, B) (ppc.h): float arithmetic where the locals are float (PPC_FLOAT_LOCALS, the Vita),
 # else the old to_single(A op B); leaflocal.py types the halves that only ever hold singles as ppc_fs
-FLOATLOC = os.environ.get("RECOMP_FLOATLOC", "0") == "1"  # prototype, off: not bit-exact yet (det route step 3547)
+FLOATLOC = os.environ.get("RECOMP_FLOATLOC", "0") == "1"  # off by default; bit-exact on the PC det route since 2026-11-04 (reads are PPC_FD)
 FLOAT_CHECK = os.environ.get("RECOMP_FLOAT_CHECK", "0") == "1"
+FLOATLOC_ALL = FLOATLOC
+# checking build (compile without PPC_FLOAT_LOCALS): every read of a ppc_fs local must be a single
+# already (ppc.h ppc_fs_rd); the first misses name the guest address
+FLOATLOC_CHECK = os.environ.get("RECOMP_FLOATLOC_CHECK", "0") == "1"
+_FS_READ = re.compile(r"(?<![&\w])f(\d+_[01])\b(?!\s*=(?!=))")
+
+
+def fs_reads(s, typed, addr):
+    """reads of the ppc_fs halves `typed` ("n_k") become PPC_FD(f) (or the checking build's ppc_fs_rd)"""
+    if FLOATLOC_CHECK:
+        return _FS_READ.sub(lambda m: "ppc_fs_rd(f%s, 0x%08Xu)" % (m.group(1), addr) if m.group(1) in typed
+                            else m.group(0), s)
+    return _FS_READ.sub(lambda m: "PPC_FD(f%s)" % m.group(1) if m.group(1) in typed else m.group(0), s)
+# bisect aid: RECOMP_FLOATLOC_RANGE=<lo>-<hi> (hex guest addresses) types only functions starting in [lo, hi)
+_FL_RANGE = [int(x, 16) for x in os.environ.get("RECOMP_FLOATLOC_RANGE", "").split("-") if x]
+
+
+def floatloc_for(start):
+    """whether the function at `start` gets float-typed locals (sets FLOATLOC for its rewrite)"""
+    global FLOATLOC
+    FLOATLOC = FLOATLOC_ALL and (len(_FL_RANGE) != 2 or _FL_RANGE[0] <= start < _FL_RANGE[1])
+    return FLOATLOC
 _HALF_PAT = r"(?:\((c->f\[(\d+)\]\.ps([01]))\)|(c->f\[(\d+)\]\.ps([01])))"  # (half) or half, balanced
 R_BINOP = re.compile(r"to_single\(" + _HALF_PAT + r" ([-+*/]) " + _HALF_PAT + r"\)")
 
@@ -235,7 +257,7 @@ def analyze_and_rewrite(body, start, end, branch_target, call_keeps, patched):
                 op = m.group(7)
                 if not (state & bit(int(an), int(ak)) and state & bit(int(bn), int(bk))):
                     return m.group(0)
-                if FLOAT:
+                if FLOAT or FLOAT_CHECK:  # the check compares the float form against the double one
                     fl = "((double)((float)%s %s (float)%s))" % (ax, op, bx)
                 else:
                     fl = "PPC_SOP(%s, %s, %s)" % (ax, op, bx)

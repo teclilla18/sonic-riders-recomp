@@ -371,8 +371,11 @@ static inline double to_single(double d) { return (double)(float)d; }
  * are float and the arithmetic is done in float; the results are the same bit for bit (the operands
  * are singles, and double has more than 2 * 24 + 2 bits). Elsewhere: double and to_single, as before. */
 #ifndef PPC_FLOAT_LOCALS
-#define PPC_FLOAT_LOCALS 0  /* prototype: not bit-exact yet; also needs RECOMP_FLOATLOC=1 */
+#define PPC_FLOAT_LOCALS 0  /* also needs RECOMP_FLOATLOC=1; bit-exact on the PC det route (2026-11-04) */
 #endif
+/* every read of a ppc_fs local (tools/recomp/gcrecomp.py): double, so that an expression of float locals
+ * is not done in float (ps_madd: to_single(a * c + b) must not round the product) */
+#define PPC_FD(x) ((double)(x))
 #if PPC_FLOAT_LOCALS
 typedef float ppc_fs;
 #define PPC_SOP(a, op, b) ((double)((float)(a) op (float)(b)))
@@ -385,6 +388,14 @@ typedef double ppc_fs;
 void ppc_single_report(uint32_t addr, double v);
 static inline double ppc_single_chk(double v, uint32_t addr) {
     if (__builtin_expect(f64_as_u64(round25(v)) != f64_as_u64(v), 0)) ppc_single_report(addr, v);
+    return v;
+}
+
+/* checking build of the float-typed locals (RECOMP_FLOATLOC=1 RECOMP_FLOATLOC_CHECK=1, compiled without
+ * PPC_FLOAT_LOCALS): every read of a ppc_fs local must survive a float round trip bit for bit */
+void ppc_fs_report(uint32_t addr, double v);
+static inline double ppc_fs_rd(double v, uint32_t addr) {
+    if (__builtin_expect(f64_as_u64((double)(float)v) != f64_as_u64(v), 0)) ppc_fs_report(addr, v);
     return v;
 }
 

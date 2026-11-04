@@ -349,6 +349,7 @@ class GcRecompiler:
         del jts
         fstates = None
         if singleflow.ENABLED and not plain:
+            singleflow.floatloc_for(start)
             def call_keeps(a, w):
                 t = branch_target(a, w & ~1)  # the call's target (branch_target skips linking branches)
                 return (t is not None and t in self.entries and t not in self.hooks
@@ -378,6 +379,17 @@ class GcRecompiler:
                 body = [(a, w, s) for (a, w, _), s in zip(body, stmts)]
                 out += ["    %s" % p for p in prologue]
                 self.nonleaf_count += 1
+        # reads of ppc_fs locals are double (PPC_FD): C would do an expression whose operands are all
+        # float in float (ps_madd's to_single(a * c + b) rounded the product); in PPC_SOP the cast back
+        # to float is exact and the compiler drops it
+        if singleflow.FLOATLOC:
+            typed = set()
+            for p in out[2:]:
+                if p.strip().startswith("ppc_fs "):
+                    typed |= set(re.findall(r"\bf(\d+_[01]) = ", p))
+            if typed:
+                body = [(a, w, singleflow.fs_reads(s, typed, a)) for a, w, s in body]
+                tail_wb = singleflow.fs_reads(tail_wb, typed, self.cur_end)
         # a function that keeps r1 in a local: an interrupt delivered at a loop back-edge must see the
         # current stack pointer (its frame may already be below the struct's stale r1)
         if any("r1 = c->r[1]" in p for p in out[2:]):
