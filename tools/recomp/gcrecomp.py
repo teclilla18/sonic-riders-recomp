@@ -48,6 +48,11 @@ LEAF = ppc2c.pass_on("WWHD_RECOMP_LEAF")
 NONLEAF = ppc2c.pass_on("WWHD_RECOMP_NONLEAF")
 GQR_STATIC = ppc2c.pass_on("WWHD_RECOMP_GQR")
 HOT = os.environ.get("RECOMP_HOT", "1") != "0"
+# profiling builds only (RECOMP_PROFEXACT=1): after each call returns, the caller writes its own address
+# back to g_ppc_cur_fn, so the sampling profiler (SR_PROFILE) charges the caller's code to the caller
+# instead of to the function it called last. One store per call.
+PROFEXACT = os.environ.get("RECOMP_PROFEXACT", "0") == "1"
+_PROF_CALL = re.compile(r"(?<!return )\b(?:f_[0-9A-F]{8}(?:_orig)?|ppc_dispatch|site_[0-9A-F]{8}|imp_\w+)\(c\);")
 
 # Where the REL module lives in guest memory: just above the 24 MiB of MEM1 (the runtime backs a few
 # extra MiB there; development hardware had 48 MiB at these addresses). The game still loads and
@@ -394,6 +399,9 @@ class GcRecompiler:
         # current stack pointer (its frame may already be below the struct's stale r1)
         if any("r1 = c->r[1]" in p for p in out[2:]):
             body = [(a, w, s.replace("PPC_LOOP();", "PPC_LOOP_R1(r1);")) for a, w, s in body]
+        if PROFEXACT:
+            mark = r"\g<0> g_ppc_cur_fn = 0x%08Xu;" % start
+            body = [(a, w, _PROF_CALL.sub(mark, s)) for a, w, s in body]
         for a, w, s in body:
             if a in self.labels:
                 out.append("L_%08X: ;" % a)

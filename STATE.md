@@ -1,4 +1,4 @@
-# State (2026-11-04, evening)
+# State (2026-11-04, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -8,7 +8,8 @@ Latest release: **v0.4.1** (2026-11-04, tag at c263ebe): setup fixes only (the g
 port, online-play groundwork, perf test). **v0.4.0's GitHub release was deleted** (user's request; its tag stays):
 its Android download failed at the APK step for everyone. v0.4.1's fixes were found by the new Windows Sandbox
 clean-install test (`tools/sandbox_test.py`); cold PC and Android installs PASS on c263ebe, in both
-`C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not yet seen by a user. Vita code: branch `vita` only.
+`C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not yet seen by a user: no replies in #12/#13 since our
+answers (checked 2026-11-04 night). Vita code: branch `vita` only.
 
 ## Windows host build (the fast test loop)
 
@@ -74,10 +75,14 @@ Run-to-run noise ~±10%. Session 5: float-typed single-precision locals are now 
 11,305 steps differ; cause was float-only expressions such as ps_madd) but give **no measurable gain** on the Vita
 (1P ~38 ms/step either way; GCC already narrows most single ops, conversions drop only 2.5%), so they stay off.
 Audio mixer cheap wins: bit-exact (WAV identical), Vita mixing 7.4 -> 6.6 ms/frame, audio thread -9% [confirmed].
-Next for speed: the game thread is the limit (~790 ms/s busy, ~38 ms/step vs 33 needed for 30 fps): storing FPR
-halves as float in the register struct, or the PSMTX/PSVEC hot paths. USB camera (udcd_uvc) is on: the Vita does
-not charge over USB. Details: docs/notes/vita-research.md "Game-thread profile", "Probe V1b results", "Float-typed
-locals prototype".
+Session 6: an exact-attribution profile (`RECOMP_PROFEXACT=1`) shows the race profile is flat (PSMTX/PSVEC 5.5%,
+not 12%; top function 6%) and conversions are only ~2.3% of executed instructions, so FPR halves as float is
+dropped. **Fixed memory base** (window reserved at 0x90000000, base a constant; `--vita-base`, default on the
+Vita): 1P 36.4 vs 37.9 ms/step, 2P 33.4 vs 36.6 in an alternating A/B [likely]. Still ~36 ms vs 33 needed for the
+30 fps mode. Next: device-range test on non-stack accesses (unmapped range + kubridge fault handler?), or start
+the renderer (gxm) since only code-generation-wide gains remain. USB camera (udcd_uvc) is on: the Vita does not
+charge over USB. Details: docs/notes/vita-research.md "Exact profile and fixed memory base", "Game-thread
+profile", "Float-typed locals prototype".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 

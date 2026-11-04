@@ -304,6 +304,43 @@ Vita runner (local, build/old/fl/): vita_run.py <eboot> <outdir> (quit all, FTP 
 "[perftest] done", pull log/json) and vita_sum.py <elf> <run> (scenes + CPU per named thread via nm). One run
 (float off) stopped logging at 140 s with no crash dump; the next runs were fine [uncertain why].
 
+## Exact profile and fixed memory base (2026-11-04, session 6)
+
+PCH-2000 at CPU 500 / bus 222 / GPU 222 / xbar 166, `SR_PERFTEST=1`, probe without renderer.
+
+- **Exact-attribution profile**: recompiled with `RECOMP_PROFEXACT=1` (the caller re-marks `g_ppc_cur_fn` after
+  each call; 31,169 call sites) and `SR_PROFILE=1`. The 1P race window (log reports during scene 2): flat. Top:
+  SelectThread 6.3% (the OS idle loop), REL 818BFF54 6.0%, REL 8184EDC0 5.4%, GX pipe tag 5.0%, 8184F404 2.6%;
+  **PSMTX/PSVEC 5.5% in all** (the old "~12%" charged their callers' code to them). The 40 entries per report
+  cover only 55% of samples. Boot, loading and menus are 20-70% SelectThread (the guest idle loop spins after
+  enabling interrupts once), so whole-run "game CPU ms/s" overstates work outside races; in races it is 2-7%.
+  Conclusion: no single routine is worth a native rewrite; only code-generation-wide changes pay.
+- **Conversions (item "FPR halves as float")**: weighting each hot function's share by its static instruction mix
+  (objdump of the ELF), double<->single conversions are ~2.3% of executed guest instructions (f64 ops 3.4%, f32
+  3.5%). Removing all of them is worth a few percent at most: not pursued.
+- **Where the time goes per access**: a guest load was `lsr/cmp/beq` (device test) + `movw/movt/ldr` (reload the
+  base global) + `bic` + `ldr` + `rev`. GCC reloads the global after every guest store (generated code uses
+  `-fno-strict-aliasing`) and after each device-path call. (r1/r13-based accesses already skip the device test:
+  `RECOMP_STACKRAM`.)
+- **Fixed memory base** (`configure.py --vita-base`, default `0x90000000`, an ARM immediate): mem_init asks
+  kubridge for the window at that address (it honours the request; it was at 0x8E400000 before) and stops if it
+  lands elsewhere; ppc.h makes `PPC_MEM_BASE` a constant on the Vita, so an access is `bic; add #base; ldr; rev`.
+  Text -0.3%, eboot -4%. A/B in one session, alternating (game ms per step mean / median):
+
+  | Run | 1P | 2P |
+  |---|---|---|
+  | fixed #1 | 35.1 / 30.0 | 32.2 / 25.8 |
+  | global #1 | 36.6 / 30.6 | 35.7 / 27.7 |
+  | fixed #2 | 37.6 / 30.4 | 34.6 / 26.3 |
+  | global #2 | 39.2 / 32.8 | 37.5 / 30.4 |
+
+  Fixed beat the following global run in all 4 pairs: ~4% (1P) and ~9% (2P) less game time per step [likely: each
+  pair is inside the ±10% noise]. Game thread CPU 779 vs ~791 ms/s. PC and Switch unaffected (Vita-only define;
+  default recompiler output byte-identical).
+- Next ideas from this: the device test on non-stack accesses (3 instructions each) could go if the device range
+  of the window (offset 0x08000000) were left unmapped and faults emulated through kubridge's exception handler
+  (bigger change, [uncertain] cost of a fault); the game thread still needs ~36 ms vs 33 for 30 fps.
+
 ## Sources (read 2026-11-03)
 
 - vita.hacks.guide, updating firmware 3.74 / HENlo: <https://vita.hacks.guide/updating-firmware-(3.74)>

@@ -62,6 +62,11 @@ Environment variables read by `tools/recomp/gcrecomp.py` when generating code (a
 - `RECOMP_HOT=0`: don't emit `config/GXEE8P/hot_functions.txt` functions first.
 - `RECOMP_SUMMARY=0`: no register summaries at calls; `RECOMP_SUMMARY_CHECK=1`: checking build.
 - `RECOMP_FLOAT=1` (off by default) / `RECOMP_FLOAT_CHECK=1`: single-precision ops computed in float (no gain).
+- `RECOMP_PROFEXACT=1` (profiling builds only): after each call the caller writes its own address back to
+  `g_ppc_cur_fn`, so `SR_PROFILE` charges a caller's code to the caller (default: to the last function entered).
+  One store per call. Recompile into its own folder (`gcrecomp.py config/GXEE8P baserom <dir>`).
 - `configure.py --no-base-reg`: Switch without the x28 guest-memory base register.
+- `configure.py --vita-base 0x90000000`: Vita, guest window reserved at that fixed address and used as a constant
+  (no base load per access); the program stops at start-up if the window lands elsewhere.
 - After editing `config/GXEE8P/patches.txt`, run `python tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen`
   if ninja says there is nothing to do [uncertain].

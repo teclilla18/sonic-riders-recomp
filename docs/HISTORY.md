@@ -392,3 +392,11 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   clamp/ADPCM, cached ARAM base, silent sends skipped: WAV identical on the PC det route; Vita mixing 7.4 -> 6.6
   ms/frame, audio thread 214 -> 195 ms/s [confirmed]. The det-route RAM hash flakes once in a while in blocks
   00000006 (old code too) [likely harness noise]. One Vita run stopped logging at 140 s (no dump) [uncertain].
+- 2026-11-04 (h): **Vita: exact profile, fixed memory base** (branch `vita`; PCH-2000 at CPU 500 / bus 222 / GPU
+  222). The sampling profiler charged a caller's code to the last function it called; new `RECOMP_PROFEXACT=1`
+  build re-marks the caller after each call. Race profile is flat: PSMTX/PSVEC 5.5% (not ~12%), top function 6%
+  [confirmed]. Double/single conversions ~2.3% of executed guest instructions, so FPR halves as float is not worth
+  it [likely]. Disassembly showed each guest access reloading the memory base global; the window is now reserved
+  at a fixed 0x90000000 (kubridge honours it) and the base is a constant (`configure.py --vita-base`, default on
+  the Vita). Alternating A/B, 2 runs each: 1P 36.4 vs 37.9 ms/step, 2P 33.4 vs 36.6 [likely: 4/4 pairs better,
+  each inside the noise]. PC/Switch unaffected (Vita-only; recompiler default output byte-identical).

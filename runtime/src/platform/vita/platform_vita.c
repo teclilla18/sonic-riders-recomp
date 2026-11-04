@@ -279,9 +279,18 @@ void rt_thread_pin(int core) {
 #define WINDOW_SIZE 0x20010000u
 void mem_init(void) {
     vita_mark("mem_init: reserving the guest window");
+#ifdef PPC_VITA_BASE
+    void* w = (void*)(uintptr_t)(PPC_VITA_BASE);  /* the generated code uses this address as a constant (ppc.h) */
+#else
     void* w = NULL;
+#endif
     SceUID blk = kuKernelMemReserve(&w, WINDOW_SIZE, SCE_KERNEL_MEMBLOCK_TYPE_USER_RW);
     if (blk < 0) rt_fatal("kuKernelMemReserve of %u MiB failed (0x%X): kubridge 0.2+ loaded?", WINDOW_SIZE >> 20, blk);
+#ifdef PPC_VITA_BASE
+    if ((uintptr_t)w != (uintptr_t)(PPC_VITA_BASE))
+        rt_fatal("the guest window must be at 0x%08X (this build's --vita-base) but was placed at %p",
+                 (unsigned)(PPC_VITA_BASE), w);
+#endif
     const struct { uint32_t start, size; } r[] = {{0, GUEST_RAM_SIZE}, {LOCKED_CACHE_PHYS, 0x10000}};
     for (int i = 0; i < 2; i++) {
         int rc = kuKernelMemCommit((uint8_t*)w + r[i].start, r[i].size, KU_KERNEL_PROT_READ | KU_KERNEL_PROT_WRITE, NULL);

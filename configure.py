@@ -29,6 +29,7 @@ from ninja_syntax import Writer  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--target", choices=["host", "switch", "android", "vita"], default="host")
 ap.add_argument("--vitasdk", default="", help="vita: VitaSDK folder ($VITASDK; kubridge package installed)")
+ap.add_argument("--vita-base", default="0x90000000", help="vita: reserve the guest window at this fixed address (hex, an ARM immediate) and use it as a constant in all code (default; 4-9%% less game time per step); none: placed by the system, base read from a global")
 ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="host compiler setup")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
@@ -214,6 +215,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         if " " in vsdk:
             sys.exit("the VitaSDK folder must not contain spaces: %s" % vsdk)
         arch = "-march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb -ffunction-sections -fdata-sections"
+        if args.vita_base and args.vita_base != "none":
+            arch += " -DPPC_VITA_BASE=0x%08Xu" % int(args.vita_base, 16)
         n.variable("cc", vsdk + "/bin/arm-vita-eabi-gcc")
         n.variable("cxx", vsdk + "/bin/arm-vita-eabi-g++")
         vinc = "-Iruntime/include/compat_vita -I%s/arm-vita-eabi/include %s" % (vsdk, inc)

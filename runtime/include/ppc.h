@@ -46,6 +46,13 @@ static inline __attribute__((always_inline)) uint8_t* ppc_mem_base(void) {
     return p;
 }
 #define PPC_MEM_BASE (ppc_mem_base())
+#elif defined(__vita__) && defined(PPC_VITA_BASE)
+extern uint8_t* ppc_mem_base_var;
+/* Vita (configure.py --vita-base): the window is reserved at this fixed address (platform_vita.c
+ * mem_init stops if it lands elsewhere), so the base is a constant: an access is `bic; add #base; ldr`
+ * instead of loading the global after every guest store or device-path call (the generated code is
+ * built with -fno-strict-aliasing, and 32-bit ARM has too few registers to keep it in one) */
+#define PPC_MEM_BASE ((uint8_t*)(uintptr_t)(PPC_VITA_BASE))
 #else
 extern uint8_t* ppc_mem_base_var;
 #define PPC_MEM_BASE (ppc_mem_base_var)
