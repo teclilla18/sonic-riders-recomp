@@ -339,7 +339,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   handoffs deadlocked), then the perf test ran: CPU 500 (plugin override of 444), game thread 52.1 ms/step 1P /
   43.0 ms 2P, GP thread 42-51 ms [confirmed]. Remote: vitacompanion 1.08 installed, udcd_uvc enabled (USB camera
   "PSVita" read with ffmpeg). docs/notes/vita-research.md.
-<<<<<<< HEAD
 - 2026-11-04 (b): **Vita: profile, cheap wins, V1b** (branch `vita`; PCH-2000 at CPU 500 / GPU 222). A boot
   microbench showed a clock read costs 682 ns and `rt_ticks` 1,299 ns (64-bit division in software); the
   renderer's per-draw `[perf]` timers read it ~10 times per draw. Fixes: microsecond `rt_ticks`, per-draw timers
@@ -370,8 +369,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   `-DPPC_FLOAT_LOCALS=1`, both off by default): 7,727 of 23,050 FPR halves typed float, 7,150 operations as
   `PPC_SOP`; PC det route with it forced on differs from step 3547 (1P demo race) [confirmed not bit-exact];
   cause not found yet. Details: docs/notes/vita-research.md "Float-typed locals prototype".
-=======
-- 2026-11-04 (d): **Clean-install release test in Windows Sandbox** (`main`). New `tools/sandbox_test.py`: the
+- 2026-11-04 (e): **Clean-install release test in Windows Sandbox** (`main`). New `tools/sandbox_test.py`: the
   release zip, marked as downloaded (ZoneId=3) and extracted by the Explorer shell, installed by its .bat with
   the unattended flags in a fresh sandbox (8 GB, disc folder read-only, results folder the only writable one).
   Found and fixed, each by a cold rerun: dtk.exe exits 0xC0000135 on a clean Windows (VCRUNTIME140.dll; now
@@ -382,4 +380,3 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   exit code (`SR_NOPAUSE=1` skips the pause). Final cold runs on commit 174b9811 (zips v0.4.1-rc5): PC and
   Android PASS, each in `C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not tested: playing (no GPU in
   the sandbox), the Switch zip. Procedure: docs/notes/build-and-test.md.
->>>>>>> main
