@@ -1,11 +1,11 @@
-# State (2026-11-03)
+# State (2026-11-04)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-Latest release: **v0.3.4** (2026-10-29). Unreleased on `main`: online-play groundwork (record/replay, lockstep,
-generated online save, own view) and the performance test (`SR_PERFTEST`).
+Latest release: **v0.4.0** (2026-11-04): the Android port (`android` merged into `main`) plus the online-play
+groundwork and the performance test. Vita probe code lives on branch `vita` (not in the release).
 
 ## Windows host build (the fast test loop)
 
@@ -43,10 +43,13 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   - First PC-Switch lockstep session (Switch hosting, PC as player 2): identical up to frame 6917, then a desync at
     6919 caused by the sign of a NaN (x86 vs ARM). PC-PC and Switch-Switch are not affected.
   - Perf test record: `perf/results/2026-10-30-switch.json`.
-- 2026-10-29: teal tint fix confirmed ("Are you ready?" screen and a Metal City race, 59.9 fps at the countdown).
-- 2026-10-26, stock clocks (hw32-hw36): uniform-buffer XF reads -27% GPU time; decode helper; shader-key fix.
 
-## Android port (branch `android`; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03 entries)
+## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
+
+- **Open, known issue in v0.4.0: device lost (crash) while screen recording**, also once on a warm phone without
+  recording. Reproduces 4 of 4 with `SR_PERFTEST=1` + `adb shell screenrecord`. Four fixes tried and ruled out;
+  next ideas (device-loss recovery, smaller present surface + pre-rotation): docs/notes/android.md "Open: device
+  lost". Experiments patch: `build/old/android-devicelost-experiments-2026-11-04.patch` (local).
 
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
   background/resume, touch controls, Xbox Series X pad over Bluetooth. [confirmed]
@@ -61,14 +64,17 @@ generated online save, own view) and the performance test (`SR_PERFTEST`).
   (box art, never committed; default for players is the save icon). Right stick → C-stick: checked in code (same
   round 25% dead zone, full range, up = higher, sent unchanged in the SI poll); not checked in a game screen that
   uses the C-stick.
-- **Next:** GPU needs a profiler now (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
+- **Next after the crash:** GPU needs a profiler (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
   size), pre-rotation, 2P with two pads.
 
 ## After Android (user's wish list, 2026-11-03)
 
 Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
 (user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
-memory fits, CPU is the blocker (est. 50-80 ms/step vs 33 needed); next step only a measuring probe (V1a/V1b).
+**Probe V1a run on the user's PCH-2000 (2026-11-04)** [confirmed]: the game boots and plays headless; at CPU 500
+the game thread needs 52 ms/step (1P demo) / 43 ms (2P), GP thread 42-51 ms: ~1.6x too slow for the game's 30 fps
+mode. Remote control: vitacompanion (FTP 1337, commands 1338), screen via udcd_uvc + ffmpeg. Next: V1b (GXM draw
+microbench), game-thread profile on the Vita. Details: docs/notes/vita-research.md "Probe V1a results".
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
@@ -84,7 +90,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android port (branch `android`): GPU cost next (see "Android" above). Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
+1. Android device lost while recording (v0.4.0 known issue, see "Android" above); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
 2. Online phase 3/4 (paused, see above).
 3. #12 PC at 13 fps (v0.3.4): read the attached log (GPU? vsync? software GL?).
 4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.

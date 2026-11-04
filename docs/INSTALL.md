@@ -5,13 +5,14 @@
 - [What you need](#what-you-need)
 - [Install on Switch](#install-on-switch)
 - [Install on PC](#install-on-pc)
+- [Install on Android](#install-on-android)
 - [Updating to a new version](#updating-to-a-new-version)
 - [If something goes wrong](#if-something-goes-wrong)
 - [What the setup does](#what-the-setup-does)
 
 ## What you need
 
-**For both versions:**
+**For every version:**
 
 - **Your own copy of Sonic Riders (USA)** dumped to a disc image: game ID `GXEE8P`, revision 0, a clean
   1:1 `.iso` (1,459,978,240 bytes, SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`, the Redump
@@ -36,6 +37,14 @@
 
 - A graphics card with **OpenGL 3.3** (any from the last ten years). Tested on an NVIDIA RTX 3060.
 - A game controller is recommended (Xbox-style, through SDL; up to 4 for multiplayer). Keyboard works too.
+
+**For Android:**
+
+- **A 64-bit Android phone with Android 11 or newer** and Vulkan graphics (almost every phone from the
+  last five years). Tested on a Samsung Galaxy S23 Ultra, where races run at 60 fps; other phones are untested.
+- About **2 GB free on the phone** (the game plus your disc image) and about **4 GB more on the PC** for the
+  Android build tools (a 1.1 GB download the first time, about 3 GB unpacked, kept for updates).
+- A **USB cable** between the phone and the PC, and **USB debugging** turned on (step 1 below).
 
 ## Install on Switch
 
@@ -80,18 +89,56 @@ see `tools/nsp/build_nsp.ps1`.
 Controls are in [PLAYING.md](PLAYING.md). The game's log is `sonicriders.log` in the install folder
 (attach it to bug reports).
 
+## Install on Android
+
+The game is built on your PC and installed on the phone over USB; nothing is downloaded on the phone.
+
+1. **On the phone, turn on USB debugging (once):** Settings → About phone → Software information → tap
+   **Build number** 7 times until it says Developer mode is on. Then Settings → **Developer options** →
+   **USB debugging**: on. (On other brands Build number is under About phone.)
+2. **Download** `SonicRiders-Android-Setup-<version>.zip` from the [latest release](../../../releases/latest)
+   and **extract** the whole zip to a folder **you'll keep**, for example `C:\SonicRiders` (only English letters
+   and digits in the path).
+3. **Connect the phone** with a USB cable and unlock it. If it asks what the USB connection is for, choose
+   **File transfer**.
+4. **Double-click `Install Sonic Riders (Android).bat`.** If Windows shows "Windows protected your PC", click
+   *More info* → *Run anyway*. Then:
+   - read and accept the **Android SDK License** (the setup uses Google's build tools);
+   - pick your disc image;
+   - say **y** to install on the connected phone. When the phone shows **"Allow USB debugging?"**, tap
+     **Allow** (tick *Always allow from this computer* to skip it next time).
+5. **Wait.** The first run downloads the Android build tools and builds the game: 20–40 minutes. The setup
+   then installs the app and copies your disc image to the phone (about a minute over USB), and checks it.
+6. **Play:** start **Sonic Riders** from the phone's app list. You can unplug the cable.
+
+**Controls:** touch controls are on screen. The left half is the control stick (it appears where your thumb
+lands); on the right are JUMP (A, hold to charge), BOOST (B), DRIFT (R, hold) and TORNADO (L + R); top right
+is START, top left opens the settings menu. Any Bluetooth or USB controller works too (it hides the touch
+controls until you touch the screen; hold Back/Select or press the phone's Back for the menu). Two players on
+one phone: connect two controllers.
+
+**Your saves** live inside the app's own folder on the phone (`Android/data/net.srnative.sonicriders/files/`).
+Uninstalling the app deletes them, so update by installing over it (below), not by uninstalling first.
+
+**Known issue:** the game can **crash while you record the screen** (and, rarely, when the phone is very warm).
+The phone's GPU driver resets the game; reopen it. A fix is being worked on.
+
 ## Updating to a new version
 
 1. Download the new zip for your platform from the [latest release](../../../releases/latest) and
    extract it to a **new** folder.
-2. Run its installer (`Install Sonic Riders (Switch).bat` or `Install Sonic Riders (PC).bat`) with the
-   same disc image (and, for the Switch, the same SD card).
+2. Run its installer (`Install Sonic Riders (Switch).bat`, `Install Sonic Riders (PC).bat` or
+   `Install Sonic Riders (Android).bat`) with the same disc image (and, for the Switch, the same SD card;
+   for Android, the phone connected).
 3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
    minutes).
 
 Your saves and settings are kept: on the Switch they're on the SD card, which the update doesn't touch.
 On PC they're in the old install folder: copy its `saves` folder into the new one, then delete the old
-folder.
+folder. On Android the update installs over the app and keeps its saves; it must be built **on the same PC**,
+because Android only accepts an update signed with the same key (the setup keeps it in
+`%LOCALAPPDATA%\SonicRidersSetup\tools\android\`; don't delete it). From another PC you would have to
+uninstall first, which deletes the saves.
 
 To get a notification when a new version comes out, click **Watch** at the top of the GitHub page,
 then **Custom** → **Releases**. What changed in each version is in the [CHANGELOG](../CHANGELOG.md).
@@ -109,6 +156,9 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 | Switch: slow motion / low frame rate | Set the frame rate to *30 fps* or *60 fps* (hold Minus for the settings), or overclock (see [What you need](#what-you-need)). |
 | PC: the game doesn't start | Check `sonicriders.log` in the install folder; update your graphics driver (OpenGL 3.3 is needed). |
 | PC: no sound | Check Windows' default playback device; the game uses it. |
+| Android: "0 Android devices are connected" | Unlock the phone, use a data cable (not charge-only), choose File transfer, turn on USB debugging and tap Allow on the phone, then run the installer again. |
+| Android: "signatures do not match" (INSTALL_FAILED_UPDATE_INCOMPATIBLE) | The installed app was built on another PC (or the signing key was deleted). Uninstall the app (this deletes its saves) and install again. |
+| Android: the game closes while screen recording | Known issue (see [Install on Android](#install-on-android)); reopen the game and play without recording for now. |
 | Anything else | See [Reporting bugs](REPORTING-BUGS.md). |
 
 ## What the setup does

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Make the release zip: the committed source plus the setup tool, nothing else.
 
-  python tools/make_release.py --version v0.2.0 [--flavor switch|pc|source] [--ref HEAD] [--out build/release]
+  python tools/make_release.py --version v0.2.0 [--flavor switch|pc|android|source] [--ref HEAD] [--out build/release]
 
 Flavors (one download per platform, for players):
   switch  SonicRiders-Switch-Setup-<version>.zip: "Install Sonic Riders (Switch).bat" + README-FIRST.txt
   pc      SonicRiders-PC-Setup-<version>.zip: "Install Sonic Riders (PC).bat" + README-FIRST.txt
+  android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).bat" + README-FIRST.txt
   source  sonic-riders-recomp-<version>-<commit>.zip: the tree as is (SonicRidersSetup.bat asks)
 
 The zip holds every file tracked in git at REF (default HEAD) under one top folder, plus a VERSION
@@ -30,8 +31,11 @@ def git(*args):
     return subprocess.run(("git",) + args, capture_output=True, check=True).stdout
 
 
+PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android")}
+
+
 def launcher(flavor):
-    plat, target = ("Switch", "switch") if flavor == "switch" else ("PC", "pc")
+    plat, target = PLAT[flavor]
     lines = [
         "@echo off",
         "rem Sonic Riders native port: builds the %s version from your own disc image (see README-FIRST.txt)" % plat,
@@ -67,6 +71,32 @@ def readme_first(flavor, version):
             "",
             "In game: hold Minus for the settings menu (widescreen, FPS counter, controllers, screenshots).",
         ]
+    elif flavor == "android":
+        body = [
+            "PLAY ON AN ANDROID PHONE (64-bit, Android 11 or newer, Vulkan; tested on a Galaxy S23 Ultra)",
+            "",
+            "The game is built on this PC from your disc image and installed on the phone over a USB cable.",
+            "",
+            "On the phone, once: turn on USB debugging.",
+            "  Settings > About phone > Software information > tap Build number 7 times (Developer options),",
+            "  then Settings > Developer options > USB debugging: on.",
+            "",
+            "1. Extract this whole zip to a folder you'll keep (for example C:\\SonicRiders). Its path must use",
+            "   only English letters and digits. Install updates from this same PC: it keeps the signing key.",
+            "2. Connect the phone with a USB cable, unlock it, and choose File transfer if it asks.",
+            '3. Double-click "Install Sonic Riders (Android).bat". If Windows warns, click More info > Run anyway.',
+            "   Accept the Android SDK License when asked, pick your disc image, and say y to install.",
+            '   When the phone asks "Allow USB debugging?", tap Allow.',
+            "   The first run downloads about 1.1 GB of Android build tools (about 8 GB free needed on the PC)",
+            "   and takes 20-40 minutes.",
+            "4. The setup installs the game and copies your disc image (1.4 GB) to the phone.",
+            "   Start Sonic Riders from the phone's app list.",
+            "",
+            "Controls: touch controls on screen, or any Bluetooth/USB controller. Top-left button = settings menu.",
+            "Your saves live inside the app: uninstalling the app deletes them.",
+            "",
+            "Known issue: the game can crash while you record the screen (and rarely when the phone is very warm).",
+        ]
     else:
         body = [
             "PLAY ON WINDOWS (no emulator: the game runs natively)",
@@ -101,7 +131,7 @@ def main():
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
     ap.add_argument("--ref", default="HEAD", help="commit to package (default: HEAD)")
     ap.add_argument("--out", default=os.path.join("build", "release"), help="output folder")
-    ap.add_argument("--flavor", choices=["switch", "pc", "source"], default="source")
+    ap.add_argument("--flavor", choices=["switch", "pc", "android", "source"], default="source")
     args = ap.parse_args()
 
     root = git("rev-parse", "--show-toplevel").decode().strip()
@@ -131,7 +161,7 @@ def main():
         top = "sonic-riders-recomp-%s" % args.version
         zipname = "%s-%s.zip" % (top, commit)
     else:
-        plat = "Switch" if args.flavor == "switch" else "PC"
+        plat = PLAT[args.flavor][0]
         top = "SonicRiders-%s-%s" % (plat, args.version)
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
         files = [(n, d) for n, d in files if n != "SonicRidersSetup.bat"]

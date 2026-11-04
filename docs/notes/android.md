@@ -83,3 +83,20 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Remaining GPU leads (untested): per-draw cost on the tiler (4 EFB passes per race frame: each copy ends a render
   pass, so tiles are stored and reloaded), the vertex shader's XF reads, render resolution. Needs a GPU profiler
   (Android GPU Inspector / Snapdragon Profiler) before more guessing.
+
+## Open: device lost while screen recording (2026-11-04) [confirmed repro, cause unknown]
+
+- Symptom: `FATAL: [vk] vkQueueSubmit(...) failed: -4` (VK_ERROR_DEVICE_LOST), Adreno `log_gpu_snapshot` just
+  before. The user hit it while recording and playing (warm phone); reproduced 4 of 4 with the perf test plus
+  `adb shell screenrecord`, and once without recording on the warm phone (older build).
+- Pattern: from the first heavy race frame (~6,000 draws, right after "Now Loading") every frame takes ~330 ms
+  (`present` or `submit` blocks), then the device is lost after 4-5 such frames. Without recording that first
+  frame alone costs 85-99 ms of GPU (every build since 2026-11-03 17:00, ubershader too), then normal.
+- Ruled out, each still crashing (patch kept locally, not committed): EFB copy/clear rectangles clamped (none were
+  out of bounds); frames split into submissions of 1,500 draws; robustBufferAccess on; the swapchain acquire waited
+  at colour output instead of ALL_COMMANDS; `SR_VK_TINYSCISSOR=1` (1-pixel scissor) still crashes, so not pixel cost.
+  The driver offers no VK_EXT_device_fault.
+- Next ideas: recover from device loss (rebuild the Vulkan state, re-upload textures); present at a lower surface
+  size (Java `SurfaceHolder.setFixedSize`) and pre-rotate (swapchain transform 1 vs current 2), so the compositor
+  and recorder do less; fewer swapchain images (now 5).
+- Released in v0.4.0 with this as a known issue (user's decision).
