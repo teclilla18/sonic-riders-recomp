@@ -110,6 +110,14 @@ own game files, as we do.
   log socket to the PC.
 - A small MCP server (like switch-remote) could wrap FTP + port 1338 + USB capture. Not built yet.
 
+## The maintainer's test Vita (checked 2026-11-03 over VitaShell USB, read-only)
+
+- PCH-2000, firmware 3.65 with Ensō; `ux0:` is a ~120 GB card through YAMT (~13 GB free).
+- Present: libshacccg (extracted with ShaRKF00D to `ur0:data/libshacccg.suprx`), iTLS-Enso, YAMT, PSM runtime
+  driver, AutoPlugin 2, VitaGrafix, VitaShell, crash dumps in `ux0:data/` (so core dumps are on).
+- Not visible over USB: `ur0:tai/config.txt` (no `ux0:tai/`), so whether PSVshell, kubridge or vitacompanion are
+  loaded is unknown. vitacompanion is not on the card. VitaShell's own FTP (SELECT, port 1337) works without it.
+
 ## Suggested probe build (like Android milestone 1)
 
 Goal: measure, on the user's PCH-2000 at 444 and 500 MHz, whether 33 ms per step is reachable, before any renderer
@@ -123,8 +131,8 @@ work. Run on hardware only (Vita3K is not a stand-in: it skips DRAM latency and 
    compile time for 50 specialized shaders. Report CPU submit ms and GPU ms at GPU 222 MHz.
 3. **Gate:** continue only if V1a is <= ~45 ms/step at 500 MHz (headroom for savings) and V1b submits 7,000 draws in
    <= ~15 ms on a second core. Otherwise stop and record the numbers.
-4. Prerequisites from the user: firmware version, Ensō or HENlo, storage plugin, whether libshacccg, PSVshell and
-   vitacompanion are installed, and the Vita's IP.
+4. Prerequisites still open: whether PSVshell and kubridge are in `ur0:tai/config.txt`, vitacompanion (to install), and
+   the Vita's IP.
 
 ## Sources (read 2026-11-03)
 
