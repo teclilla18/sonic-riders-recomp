@@ -89,18 +89,28 @@ __attribute__((used)) static void* const k_emutls_needs[] = {
 /* _Thread_local is emulated (GCC emutls over pthread keys) here; the scheduler's t_self must differ per
  * host thread or guest thread handoffs deadlock. Checked once at start. */
 static _Thread_local int t_tls_probe;
+static pthread_key_t g_probe_key;
+static void* g_probe_key_seen = (void*)1;
+static int g_probe_tid_main, g_probe_tid_new;
 static void* tls_probe_thread(void* arg) {
+    g_probe_key_seen = pthread_getspecific(g_probe_key);  /* must be NULL in a new thread */
+    g_probe_tid_new = sceKernelGetThreadId();
     *(int*)arg = t_tls_probe;  /* a new thread must see 0, not the main thread's 1 */
     t_tls_probe = 2;
     return NULL;
 }
 static void tls_check(void) {
+    pthread_key_create(&g_probe_key, NULL);
+    pthread_setspecific(g_probe_key, &g_probe_key);
+    g_probe_tid_main = sceKernelGetThreadId();
     t_tls_probe = 1;
     int seen = -1;
     pthread_t t;
     if (pthread_create(&t, NULL, tls_probe_thread, &seen) == 0) pthread_join(t, NULL);
     rt_log("[vita] thread-local check: new thread saw %d, main thread keeps %d (%s)", seen, t_tls_probe,
            seen == 0 && t_tls_probe == 1 ? "per thread: ok" : "SHARED: guest thread switches will hang");
+    rt_log("[vita] pthread key: new thread got %p (main set %p; NULL expected); thread ids %X / %X", g_probe_key_seen,
+           (void*)&g_probe_key, g_probe_tid_main, g_probe_tid_new);
 }
 
 void platform_init(void) {
