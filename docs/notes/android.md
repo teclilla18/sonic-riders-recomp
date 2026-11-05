@@ -112,3 +112,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   size (Java `SurfaceHolder.setFixedSize`) and pre-rotate (swapchain transform 1 vs current 2), so the compositor
   and recorder do less; fewer swapchain images (now 5).
 - Released in v0.4.0 with this as a known issue (user's decision).
+- 2026-11-05, v0.4.2, a normal play session while recording (via the new crash report): same pattern at 2,769
+  draws/frame (not ~6,000), `present` 297 ms per frame for 4 frames, then device lost. One recording session
+  before it did not crash: intermittent.
