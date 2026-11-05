@@ -388,3 +388,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   launch logged `[crash] SIGABRT` with a stack through the signal frame into `SDL_main`, the next launch showed the
   dialog and saved the report to Download/SonicRiders, Close kept the game running, and a force-stop + relaunch
   showed no dialog [confirmed]. Not tested on a phone: a fault in recompiled code, Share report to a real app.
+- 2026-11-05 (d): the user screen-recorded on the S23 Ultra with v0.4.2 installed (build b790304) and the game did
+  not crash. Not reproduced is not fixed: v0.4.2 changed nothing in rendering, and the earlier 4-of-4 repro used
+  `SR_PERFTEST=1` + `adb shell screenrecord` [uncertain: recorder, length and scene not known yet]. Known-issue
+  note kept; a new crash would now leave a report (Download/SonicRiders).
