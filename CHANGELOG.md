@@ -2,6 +2,9 @@
 
 ## v0.4.1 (2026-11-04)
 
+- Android setup: when no phone was found (or it had not allowed USB debugging yet), the install step was
+  skipped without a word. It now says why and what to do (issue #14; the v0.4.1 Android zip was updated
+  in place on 2026-11-05).
 - Android setup: a first build could fail at the very end with "unable to find library -lSDL2" (the game was
   linked before SDL2 was built; running the setup again worked). The link now waits for SDL2 (issue #13).
 - Android setup from the release download failed at the last step ("unrecognized arguments") for everyone in

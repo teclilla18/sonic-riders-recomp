@@ -492,12 +492,28 @@ if ($builtApks.Count -gt 0) {
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
     # "adb devices" starts the adb server, which keeps running (and holds the tools folder) after the
     # setup: skip it when the answer is already no, and stop it at the end
-    $devs = @()
-    if ($Install -ne "no") { $devs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" }) }
+    $devs = @(); $unauth = @()
+    if ($Install -ne "no") {
+        $adbLines = @(& $adb devices 2>$null | Select-Object -Skip 1)
+        $devs = @($adbLines | Where-Object { $_ -match "\tdevice$" })
+        $unauth = @($adbLines | Where-Object { $_ -match "\tunauthorized$" })
+    }
     $ErrorActionPreference = $old
     if (-not $Install) {
         if ($devs.Count -eq 1) { $Install = (Ask "Install it on the connected Android device now? (y/n)" "y") -replace "^[yY].*", "yes" -replace "^[nN].*", "no" }
-        else { $Install = "no" }
+        else {
+            # say why nothing is installed: a silent skip looks like the setup jumped to the end (#14)
+            $Install = "no"
+            if ($devs.Count -gt 1) {
+                Log "Not installing: $($devs.Count) Android devices are connected; leave only the phone connected and run the setup again." "Yellow"
+            } elseif ($unauth.Count -gt 0) {
+                Log "Not installing: the phone is connected but has not allowed this PC yet. Unlock it, tap Allow on the" "Yellow"
+                Log "'Allow USB debugging?' prompt, then run the setup again (the build is reused, so it goes straight to installing)." "Yellow"
+            } else {
+                Log "Not installing: no Android phone found. Turn on USB debugging (Settings > Developer options), connect the" "Yellow"
+                Log "phone by USB, allow this PC on the phone's screen, then run the setup again (the build is reused)." "Yellow"
+            }
+        }
     }
     if ($Install -eq "yes") {
         if ($devs.Count -ne 1) { Fail "Install: $($devs.Count) Android devices are connected and authorized; exactly one is needed." "Turn on USB debugging, connect the phone, allow this PC on its screen, then run the setup again." }
