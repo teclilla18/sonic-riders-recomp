@@ -48,6 +48,18 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Emulator (dev only, not in the setup): emulator 16740729 + `system-images;android-35;google_apis;x86_64` r09
   unpacked into `<tools>/android-sdk` (Google SHA-1 checked), AVD `srtest` in `<tools>/avd` (`ANDROID_AVD_HOME`),
   started with `-no-window -gpu host` (WHPX). Its GLES stops at 3.1 and its GPU is the PC's: no performance numbers.
+- Crash reports (2026-11-05): `crash_signal` in platform_host.c (SIGSEGV/BUS/ILL/FPE/ABRT, through ART's
+  sigchain) writes `crash.txt` in the app folder with plain `write()` (signal, fault address for real faults, pc,
+  lr, `_Unwind_Backtrace` as `lib+offset symbol`), then logcat and the log, then the guest dumps; then the old
+  handler runs (debuggerd still writes its tombstone; sent signals are re-raised). On the next launch,
+  `CrashReport.collect` (before `super.onCreate`, so before the log is rotated) reads the newest
+  `ApplicationExitInfo` (CRASH, CRASH_NATIVE, ANR, INITIALIZATION_FAILURE, EXIT_SELF with status != 0; newest
+  timestamp kept in prefs `crashreport/exit_seen`) or a `crash.txt`, and writes header + crash.txt + log (first
+  256 KB + last 768 KB) to `crash-report.txt` and via MediaStore to `Download/SonicRiders/sonicriders-crash-<time>.txt`,
+  then a dialog with Share report (ACTION_SEND of the MediaStore Uri). Summary line: last `FATAL:` of the log, else
+  crash.txt's first line. Java exceptions also go to crash.txt. Test on the emulator: launch args `missing.iso`
+  (rt_fatal -> abort) or `adb root` + `adb shell kill -SEGV <pid>`, then start it again. A missing disc image
+  (`cannot open the disc image`) shows up this way, as a "crash on launch".
 - Touch controls (2026-11-03, second round): stick home a little north-east (`stick_home`); dead zone 12% in races,
   35% with a squared start in the game's menus (`stick_value`, by `GAME_TOP_MODE`; the log says `[touch] game mode N`
   when it changes); PAUSE is a circle with START drawn in vk_touch.frag (radius 0.065 H). Menu by touch: Close and

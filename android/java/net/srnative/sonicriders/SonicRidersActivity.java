@@ -6,10 +6,26 @@
 package net.srnative.sonicriders;
 
 import android.content.Intent;
+import android.os.Bundle;
 
 import org.libsdl.app.SDLActivity;
 
 public class SonicRidersActivity extends SDLActivity {
+    private static boolean crashChecked;
+
+    @Override
+    protected void onCreate(Bundle state) {
+        // before the game starts (it rotates sonicriders.log): a report of the last run, if it ended badly
+        CrashReport report = null;
+        if (!crashChecked) {
+            crashChecked = true;
+            CrashReport.installJavaHandler(this);
+            report = CrashReport.collect(this);
+        }
+        super.onCreate(state);
+        if (report != null) report.show(this);
+    }
+
     @Override
     protected String[] getLibraries() {
         return new String[] {"c++_shared", "SDL2", "main"};
