@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.2 (2026-11-05)
 
 - Android: crash reports you can send from the phone. When the game crashed or stopped with an error last time,
   the next launch saves a report (the game's log, the crash and the phone model) to

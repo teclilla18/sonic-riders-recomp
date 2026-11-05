@@ -4,12 +4,10 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-Latest release: **v0.4.1** (2026-11-04, tag at c263ebe): setup fixes only (the game is v0.4.0's: the Android
-port, online-play groundwork, perf test). **v0.4.0's GitHub release was deleted** (user's request; its tag stays):
-its Android download failed at the APK step for everyone. v0.4.1's fixes were found by the new Windows Sandbox
-clean-install test (`tools/sandbox_test.py`); cold PC and Android installs PASS on c263ebe, in both
-`C:\SonicRiders` and `C:\Sonic Riders Test` [confirmed]. Not yet seen by a user: no replies in #12/#13 since our
-answers (checked 2026-11-04 night). Vita code: branch `vita` only.
+Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
+`Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
+(both folders) [confirmed]; crash dialog checked on the S23 Ultra and the emulator [confirmed]. Not yet seen by a
+user. Vita code: branch `vita` only.
 
 ## Windows host build (the fast test loop)
 
@@ -52,10 +50,8 @@ answers (checked 2026-11-04 night). Vita code: branch `vita` only.
   next ideas (device-loss recovery, smaller present surface + pre-rotation): docs/notes/android.md "Open: device
   lost". Experiments patch: `build/old/android-devicelost-experiments-2026-11-04.patch` (local).
 
-- **Crash reports (2026-11-05, main, unreleased):** native crash handler + next-launch dialog that saves
-  `Download/SonicRiders/sonicriders-crash-<time>.txt` with Share report. Tested on the x86_64 emulator only
-  (missing disc, kill -SEGV, no false report after force-stop/reinstall); not yet on a phone. Reddit report
-  "crashes on launch" (cause unknown; a missing disc image looks exactly like that): send them the next build.
+- **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
+  dialog after a normal stop) and the emulator (also kill -SEGV). Reddit "crashes on launch": ask for the report.
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
   background/resume, touch controls, Xbox Series X pad over Bluetooth. [confirmed]
 - Perf (S23 Ultra, Android 17, `SR_PERFTEST`): **specialized fragment shaders** (2026-11-03, tested by A/B on the

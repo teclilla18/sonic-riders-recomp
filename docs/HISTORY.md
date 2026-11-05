@@ -430,3 +430,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   signal stack (stack overflow there gets no crash.txt; the exit record still triggers the report) [uncertain].
   Cosmetic: the share sheet shows the MediaStore id instead of the file name [uncertain whether receiving apps do].
 - The redditor's cause is unknown; a missing or failed disc push shows exactly as a "crash on launch" [likely].
+- 2026-11-05 (c): **v0.4.2 released** (tag b790304; PC, Switch, Android zips). Before publishing: cold Windows
+  Sandbox PC and Android PASS, both folders [confirmed]; on the S23 Ultra (arm64, Android 17) the `missing.iso`
+  launch logged `[crash] SIGABRT` with a stack through the signal frame into `SDL_main`, the next launch showed the
+  dialog and saved the report to Download/SonicRiders, Close kept the game running, and a force-stop + relaunch
+  showed no dialog [confirmed]. Not tested on a phone: a fault in recompiled code, Share report to a real app.
