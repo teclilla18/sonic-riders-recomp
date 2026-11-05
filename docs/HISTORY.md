@@ -359,5 +359,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Issue #14: the setup built the APK, then step 7 skipped the install without a word because `adb devices` showed
   no authorized phone. Found from the reporter's setup.log. Fix (ceb9502): log why (no phone / not authorized /
   several) and what to do. The v0.4.1 Android zip was rebuilt from ceb9502 and replaced in place; tag unchanged.
-  Tested: script parses, the three adb outputs simulated [confirmed]; not run end to end, no Sandbox test [uncertain].
+  Tested from the refreshed zip: cold Windows Sandbox Android PASS (both folders, 2 min each) [confirmed]; on this PC
+  with no device, step 7 prints "no Android phone found" [confirmed]; with the x86_64 emulator (srtest) attached it
+  installs (versionName v0.4.1 (ceb95020)) [confirmed]. Not tested: the "not authorized" and "several devices"
+  messages (simulated only), a real phone. The arm64 APK was not running 20 s after start on the emulator (arm64
+  under translation; earlier emulator runs used an x86_64 build) [uncertain, not the setup].
 - #13 closed (reporter: installs, 60 fps on Snapdragon 7 Gen 3).
