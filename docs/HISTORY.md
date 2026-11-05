@@ -353,3 +353,11 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - 2026-11-04 (f): **v0.4.1 released** (tag c263ebe; PC, Switch and Android zips): the setup fixes of (e). Cold
   sandbox PC + Android PASS on the tagged commit (both folders) before publishing [confirmed]. The v0.4.0 GitHub
   release was deleted at the user's request (its Android download was broken); the v0.4.0 tag remains.
+
+## 2026-11-05: Android setup skipped the install silently (#14)
+
+- Issue #14: the setup built the APK, then step 7 skipped the install without a word because `adb devices` showed
+  no authorized phone. Found from the reporter's setup.log. Fix (ceb9502): log why (no phone / not authorized /
+  several) and what to do. The v0.4.1 Android zip was rebuilt from ceb9502 and replaced in place; tag unchanged.
+  Tested: script parses, the three adb outputs simulated [confirmed]; not run end to end, no Sandbox test [uncertain].
+- #13 closed (reporter: installs, 60 fps on Snapdragon 7 Gen 3).
