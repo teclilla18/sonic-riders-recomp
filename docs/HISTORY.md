@@ -392,3 +392,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   not crash. Not reproduced is not fixed: v0.4.2 changed nothing in rendering, and the earlier 4-of-4 repro used
   `SR_PERFTEST=1` + `adb shell screenrecord` [uncertain: recorder, length and scene not known yet]. Known-issue
   note kept; a new crash would now leave a report (Download/SonicRiders).
+- 2026-11-05 (e): minutes later the user's v0.4.2 session crashed loading a race (screen recording). The new crash
+  report worked end to end on a real crash [confirmed]: next launch wrote the report with
+  `FATAL: [vk] vkQueueSubmit ... failed: -4` (device lost), SIGABRT stack through rt_fatal. Same pattern as the
+  open issue: 4 frames of 299-339 ms each, all in `present` (297 ms), 2,769 draws/frame (fewer than the ~6,000 seen
+  before), then the loss; the window before showed GPU 8.3 ms/frame avg, max 25 ms. So (d) was luck, not a fix.
