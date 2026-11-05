@@ -1,4 +1,4 @@
-# State (2026-11-04, night)
+# State (2026-11-05)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -52,6 +52,10 @@ answers (checked 2026-11-04 night). Vita code: branch `vita` only.
   next ideas (device-loss recovery, smaller present surface + pre-rotation): docs/notes/android.md "Open: device
   lost". Experiments patch: `build/old/android-devicelost-experiments-2026-11-04.patch` (local).
 
+- **Crash reports (2026-11-05, main, unreleased):** native crash handler + next-launch dialog that saves
+  `Download/SonicRiders/sonicriders-crash-<time>.txt` with Share report. Tested on the x86_64 emulator only
+  (missing disc, kill -SEGV, no false report after force-stop/reinstall); not yet on a phone. Reddit report
+  "crashes on launch" (cause unknown; a missing disc image looks exactly like that): send them the next build.
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
   background/resume, touch controls, Xbox Series X pad over Bluetooth. [confirmed]
 - Perf (S23 Ultra, Android 17, `SR_PERFTEST`): **specialized fragment shaders** (2026-11-03, tested by A/B on the
@@ -59,8 +63,8 @@ answers (checked 2026-11-04 night). Vita code: branch `vita` only.
   (was 14-18), title 1.7 ms (was ~10). Pictures identical to the ubershader. Game thread ~5 ms/step.
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
 - Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
-- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**; details in notes/android.md.
-  App icon: the user's own .ico, built locally with `--icon` (never committed).
+- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**: stick, menu taps, START, triggers.
+  App icon: the user's own .ico built locally with `--icon` (never committed). Right stick → C-stick: code only.
 - **Next after the crash:** GPU needs a profiler (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
   size), pre-rotation, 2P with two pads.
 
@@ -93,8 +97,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 - Next when resumed, in order: (1) PC-PC on two PCs and Switch-Switch sessions (2P race route); (2) phase 4 NaN fix
   on x86 at the operations that create a NaN (not at stores: tried, reverted); (3) turn the host-clock alarm backstop
   off in sessions (fired once in a 585 ms PC stall).
-- Android arm64 should behave like the Switch for NaN signs, x86_64 (emulator) like the PC: worth one det-route
-  compare once Android boots.
+- Untested: Android NaN signs (arm64 should match the Switch, x86_64 the PC).
 
 ## Open items, in priority order
 

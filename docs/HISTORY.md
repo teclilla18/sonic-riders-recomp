@@ -412,3 +412,21 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   messages (simulated only), a real phone. The arm64 APK was not running 20 s after start on the emulator (arm64
   under translation; earlier emulator runs used an x86_64 build) [uncertain, not the setup].
 - #13 closed (reporter: installs, 60 fps on Snapdragon 7 Gen 3).
+
+## 2026-11-05 (b): Android crash reports a player can send without a PC
+
+- Why: a Reddit user wrote that the Android build "keeps crashing on launch", and players had no way to send a log:
+  `sonicriders.log` sits in `Android/data/net.srnative.sonicriders/files`, which phone file managers cannot open
+  since Android 11, and the POSIX build had no crash handler (only Windows logged `[crash]`).
+- Change: native `crash_signal` in platform_host.c (crash.txt + logcat + log, backtrace as lib+offset; chains to
+  debuggerd), and `CrashReport.java`: on the next launch, a run that ended badly (Android's exit record or a
+  crash.txt) becomes `Download/SonicRiders/sonicriders-crash-<time>.txt` plus a dialog with Share report. Details:
+  docs/notes/android.md "Crash reports".
+- Tested on the x86_64 emulator (Android 15) [confirmed]: missing disc (`missing.iso` -> rt_fatal -> SIGABRT) gives
+  crash.txt with a stack into libmain.so/SDL, and on relaunch a dialog "cannot open the disc image missing.iso", the
+  file in Download/SonicRiders, and a working share sheet; `kill -SEGV` while playing gives a report and debuggerd
+  still writes its tombstone; a force-stop and a reinstall give no dialog. Not tested: a real phone (arm64 build
+  compiled only), a real fault inside recompiled code, a crash on a thread other than the one with the alternate
+  signal stack (stack overflow there gets no crash.txt; the exit record still triggers the report) [uncertain].
+  Cosmetic: the share sheet shows the MediaStore id instead of the file name [uncertain whether receiving apps do].
+- The redditor's cause is unknown; a missing or failed disc push shows exactly as a "crash on launch" [likely].

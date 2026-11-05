@@ -82,6 +82,117 @@ void platform_sample_threads(void) {
 void platform_sample_threads(void) {}
 #endif
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <ucontext.h>
+#include <unistd.h>
+#include <unwind.h>
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+void cpu_dump_trace(void);
+void mmio_dump(void);
+void sched_dump(void);
+extern const char g_build_version[];
+
+/* a native crash (Android, Linux), as the Windows crash_handler: the report goes to crash.txt first
+ * (plain write(), works even if the log's stdio lock is held), then to logcat and the log, then the
+ * guest state; then the previous handler (Android's debuggerd: tombstone) runs. On Android the app
+ * folder's crash.txt and sonicriders.log are picked up on the next launch (CrashReport.java). */
+static struct sigaction crash_old[NSIG];
+static char crash_buf[16384];
+static int crash_len;
+
+static void crash_add(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int room = (int)sizeof crash_buf - crash_len;
+    int n = room > 1 ? vsnprintf(crash_buf + crash_len, (size_t)room, fmt, ap) : 0;
+    va_end(ap);
+    if (n > 0) crash_len += n < room ? n : room - 1;
+}
+
+static void crash_frame(int i, uintptr_t pc) {
+    Dl_info di;
+    if (pc && dladdr((void*)pc, &di) && di.dli_fname) {
+        const char* lib = strrchr(di.dli_fname, '/');
+        crash_add("[crash] #%02d pc %p %s+%llX%s%s\n", i, (void*)pc, lib ? lib + 1 : di.dli_fname,
+                  (unsigned long long)(pc - (uintptr_t)di.dli_fbase), di.dli_sname ? " " : "",
+                  di.dli_sname ? di.dli_sname : "");
+    } else {
+        crash_add("[crash] #%02d pc %p\n", i, (void*)pc);
+    }
+}
+
+struct crash_bt { int n; };
+static _Unwind_Reason_Code crash_bt_step(struct _Unwind_Context* c, void* arg) {
+    struct crash_bt* b = arg;
+    uintptr_t pc = (uintptr_t)_Unwind_GetIP(c);
+    if (!pc) return _URC_END_OF_STACK;
+    crash_frame(b->n, pc);
+    return ++b->n >= 40 ? _URC_END_OF_STACK : _URC_NO_REASON;
+}
+
+static void crash_signal(int sig, siginfo_t* si, void* uctx) {
+    static volatile sig_atomic_t once;
+    sigaction(sig, &crash_old[sig], NULL);  /* returning re-runs the fault (or abort) into the old handler */
+    if (once) return;
+    once = 1;
+    const char* name = sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL"
+                     : sig == SIGFPE ? "SIGFPE" : sig == SIGABRT ? "SIGABRT" : "signal";
+    crash_add("[crash] %s (%d) code %d, build %s\n", name, sig, si->si_code, g_build_version);
+    if (si->si_code > 0 && sig != SIGABRT)  /* a fault (not kill/abort): the address it touched */
+        crash_add("[crash] address %p (guest window offset %llX)\n", si->si_addr,
+                  (unsigned long long)((uintptr_t)si->si_addr - (uintptr_t)ppc_mem_base_var));
+    ucontext_t* uc = uctx;
+    (void)uc;
+#if defined(__aarch64__)
+    crash_add("[crash] at:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext.pc);
+    crash_add("[crash] lr:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext.regs[30]);
+#elif defined(__x86_64__) && defined(REG_RIP)
+    crash_add("[crash] at:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext.gregs[REG_RIP]);
+#endif
+    crash_add("[crash] stack:\n");
+    struct crash_bt bt = {0};
+    _Unwind_Backtrace(crash_bt_step, &bt);
+    int fd = open("crash.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0) {
+        write(fd, crash_buf, (size_t)crash_len);
+        close(fd);
+    }
+#ifdef __ANDROID__
+    __android_log_write(ANDROID_LOG_FATAL, "sonicriders", crash_buf);
+#endif
+    fflush(stderr);
+    write(fileno(stderr), crash_buf, (size_t)crash_len);
+    if (g_ppc_trace) cpu_dump_trace();
+    mmio_dump();
+    sched_dump();
+    fflush(stderr);
+    if (si->si_code <= 0) raise(sig);  /* sent (kill, abort): a fault would not come back on return */
+}
+
+static void crash_install(void) {
+    /* a stack overflow needs its own stack for the handler (this thread only) */
+    static char alt[64 * 1024];
+    stack_t ss = {.ss_sp = alt, .ss_size = sizeof alt};
+    sigaltstack(&ss, NULL);
+    struct sigaction sa;
+    memset(&sa, 0, sizeof sa);
+    sa.sa_sigaction = crash_signal;
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    sigemptyset(&sa.sa_mask);
+    const int sigs[] = {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT};
+    for (unsigned i = 0; i < sizeof sigs / sizeof sigs[0]; i++) sigaction(sigs[i], &sa, &crash_old[sigs[i]]);
+}
+#endif
+
 #ifdef __ANDROID__
 #include <SDL_system.h>
 #include <unistd.h>
@@ -153,6 +264,9 @@ void platform_init(void) {
      * SR_LOGSYNC); an unbuffered stderr wrote each piece of a line separately */
     static char logbuf[64 * 1024];
     setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);
+#ifndef _WIN32
+    crash_install();
+#endif
 #ifdef _WIN32
     SetUnhandledExceptionFilter(crash_handler);
     /* 1 ms timer resolution: the device threads sleep for fractions of a millisecond (the AI clock

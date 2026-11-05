@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Android: crash reports you can send from the phone. When the game crashed or stopped with an error last time,
+  the next launch saves a report (the game's log, the crash and the phone model) to
+  `Download/SonicRiders/sonicriders-crash-<time>.txt` and offers **Share report**. Any file manager can open that
+  folder (the game's own folder under `Android/data` is hidden from them since Android 11). Native crashes are
+  caught by a new crash handler, like the PC's `[crash]` lines.
+
 ## v0.4.1 (2026-11-04)
 
 - Android setup: when no phone was found (or it had not allowed USB debugging yet), the install step was

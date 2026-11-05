@@ -38,7 +38,9 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Android renderer (Vulkan) | android/render_vk.c (1720) | `vk_setup`, `execute`, `spec_bits` (specialized shaders), `pipe_get`, `pcache_save`, `draw_overlay_and_touch`, `picture_rect`, `shot_request`, `pump`, `render_thread` |
 | Android touch controls | android/touch_android.c (270) | `layout` (positions), `stick_home`, `stick_value` (dead zones), `game_in_race`, `touch_event`, `touch_apply`, `touch_shapes` |
 | Touch control drawing (shader) | `runtime/shaders/vk_touch.frag` | `icon()` (per-button strokes) |
-| Android Java activity | `android/java/net/srnative/sonicriders/SonicRidersActivity.java` | |
+| Android Java activity | `android/java/net/srnative/sonicriders/SonicRidersActivity.java` | `onCreate` (crash report before SDL starts) |
+| Android crash report (next launch) | `android/java/.../CrashReport.java` | `collect` (exit record + crash.txt + log → Download/SonicRiders), `show`, `share` |
+| Native crash handler (Android, Linux) | host/platform_host.c | `crash_signal` (crash.txt, logcat, log), `crash_install` |
 | Android manifest template | `android/AndroidManifest.xml.in` | `@ICON@` |
 | Switch input | switch/input_hid.c | |
 | Switch renderer (deko3d) | switch/render_deko.c (1100) | |
