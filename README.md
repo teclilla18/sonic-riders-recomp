@@ -46,8 +46,10 @@ Playable from boot to races, story mode and 4-player Free Race, with sound, on b
 - **PC:** 60 fps on the test PC (RTX 3060), 4 players included.
 - **Switch (stock clocks):** a steady 30 fps in races (1 player tested); 60 fps in lighter scenes with
   the *60 fps* setting.
-- **Android (new in v0.4.0):** 60 fps races on a Galaxy S23 Ultra (other phones untested). Known issue: it
-  can crash while you record the screen.
+- **Android (new in v0.4.0):** 60 fps races on a Galaxy S23 Ultra (other phones untested).
+  **Screen recording is not supported on Android:** recording the screen during a race makes the phone's
+  graphics driver reset the game again and again until it closes. Record with a capture card or play
+  without recording.
 - **Switch (overclocked):** 1–2 players mostly 60 fps; 3 players mostly 60 with dips in the busiest
   moments; 4 players about 30 fps.
 - Known issues are tracked in [Issues](../../issues); what changed in each version is in the

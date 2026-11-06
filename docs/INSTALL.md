@@ -124,8 +124,9 @@ Uninstalling the app deletes them, so update by installing over it (below), not 
 saves a report to the phone's `Download/SonicRiders/` folder. Tap **Share report** (or attach that file from
 any file manager) and send it with your bug report.
 
-**Known issue:** the game can **crash while you record the screen** (and, rarely, when the phone is very warm).
-The phone's GPU driver resets the game; reopen it. A fix is being worked on.
+**Screen recording is not supported:** recording the screen during a race makes the phone's GPU driver reset
+the game again and again until it closes (seen on the Galaxy S23 Ultra). A single reset without recording (rare,
+on a very warm phone) is survived after the next update: the game pauses for about a third of a second and goes on.
 
 ## Updating to a new version
 
@@ -163,7 +164,7 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 | Android: "0 Android devices are connected" | Unlock the phone, use a data cable (not charge-only), choose File transfer, turn on USB debugging and tap Allow on the phone, then run the installer again. |
 | Android: "signatures do not match" (INSTALL_FAILED_UPDATE_INCOMPATIBLE) | The installed app was built on another PC (or the signing key was deleted). Uninstall the app (this deletes its saves) and install again. |
 | Android: the game closes on launch or while playing | Open it again and tap **Share report** (the report is also in `Download/SonicRiders/`); attach it to a [bug report](../../../issues/new/choose). |
-| Android: the game closes while screen recording | Known issue (see [Install on Android](#install-on-android)); reopen the game and play without recording for now. |
+| Android: the game closes while screen recording | Screen recording is not supported (see [Install on Android](#install-on-android)); reopen the game and play without recording. |
 | Anything else | See [Reporting bugs](REPORTING-BUGS.md). |
 
 ## What the setup does
