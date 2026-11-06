@@ -449,3 +449,24 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   r4 of `fn_800645DC`); the user's 3440x1440 monitor is the target. Boost camera effect (NFS-style, levels 2/3):
   docs/notes/boost-effect.md, Discussions #16. User's order: ultrawide/FOV next, then online play.
 
+
+## 2026-11-06 (evening): ultrawide without stretching + FOV setting; Android setup counted one phone twice
+
+- **GitHub:** no new replies on #14, #12, Discussions #15/#16; the Linux pre-release has no Deck report yet.
+  gbatemp first post drafted for the user (kept locally).
+- **Ultrawide (#15):** new "Fit window" mode (window/screen aspect, 4:3..32:9); the 16:9 and fit modes draw a
+  wider EFB (640 x k) instead of stretching: k and flags travel in unused XF registers 0x7D-0x7F of each state;
+  backends scale viewport/scissor/copies/present X by k; gx.vert keeps orthographic draws at 4:3 in the middle
+  except vertices on a screen edge (full-width quads still fill). Option "stretch HUD". Captures on the det route
+  at 16:9, 21:9 (3440x1440) and 32:9: race, 2P split and title right, 59.8+ fps [confirmed on PC]; Switch in Eden
+  16:9 same as PC [confirmed in Eden]; Android emulator 20:9 fills the screen [confirmed in the emulator]. Not
+  on hardware, not seen by the user. Known: seams at the title bands' corners; speed-blur outline at 32:9/FOV 130.
+- **FOV:** the plan's hook was wrong: `fn_800645DC` tail-calls a translation-matrix builder (`fn_8004C9E0`), so
+  its r4 is not a field of view [confirmed by reading the generated code]. FOV is done in gx.vert instead (scale
+  the projection's vertical angle, 80-130 %), render-only.
+- **Determinism:** RAM hashes over 6000 det-route steps: FOV and HUD stretch change nothing [confirmed]; the camera
+  aspect changes game RAM from the race start (even 1.3333 vs 1.3344) [confirmed], so online sessions need one
+  camera aspect for all players (open, ONLINE.md). 16:9 now rounded like the fit mode: 16:9 = fit at 16:9 [confirmed].
+- **Android setup:** the user's own v0.4.2 build skipped the install: "3 devices" = the emulator I had running
+  plus the S23 Ultra over USB and over wireless debugging. setup.ps1 now counts devices by `ro.serialno`, prefers
+  USB and sets ANDROID_SERIAL [likely: the dedupe tested by hand on the two entries, not a full setup run].

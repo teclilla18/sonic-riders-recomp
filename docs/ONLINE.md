@@ -196,6 +196,10 @@ right, A) through Metal City. In lockstep each copy gets its own player's part o
 - Open: in that session one PC frame stalled 585 ms in the game thread (not in the network wait) and the
   host-clock alarm backstop fired; it changed nothing that time, but in a session a host-clock fallback should
   never decide anything (consider turning those backstops off in sessions: a stall then only slows the game).
+- Open (2026-11-06): the **camera aspect is part of the game state**: 4:3 vs 16:9, and even 16:9 vs a 0.1%
+  different aspect, give different RAM from the race start on (docs/notes/ultrawide-fov.md "Determinism"). Every
+  machine in a session must use the same camera aspect (e.g. the session fixes it and each side shows it with
+  bars, or the wide EFB at that aspect). FOV and HUD stretch are render-only (RAM identical).
 - Next: PC-PC on two PCs and Switch-Switch (the user has a laptop and two more Switches), then the NaN fix for
   cross-play (phase 4).
 

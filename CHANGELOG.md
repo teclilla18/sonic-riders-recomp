@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Ultrawide without stretching, and a field of view setting** (Discussions #15; settings menu > Display):
+  a new **Fit window** screen mode matches your window or screen (16:10 Steam Deck, 21:9 and 32:9 ultrawide,
+  ~20:9 phones), and the 16:9 mode no longer stretches the picture: the game draws a wider image. The HUD and
+  menus keep their original 4:3 shape in the middle (option: stretch them to the width). Field of view 80-130%.
+  Known: small seams at the corners of the title screen's black bands in wide modes. (Settings may still change.)
+- Android setup: a phone connected by USB and by wireless debugging at the same time counted as two devices,
+  so the setup refused to install; it now counts it once and installs over USB.
+
 - **Linux and Steam Deck (new, not yet tested on a Deck):** `SonicRiders-Linux-Setup-<version>.zip` with
   `Install Sonic Riders (Linux).sh`. It builds the PC version on the Linux machine itself from your disc image,
   with nothing to install and no root rights: system Python 3, SDL2 and OpenGL (SteamOS has them), and its own

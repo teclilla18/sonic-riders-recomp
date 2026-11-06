@@ -1,14 +1,23 @@
-# State (2026-11-06)
+# State (2026-11-06, evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
 **Decisions (user, 2026-11-06):** Android screen recording is not supported (no more work on it); Vita and iOS
-paused until the user says otherwise. **Next (user's order): ultrawide without stretching + FOV setting
-(docs/notes/ultrawide-fov.md, Discussions #15), then online play (phase 3/4, see "Online"); the boost camera effect
-(docs/notes/boost-effect.md, #16) after ultrawide. The user's hardware tests (two PCs, PC-Switch, Switch-Switch)
-come last.**
+paused until the user says otherwise. **Next (user's order): the user looks at the ultrawide/FOV captures
+(`build/uw/`) and settles the menu settings; then online play (phase 3/4, see "Online"); then the boost camera
+effect (docs/notes/boost-effect.md, #16). The user's hardware tests (two PCs, PC-Switch, Switch-Switch) come last.**
+
+## Ultrawide + FOV (2026-11-06; on `main`, not released; docs/notes/ultrawide-fov.md)
+
+- Implemented on PC, Switch, Android: "Fit window" mode (4:3..32:9), wide EFB instead of stretching (16:9 too),
+  HUD 4:3 in the middle (option: stretch), FOV 80-130 % (shader, render-only).
+- Tested: PC det-route captures at 16:9 / 21:9 / 32:9 incl. 2P split, 59.8+ fps; Switch in Eden (16:9);
+  Android emulator (20:9). Not on hardware, not seen by the user. Known: title-band corner seams; speed-blur
+  outline at 32:9 / FOV 130.
+- The camera aspect is game state (RAM differs): online sessions must fix one aspect for all (open).
+- Android setup fix on `main`: a phone on USB + wireless debugging counted once (user hit it with v0.4.2).
 
 Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
 `Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
@@ -20,10 +29,8 @@ user. Vita code: branch `vita` only.
 - `configure.py --toolchain linux` -> `build/host-linux/sonicriders` (system clang/gcc or zig cc; links the runtime
   libSDL2-2.0.so.0 + libGL.so.1, no -dev packages). `SonicRidersSetup.sh` -> `tools/setup_linux.py`; release
   flavor `make_release.py --flavor linux`. Notes: docs/notes/build-and-test.md "Host (Linux / Steam Deck)".
-- Tested in WSL Ubuntu 24.04 only (system clang 18; and from the release zip in a no-compiler sandbox with zig):
-  system clang: perf test to the end, demos 0.84 / 0.78 game ms per step (fps 19: WSL's GL on the Intel iGPU,
-  not a Deck measure); zig, from the v0.5.0-test zip with no compiler, headers or sdl2-config: setup -> menu
-  entry, launcher, `sonicriders.log`, perf test to the end (0.88 / 0.85 ms), clean exit; race frame right [confirmed].
+- Tested in WSL Ubuntu 24.04 only (system clang and, from the release zip with no compiler, zig): setup, launcher,
+  perf test to the end, race frame right [confirmed]. Details: HISTORY 2026-11-06 (afternoon).
 - Published as a GitHub pre-release (Linux zip only), not marked latest.
 - Not tested on a Steam Deck, Game Mode, Steam Input or a real Linux GPU driver. First Deck test: the gbatemp
   user (reply drafted for the user to post).
@@ -74,12 +81,11 @@ Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/r
 - Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
 - **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**: stick, menu taps, START, triggers.
   App icon: the user's own .ico built locally with `--icon` (never committed). Right stick → C-stick: code only.
-- **Next after the crash:** GPU needs a profiler (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
-  size), pre-rotation, 2P with two pads.
+- Next on Android: GPU profiler leads (notes/android.md), pre-rotation, 2P with two pads.
 
 ## Wish list / paused
 
-Picture enhancements (resolution scale, bloom, HD textures); ultrawide/FOV and the boost effect are planned (top).
+Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
 PS4/PS5 on hold; Vita (branch `vita`, notes/vita-research.md) and iOS paused by the user.
 
 ## Online play (next after ultrawide/FOV)
@@ -88,6 +94,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 - Done: determinism (`SR_DETCLOCK`), input record/replay, lockstep with desync check (`SR_NET`), generated online
   save, own view (`SR_VIEW`). One PC: 8,400 frames identical on the 2P race route. PC-Switch session (2026-10-30):
   identical to frame 6917, then a desync at 6919 from the sign of a NaN (x86 vs ARM).
+- Open: one camera aspect for every machine in a session (ultrawide note "Determinism").
 - Next when resumed, in order: (1) PC-PC on two PCs and Switch-Switch sessions (2P race route); (2) phase 4 NaN fix
   on x86 at the operations that create a NaN (not at stores: tried, reverted); (3) turn the host-clock alarm backstop
   off in sessions (fired once in a 585 ms PC stall).
@@ -95,8 +102,8 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Ultrawide without stretching + FOV (notes/ultrawide-fov.md), then online play phase 3/4, then the boost effect
-   (notes/boost-effect.md). Linux: wait for the first Deck report.
+1. Ultrawide/FOV: user review of the captures, then Switch hardware + phone check; then online play phase 3/4,
+   then the boost effect (notes/boost-effect.md). Linux: wait for the first Deck report.
 2. #12 PC at 13 fps: answered (Intel UHD 620; GL draw cost; 2x EFB fixed on PC). #14 Android music: waiting.
 3. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
 4. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
@@ -118,6 +125,7 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
+- [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9 (EFB 854 x 2 columns).
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.
 - [ ] `SR_PERFTEST=1` at stock clocks, handheld: save a stock record in `perf/results/`.

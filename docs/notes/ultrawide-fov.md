@@ -1,43 +1,57 @@
-# Ultrawide without stretching, and a FOV setting (plan, 2026-11-06)
+# Ultrawide without stretching, and a FOV setting (2026-11-06)
 
-Requested by the user (3440x1440 monitor, 21.5:9) and in GitHub Discussions #15 ("UltraWidescreen", ultrawide
-+ FOV switching). Status: **planned, nothing implemented**. Order: before online play (user, 2026-11-06).
+Requested by the user (3440x1440 monitor, 21.5:9) and in GitHub Discussions #15. Status: **implemented on PC,
+Switch and Android; tested on PC (det-route captures), Switch in Eden and the Android emulator; not yet seen by
+the user; menu settings not final** (the user asked to see captures first).
 
-## What exists
+## Settings (settings.c, menu.cpp Display tab)
 
-- `config/GXEE8P/patches.txt` "Widescreen (any aspect)": multiplies the camera aspect by `g_aspect_scale`
-  (target / (4/3)) at `fn_800645DC` entry (f1 = aspect) and after the race camera's aspect `fmadds` (REL
-  `81941218`). `settings.c`: `SCREEN_WIDE` sets it to 16:9; `settings_display_aspect()` is 4:3 or 16:9.
-- The EFB is 4:3-shaped (`EFB_WIDTH` 640 x 528, times `EFB_SCALE`) and the present pass stretches it to the
-  display aspect (`render_gl.c` ~line 327/361; Android `render_vk.c`; Switch deko3d). So 16:9 today = Hor+
-  3D squeezed into a 4:3 image, then stretched back: the 3D is right, the 2D layer (HUD, menus) is stretched
-  1.33x and horizontal resolution is lower than vertical.
-- FOV input: `fn_800645DC(r3 = matrix, r4 = field of view as an integer angle, f1 = aspect, f2/f3 = near/far)`
-  converts r4 to float (int->float via the 0x43300000 trick, times a constant) and calls the perspective
-  builder [confirmed by reading the generated code]. The race camera computes its aspect itself at
-  `81941218`; whether it also goes through `fn_800645DC` for its FOV is **not checked** [uncertain].
+- Screen modes: 4:3, 16:9 widescreen, 16:9 stretched, **Fit window** (`SCREEN_FIT` = 3, the window's or
+  screen's aspect, clamped 4:3..32:9; Switch = 16:9, Steam Deck 16:10, phones ~20:9). Aspects are rounded so the
+  EFB is an even number of pixels wide (`round_aspect`); 16:9 is rounded the same way (k = 854/640), so 16:9 and
+  Fit in a 16:9 window give the game the same camera aspect.
+- `hud_stretch` (default off): 2D at 4:3 proportions in the middle, or stretched to the width.
+- `fov` 80..130 % (default 100).
+- Test overrides (not saved): `SR_SCREEN=0..3`, `SR_FOV=80..130`, `SR_HUDSTRETCH=0/1`; PC `SR_WINDOW=WxH`
+  (first window size, for wide captures).
 
-## Plan
+## How it works
 
-1. **"Fit window" screen mode** (settings, all platforms): display aspect = the window's (or screen's) aspect,
-   clamped to 4:3..32:9; `g_aspect_scale` follows it, also on window resize. Keep the old 3 modes. 16:10 on the
-   Steam Deck falls out of this.
-2. **Wider EFB instead of stretching** (the "no stretching" part): EFB width = 640 x k x scale with
-   k = aspect / (4/3); map GX viewport and scissor X from game units to the wider target (x' = x * k); EFB
-   copies (`GXCopyTex` sources: speed blur, screen effects) and peeks scaled the same way; present without
-   horizontal stretch. Check: Switch/Android memory (a 2x EFB at 21:9 is ~2400 x 1056), per-backend.
-3. **2D layer at its own proportions**: for orthographic projections (GX projection type 1) the renderer
-   scales X by 1/k around the centre, so HUD and menus keep 4:3 proportions in the middle. Side areas then
-   show what the game drew there (3D in races; clear colour or nothing in 2D-only menus). Option in settings:
-   "HUD: stretched / original proportions". Full-screen 2D (fades, menu backgrounds, the speed-blur overlay)
-   may need "stretch this quad" detection (a quad covering the whole 640-wide screen gets k instead of 1).
-4. **Edge-anchored HUD (later, separate step)**: move left/right HUD groups to the screen edges: needs the
-   HUD drawing functions found and a per-element offset. Not part of the first step.
-5. **FOV setting**: a patch at `fn_800645DC` entry scaling r4 by `g_fov_scale` (setting: 80%-130%, default
-   100%), plus the race camera path if it does not go through that function. Must stay out of online
-   sessions or be the same on both sides (determinism: it only changes rendering, but check the game logic does
-   not read the projection, e.g. for culling or the lens flare).
-6. **Checks**: culling at the widened edges (objects popping in the side areas), lens flare/EFB Z peeks (#7),
-   speed blur (#3), split screen 2-4P (each viewport widens), the det route identical (render-only change),
-   frames from `SR_SCREENSHOT` at 21:9 and 32:9 (window size via `SR_WINDOW`? add if missing), Switch handheld
-   still 16:9, Android phone aspect (~20:9) as a free bonus.
+- Camera: the existing aspect patches (`config/GXEE8P/patches.txt`, `g_aspect_scale` = k) make the 3D Hor+
+  (race frame at 16:9: projection P2 unchanged, P0 / 1.333 [confirmed]).
+- Wide EFB instead of stretching: k = display aspect / (4/3). `gx_render.c` frame start stamps k, a flags word
+  and the FOV scale into unused XF registers 0x7E / 0x7F / 0x7D of every state (`GX_XR_*` in gx_render.h; game
+  writes to them are ignored in gx_fifo.c) and into `GxFrame.wide_k`. Backends scale viewport, scissor, EFB-copy
+  source rects, copy clears and the XFB present by k in X (`wx()` in render_gl.c, `XSC()` in render_deko.c and
+  render_vk.c). EFB width: PC reallocates on change (`efb_resize`); Switch allocated for 16:9 (854 x 2 columns);
+  Android for up to 32:9.
+- 2D (gx.vert): orthographic draws get clip x / k (4:3 in the middle) unless a vertex is on or beyond a screen
+  edge (|x| >= 0.998): full-width quads (fades, backgrounds, the speed-blur overlay) still fill the screen.
+- FOV (gx.vert): perspective draws scale clip x/y by 1 / (tan(fs * atan(1/P2)) * P2): the game's vertical angle
+  times fs, about the projection centre. Render-only.
+- `fn_800645DC` is **not** a projection setup: it tail-calls `fn_8006462C` -> `fn_8004C9E0`, which builds a
+  translation matrix (identity + f1/f2/f3), so its r4 is a translation, not a FOV [confirmed by reading the
+  generated code]. The race camera calls `fn_8006462C` too; its patched f1 is used by a later projection call.
+  What the `800645DC` entry patch (from the Gecko code) actually scales is [uncertain].
+
+## Determinism (online play)
+
+- FOV and HUD stretch do not change game memory: RAM hashes identical over 6000 det-route steps [confirmed].
+- The camera aspect **does**: 4:3 vs 16:9 differ in many RAM blocks from the race start on, and even 1.3333 vs
+  1.3344 differ in blocks 1, 2, 3, 17, 26 (the game uses the aspect beyond drawing, probably culling). So every
+  machine in an online session must use the same camera aspect (open item for online play; the desync check
+  would report it). Note: this was already true for 4:3 vs 16:9 before.
+
+## Checked (PC det route: title 2900, 1P race 5300, 2P race 10500)
+
+- 16:9, 21:9 (3440x1440), 32:9 (3840x1080): 3D wider, HUD 4:3 in the middle, 2P split screen right, perf test
+  59.8+ fps both demos [confirmed on PC]. Switch in Eden (16:9): same frame as PC. Android emulator (2400x1080):
+  fills the screen; touch buttons now sit over the picture instead of on black bars.
+- Known: title screen top/bottom bands show seams near the corners in wide modes (the bands are pieces; those
+  touching an edge get stretched); at 32:9 and at FOV 130 % the speed-blur geometry's outline shows at the
+  right edge; culling at the widened edges not seen popping in the captures (not proven).
+- Not checked: menus beyond the title, story cutscenes, 3-4P, lens flare (#7 is missing anyway).
+
+## Later
+
+- Edge-anchored HUD (left/right groups at the screen edges): needs the HUD drawing functions.

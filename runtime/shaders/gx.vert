@@ -115,6 +115,21 @@ void main() {
   float P3 = uintBitsToFloat(XR(0x23)), P4 = uintBitsToFloat(XR(0x24)), P5 = uintBitsToFloat(XR(0x25));
   vec4 clip = XR(0x26) == 0u ? vec4(P0 * pv.x + P1 * pv.z, P2 * pv.y + P3 * pv.z, P4 * pv.z + P5, -pv.z)
                              : vec4(P0 * pv.x + P1, P2 * pv.y + P3, P4 * pv.z + P5, 1.0);
+  /* wide screen modes (gx_render.h GX_XR_WIDE_K): the backend widened the viewport k times; 2D
+     (orthographic) draws keep their 4:3 proportions in the middle, except vertices on or beyond a
+     screen edge, so full-width quads (fades, backgrounds, screen effects) still fill the screen */
+  /* field of view setting (gx_render.h GX_XR_FOV): perspective projections see fs times the game's
+     vertical angle (taken from the projection), the picture scaled about its centre */
+  float fs = uintBitsToFloat(XR(0x7D));
+  if (XR(0x26) == 0u && fs > 0.0 && fs != 1.0 && P2 != 0.0) {
+    float m = 1.0 / (tan(fs * atan(1.0 / abs(P2))) * abs(P2));
+    clip.x = clip.x * m;
+    clip.y = clip.y * m;
+  }
+  if (XR(0x26) != 0u && (XR(0x7F) & 1u) != 0u) {
+    float wk = uintBitsToFloat(XR(0x7E));
+    if (wk > 1.0 && abs(clip.x) < 0.998 * clip.w) clip.x = clip.x / wk;
+  }
   float xs = uintBitsToFloat(XR(0x1A)), ys = uintBitsToFloat(XR(0x1B)), zs = uintBitsToFloat(XR(0x1C));
   float zo = uintBitsToFloat(XR(0x1F));
   gl_Position = vec4(clip.x * sign(xs), clip.y * sign(ys) * CLIP_Y, (2.0 * zo / 16777215.0 - 1.0) * clip.w + 2.0 * zs / 16777215.0 * clip.z, clip.w);

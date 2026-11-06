@@ -31,7 +31,12 @@ void input_pump(void);
 #define EFB_SCALE 2  /* the largest internal resolution; g_s is this frame's (1, 1.5 or 2) */
 static float g_s = EFB_SCALE;
 #define SC(v) ((uint32_t)((float)(v) * g_s + 0.5f))
-#define EFB_W (EFB_WIDTH * EFB_SCALE)
+/* the wide screen modes (gx_render.h GX_XR_WIDE_K): X is also scaled by this frame's k; the EFB is
+ * allocated for 16:9 (the widest a Switch screen gets) */
+#define WIDE_K_MAX (854.0f / 640.0f)
+static float g_k = 1.0f;
+#define XSC(v) ((uint32_t)((float)(v) * g_k * g_s + 0.5f))
+#define EFB_W ((int)(EFB_WIDTH * WIDE_K_MAX + 0.5f) * EFB_SCALE)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
 #define FB_W 1280
 #define FB_H 720
@@ -412,13 +417,13 @@ static void apply_state(const GxUniforms* u) {
     float xs = f32(u->xfr[0x1A]), ys = f32(u->xfr[0x1B]), xo = f32(u->xfr[0x1D]), yo = f32(u->xfr[0x1E]);
     int sox = (int)(u->bp[0x59] & 0x3FF) * 2, soy = (int)((u->bp[0x59] >> 10) & 0x3FF) * 2;
     float ax = xs < 0 ? -xs : xs, ay = ys < 0 ? -ys : ys;
-    DkViewport vp = {(xo - ax - (float)sox) * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_s, 2 * ay * g_s, 0.0f, 1.0f};
+    DkViewport vp = {(xo - ax - (float)sox) * g_k * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_k * g_s, 2 * ay * g_s, 0.0f, 1.0f};
     if (ST_CHANGED(vp, vp)) dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
     int x0 = (int)((u->bp[0x20] >> 12) & 0x7FF) - sox, y0 = (int)(u->bp[0x20] & 0x7FF) - soy;
     int x1 = (int)((u->bp[0x21] >> 12) & 0x7FF) - sox + 1, y1 = (int)(u->bp[0x21] & 0x7FF) - soy + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
-    DkScissor sc = {SC(x0), SC(y0), SC(x1 > x0 ? x1 - x0 : 0), SC(y1 > y0 ? y1 - y0 : 0)};
+    DkScissor sc = {XSC(x0), SC(y0), x1 > x0 ? XSC(x1) - XSC(x0) : 0, SC(y1 > y0 ? y1 - y0 : 0)};
     if (ST_CHANGED(sc, sc)) dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
 
     static const DkCompareOp zf[8] = {DkCompareOp_Never, DkCompareOp_Less, DkCompareOp_Equal, DkCompareOp_Lequal,
@@ -577,7 +582,7 @@ static void shot_write(void) {
 static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     g_st_valid = 0;  /* binds state of its own */
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
-    DkImageRect src = {SC(x), SC(y), 0, SC(w), SC(h), 1};
+    DkImageRect src = {XSC(x), SC(y), 0, XSC(x + w) - XSC(x), SC(h), 1};
     dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
     if (c->copy[4]) {  /* to the XFB: into the swapchain image, letterboxed to 4:3 */
         if (g_fb_slot < 0) g_fb_slot = dkQueueAcquireImage(g_queue, g_swap);
@@ -595,7 +600,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         dkCmdBufClearColor(g_cmd, 0, DkColorMask_RGBA, black);
         dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
         /* at the chosen aspect (settings.h), centred */
-        float aspect = settings_display_aspect();
+        float aspect = g_k > 1.0f ? 4.0f / 3.0f * g_k : settings_display_aspect();
         if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
             src.y = SC(y + (c->copy[11] >> 16));
             src.height = SC(c->copy[11] & 0xFFFF);
@@ -635,7 +640,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     }
     if (c->copy[5]) {  /* clear the copied rectangle */
         uint32_t argb = c->copy[6], cm = u->bp[0x41];
-        DkScissor sc = {SC(x), SC(y), SC(w), SC(h)};
+        DkScissor sc = {XSC(x), SC(y), XSC(x + w) - XSC(x), SC(h)};
         dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
         float col[4] = {((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, (argb >> 24) / 255.0f};
         uint32_t mask = ((cm >> 3) & 1 ? DkColorMask_RGB : 0) | ((cm >> 4) & 1 ? DkColorMask_A : 0);
@@ -779,6 +784,8 @@ static void execute(GxFrame* f) {
     }
     g_s = settings_internal_scale();
     g_s_sum += g_s;
+    settings_set_window_aspect((float)FB_W / (float)FB_H);  /* the fit mode: the screen's */
+    g_k = f->wide_k > 1.0f ? (f->wide_k < WIDE_K_MAX ? f->wide_k : WIDE_K_MAX) : 1.0f;
     DkMemBlock mem = g_slots[g_slot];
     uint8_t* cpu = (uint8_t*)dkMemBlockGetCpuAddr(mem);
     DkGpuAddr gpu = dkMemBlockGetGpuAddr(mem);

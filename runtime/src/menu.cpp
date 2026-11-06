@@ -292,13 +292,31 @@ void tab_display() {
     for (int m = 0; m < SCREEN_MODES; m++) {
         static const char* const tips[SCREEN_MODES] = {
             "The original 4:3 picture with black bars at the sides.",
-            "The cameras see a wider 16:9 view (the HUD is stretched a little).",
-            "The 4:3 picture stretched to fill a 16:9 screen."};
-        if (m) ImGui::SameLine();
+            "The cameras see a wider 16:9 view; the picture is drawn wider, not stretched.",
+            "The 4:3 picture stretched to fill a 16:9 screen.",
+            "The cameras see as wide as your window or screen (from 4:3 up to 32:9: 16:10, 21:9 ultrawide, 32:9), "
+            "drawn wider, not stretched."};
+        if (m & 1) ImGui::SameLine();
         if (radio(settings_screen_name(m), g_settings.screen == m, tips[m])) {
             g_settings.screen = m;
             settings_apply();
         }
+    }
+    if (g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT) {
+        if (check("Stretch the HUD and menus to the width", &g_settings.hud_stretch,
+                  "Off: the HUD and menus keep their original 4:3 shape in the middle of the screen. On: they are "
+                  "stretched across the whole width like the 16:9 mode of older versions."))
+            settings_apply();
+    }
+    heading("Field of view");
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
+    ImGui::SliderInt("##fov", &g_settings.fov, FOV_MIN, FOV_MAX, "%d%%");
+    help("How much the cameras see; 100% is the game's own view. Higher shows more around you.");
+    if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
+    ImGui::SameLine();
+    if (ImGui::Button("Reset") && g_settings.fov != 100) {
+        g_settings.fov = 100;
+        settings_apply();
     }
 #ifdef __SWITCH__
     heading("Resolution");
