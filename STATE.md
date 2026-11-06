@@ -5,24 +5,34 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
 **Decisions (user, 2026-11-06):** Android screen recording is not supported (no more work on it); Vita and iOS
-paused until the user says otherwise. **Next (user's order): the user looks at the ultrawide/FOV captures
-(`build/uw/`) and settles the menu settings; then online play (phase 3/4, see "Online"); then the boost camera
-effect (docs/notes/boost-effect.md, #16). The user's hardware tests (two PCs, PC-Switch, Switch-Switch) come last.**
+paused until the user says otherwise. **Next (user's order): fix ultrawide per the user's report below, then online play (phase 3/4, see "Online");
+then the boost camera effect (docs/notes/boost-effect.md, #16). The user's hardware tests come last.**
 
 ## Ultrawide + FOV (2026-11-06; on `main`, not released; docs/notes/ultrawide-fov.md)
 
 - Implemented on PC, Switch, Android: "Fit window" mode (4:3..32:9), wide EFB instead of stretching (16:9 too),
-  HUD 4:3 in the middle (option: stretch), FOV 80-130 % (shader, render-only).
-- Tested: PC det-route captures at 16:9 / 21:9 / 32:9 incl. 2P split, 59.8+ fps; Switch in Eden (16:9);
-  Android emulator (20:9). Not on hardware, not seen by the user. Known: title-band corner seams; speed-blur
-  outline at 32:9 / FOV 130.
-- The camera aspect is game state (RAM differs): online sessions must fix one aspect for all (open).
-- Android setup fix on `main`: a phone on USB + wireless debugging counted once (user hit it with v0.4.2).
-
-Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
-`Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
-(both folders) [confirmed]; crash dialog checked on the S23 Ultra and the emulator [confirmed]. Not yet seen by a
-user. Vita code: branch `vita` only.
+  2D at 4:3 in the middle (option: stretch), FOV 80-130 % (shader, render-only). Tested: PC det-route captures,
+  Switch in Eden, Android emulator. Camera aspect is game state: online sessions must fix one aspect (open).
+- **User report (PC, 3440x1440, 2026-11-06; 3 in-game screenshots, ignore the 3rd; find them as the newest
+  `shot_*.png` in the user's game folder / `build/`):**
+  1. Fit window: a GUI bug in shots 1-2; bottom left has a weird colour gradient (likely a HUD piece touching the
+     left edge stretched by the gx.vert edge rule [uncertain]).
+  2. Any aspect other than 4:3: a very opaque "mirage" of the player's character to the right of it (lead: an
+     EFB-copy effect, e.g. afterimage/blur, sampled with screen-space texture coords that assume 640 wide; the
+     copy source is now 640 x k [uncertain]; check the copy-texture draws' texgen in a `SR_GXDEBUG` race frame).
+  3. Decisions: HUD 4:3 in the middle is the right default for 16:9. In 16:9 keep the "stretch HUD" option (looks
+     fine). In Fit window (ultrawide) the HUD must move to the screen edges, and that is the only option there (no
+     4:3-middle, no stretch). Remove the separate "16:9 stretched" screen mode ("stretched shouldn't be an option").
+  - Android not tried by the user yet (building it now). Android setup fix (phone counted once) on `main`.
+- **Plan:** (a) reproduce 1-2 on the PC det route at 21:9 (`SR_SCREEN=3 SR_WINDOW=3440x1440`) and look at the
+  user's shots; (b) edge-anchored HUD for Fit: per orthographic draw, its clip-space x extent decides left / right
+  / centre / full width; left groups shift by -(k-1) (in 4:3 units), right by +(k-1), centre stays, full width
+  stretches. Needs a per-draw value (bbox computed on the CPU at the draw in gx_render.c or the backend from the
+  decoded vertices + XF matrix, passed per draw, e.g. GxCmd.pad) instead of the per-vertex edge rule; HUD pieces
+  that belong together (e.g. the left panel made of several draws) must get the same shift: use the half of the
+  screen the draw's centre is in, with a dead zone around the centre; (c) fix the mirage; (d) menu: modes 4:3,
+  16:9 (+ stretch HUD option), Fit window (edges only); old saved `screen=2` maps to 16:9; (e) captures at 16:9,
+  21:9, 32:9 + 2P split to the user before finishing.
 
 ## Linux / Steam Deck (new, 2026-11-06; on `main`, not released)
 

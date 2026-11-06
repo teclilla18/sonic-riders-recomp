@@ -55,3 +55,10 @@ the user; menu settings not final** (the user asked to see captures first).
 ## Later
 
 - Edge-anchored HUD (left/right groups at the screen edges): needs the HUD drawing functions.
+
+## User review (2026-11-06, PC 3440x1440) and the plan
+
+See STATE.md "Ultrawide + FOV" for the full report and plan: fit window needs an edge-anchored HUD (the only
+option there), 16:9 keeps 4:3-middle (default) or stretched HUD, the "16:9 stretched" screen mode goes; bugs: a
+colour gradient bottom left in fit mode, and a faint copy ("mirage") of the player's character to its right in
+every non-4:3 mode.
