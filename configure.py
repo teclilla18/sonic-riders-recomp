@@ -210,8 +210,10 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("cxxflags", "-std=c++20 -g " + hostinc)
             # the program finds libSDL2 in the system (or next to itself: $ORIGIN); static C++ runtime
             # so a Steam Deck needs nothing besides SDL2 and OpenGL, which SteamOS has
-            n.variable("ldflags", "-g -pthread %s -ldl -lm -static-libstdc++ -static-libgcc -Wl,-rpath,'$$ORIGIN' "
-                       "-Wl,-Map=%s/sonicriders.map" % (sdl_lib, OUT))
+            # zig's linker takes no -Map (and links its own libc++ statically anyway)
+            is_zig = "zig" in os.path.basename(cxx.split()[0]) or cxx.split()[0] == "zig"
+            n.variable("ldflags", "-g -pthread %s -ldl -lm -Wl,-rpath,'$$ORIGIN' %s" % (sdl_lib, "" if is_zig else
+                       "-static-libstdc++ -static-libgcc -Wl,-Map=%s/sonicriders.map" % OUT))
             sdl_dll = ""
         elif args.toolchain == "mingw":
             lm = args.llvm_mingw.replace("\\", "/")

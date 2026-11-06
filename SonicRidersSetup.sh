@@ -5,13 +5,14 @@
 cd "$(dirname "$0")" || exit 1
 
 # started from a file manager (no terminal): show the progress in one
-if [ ! -t 1 ] && [ -z "$SR_SETUP_TERMINAL" ]; then
-    export SR_SETUP_TERMINAL=1
+# (only with a desktop; the flag is set just for the new terminal, so a run without one never waits for Enter)
+if [ ! -t 1 ] && [ -z "$SR_SETUP_TERMINAL" ] && { [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; } \
+   && [ -z "$SR_SETUP_NO_TERMINAL" ]; then
     for t in konsole gnome-terminal kgx xfce4-terminal x-terminal-emulator xterm; do
         command -v "$t" >/dev/null 2>&1 || continue
         case "$t" in
-            gnome-terminal|kgx) exec "$t" -- "$0" "$@" ;;
-            *) exec "$t" -e "$0" "$@" ;;
+            gnome-terminal|kgx) exec env SR_SETUP_TERMINAL=1 "$t" -- "$0" "$@" ;;
+            *) exec env SR_SETUP_TERMINAL=1 "$t" -e "$0" "$@" ;;
         esac
     done
 fi

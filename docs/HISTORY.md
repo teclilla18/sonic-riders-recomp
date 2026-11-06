@@ -425,3 +425,27 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Vita paused by the user (GXM renderer chosen over the fault-handler idea: ~50,000 GX pipe stores per race frame
   go through the device range, so faults there are not an option without recompiler work). iOS: the Mac is not
   updated yet.
+
+## 2026-11-06 (afternoon): Linux / Steam Deck build; issue #14 log; ultrawide/FOV and boost-effect plans
+
+- **#14 (Android music stops):** the reporter pasted a log (Adreno 810 phone, v0.4.2) that ends ~20 s in, before the
+  music stops; it shows 70-150 ms game-code hitches every few seconds. Lead: the CRI music stream thread (prio 31)
+  starved by those frames [uncertain]. Replied asking for the attached file, the phone model and a 30 fps test.
+- **Linux build** (gbatemp request: the .bat can't run on a Deck): `configure.py --toolchain linux`; the runtime
+  compiled as is (POSIX paths from Switch/Android). Link: GL 1.1 calls need libGL; SDL2 and GL are linked by the
+  full path of the runtime `.so.0`/`.so.1` because SteamOS has no -dev links. Found by running it in WSL:
+  (1) exit hung: glibc's `pthread_cond_destroy` (C++ static destructor of menu.cpp's condition variable) waits
+  for the helper thread blocked on it; now never destroyed [confirmed]. (2) Then a crash at exit: `SR_PERFTEST`
+  called `exit()` on the game thread while the render thread presented, and Mesa's driver was unloaded under it;
+  the perf test now quits through the render thread like the menu's Quit (Windows: 59.94 fps both demos, exits
+  normally) [confirmed].
+- **Setup** `SonicRidersSetup.sh` -> `tools/setup_linux.py` (system python3; dtk, ninja, imgui, SDL2 headers, zig
+  0.17.1 pinned in toolchain.json "linux"). A bubblewrap "Deck-like" sandbox (no compiler, linker, headers or
+  sdl2-config) found three more bugs: sdl2-config's presence taken for headers; zig's linker rejects `-Map`; the
+  wrapper waited for Enter when it had no terminal to open. All fixed; the zip-based run then passed end to end
+  [confirmed in WSL]. Not tested: a real Deck, Game Mode, Steam Input, AMD/Mesa drivers [uncertain until a user
+  report]. WSL GL is llvmpipe or d3d12-on-iGPU, so no fps conclusions.
+- **Ideas:** Discussions #15 (ultrawide + FOV) answered with a plan, docs/notes/ultrawide-fov.md (the FOV input is
+  r4 of `fn_800645DC`); the user's 3440x1440 monitor is the target. Boost camera effect (NFS-style, levels 2/3):
+  docs/notes/boost-effect.md, Discussions #16. User's order: ultrawide/FOV next, then online play.
+

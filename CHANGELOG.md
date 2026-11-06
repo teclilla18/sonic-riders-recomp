@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Linux and Steam Deck (new, not yet tested on a Deck):** `SonicRiders-Linux-Setup-<version>.zip` with
+  `Install Sonic Riders (Linux).sh`. It builds the PC version on the Linux machine itself from your disc image,
+  with nothing to install and no root rights: system Python 3, SDL2 and OpenGL (SteamOS has them), and its own
+  downloaded tools, including the zig compiler when the system has no clang or gcc. It adds a menu entry, a
+  launcher, and says how to add the game to Steam for Game Mode. Tested on Ubuntu 24.04 (WSL), with and without
+  a system compiler. ([Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck))
+
 - Android: when the phone's graphics driver resets (Vulkan "device lost"), the game now rebuilds its renderer and
   carries on after a pause of about a third of a second, instead of closing. While the screen is being recorded on
   the Galaxy S23 Ultra the reset still repeats every few frames in races, and after the fourth one within 10 s the

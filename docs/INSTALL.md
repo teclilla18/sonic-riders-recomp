@@ -139,7 +139,8 @@ on a very warm phone) is survived after the next update: the game pauses for abo
 
 ## Install on Linux / Steam Deck
 
-1. **Download** `SonicRiders-Linux-Setup-<version>.zip` from the [latest release](../../../releases/latest).
+1. **Download** `SonicRiders-Linux-Setup-<version>.zip` from the [Linux test pre-release](../../../releases/tag/v0.5.0-linux-test)
+   (later releases will include it).
    On the Steam Deck, do steps 1-4 in **Desktop Mode** (Power → Switch to Desktop).
 2. **Extract** the whole zip to a folder **you'll keep**, for example `~/Games/SonicRiders` (right-click
    the zip → Extract). The game, your saves and your settings live in that folder. Your disc image can stay

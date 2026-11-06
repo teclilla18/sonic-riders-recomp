@@ -17,7 +17,7 @@ no game files.
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
-| **Linux** or a **Steam Deck** (new) | `SonicRiders-Linux-Setup-<version>.zip` | [Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck) |
+| **Linux** or a **Steam Deck** (new, test version) | `SonicRiders-Linux-Setup-<version>.zip` from the [Linux test pre-release](../../releases/tag/v0.5.0-linux-test) | [Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck) |
 
 **In short:** extract the zip, double-click the `Install Sonic Riders` file, pick your disc image, and
 wait 10–30 minutes the first time (Android: 20–40, then it installs over a USB cable). Every version is
