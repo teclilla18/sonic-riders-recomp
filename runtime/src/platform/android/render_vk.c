@@ -41,7 +41,12 @@ void input_pump(void);
 #define EFB_SCALE 2
 static float g_s = EFB_SCALE;
 #define SC(v) ((uint32_t)((float)(v) * g_s + 0.5f))
-#define EFB_W (EFB_WIDTH * EFB_SCALE)
+/* the wide screen modes (gx_render.h GX_XR_WIDE_K): X is also scaled by this frame's k; the EFB is
+ * allocated for up to 32:9 */
+#define WIDE_K_MAX (1708.0f / 640.0f)
+static float g_k = 1.0f;
+#define XSC(v) ((uint32_t)((float)(v) * g_k * g_s + 0.5f))
+#define EFB_W ((int)(EFB_WIDTH * WIDE_K_MAX + 0.5f) * EFB_SCALE)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
 #define MAX_TEX 8192
 
@@ -1024,7 +1029,7 @@ static void efb_begin(void) {
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, {{{0}}}};
     /* only the part the internal resolution uses: a tiled GPU loads and stores the whole render area each
      * time rendering starts again (after every EFB copy) */
-    uint32_t aw = SC(EFB_WIDTH), ah = SC(EFB_HEIGHT);
+    uint32_t aw = XSC(EFB_WIDTH), ah = SC(EFB_HEIGHT);
     static int full = -1;  /* SR_VK_FULLAREA=1: the whole image (A/B test) */
     if (full < 0) full = getenv("SR_VK_FULLAREA") != NULL;
     if (full) aw = EFB_W, ah = EFB_H;
@@ -1165,14 +1170,14 @@ static void apply_dynamic(const GxUniforms* u) {
     float xs = f32(u->xfr[0x1A]), ys = f32(u->xfr[0x1B]), xo = f32(u->xfr[0x1D]), yo = f32(u->xfr[0x1E]);
     int sox = (int)(u->bp[0x59] & 0x3FF) * 2, soy = (int)((u->bp[0x59] >> 10) & 0x3FF) * 2;
     float ax = xs < 0 ? -xs : xs, ay = ys < 0 ? -ys : ys;
-    VkViewport vp = {(xo - ax - (float)sox) * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_s, 2 * ay * g_s, 0.0f, 1.0f};
+    VkViewport vp = {(xo - ax - (float)sox) * g_k * g_s, (yo - ay - (float)soy) * g_s, 2 * ax * g_k * g_s, 2 * ay * g_s, 0.0f, 1.0f};
     if (vp.width < 1) vp.width = 1;
     if (vp.height < 1) vp.height = 1;
     int x0 = (int)((u->bp[0x20] >> 12) & 0x7FF) - sox, y0 = (int)(u->bp[0x20] & 0x7FF) - soy;
     int x1 = (int)((u->bp[0x21] >> 12) & 0x7FF) - sox + 1, y1 = (int)(u->bp[0x21] & 0x7FF) - soy + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
-    VkRect2D sc = {{(int32_t)SC(x0), (int32_t)SC(y0)}, {SC(x1 > x0 ? x1 - x0 : 0), SC(y1 > y0 ? y1 - y0 : 0)}};
+    VkRect2D sc = {{(int32_t)XSC(x0), (int32_t)SC(y0)}, {x1 > x0 ? XSC(x1) - XSC(x0) : 0, SC(y1 > y0 ? y1 - y0 : 0)}};
     if (sc.offset.x > EFB_W) sc.offset.x = EFB_W;
     if (sc.offset.y > EFB_H) sc.offset.y = EFB_H;
     static int tiny = -1;  /* SR_VK_TINYSCISSOR=1 (GPU cost test): one pixel per draw, so only vertex and per-draw work remain */
@@ -1259,14 +1264,14 @@ static void picture_rect(float aspect, float out[4]) {
 static void present_picture(const GxCmd* c) {
     if (!acquire()) return;
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
-    float aspect = settings_display_aspect();
+    float aspect = g_k > 1.0f ? 4.0f / 3.0f * g_k : settings_display_aspect();
     float sy = (float)SC(y), sh = (float)SC(h);
     if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
         sy = (float)SC(y + (c->copy[11] >> 16));
         sh = (float)SC(c->copy[11] & 0xFFFF);
         aspect *= (float)h / (float)(c->copy[11] & 0xFFFF);
     }
-    float uv[4] = {(float)SC(x) / EFB_W, sy / EFB_H, (float)(SC(x) + SC(w)) / EFB_W, (sy + sh) / EFB_H};
+    float uv[4] = {(float)XSC(x) / EFB_W, sy / EFB_H, (float)XSC(x + w) / EFB_W, (sy + sh) / EFB_H};
     float px[4];
     picture_rect(aspect, px);
     to_layout(&g_efb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1462,7 +1467,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         if (t && t->live) {
             to_layout(&g_efb, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
             to_layout(t, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            VkImageBlit b = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {{(int32_t)SC(x), (int32_t)SC(y), 0}, {(int32_t)(SC(x) + SC(w)), (int32_t)(SC(y) + SC(h)), 1}},
+            VkImageBlit b = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {{(int32_t)XSC(x), (int32_t)SC(y), 0}, {(int32_t)XSC(x + w), (int32_t)(SC(y) + SC(h)), 1}},
                              {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {{0, 0, 0}, {(int32_t)t->w, (int32_t)t->h, 1}}};
             vkCmdBlitImage(g_cmd, g_efb.img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t->img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &b,
                            VK_FILTER_LINEAR);
@@ -1484,14 +1489,14 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         float col[4] = {((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, (argb >> 24) / 255.0f};
         VkColorComponentFlags mask = ((cm >> 3) & 1 ? (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT) : 0) |
                                      ((cm >> 4) & 1 ? VK_COLOR_COMPONENT_A_BIT : 0);
-        VkClearRect rect = {{{(int32_t)SC(x), (int32_t)SC(y)}, {SC(w), SC(h)}}, 0, 1};
+        VkClearRect rect = {{{(int32_t)XSC(x), (int32_t)SC(y)}, {XSC(x + w) - XSC(x), SC(h)}}, 0, 1};
         if (mask == 15) {
             VkClearAttachment ca = {VK_IMAGE_ASPECT_COLOR_BIT, 0, {{{col[0], col[1], col[2], col[3]}}}};
             vkCmdClearAttachments(g_cmd, 1, &ca, 1, &rect);
         } else if (mask) {  /* only some channels: a quad with that write mask */
             VkPipeline p = quad_pipe(Q_FILL, TGT_EFB, mask);
             (void)p;
-            float px[4] = {(float)SC(x), (float)SC(y), (float)(SC(x) + SC(w)), (float)(SC(y) + SC(h))};
+            float px[4] = {(float)XSC(x), (float)SC(y), (float)XSC(x + w), (float)(SC(y) + SC(h))};
             quad(Q_FILL, TGT_EFB, mask, NULL, NULL, EFB_W, EFB_H, px, NULL, col, NULL);
         }
         if ((u->bp[0x40] >> 4) & 1) {
@@ -1658,6 +1663,8 @@ static void execute(GxFrame* f) {
     slot_reclaim(g_slot);
     if (g_lost) device_recover();  /* found by the fence wait */
     g_s = settings_internal_scale();
+    settings_set_window_aspect((float)g_ext.width / (float)g_ext.height);  /* the fit mode: the screen's */
+    g_k = f->wide_k > 1.0f ? (f->wide_k < WIDE_K_MAX ? f->wide_k : WIDE_K_MAX) : 1.0f;
     g_cmd = g_cb[g_slot];
     vkResetCommandBuffer(g_cmd, 0);
     if (!g_push_desc) vkResetDescriptorPool(g_dev, g_dpool_frame[g_slot], 0);

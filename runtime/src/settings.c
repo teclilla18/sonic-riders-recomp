@@ -1,16 +1,20 @@
 /* User options: see settings.h. The file is plain `key=value` lines. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1, 0, 100};
 volatile double g_aspect_scale = 1.0;
+volatile double g_fov_scale = 1.0;
+static volatile float g_window_aspect = 16.0f / 9.0f;
+static volatile float g_wide_k = 1.0f;
 
 const char* settings_screen_name(int mode) {
-    static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched"};
+    static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched", "Fit window (wide)"};
     return mode >= 0 && mode < SCREEN_MODES ? names[mode] : "?";
 }
 
@@ -26,20 +30,48 @@ const char* settings_framerate_name(int mode) {
 
 float settings_internal_scale(void) { return g_settings.resolution == RES_2X ? 2.0f : g_settings.resolution == RES_1_5X ? 1.5f : 1.0f; }
 
-float settings_display_aspect(void) { return g_settings.screen == SCREEN_4_3 ? 4.0f / 3.0f : 16.0f / 9.0f; }
+/* an aspect from 4:3 to 32:9, rounded so the EFB is a whole number of
+ * (even) pixels wide: 640 x k */
+static float round_aspect(float a) {
+    if (!(a >= 4.0f / 3.0f)) a = 4.0f / 3.0f;
+    if (a > 32.0f / 9.0f) a = 32.0f / 9.0f;
+    float w = floorf(640.0f * a / (4.0f / 3.0f) / 2.0f + 0.5f) * 2.0f;
+    return w / 640.0f * (4.0f / 3.0f);
+}
+
+float settings_display_aspect(void) {
+    switch (g_settings.screen) {
+    case SCREEN_4_3: return 4.0f / 3.0f;
+    /* 16:9 rounded like the fit mode's, so both give the game the same camera aspect (online play) */
+    case SCREEN_FIT: return round_aspect(g_window_aspect);
+    case SCREEN_WIDE: return round_aspect(16.0f / 9.0f);
+    default: return 16.0f / 9.0f;
+    }
+}
+
+float settings_wide_k(void) { return g_wide_k; }
 
 /* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
 static void settings_log(const char* when) {
-    rt_log("[settings] %sscreen: %s, fps counter %s, resolution %s, frame rate %s, handheld graphics %s, Chaos Emerald gear %s",
-           when, settings_screen_name(g_settings.screen), g_settings.show_fps ? "on" : "off",
+    rt_log("[settings] %sscreen: %s (%.3f), HUD %s, field of view %d%%, fps counter %s, resolution %s, frame rate %s, "
+           "handheld graphics %s, Chaos Emerald gear %s",
+           when, settings_screen_name(g_settings.screen), settings_display_aspect(),
+           g_settings.hud_stretch ? "stretched" : "4:3", g_settings.fov, g_settings.show_fps ? "on" : "off",
            settings_resolution_name(g_settings.resolution),
            settings_framerate_name(g_settings.framerate), g_settings.handheld_gpu ? "384 MHz" : "system default",
            g_settings.chaos_emerald ? "unlocked" : "as in the save");
 }
 
+static void apply_view(void) {
+    /* widescreen: the cameras' aspect ratio from 4:3 to the screen's, and an EFB as much wider */
+    int wide = g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT;
+    g_wide_k = wide ? settings_display_aspect() / (4.0f / 3.0f) : 1.0f;
+    g_aspect_scale = g_wide_k;
+    g_fov_scale = g_settings.fov / 100.0;
+}
+
 static void apply(void) {
-    /* widescreen: the cameras' aspect ratio from 4:3 to 16:9 */
-    g_aspect_scale = g_settings.screen == SCREEN_WIDE ? (16.0 / 9.0) / (4.0 / 3.0) : 1.0;
+    apply_view();
     platform_set_handheld_gpu(g_settings.handheld_gpu);
 }
 
@@ -59,13 +91,30 @@ void settings_load(void) {
             else if (!strcmp(line, "fullscreen")) g_settings.fullscreen = v != 0;
             else if (!strcmp(line, "framerate") && v >= 0 && v < FR_MODES) g_settings.framerate = v;
             else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
+            else if (!strcmp(line, "hud_stretch")) g_settings.hud_stretch = v != 0;
+            else if (!strcmp(line, "fov") && v >= FOV_MIN && v <= FOV_MAX) g_settings.fov = v;
         }
         fclose(f);
     }
     const char* fr = getenv("SR_FRAMERATE");  /* testing: 0 = 60 fps, 1 = Auto, 2 = 30 fps (not saved unless changed in the menu) */
     if (fr && atoi(fr) >= 0 && atoi(fr) < FR_MODES) g_settings.framerate = atoi(fr);
+    /* testing, not saved unless changed in the menu: SR_SCREEN=0-3 (SCREEN_*), SR_FOV=80-130, SR_HUDSTRETCH=0/1 */
+    const char* sc = getenv("SR_SCREEN");
+    if (sc && atoi(sc) >= 0 && atoi(sc) < SCREEN_MODES) g_settings.screen = atoi(sc);
+    const char* fv = getenv("SR_FOV");
+    if (fv && atoi(fv) >= FOV_MIN && atoi(fv) <= FOV_MAX) g_settings.fov = atoi(fv);
+    if (getenv("SR_HUDSTRETCH")) g_settings.hud_stretch = atoi(getenv("SR_HUDSTRETCH")) != 0;
     apply();
     settings_log("");
+}
+
+void settings_set_window_aspect(float aspect) {
+    if (!(aspect > 0.1f) || fabsf(aspect - g_window_aspect) < 0.001f) return;
+    g_window_aspect = aspect;
+    if (g_settings.screen == SCREEN_FIT) {
+        apply_view();
+        rt_log("[settings] window aspect %.3f: picture %.3f, EFB width x%.3f", aspect, settings_display_aspect(), g_wide_k);
+    }
 }
 
 void settings_apply(void) {
@@ -77,9 +126,9 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
-            g_settings.handheld_gpu);
+            g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov);
     fclose(f);
 }

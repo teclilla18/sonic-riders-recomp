@@ -78,6 +78,13 @@ static GxFrame* frame(void) {
         { uint64_t d = rt_ticks() - t; g_wait_ticks += d; g_wait_total += d; }
         g_frame->ncmds = g_frame->nverts = g_frame->nunis = g_frame->nretired = g_frame->nxchunks = g_frame->nxtabs = 0;
         g_frame->nidx = 0;
+        /* the wide screen modes (gx_render.h GX_XR_WIDE_K): one factor for the whole frame */
+        float k = settings_wide_k();
+        g_frame->wide_k = k;
+        memcpy(&g_gx.xf_reg[GX_XR_WIDE_K], &k, 4);
+        g_gx.xf_reg[GX_XR_WIDE_FLAGS] = g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
+        float fov = (float)g_fov_scale;
+        memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
         g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;

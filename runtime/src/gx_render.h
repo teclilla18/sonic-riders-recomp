@@ -12,6 +12,15 @@ extern "C" {
 #define EFB_WIDTH 640
 #define EFB_HEIGHT 528
 
+/* Wide screen modes (settings_wide_k): two unused XF registers of each state carry the frame's EFB
+ * width factor k (float bits; 0 or 1 = the original 640) and flags, for the backends (viewport,
+ * scissor and copy X times k) and the vertex shader (gx.vert: 2D kept at 4:3 in the middle). A third
+ * carries the field of view setting. The game's writes to them are ignored (gx_fifo.c). */
+#define GX_XR_FOV 0x7D        /* field of view scale (float bits; 0 or 1 = the game's): gx.vert */
+#define GX_XR_WIDE_K 0x7E
+#define GX_XR_WIDE_FLAGS 0x7F
+#define GX_WIDE_HUD_43 1u     /* orthographic draws not touching the screen edges: 4:3 in the middle */
+
 /* one decoded vertex: raw attributes as floats (the XF stage runs in the vertex shader) */
 typedef struct GxVertex {
     float pos[4];      /* xyz, w = position/normal matrix index (row address / 4... see gx_render.c) */
@@ -73,6 +82,7 @@ typedef struct GxFrame {
     uint32_t* xchunks; uint32_t nxchunks, cap_xchunks;  /* XF memory chunk copies (GX_XFM_CHUNK words) */
     GxXTab* xtabs; uint32_t nxtabs, cap_xtabs;
     int* retired; uint32_t nretired, cap_retired;  /* texture ids to free after this frame */
+    float wide_k;                                  /* EFB width factor of this frame (settings_wide_k) */
 } GxFrame;
 
 /* backend (render_gl.c / render_deko.c) */

@@ -495,8 +495,21 @@ if ($builtApks.Count -gt 0) {
     $devs = @(); $unauth = @()
     if ($Install -ne "no") {
         $adbLines = @(& $adb devices 2>$null | Select-Object -Skip 1)
-        $devs = @($adbLines | Where-Object { $_ -match "\tdevice$" })
+        $devs = @($adbLines | Where-Object { $_ -match "\tdevice$" } | ForEach-Object { ($_ -split "\t")[0] })
         $unauth = @($adbLines | Where-Object { $_ -match "\tunauthorized$" })
+        # one phone on USB and on wireless debugging at once is listed twice: count it once, by its
+        # hardware serial, and use the USB entry (wireless ones are "ip:port" or "adb-...._tcp")
+        if ($devs.Count -gt 1) {
+            $bySerial = [ordered]@{}
+            foreach ($d in ($devs | Sort-Object { if ($_ -match ":|_tcp") { 1 } else { 0 } })) {
+                $sn = ((& $adb -s $d shell getprop ro.serialno 2>$null) -join "").Trim()
+                if (-not $sn) { $sn = $d }
+                if (-not $bySerial.Contains($sn)) { $bySerial[$sn] = $d }
+            }
+            $devs = @($bySerial.Values)
+        }
+        # every later adb call goes to that device (adb reads ANDROID_SERIAL)
+        if ($devs.Count -eq 1) { $env:ANDROID_SERIAL = $devs[0] }
     }
     $ErrorActionPreference = $old
     if (-not $Install) {

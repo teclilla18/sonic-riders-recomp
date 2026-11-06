@@ -21,6 +21,7 @@
 #include <threads.h>
 
 #include "gx.h"
+#include "gx_render.h"
 #include "runtime.h"
 
 #define OS_INTERRUPT_PI_PE_TOKEN  18
@@ -282,7 +283,7 @@ static void load_xf(uint32_t addr, const uint8_t* data, uint32_t n) {
             g_gx.xf_mem[addr] = v;
             g_gx.xfm_dirty |= 1u << ((addr >> 6) & 31);
             changed = 1;
-        } else if (addr < 0x1100) {
+        } else if (addr < 0x1100 && (addr < 0x1000 + GX_XR_FOV || addr > 0x1000 + GX_XR_WIDE_FLAGS)) {
             if (g_gx.xf_reg[addr - 0x1000] == v) continue;
             g_gx.xf_reg[addr - 0x1000] = v;
             g_gx.regs_dirty = 1;

@@ -24,8 +24,13 @@ void input_init(void);
 void input_pump(void);
 
 #define EFB_SCALE 2
-#define EFB_W (EFB_WIDTH * EFB_SCALE)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
+/* the wide screen modes (gx_render.h GX_XR_WIDE_K): the EFB is 640 x k wide (in GX units), k from the
+ * frame; X of viewports, scissors and copies is scaled by it */
+static float g_wide_k = 1.0f;     /* this frame's */
+static float g_efb_k = 0.0f;      /* the EFB textures' */
+static int efb_w(float k) { return (int)(EFB_WIDTH * k + 0.5f) * EFB_SCALE; }
+static int wx(int x) { return (int)((float)x * g_wide_k + 0.5f) * EFB_SCALE; }  /* GX X -> EFB pixels */
 
 /* ---- GL functions beyond 1.1 ---- */
 #define GLFUNCS(X) \
@@ -114,6 +119,28 @@ static GLuint compile(GLenum type, const char* src) {
 
 static const char* const k_attrs[10] = {"a_pos", "a_nrm", "a_col0", "a_col1", "a_tex01", "a_tex23", "a_tex45", "a_tex67", "a_tm0", "a_tm1"};
 
+/* (re)creates the EFB at 640 x k (wide screen modes); its contents are lost (cleared) */
+static void efb_resize(float k) {
+    int w = efb_w(k);
+    glBindTexture(GL_TEXTURE_2D, g_efb_color);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, EFB_H, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, g_efb_depth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, EFB_H, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+    p_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_efb_color, 0);
+    p_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_efb_depth, 0);
+    if (p_glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) rt_fatal("EFB framebuffer incomplete");
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(1, 1, 1, 1);
+    glDepthMask(GL_TRUE);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (g_efb_k != 0.0f) rt_log("[gl] EFB %d x %d (wide x%.3f)", w, EFB_H, k);
+    g_efb_k = k;
+}
+
 static void gl_setup(void) {
 #define LOAD(t, n) if (!(p_##n = (t)SDL_GL_GetProcAddress(#n))) rt_fatal("missing GL function " #n);
     GLFUNCS(LOAD)
@@ -166,21 +193,10 @@ static void gl_setup(void) {
     p_glGenBuffers(1, &g_ibo);
     /* the EFB */
     glGenTextures(1, &g_efb_color);
-    glBindTexture(GL_TEXTURE_2D, g_efb_color);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, EFB_W, EFB_H, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenTextures(1, &g_efb_depth);
-    glBindTexture(GL_TEXTURE_2D, g_efb_depth);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, EFB_W, EFB_H, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
     p_glGenFramebuffers(1, &g_fbo);
-    p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
-    p_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_efb_color, 0);
-    p_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, g_efb_depth, 0);
-    if (p_glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) rt_fatal("EFB framebuffer incomplete");
+    efb_resize(1.0f);
     p_glGenFramebuffers(1, &g_copy_fbo);
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 /* ---- textures ---- */
@@ -239,17 +255,18 @@ static void apply_state(const GxUniforms* u) {
     float xs = f32(u->xfr[0x1A]), ys = f32(u->xfr[0x1B]), xo = f32(u->xfr[0x1D]), yo = f32(u->xfr[0x1E]);
     int sox = (int)(u->bp[0x59] & 0x3FF) * 2, soy = (int)((u->bp[0x59] >> 10) & 0x3FF) * 2;
     if (g_debug_frame)
-        rt_log("[gxdbg] viewport scale %.1f %.1f off %.1f %.1f | scissor %08X %08X off %d %d | proj %u", xs, ys, xo, yo,
-               u->bp[0x20], u->bp[0x21], sox, soy, u->xfr[0x26]);
+        rt_log("[gxdbg] viewport scale %.1f %.1f off %.1f %.1f | scissor %08X %08X off %d %d | proj %u P0 %g P2 %g", xs, ys,
+               xo, yo, u->bp[0x20], u->bp[0x21], sox, soy, u->xfr[0x26], f32(u->xfr[0x20]), f32(u->xfr[0x22]));
     float vx = xo - (xs < 0 ? -xs : xs) - (float)sox, vy = yo - (ys < 0 ? -ys : ys) - (float)soy;
-    glViewport((GLint)(vx * EFB_SCALE), (GLint)(vy * EFB_SCALE), (GLsizei)(2 * (xs < 0 ? -xs : xs) * EFB_SCALE),
+    float k = g_wide_k;
+    glViewport((GLint)(vx * k * EFB_SCALE), (GLint)(vy * EFB_SCALE), (GLsizei)(2 * (xs < 0 ? -xs : xs) * k * EFB_SCALE),
                (GLsizei)(2 * (ys < 0 ? -ys : ys) * EFB_SCALE));
     int x0 = (int)((u->bp[0x20] >> 12) & 0x7FF) - sox, y0 = (int)(u->bp[0x20] & 0x7FF) - soy;
     int x1 = (int)((u->bp[0x21] >> 12) & 0x7FF) - sox + 1, y1 = (int)(u->bp[0x21] & 0x7FF) - soy + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     glEnable(GL_SCISSOR_TEST);
-    glScissor(x0 * EFB_SCALE, y0 * EFB_SCALE, (x1 > x0 ? x1 - x0 : 0) * EFB_SCALE, (y1 > y0 ? y1 - y0 : 0) * EFB_SCALE);
+    glScissor(wx(x0), y0 * EFB_SCALE, x1 > x0 ? wx(x1) - wx(x0) : 0, (y1 > y0 ? y1 - y0 : 0) * EFB_SCALE);
     /* depth */
     uint32_t z = u->bp[0x40];
     static const GLenum zf[8] = {GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_GEQUAL, GL_ALWAYS};
@@ -352,13 +369,14 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             int ww, wh;
             SDL_GetWindowSize(g_win, &ww, &wh);
             if (ww <= 0 || wh <= 0) { ww = 1280; wh = 960; }
+            settings_set_window_aspect((float)ww / (float)wh);  /* the fit mode (next frame) */
             pres_target(ww, wh);
             glColorMask(1, 1, 1, 1);
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
             /* the picture at the chosen aspect (settings.h), centred; the EFB is stored top row first:
              * flip while blitting to the window */
-            float aspect = settings_display_aspect();
+            float aspect = g_wide_k > 1.0f ? 4.0f / 3.0f * g_wide_k : settings_display_aspect();
             int sy = y, sh = h;
             if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
                 sy = y + (int)(c->copy[11] >> 16), sh = (int)(c->copy[11] & 0xFFFF);
@@ -368,7 +386,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
             else dh = (int)((float)ww / aspect + 0.5f);
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
-            p_glBlitFramebuffer(x * EFB_SCALE, sy * EFB_SCALE, (x + w) * EFB_SCALE, (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
+            p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
             draw_overlay(ww, wh);
             if (g_same_k >= 0) {  /* SR_SKIPSAME: a repeat of this frame; saved, not counted */
@@ -414,7 +432,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_copy_fbo);
             p_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
             glColorMask(1, 1, 1, 1);
-            p_glBlitFramebuffer(x * EFB_SCALE, y * EFB_SCALE, (x + w) * EFB_SCALE, (y + h) * EFB_SCALE, 0, 0,
+            p_glBlitFramebuffer(wx(x), y * EFB_SCALE, wx(x + w), (y + h) * EFB_SCALE, 0, 0,
                                 (GLint)(t->width * EFB_SCALE), (GLint)(t->height * EFB_SCALE), GL_COLOR_BUFFER_BIT, GL_LINEAR);
             if (copy_format_opaque(c->copy[9])) {  /* the target format has no alpha: it samples as 1 */
                 glColorMask(0, 0, 0, 1);
@@ -429,7 +447,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         uint32_t argb = c->copy[6];
         uint32_t cm = u->bp[0x41];
         glEnable(GL_SCISSOR_TEST);
-        glScissor(x * EFB_SCALE, y * EFB_SCALE, w * EFB_SCALE, h * EFB_SCALE);
+        glScissor(wx(x), y * EFB_SCALE, wx(x + w) - wx(x), h * EFB_SCALE);
         glColorMask((cm >> 3) & 1, (cm >> 3) & 1, (cm >> 3) & 1, (cm >> 4) & 1);
         glDepthMask((u->bp[0x40] >> 4) & 1 ? GL_TRUE : GL_FALSE);
         glClearColor(((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, (argb >> 24) / 255.0f);
@@ -439,6 +457,8 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 }
 
 static void execute(GxFrame* f) {
+    g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
+    if (g_wide_k != g_efb_k) efb_resize(g_wide_k);
     p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
     p_glUseProgram(g_prog);
     {   /* SR_TEVDEBUG=cycle (modes 0-3) or cycle:a,b,...: one mode per frame, in turn (one moment several ways) */
@@ -763,7 +783,10 @@ static int render_thread(void* arg) {
         /* SR_MINIMIZED: start minimized and without taking focus (unattended test runs) */
         int minimized = getenv("SR_MINIMIZED") != NULL;
         if (minimized) SDL_SetHint("SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN", "1");
-        g_win = SDL_CreateWindow("Sonic Riders (native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960,
+        int win_w = 1280, win_h = 960;  /* SR_WINDOW=WxH: the window's first size (wide screen captures) */
+        if (getenv("SR_WINDOW")) sscanf(getenv("SR_WINDOW"), "%dx%d", &win_w, &win_h);
+        if (win_w < 160 || win_h < 120) win_w = 1280, win_h = 960;
+        g_win = SDL_CreateWindow("Sonic Riders (native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_w, win_h,
                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
         if (!SDL_GL_CreateContext(g_win)) rt_fatal("SDL_GL_CreateContext: %s", SDL_GetError());
