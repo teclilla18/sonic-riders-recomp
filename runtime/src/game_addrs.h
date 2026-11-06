@@ -31,6 +31,7 @@
  * seen), 8 in races (demo and Free Race seen; 2026-11-03). Other modes not looked at yet. */
 #define GAME_TOP_MODE        0x8021B8C0u
 #define GAME_TOP_MODE_MENUS  1u
+#define GAME_TOP_MODE_RACE   8u   /* demo and Free Race seen (notes/game-addresses.md) */
 
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */

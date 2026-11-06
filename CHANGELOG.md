@@ -1,16 +1,27 @@
 # Changelog
 
-## Unreleased
+## v0.5.0 (2026-11-06)
 
-- **Ultrawide without stretching, and a field of view setting** (Discussions #15; settings menu > Display):
-  a new **Fit window** screen mode matches your window or screen (16:10 Steam Deck, 21:9 and 32:9 ultrawide,
-  ~20:9 phones), and the 16:9 mode no longer stretches the picture: the game draws a wider image. The HUD and
-  menus keep their original 4:3 shape in the middle (option: stretch them to the width). Field of view 80-130%.
-  Known: small seams at the corners of the title screen's black bands in wide modes. (Settings may still change.)
+- **Ultrawide without stretching, and a field of view setting** (Discussions #15; settings menu > Display).
+  Three screen modes:
+  - **4:3** (original);
+  - **16:9 widescreen**: the game draws a wider picture instead of stretching; HUD and menus keep their 4:3 shape
+    in the middle (option: stretch them to the width);
+  - **Fit window**: matches your window or screen (16:10 Steam Deck, 21:9 and 32:9 ultrawide, ~20:9 phones). In
+    races the HUD moves to the screen edges; menus stay in the middle with their backgrounds filling the screen.
+  - The old "16:9 stretched" mode is gone (a saved setting becomes 16:9 widescreen).
+  - Field of view 80-130%.
+- Fixed in the wide modes: a faint copy ("mirage") of your character to its right (the speed-blur effect was
+  squeezed), a smeared colour gradient at the bottom left of menus, and gaps in the title screen's bands.
+- PC: the settings menu (F1) works with the mouse: point, click, drag sliders, scroll. The cursor shows while the
+  menu is open, also in fullscreen.
+- Online play groundwork (not a feature yet): a session uses the host's picture shape on every machine (it is
+  part of the game's state), timing fallbacks no longer act during a session, and the PC now makes the same "NaN"
+  float values as the Switch and phones (needed for PC-Switch sessions; not tested between machines yet).
 - Android setup: a phone connected by USB and by wireless debugging at the same time counted as two devices,
   so the setup refused to install; it now counts it once and installs over USB.
 
-- **Linux and Steam Deck (new, not yet tested on a Deck):** `SonicRiders-Linux-Setup-<version>.zip` with
+- **Linux and Steam Deck (new; first Deck report on gbatemp: it works):** `SonicRiders-Linux-Setup-<version>.zip` with
   `Install Sonic Riders (Linux).sh`. It builds the PC version on the Linux machine itself from your disc image,
   with nothing to install and no root rights: system Python 3, SDL2 and OpenGL (SteamOS has them), and its own
   downloaded tools, including the zig compiler when the system has no clang or gcc. It adds a menu entry, a

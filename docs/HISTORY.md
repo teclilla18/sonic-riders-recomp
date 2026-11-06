@@ -525,3 +525,27 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - **Android setup:** the user's own v0.4.2 build skipped the install: "3 devices" = the emulator I had running
   plus the S23 Ultra over USB and over wireless debugging. setup.ps1 now counts devices by `ro.serialno`, prefers
   USB and sets ANDROID_SERIAL [likely: the dedupe tested by hand on the two entries, not a full setup run].
+
+## 2026-11-06 (evening): v0.5.0: edge HUD, wide-mode fixes, mouse menu, online groundwork
+- **User report** (PC 3440x1440, Fit window; shots in build/old/user-shots-2026-11-06): gradient bottom left in
+  menus, a faint copy of the character beside it in every non-4:3 mode; wants the HUD at the edges in Fit window,
+  16:9 with 4:3-middle HUD (+ stretch option), no "16:9 stretched" mode.
+- **Mirage cause [confirmed]**: the per-vertex 2D rule (vertices at the edge kept, the rest /k) squeezed the inner
+  vertices of the 18-vertex speed-blur copy quad (512x256 EFB copy of the last frame) against its texture; the
+  gradient was an edge piece of a menu band stretched the same way. **Fix**: per-draw anchors (gx_render.c
+  `wide_anchor`, normal's w, gx.vert): full width / bands stretched, others middle, and in Fit window during races
+  (GAME_TOP_MODE 8) left/right of a 0.3 dead zone to the edges. Edges in menus were tried and split text lines and
+  icon rows, so menus stay in the middle. Text glyphs chained into bands until bands needed 0.1-wide pieces with
+  similar heights. [confirmed by captures: PC det route 16:9/21:9/32:9 + 2P, menu route + race pause 21:9, Eden,
+  Android emulator 20:9]. Not checked: results screen, story, 3-4P; phones: edge HUD under the touch buttons.
+- "16:9 stretched" removed (saved value 2 -> 16:9).
+- **PC mouse in the F1 menu** (render_gl.c -> overlay_mouse_*): click, tabs, slider click and drag [confirmed with
+  posted WM_ mouse messages]; wheel coded, nothing scrolls at 720p to check; fullscreen cursor untested.
+- **Online** (not tested between machines): host camera aspect in the welcome (protocol 3) and recordings;
+  backstops off during sessions; x86 NaN creation -> +NaN in the recompiled float ops (ppc_nan2/3). PC perf test
+  after the NaN change: 1P 58.6 fps / 2P 59.7, game 1.6 ms/step [likely unchanged; the PC was busy].
+- Found: Git Bash `python` and `py` are devkitPro's msys python, which writes forward-slash program paths into
+  build.ninja (CreateProcess failed); configure with the Windows Python312 path.
+- Steam Deck: first user report on gbatemp (works; fullscreen borderless shows 4:3 borders, "16:9 stretch" did
+  not work (now removed), Chaos Emerald gear option did not work) -> next session.
+- Released v0.5.0 (PC, Android, Switch, Linux zips) after the cold sandbox tests.

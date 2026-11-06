@@ -203,6 +203,19 @@ right, A) through Metal City. In lockstep each copy gets its own player's part o
 - Next: PC-PC on two PCs and Switch-Switch (the user has a laptop and two more Switches), then the NaN fix for
   cross-play (phase 4).
 
+**2026-11-06 (implemented, released in v0.5.0, not yet tested between machines):**
+- Camera aspect: the host's k goes in the welcome message (protocol 3) and recordings (header bytes 20-23);
+  the joiner and replays use it (`settings_fix_wide_k`); the menu says the shape is fixed for the session.
+- Backstops: during a session (`netplay_in_session`) the sched.c alarm backstop and the vi.c retrace backstop
+  never act on the host clock; they log `[det] ... backstop skipped (online session)` instead.
+- NaN sign (phase 4): tools/recomp/ppc2c.py wraps the recompiled float arithmetic (add, sub, mul, div, sqrt,
+  madd/msub forms, paired singles) in `ppc_nan2`/`ppc_nan3` (ppc.h): on x86 a NaN result from non-NaN inputs
+  becomes +NaN (0x7FF8000000000000), before the negation of fnmadd/fnmsub; on ARM they are empty macros.
+  fres/frsqrte already return explicit positive NaNs. PC perf test unchanged (game 1.6 ms/step). Unproven:
+  a PC recording of the 2P race route replayed on ARM (Eden or Switch) frame-identical through frames 6918-7103.
+- The 2P race route script must be rebuilt (old scratchpad lost): online save, `SR_PADS=2`; note SR_SHOTSTEP
+  names files `shot_<step+1>.png`.
+
 
 ## Save data for online races (decided, 2026-10-30)
 

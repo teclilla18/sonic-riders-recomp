@@ -390,6 +390,26 @@ typedef float ppc_fs;
 typedef double ppc_fs;
 #define PPC_SOP(a, op, b) to_single((a) op (b))
 #endif
+/* NaN sign for online cross-play (docs/ONLINE.md phase 4): an operation that makes a NaN out of
+ * non-NaN inputs (0/0, inf - inf, 0 * inf, sqrt of a negative) gives the positive default NaN on the
+ * Gekko and on ARM, but a negative one on x86 (SSE), and the game stores such NaNs. On x86 the
+ * recompiled arithmetic (tools/recomp/ppc2c.py) passes its result through these, so a created NaN is
+ * the positive one there too; NaN inputs still propagate as they are (the game also keeps negative
+ * NaNs as data). On ARM they cost nothing. The negated forms (fnmadd, fnmsub) apply it before the
+ * negation, as ARM's NaN is created before it. */
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+static inline PPC_ALWAYS_INLINE double ppc_nan2(double r, double a, double b) {
+    if (__builtin_expect(r != r, 0) && a == a && b == b) return __builtin_nan("");
+    return r;
+}
+static inline PPC_ALWAYS_INLINE double ppc_nan3(double r, double a, double b, double c) {
+    if (__builtin_expect(r != r, 0) && a == a && b == b && c == c) return __builtin_nan("");
+    return r;
+}
+#else
+#define ppc_nan2(r, a, b) (r)
+#define ppc_nan3(r, a, b, c) (r)
+#endif
 /* checking build of the single-precision tracking (RECOMP_SINGLE_CHECK=1, tools/recomp/singleflow.py):
  * an operand the recompiler left without round25 must be single precision already */
 void ppc_single_report(uint32_t addr, double v);

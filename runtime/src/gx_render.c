@@ -7,6 +7,7 @@
 #include <threads.h>
 
 #include "gx.h"
+#include "ppc.h"
 #include "game_addrs.h"
 #include "gx_render.h"
 #include "settings.h"
@@ -71,6 +72,7 @@ static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using u
 static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
 static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
 
+static uint32_t g_nanch;  /* 2D draws of this frame remembered for wide_anchor */
 static GxFrame* frame(void) {
     if (!g_frame) {
         uint64_t t = rt_ticks();
@@ -82,13 +84,24 @@ static GxFrame* frame(void) {
         float k = settings_wide_k();
         g_frame->wide_k = k;
         memcpy(&g_gx.xf_reg[GX_XR_WIDE_K], &k, 4);
-        g_gx.xf_reg[GX_XR_WIDE_FLAGS] = g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
+        /* fit window: the race HUD at the screen edges; menus stay 4:3 in the middle (their rows of
+         * text and icons would come apart) */
+        g_gx.xf_reg[GX_XR_WIDE_FLAGS] =
+            g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE ? GX_WIDE_HUD_EDGES : 0u)
+            : g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
+        {
+            static uint32_t last_fl = ~0u;
+            if (g_gx.xf_reg[GX_XR_WIDE_FLAGS] != last_fl && k > 1.0f)
+                rt_log("[wide] frame %llu: game mode %u, HUD flags %u", g_frames, ld32(GAME_TOP_MODE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
+            last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
+        }
         float fov = (float)g_fov_scale;
         memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
         g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
         gx_texture_new_frame();
+        g_nanch = 0;
     }
     return g_frame;
 }
@@ -576,6 +589,106 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
     draw_impl(prim, vat, count, vertices, vertex_size);
     g_ppc_cur_fn = prev;
 }
+/* wide screen modes (gx_render.h GX_ANCHOR_*): where a 2D (orthographic) draw goes, decided once for
+ * the whole draw from its extent in clip space (X -1..1 = the game's 640 columns), so the pieces of
+ * one HUD element move together. Spanning the width: stretched (fades, backgrounds, the speed-blur
+ * copy, whose inner vertices must not move against its texture). With GX_WIDE_HUD_EDGES, a draw
+ * whose middle is left (right) of the dead zone moves with the left (right) screen edge.
+ * A band made of several pieces side by side (the title's top and bottom bands) is stretched as a
+ * whole: when the draws touching each other (X ranges meet, Y ranges overlap) cover the width, every
+ * one of them is stretched (they may be marked again after they were decoded: the frame is drawn
+ * only once it is complete). */
+#define ANCHOR_DEAD_ZONE 0.3f  /* clip units around the middle that stay in the middle (TIME, PRESS START) */
+#define ANCHOR_MAX 64          /* 2D draws of a frame remembered for the bands */
+typedef struct { uint32_t v0, n; float x0, x1, y0, y1; int code, full; } Anchored;
+static Anchored g_anch[ANCHOR_MAX];
+static void anchor_set(GxFrame* f, Anchored* a, int code) {
+    a->code = code;
+    for (uint32_t i = 0; i < a->n; i++) f->verts[a->v0 + i].nrm[3] = (float)code;
+}
+/* side by side: X ranges meet or overlap a little, Y ranges mostly the same (text on a band is not
+ * part of it); draws that span the width alone (backgrounds) and narrow ones (the letters of a line
+ * of text, side by side too) join nothing */
+#define ANCHOR_BAND_MIN_W 0.1f  /* clip units (32 of the 640 columns) */
+static int anchor_touch(const Anchored* a, const Anchored* b) {
+    if (a->full || b->full || a->x1 - a->x0 < ANCHOR_BAND_MIN_W || b->x1 - b->x0 < ANCHOR_BAND_MIN_W) return 0;
+    float yover = (a->y1 < b->y1 ? a->y1 : b->y1) - (a->y0 > b->y0 ? a->y0 : b->y0);
+    float ha = a->y1 - a->y0, hb = b->y1 - b->y0;
+    if (yover < 0.5f * (ha > hb ? ha : hb)) return 0;
+    float over = (a->x1 < b->x1 ? a->x1 : b->x1) - (a->x0 > b->x0 ? a->x0 : b->x0);
+    float wa = a->x1 - a->x0, wb = b->x1 - b->x0;
+    return over >= -0.01f && over <= 0.5f * (wa < wb ? wa : wb);
+}
+/* SR_ANCHORLOG=<frame>: log that frame's 2D draws and their anchors (frames counted as SR_GXDEBUG) */
+static int anchor_log(void) {
+    static int at = -1;
+    if (at < 0) at = getenv("SR_ANCHORLOG") ? atoi(getenv("SR_ANCHORLOG")) : 0;
+    return at && g_frames + 1 == (unsigned)at;
+}
+static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
+    GxVertex* v = &f->verts[v0];
+    uint32_t fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
+    float P0, P1, P2, P3, xs;
+    memcpy(&P0, &g_gx.xf_reg[0x20], 4);
+    memcpy(&P1, &g_gx.xf_reg[0x21], 4);
+    memcpy(&P2, &g_gx.xf_reg[0x22], 4);
+    memcpy(&P3, &g_gx.xf_reg[0x23], 4);
+    memcpy(&xs, &g_gx.xf_reg[0x1A], 4);
+    float lo = 1e30f, hi = -1e30f, ylo = 1e30f, yhi = -1e30f;
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t pm = ((uint32_t)v[i].pos[3] * 4) & 0xFFC;
+        float r[4];
+        memcpy(r, &g_gx.xf_mem[pm], sizeof r);
+        float x = P0 * (r[0] * v[i].pos[0] + r[1] * v[i].pos[1] + r[2] * v[i].pos[2] + r[3]) + P1;
+        if (xs < 0.0f) x = -x;  /* a mirrored viewport */
+        if (x < lo) lo = x;
+        if (x > hi) hi = x;
+        memcpy(r, &g_gx.xf_mem[pm + 4], sizeof r);
+        float y = P2 * (r[0] * v[i].pos[0] + r[1] * v[i].pos[1] + r[2] * v[i].pos[2] + r[3]) + P3;
+        if (y < ylo) ylo = y;
+        if (y > yhi) yhi = y;
+    }
+    int code = GX_ANCHOR_MIDDLE;
+    if (lo <= -0.99f && hi >= 0.99f) code = GX_ANCHOR_STRETCH;
+    else if (fl & GX_WIDE_HUD_EDGES) {
+        float mid = 0.5f * (lo + hi);
+        code = mid < -ANCHOR_DEAD_ZONE ? GX_ANCHOR_LEFT : mid > ANCHOR_DEAD_ZONE ? GX_ANCHOR_RIGHT : GX_ANCHOR_MIDDLE;
+    }
+    if (g_nanch == ANCHOR_MAX) {  /* keep the newer half */
+        memmove(g_anch, g_anch + ANCHOR_MAX / 2, sizeof g_anch[0] * (ANCHOR_MAX / 2));
+        g_nanch = ANCHOR_MAX / 2;
+    }
+    Anchored* me = &g_anch[g_nanch++];
+    if (anchor_log())
+        rt_log("[anchor] draw %u: %u verts x %.3f..%.3f y %.3f..%.3f -> %d", g_nanch - 1, count, lo, hi, ylo, yhi, code);
+    *me = (Anchored){v0, count, lo, hi, ylo, yhi, GX_ANCHOR_MIDDLE, code == GX_ANCHOR_STRETCH};
+    anchor_set(f, me, code);
+    if (code == GX_ANCHOR_STRETCH) return;
+    /* the band this draw belongs to: the draws connected to it */
+    uint64_t in = 1ull << (g_nanch - 1);
+    float b0 = lo, b1 = hi;
+    for (int grew = 1; grew;) {
+        grew = 0;
+        for (uint32_t j = 0; j + 1 < g_nanch; j++) {
+            if (in & (1ull << j)) continue;
+            for (uint32_t m = 0; m < g_nanch; m++)
+                if ((in & (1ull << m)) && anchor_touch(&g_anch[j], &g_anch[m])) {
+                    in |= 1ull << j;
+                    if (g_anch[j].x0 < b0) b0 = g_anch[j].x0;
+                    if (g_anch[j].x1 > b1) b1 = g_anch[j].x1;
+                    grew = 1;
+                    break;
+                }
+        }
+    }
+    if (b0 <= -0.99f && b1 >= 0.99f)
+        for (uint32_t j = 0; j < g_nanch; j++)
+            if ((in & (1ull << j)) && g_anch[j].code != GX_ANCHOR_STRETCH) {
+                anchor_set(f, &g_anch[j], GX_ANCHOR_STRETCH);
+                if (anchor_log()) rt_log("[anchor]   draw %u joins a band: stretched", j);
+            }
+}
+
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     if (!count) return;
     if (g_state_dirty) {
@@ -606,8 +719,10 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     static int check = -1;
     if (check < 0) check = getenv("SR_DECODECHECK") != NULL;
     uint64_t td = gx_ticks();
+    /* 2D in a wide mode: decoded here, the anchor needs the positions (wide_anchor) */
+    int anchor = g_gx.xf_reg[0x26] != 0 && (g_gx.xf_reg[GX_XR_WIDE_FLAGS] & GX_WIDE_HUD_43) && f->wide_k > 1.0f;
     if (!check) {
-        if (!dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
+        if (anchor || !dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
             for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
     } else {  /* SR_DECODECHECK: the reference decoder too, compared bit for bit */
         static unsigned long long checked, bad;
@@ -628,6 +743,7 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
         if ((checked & ~0xFFFFFull) != ((checked - count) & ~0xFFFFFull))
             rt_log("[decodecheck] %llu vertices compared, %llu mismatches", checked, bad);
     }
+    if (anchor) wide_anchor(f, f->nverts, count);
     g_decode_ticks += gx_ticks() - td;
     f->idx = grow(f->idx, &f->cap_idx, f->nidx + out_n, sizeof(uint32_t));
     uint32_t* o = f->idx + f->nidx;

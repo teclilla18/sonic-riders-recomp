@@ -1,50 +1,36 @@
-# State (2026-11-06, evening)
+# State (2026-11-06, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**Decisions (user, 2026-11-06):** Android screen recording is not supported (no more work on it); Vita and iOS
-paused until the user says otherwise. **Next (user's order): fix ultrawide per the user's report below, then online play (phase 3/4, see "Online");
-then the boost camera effect (docs/notes/boost-effect.md, #16). The user's hardware tests come last.**
+**Decisions (user, 2026-11-06):** Android screen recording is not supported; Vita and iOS paused. **v0.5.0 released
+2026-11-06; the user is checking it.** Next (user's order after the clear): Steam Deck fixes from the gbatemp report
++ easy issue reporting on Linux/Deck; then online play (below); right-stick camera research; boost effect (#16).
 
-## Ultrawide + FOV (2026-11-06; on `main`, not released; docs/notes/ultrawide-fov.md)
+## Steam Deck / Linux (first real-Deck report, gbatemp #19, 2026-11-06, on v0.5.0-linux-test)
 
-- Implemented on PC, Switch, Android: "Fit window" mode (4:3..32:9), wide EFB instead of stretching (16:9 too),
-  2D at 4:3 in the middle (option: stretch), FOV 80-130 % (shader, render-only). Tested: PC det-route captures,
-  Switch in Eden, Android emulator. Camera aspect is game state: online sessions must fix one aspect (open).
-- **User report (PC, 3440x1440, 2026-11-06; 3 in-game screenshots, ignore the 3rd; find them as the newest
-  `shot_*.png` in the user's game folder / `build/`):**
-  1. Fit window: a GUI bug in shots 1-2; bottom left has a weird colour gradient (likely a HUD piece touching the
-     left edge stretched by the gx.vert edge rule [uncertain]).
-  2. Any aspect other than 4:3: a very opaque "mirage" of the player's character to the right of it (lead: an
-     EFB-copy effect, e.g. afterimage/blur, sampled with screen-space texture coords that assume 640 wide; the
-     copy source is now 640 x k [uncertain]; check the copy-texture draws' texgen in a `SR_GXDEBUG` race frame).
-  3. Decisions: HUD 4:3 in the middle is the right default for 16:9. In 16:9 keep the "stretch HUD" option (looks
-     fine). In Fit window (ultrawide) the HUD must move to the screen edges, and that is the only option there (no
-     4:3-middle, no stretch). Remove the separate "16:9 stretched" screen mode ("stretched shouldn't be an option").
-  - Android not tried by the user yet (building it now). Android setup fix (phone counted once) on `main`.
-- **Plan:** (a) reproduce 1-2 on the PC det route at 21:9 (`SR_SCREEN=3 SR_WINDOW=3440x1440`) and look at the
-  user's shots; (b) edge-anchored HUD for Fit: per orthographic draw, its clip-space x extent decides left / right
-  / centre / full width; left groups shift by -(k-1) (in 4:3 units), right by +(k-1), centre stays, full width
-  stretches. Needs a per-draw value (bbox computed on the CPU at the draw in gx_render.c or the backend from the
-  decoded vertices + XF matrix, passed per draw, e.g. GxCmd.pad) instead of the per-vertex edge rule; HUD pieces
-  that belong together (e.g. the left panel made of several draws) must get the same shift: use the half of the
-  screen the draw's centre is in, with a dead zone around the centre; (c) fix the mirage; (d) menu: modes 4:3,
-  16:9 (+ stretch HUD option), Fit window (edges only); old saved `screen=2` maps to 16:9; (e) captures at 16:9,
-  21:9, 32:9 + 2P split to the user before finishing.
-- **User request (2026-11-06): mouse support in the F1 settings menu (PC)** (point, click, scroll the Dear ImGui menu).
+- User RonnieD: "It works on steam deck just minor issues like the Full Screen Borderless (can put up with 4:3
+  borders for now) and 16:9 Stretch option not working. The chaos board cheat doesn't work as well (not that it
+  matters, I plan on unlocking naturally)." Our reply (#20): Chaos Emerald option unlocks it in the shop for 0 rings;
+  fixes coming.
+- To do: (1) fullscreen on the Deck (Game Mode/gamescope: borderless fullscreen with 4:3 bars; v0.5.0's Fit window
+  should fill 16:10; check `SDL_WINDOW_FULLSCREEN_DESKTOP` under gamescope and whether Fit is the right Deck
+  default); (2) "16:9 stretch" is gone in v0.5.0 (16:9 widescreen / Fit instead): tell the user; (3) explain the
+  Chaos Emerald gear (shop, 0 rings) in the menu text/docs, check it works on Linux; (4) **make reporting issues easy
+  on Linux/Deck** (user request): e.g. a menu button / launcher entry that bundles sonicriders.log + setup.log +
+  system info into one file in an obvious place and says where, like the Android crash reports; docs link.
+- Linux build: `configure.py --toolchain linux`, `make_release.py --flavor linux`; notes/build-and-test.md.
 
-## Linux / Steam Deck (new, 2026-11-06; on `main`, not released)
+## Ultrawide + FOV (released in v0.5.0; docs/notes/ultrawide-fov.md)
 
-- `configure.py --toolchain linux` -> `build/host-linux/sonicriders` (system clang/gcc or zig cc; links the runtime
-  libSDL2-2.0.so.0 + libGL.so.1, no -dev packages). `SonicRidersSetup.sh` -> `tools/setup_linux.py`; release
-  flavor `make_release.py --flavor linux`. Notes: docs/notes/build-and-test.md "Host (Linux / Steam Deck)".
-- Tested in WSL Ubuntu 24.04 only (system clang and, from the release zip with no compiler, zig): setup, launcher,
-  perf test to the end, race frame right [confirmed]. Details: HISTORY 2026-11-06 (afternoon).
-- Published as a GitHub pre-release (Linux zip only), not marked latest.
-- Not tested on a Steam Deck, Game Mode, Steam Input or a real Linux GPU driver. First Deck test: the gbatemp
-  user (reply drafted for the user to post).
+- Modes 4:3, 16:9 (HUD 4:3 middle, option stretch), Fit window (race HUD at the edges, menus middle with
+  backgrounds stretched). "16:9 stretched" removed. Mirage and gradient fixed (per-draw 2D anchors).
+- Tested: PC det route 16:9/21:9/32:9 + 2P split, menu route + pause at 21:9, Eden, Android emulator. Not seen by
+  the user yet; not on Switch hardware or a phone. Unchecked: results screen, story, 3-4P.
+- Phones in Fit window: the edge HUD sits under the touch buttons (seen in the emulator): needs a decision.
+- PC mouse in the F1 menu (released): click/tabs/sliders tested with posted messages; wheel and the fullscreen
+  cursor untested.
 
 ## Windows host build (the fast test loop)
 
@@ -99,38 +85,31 @@ Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/r
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
 PS4/PS5 on hold; Vita (branch `vita`, notes/vita-research.md) and iOS paused by the user.
 
-## Online play (next after ultrawide/FOV)
+## Online play (after the Deck fixes)
 
-Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-done in the tree):
-- Done: determinism (`SR_DETCLOCK`), input record/replay, lockstep with desync check (`SR_NET`), generated online
-  save, own view (`SR_VIEW`). One PC: 8,400 frames identical on the 2P race route. PC-Switch session (2026-10-30):
-  identical to frame 6917, then a desync at 6919 from the sign of a NaN (x86 vs ARM).
-- Open: one camera aspect for every machine in a session (ultrawide note "Determinism").
-- Next when resumed, in order: (1) PC-PC on two PCs and Switch-Switch sessions (2P race route); (2) phase 4 NaN fix
-  on x86 at the operations that create a NaN (not at stores: tried, reverted); (3) turn the host-clock alarm backstop
-  off in sessions (fired once in a 585 ms PC stall).
-- Untested: Android NaN signs (arm64 should match the Switch, x86_64 the PC).
+Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
+- Done before: determinism, record/replay, lockstep with desync check (`SR_NET`), online save, own view. PC-Switch
+  session 2026-10-30 identical to frame 6917, then a desync from a NaN sign (x86 vs ARM).
+- **Implemented 2026-11-06, in v0.5.0, untested between machines:** host's camera aspect for everyone (protocol 3,
+  recordings too); backstops off during sessions; x86 NaN creation -> +NaN (ppc_nan2/3 in recompiled float ops).
+- Next: rebuild the 2P race route script (scratchpad lost; online save, SR_PADS=2, player 2 joins at Player Entry,
+  Knuckles, extra A for the course, START ~4700, stick forward SY=100 + SX steering); record it on PC and replay
+  in Eden (ARM): frames 6918-7103 must match (NaN fix proof); two PC copies over localhost (`SR_NET=host:127.0.0.1:
+  7777` / `join:127.0.0.1:7777`); player setup docs (how to host/join, ports, firewall); then the user's
+  PC-PC / Switch-Switch / PC-Switch hardware tests.
 
 ## Open items, in priority order
 
-1. Ultrawide/FOV: user review of the captures, then Switch hardware + phone check; then online play phase 3/4,
-   then the boost effect (notes/boost-effect.md). Linux: wait for the first Deck report.
-2. #12 PC at 13 fps: answered (Intel UHD 620; GL draw cost; 2x EFB fixed on PC). #14 Android music: waiting.
-3. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
-4. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
-5. Audio in Auto at stock clocks crackled (hw27); mixer priority raised. Needs a log: "mixes started late" ~0, 200 lists/s. HISTORY 2026-10-25 (evening).
-6. #3 speed blur weaker than GameCube: padded copies fixed most of it on PC; the overlay/particles may still differ. HISTORY 2026-10-23 (night), 2026-10-26 (night).
-7. #6 rare "Now Loading" hang: not seen since the progressive disc DMA fix (2026-10-18), not proven fixed.
-8. #4 story cutscene monitor garbled (frame ~18000 of the story route); unverified against Dolphin.
-9. #7 lens flare: EFB Z peeks return 0. HISTORY 2026-10-16 (b).
-10. Switch `[applet]` hook never logs; `rt_log` lines from different threads can interleave. HISTORY 2026-10-23 (hw22).
-11. Untested on hardware: single sideways Joy-Con mapping, mods on the Switch (`sdmc:/switch/sonicriders/mods`).
-12. Small graphics: Player Entry sprite ~8 levels lighter than the real game; faint see-through billboards; dark
-    translucent dome over the Metal City start gate; fog range adjustment (BP 0xE8-0xED) and dynamic indirect
-    matrices not implemented.
-13. #9 hardware reports wanted (Lite, original model, docked); #10 PNG screenshots (good first issue).
-14. Later / on request: mods (stats by name, tracks), Super Shadow (verify the racer's gear-id field first),
-    C-stick look-back camera (camera writer not found), picture grading sliders, PGO, float-typed register locals.
+1. Steam Deck fixes + Linux issue reporting (above). Then online play (above).
+2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
+   Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
+   or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
+   stick mapping (Android right stick already maps to the C-stick).
+3. Boost camera effect (docs/notes/boost-effect.md, #16).
+4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: waiting.
+5. #1 stock-clock performance; #2 3-4 player races at 30 fps; audio crackle at stock clocks (logs needed).
+6. #3 speed blur weaker than GameCube; #6 rare "Now Loading" hang (unproven fixed); #4 story monitor; #7 lens flare.
+7. Small graphics, Switch `[applet]` log, single Joy-Con, mods on Switch, #9/#10, PGO etc. (see HISTORY).
 
 ## Next hardware-test checklist
 

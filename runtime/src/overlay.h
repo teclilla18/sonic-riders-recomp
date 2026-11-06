@@ -38,6 +38,10 @@ void overlay_request_quit(void);
 int overlay_menu_open(void);
 void overlay_menu_toggle(void);                    /* touch controls: open/close the menu at once */
 void overlay_pointer(float x, float y, int down);  /* touch on the open menu (overlay pixels) */
+/* PC mouse on the open menu (overlay pixels; button 0 left, 1 right, 2 middle; wheel in lines, + = up) */
+void overlay_mouse_pos(float x, float y);
+void overlay_mouse_button(int button, int down);
+void overlay_mouse_wheel(float dx, float dy);
 
 #ifdef __cplusplus
 }

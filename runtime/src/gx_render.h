@@ -19,7 +19,11 @@ extern "C" {
 #define GX_XR_FOV 0x7D        /* field of view scale (float bits; 0 or 1 = the game's): gx.vert */
 #define GX_XR_WIDE_K 0x7E
 #define GX_XR_WIDE_FLAGS 0x7F
-#define GX_WIDE_HUD_43 1u     /* orthographic draws not touching the screen edges: 4:3 in the middle */
+#define GX_WIDE_HUD_43 1u     /* orthographic draws placed per draw (gx_render.c wide_anchor), not stretched */
+#define GX_WIDE_HUD_EDGES 2u  /* ... and those left or right of the middle moved to that screen edge */
+/* per draw, in every vertex's nrm[3] (gx.vert): 4:3 in the middle, moved to the left / right edge, or
+ * stretched to the width (draws spanning the whole width: fades, backgrounds, screen effects) */
+enum { GX_ANCHOR_MIDDLE, GX_ANCHOR_LEFT, GX_ANCHOR_RIGHT, GX_ANCHOR_STRETCH };
 
 /* one decoded vertex: raw attributes as floats (the XF stage runs in the vertex shader) */
 typedef struct GxVertex {

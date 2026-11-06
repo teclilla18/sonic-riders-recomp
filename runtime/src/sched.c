@@ -436,8 +436,15 @@ static int dec_main(void* arg) {
         if (left <= 0 && g_dec_vdeadline != INT64_MAX) {
             /* SR_DETCLOCK: while game time moves (frames, idle ticks) the alarm waits for it (it fires at
              * a frame end); the host-clock backstop is only for stretches where game time stands still */
-            int vi_det_time_moving(void);
-            if (vi_det_time_moving()) {
+            int vi_det_time_moving(void), netplay_in_session(void);
+            int session = netplay_in_session();
+            if (vi_det_time_moving() || session) {
+                /* online: never on the host clock (the other machine's differs); the alarm waits for
+                 * game time however long a stall lasts */
+                if (session && !vi_det_time_moving()) {
+                    static unsigned logged;
+                    if (logged++ < 20) rt_log("[det] alarm backstop skipped (online session)");
+                }
                 g_dec_deadline = (int64_t)rt_ticks() + 40500000 / 20;
                 continue;
             }

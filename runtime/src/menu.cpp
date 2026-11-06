@@ -289,20 +289,23 @@ void close_menu() {
 /* ---- tabs ---- */
 void tab_display() {
     heading("Screen");
-    for (int m = 0; m < SCREEN_MODES; m++) {
-        static const char* const tips[SCREEN_MODES] = {
-            "The original 4:3 picture with black bars at the sides.",
-            "The cameras see a wider 16:9 view; the picture is drawn wider, not stretched.",
-            "The 4:3 picture stretched to fill a 16:9 screen.",
-            "The cameras see as wide as your window or screen (from 4:3 up to 32:9: 16:10, 21:9 ultrawide, 32:9), "
-            "drawn wider, not stretched."};
-        if (m & 1) ImGui::SameLine();
-        if (radio(settings_screen_name(m), g_settings.screen == m, tips[m])) {
-            g_settings.screen = m;
+    static const int modes[3] = {SCREEN_4_3, SCREEN_WIDE, SCREEN_FIT};
+    static const char* const tips[3] = {
+        "The original 4:3 picture with black bars at the sides.",
+        "The cameras see a wider 16:9 view; the picture is drawn wider, not stretched.",
+        "The cameras see as wide as your window or screen (from 4:3 up to 32:9: 16:10, 21:9 ultrawide, 32:9), "
+        "drawn wider, not stretched. The HUD moves to the edges of the screen."};
+    for (int i = 0; i < 3; i++) {
+        if (i) ImGui::SameLine();
+        if (radio(settings_screen_name(modes[i]), g_settings.screen == modes[i], tips[i])) {
+            g_settings.screen = modes[i];
             settings_apply();
         }
     }
-    if (g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT) {
+    if (settings_wide_k_fixed())
+        note("Online (or a recording): the picture's shape is fixed for this session so every player's game "
+             "matches; changes here apply to how it is shown, and fully after the session.");
+    if (g_settings.screen == SCREEN_WIDE) {
         if (check("Stretch the HUD and menus to the width", &g_settings.hud_stretch,
                   "Off: the HUD and menus keep their original 4:3 shape in the middle of the screen. On: they are "
                   "stretched across the whole width like the 16:9 mode of older versions."))
@@ -688,6 +691,32 @@ void overlay_pointer(float x, float y, int down) {
     io.AddMousePosEvent(x, y);
     io.AddMouseButtonEvent(0, down != 0);
     if (!down) io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  /* no hover left behind after the finger lifts */
+}
+
+/* the PC mouse (render_gl.c, the render thread, like the menu itself): point, click, drag sliders,
+ * scroll; events while the menu is closed are dropped, except releases (no button left held) */
+void overlay_mouse_pos(float x, float y) {
+    if (!g_open) return;
+    init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+    io.AddMousePosEvent(x, y);
+}
+
+void overlay_mouse_button(int button, int down) {
+    if ((!g_open && down) || button < 0 || button > 2) return;
+    init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+    io.AddMouseButtonEvent(button, down != 0);
+}
+
+void overlay_mouse_wheel(float dx, float dy) {
+    if (!g_open) return;
+    init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+    io.AddMouseWheelEvent(dx, dy);
 }
 
 void overlay_request_quit(void) { g_quit_request = 1; }
