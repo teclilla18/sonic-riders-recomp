@@ -444,3 +444,12 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   `FATAL: [vk] vkQueueSubmit ... failed: -4` (device lost), SIGABRT stack through rt_fatal. Same pattern as the
   open issue: 4 frames of 299-339 ms each, all in `present` (297 ms), 2,769 draws/frame (fewer than the ~6,000 seen
   before), then the loss; the window before showed GPU 8.3 ms/frame avg, max 25 ms. So (d) was luck, not a fix.
+
+## 2026-11-05 (f): iOS research; issue #14 music report
+
+- iOS port researched (no code): docs/notes/ios-research.md. No JIT needed, so the AOT port installs like a normal
+  app. Plan: Xcode 27 on the user's M1 Pro MacBook, sign with a free Apple account (7-day reinstall), install with
+  `xcrun devicectl`, Android Vulkan renderer over MoltenVK. Xcode 27 needs macOS Tahoe 26.6+ (secondary sources
+  citing Apple) [likely]; the Mac was on 26.5.1, so the user is updating. Nothing tested.
+- #14: the reporter installed v0.4.1 after the setup fix, then reported music stopping mid-play while sound effects
+  keep playing. Not seen before by us; asked for the log, phone model and timing. Cause unknown [uncertain].

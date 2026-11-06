@@ -14,6 +14,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |
 | [notes/ps4-ps5-research.md](notes/ps4-ps5-research.md) | Investigation | PS4/PS5 homebrew scene (2026-11-03): jailbreak firmware, PS5 RADV Vulkan driver, recomp ports, suggested order |
 | [notes/vita-research.md](notes/vita-research.md) | Investigation | PS Vita scene (2026-11-03): HENlo/Enso, VitaSDK, vitaGL/GXM, Vita recomp ports, CPU estimate, remote control (vitacompanion), probe build |
+| [notes/ios-research.md](notes/ios-research.md) | Investigation | iOS/iPadOS (2026-11-05): Mac + Xcode build, MoltenVK over the Android Vulkan renderer, devicectl install, free vs paid signing, SideStore for others |
 | [archive/recon-2026-10.md](archive/recon-2026-10.md) | Historical | first recon, the superseded matching-decomp plan, original debugging and Eden notes, recon-era open questions |
 | [archive/history-2026-10-16_to_25.md](archive/history-2026-10-16_to_25.md) | Historical | HISTORY entries 2026-10-16 to 2026-10-25 |
 
