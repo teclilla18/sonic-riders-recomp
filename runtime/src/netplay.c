@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "overlay.h"
+#include "settings.h"
 #include "runtime.h"
 
 #ifdef _WIN32
@@ -80,8 +81,8 @@ static uint32_t get32(const uint8_t* b) { return (uint32_t)b[0] | (uint32_t)b[1]
 
 /* ------------------------------------------------------------------ recording and replay */
 /* File: a 64-byte header ("SRINPUT1", u32 version 1, u32 ports, u32 flags (1: an online session,
- * 2: the generated online save),
- * u32 reserved, the build version, 40 bytes), then per frame: u32 game step, u32 state checksum,
+ * 2: the generated online save), f32 the run's camera aspect as the EFB width factor k (settings.h
+ * settings_fix_wide_k; 0 in older recordings), the build version, 40 bytes), then per frame: u32 game step, u32 state checksum,
  * ports x 8 bytes (buttons u16, stick x/y, C x/y, L/R). Little-endian. */
 #define REC_HEADER 64
 static FILE* g_rec;
@@ -98,6 +99,10 @@ static void rec_open(const char* path, int flags) {
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
     put32(h + 16, (uint32_t)flags);
+    float k = settings_wide_k();
+    uint32_t kb;
+    memcpy(&kb, &k, 4);
+    put32(h + 20, kb);
     snprintf((char*)h + 24, 40, "%s", g_build_version);
     fwrite(h, 1, sizeof h, g_rec);
     rt_log("[replay] recording the controllers (%d port%s) to %s", g_ports, g_ports > 1 ? "s" : "", path);
@@ -124,6 +129,12 @@ static int rep_open(const char* path) {
     memcpy(build, h + 24, 40);
     build[40] = 0;
     if (get32(h + 16) & 2) g_online_save = 1;  /* recorded on the generated online save: replayed on it too */
+    uint32_t kb = get32(h + 20);
+    if (kb) {  /* the recorded camera aspect: game state */
+        float k;
+        memcpy(&k, &kb, 4);
+        settings_fix_wide_k(k);
+    }
     rt_log("[replay] replaying %s (%d port%s%s%s, recorded with %s)", path, g_ports, g_ports > 1 ? "s" : "",
            get32(h + 16) & 1 ? ", an online session" : "", g_online_save ? ", the online save" : "", build);
     if (strncmp(build, g_build_version, 39)) rt_log("[replay] note: recorded with another build (%s); it may not match", build);
@@ -157,7 +168,7 @@ static int rep_read(GcPad* pads, uint32_t* sum) {
 
 /* ------------------------------------------------------------------ lockstep */
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
-#define PROTO 2  /* 2: no save check (everyone uses the generated online save) */
+#define PROTO 3  /* 2: no save check (everyone uses the generated online save); 3: the host's camera aspect */
 static sock_t g_sock = SOCK_BAD;
 static struct sockaddr_in g_peer;
 static int g_net;                 /* 1: a session is on */
@@ -225,9 +236,15 @@ static void net_send_input(void) {
     g_last_send_ns = platform_now_ns();
 }
 
+/* welcome: player number, input delay, players, and the host's camera aspect (EFB width factor k,
+ * f32 at byte 8): game state, so every machine in the session uses the host's */
 static void net_send_welcome(void) {
-    uint8_t m[8] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, 0, 0};
-    sendto(g_sock, (const char*)m, 8, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
+    uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, 0, 0};
+    float k = settings_wide_k();
+    uint32_t kb;
+    memcpy(&kb, &k, 4);
+    put32(m + 8, kb);
+    sendto(g_sock, (const char*)m, sizeof m, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
 }
 
 static void net_handle(const uint8_t* m, int len, const struct sockaddr_in* from) {
@@ -472,10 +489,14 @@ static void net_connect(const char* spec) {
                 snprintf(why, sizeof why, "the host refused: %.160s", n > 4 ? (const char*)m + 4 : "");
                 net_fail(why);
             }
-            if (m[2] == M_WELCOME && n >= 8) {
+            if (m[2] == M_WELCOME && n >= 12) {
                 g_me = m[3];
                 g_delay = m[4];
                 g_players = m[5];
+                uint32_t kb = get32(m + 8);
+                float k;
+                memcpy(&k, &kb, 4);
+                settings_fix_wide_k(k);  /* the host's camera aspect */
                 break;
             }
         }
@@ -509,6 +530,9 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
 
 void netplay_connect(void) {  /* main(), after the memory card is loaded, before the game runs */
     const char* net = getenv("SR_NET");
+    /* the camera aspect is game state: fixed for the run (a replay already took the recorded one); the
+     * host and a recording use this machine's, a joiner the host's (net_connect) */
+    if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
     if (net) net_connect(net);
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
@@ -516,6 +540,9 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
 
 int netplay_ports(void) { return g_ports; }
 int netplay_online_save(void) { return g_online_save; }  /* main(): a fresh card in memory */
+/* an online session is under way (not ended): the host-clock backstops (sched.c alarm, vi.c retrace)
+ * must not decide anything then, since the other machine's clock differs; a stall only slows the game */
+int netplay_in_session(void) { return g_net && !g_net_ended; }
 
 /* gx_render.c: whose view to show full screen in a split-screen race (0-based), or -1 for the whole
  * picture. Online: this machine's player. SR_VIEW=<1-2> forces one (testing, also offline). Presentation

@@ -751,8 +751,35 @@ void render_submit(GxFrame* f) {
 int render_poll_quit(void) { return g_quit; }
 
 /* window events: closing, and the fullscreen toggle (F11 or Alt+Enter; also the settings menu) */
+/* a window point -> the menu overlay's pixels (draw_overlay: a 16:9 picture centred in the window) */
+static void mouse_to_overlay(int mx, int my, float* ox, float* oy) {
+    int ww, wh;
+    SDL_GetWindowSize(g_win, &ww, &wh);
+    int vw = ww, vh = ww * 9 / 16;
+    if (vh > wh) vh = wh, vw = wh * 16 / 9;
+    if (vw <= 0 || vh <= 0) vw = vh = 1;
+    *ox = (float)(mx - (ww - vw) / 2) * (float)OVERLAY_W / (float)vw;
+    *oy = (float)(my - (wh - vh) / 2) * (float)OVERLAY_H / (float)vh;
+}
+
 static void handle_event(const SDL_Event* e) {
     if (e->type == SDL_QUIT) g_quit = 1;
+    /* the mouse works the settings menu (F1) */
+    float ox, oy;
+    if (e->type == SDL_MOUSEMOTION) {
+        mouse_to_overlay(e->motion.x, e->motion.y, &ox, &oy);
+        overlay_mouse_pos(ox, oy);
+    } else if (e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP) {
+        mouse_to_overlay(e->button.x, e->button.y, &ox, &oy);
+        overlay_mouse_pos(ox, oy);
+        int b = e->button.button == SDL_BUTTON_LEFT ? 0 : e->button.button == SDL_BUTTON_RIGHT ? 1
+              : e->button.button == SDL_BUTTON_MIDDLE ? 2 : -1;
+        overlay_mouse_button(b, e->type == SDL_MOUSEBUTTONDOWN);
+    } else if (e->type == SDL_MOUSEWHEEL) {
+        float dx = e->wheel.preciseX, dy = e->wheel.preciseY;
+        if (e->wheel.direction == SDL_MOUSEWHEEL_FLIPPED) dx = -dx, dy = -dy;
+        overlay_mouse_wheel(dx, dy);
+    }
     if (e->type == SDL_KEYDOWN && !e->key.repeat &&
         (e->key.keysym.scancode == SDL_SCANCODE_F11 ||
          (e->key.keysym.scancode == SDL_SCANCODE_RETURN && (e->key.keysym.mod & KMOD_ALT)))) {
@@ -761,13 +788,18 @@ static void handle_event(const SDL_Event* e) {
     }
 }
 
-/* the window follows g_settings.fullscreen (changed by a key or the menu); the cursor hides in it */
+/* the window follows g_settings.fullscreen (changed by a key or the menu); in fullscreen the cursor
+ * shows only while the settings menu is open (it works with the mouse) */
 static void sync_fullscreen(void) {
-    static int applied = -1;
+    static int applied = -1, cursor = -1;
+    int want = !g_settings.fullscreen || overlay_menu_open();
+    if (want != cursor) {
+        cursor = want;
+        SDL_ShowCursor(want ? SDL_ENABLE : SDL_DISABLE);
+    }
     if (g_settings.fullscreen == applied || getenv("SR_MINIMIZED")) return;
     applied = g_settings.fullscreen;
     SDL_SetWindowFullscreen(g_win, applied ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-    SDL_ShowCursor(applied ? SDL_DISABLE : SDL_ENABLE);
     rt_log("[gl] %s", applied ? "fullscreen" : "windowed");
 }
 

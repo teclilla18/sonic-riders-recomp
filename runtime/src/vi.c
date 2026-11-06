@@ -336,7 +336,13 @@ static int vi_thread(void* arg) {
         { size_t gx_gp_backlog(void);
           if (gx_gp_backlog()) { atomic_store(&g_det_last_tick, rt_ticks()); } }
         if (atomic_load(&g_det_last_tick) > det_active) det_active = atomic_load(&g_det_last_tick);
-        if (ppc_detclock() && rt_ticks() - det_active >= det_limit) {
+        int netplay_in_session(void);
+        int session = netplay_in_session();  /* online: no host-clock backstop, the game just waits */
+        if (ppc_detclock() && rt_ticks() - det_active >= det_limit && session) {
+            static unsigned skipped;
+            if (skipped++ < 20) rt_log("[det] retrace backstop skipped (online session): game time stood still %u fields",
+                                       (unsigned)((rt_ticks() - det_active) / TICKS_PER_FIELD));
+        } else if (ppc_detclock() && rt_ticks() - det_active >= det_limit) {
             g_det_n[1]++;
             static unsigned logged;  /* what the game runs instead of waiting (first 40) */
             if (logged++ < 40) {
@@ -351,7 +357,7 @@ static int vi_thread(void* arg) {
                        (int)gx_gp_backlog(), gx_det_pending() | gx_det_parts() << 4, g_core_preempt[0], ld32(OS_CURRENT_CONTEXT));
             }
         }
-        if (ppc_detclock() && rt_ticks() - det_active < det_limit) {
+        if (ppc_detclock() && (rt_ticks() - det_active < det_limit || session)) {
             mtx_lock(&g_det_lock);
             if (g_det_due < 2) g_det_due++;
             if (ld32(0x800000E4u) != 0) det_raise();  /* idle: sched.c det_idle hands it over */
