@@ -33,6 +33,7 @@ then the boost camera effect (docs/notes/boost-effect.md, #16). The user's hardw
   screen the draw's centre is in, with a dead zone around the centre; (c) fix the mirage; (d) menu: modes 4:3,
   16:9 (+ stretch HUD option), Fit window (edges only); old saved `screen=2` maps to 16:9; (e) captures at 16:9,
   21:9, 32:9 + 2P split to the user before finishing.
+- **User request (2026-11-06): mouse support in the F1 settings menu (PC)** (point, click, scroll the Dear ImGui menu).
 
 ## Linux / Steam Deck (new, 2026-11-06; on `main`, not released)
 
