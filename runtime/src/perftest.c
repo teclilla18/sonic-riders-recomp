@@ -117,7 +117,9 @@ static void finish(void) {
     overlay_set_banner("Performance test finished: results in perftest.json.\nClose the game from HOME.");
 #else
     rt_log("[perftest] done");
-    exit(0);
+    /* the render thread exits: exit() here (game thread) unloaded the GL driver under a frame being
+     * presented, a crash at the end on Linux (Mesa) */
+    overlay_request_quit();
 #endif
 }
 

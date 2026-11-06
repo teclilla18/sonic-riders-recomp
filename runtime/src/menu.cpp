@@ -672,6 +672,8 @@ void overlay_pointer(float x, float y, int down) {
     if (!down) io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  /* no hover left behind after the finger lifts */
 }
 
+void overlay_request_quit(void) { g_quit_request = 1; }
+
 int overlay_take_quit_request(void) {
     int r = g_quit_request;
     g_quit_request = 0;

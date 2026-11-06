@@ -33,6 +33,8 @@ void overlay_request_screenshot(void);
 int overlay_take_controllers_request(void);
 /* the menu's "Quit game" (PC): 1 once after it was confirmed (the platform exits as when the window closes) */
 int overlay_take_quit_request(void);
+/* quit as if the window closed: the render thread exits at the end of its frame, never while it draws */
+void overlay_request_quit(void);
 int overlay_menu_open(void);
 void overlay_menu_toggle(void);                    /* touch controls: open/close the menu at once */
 void overlay_pointer(float x, float y, int down);  /* touch on the open menu (overlay pixels) */

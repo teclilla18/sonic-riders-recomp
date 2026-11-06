@@ -232,6 +232,19 @@ def ensure_tool(spec, tools):
     return d
 
 
+def system_sdl_headers():
+    """True when configure.py will find SDL.h itself (same search: sdl2-config, then /usr/include/SDL2)."""
+    if os.path.isfile("/usr/include/SDL2/SDL.h"):
+        return True
+    if shutil.which("sdl2-config"):
+        try:
+            r = subprocess.run(["sdl2-config", "--cflags"], capture_output=True, text=True, timeout=20)
+        except OSError:
+            return False
+        return any(f.startswith("-I") and os.path.isfile(os.path.join(f[2:], "SDL.h")) for f in r.stdout.split())
+    return False
+
+
 def system_compiler():
     """(cc, cxx) when the system has a working clang or gcc pair (compiles and links C++), else None."""
     for cc, cxx in (("clang", "clang++"), ("gcc", "g++"), ("cc", "c++")):
@@ -334,8 +347,7 @@ def main():
     ninja = os.path.join(ensure_tool(lx["ninja"][arch], tools), "ninja")
     imgui = ensure_tool(tc["imgui"], tools)
     conf_args = ["--imgui", imgui]
-    have_sdl_headers = os.path.isfile("/usr/include/SDL2/SDL.h") or shutil.which("sdl2-config")
-    if not have_sdl_headers:
+    if not system_sdl_headers():
         conf_args += ["--sdl", ensure_tool(lx["sdl2_headers"], tools)]
         log("SDL2 headers: downloaded (the game uses the system's SDL2 library).")
     cc = None if a.compiler == "zig" else system_compiler()
