@@ -12,6 +12,9 @@ Pipeline (everything under build/ is derived from the game and never committed):
 host: --toolchain msvc (default): clang with the MSVC/SDK headers (run `. tools/host/env.ps1` first)
       --toolchain mingw: llvm-mingw (--llvm-mingw DIR) with SDL2's MinGW build (--sdl DIR); the setup
       tool (setup/setup.ps1) uses this one
+      --toolchain linux: Linux / Steam Deck -> build/host-linux/sonicriders; compiler from --cc/--cxx, $CC/$CXX,
+      clang or gcc (SonicRidersSetup.sh passes "zig cc" where there is none); SDL2 headers from sdl2-config
+      or --sdl DIR (include/SDL2); links against the system's libSDL2-2.0.so.0, so no -dev package is needed
 switch: devkitA64 + libnx + deko3d (devkitPro: $DEVKITPRO, --devkitpro DIR, or C:/devkitPro)
 android: NDK + SDK build-tools + JDK 17 + SDL2 source (the setup downloads them); written by
       tools/android_build.py (docs/ANDROID_PLAN.md); --android-app probe builds the milestone 1 test APK instead.
@@ -21,6 +24,7 @@ vita: probe V1a only (no picture or sound): VitaSDK (--vitasdk DIR or $VITASDK) 
 import argparse
 import glob
 import os
+import shutil
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
@@ -30,7 +34,10 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--target", choices=["host", "switch", "android", "vita"], default="host")
 ap.add_argument("--vitasdk", default="", help="vita: VitaSDK folder ($VITASDK; kubridge package installed)")
 ap.add_argument("--vita-base", default="0x90000000", help="vita: reserve the guest window at this fixed address (hex, an ARM immediate) and use it as a constant in all code (default; 4-9%% less game time per step); none: placed by the system, base read from a global")
-ap.add_argument("--toolchain", choices=["msvc", "mingw"], default="msvc", help="host compiler setup")
+ap.add_argument("--toolchain", choices=["msvc", "mingw", "linux"],
+                default="linux" if sys.platform.startswith("linux") else "msvc", help="host compiler setup")
+ap.add_argument("--cc", default="", help="C compiler command (host, --toolchain linux), e.g. clang or \"zig cc\"")
+ap.add_argument("--cxx", default="", help="C++ compiler command (host, --toolchain linux), e.g. clang++ or \"zig c++\"")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
@@ -59,7 +66,7 @@ if args.target == "android":
         sys.exit("configure: the game is built for one ABI at a time (--abi arm64-v8a or x86_64)")
     atools = android_build.Tools(args)
 GEN = "build/gen"
-OUT = "build/%s" % ("host-mingw" if args.target == "host" and args.toolchain == "mingw" else
+OUT = "build/%s" % ("host-" + args.toolchain if args.target == "host" and args.toolchain in ("mingw", "linux") else
                     "android-" + args.abi if args.target == "android" else args.target)
 py = sys.executable.replace("\\", "/")
 if " " in py:
@@ -154,6 +161,35 @@ def cmd_path(p, program=False):
     return '"%s"' % p if " " in p else p
 
 
+def linux_sdl():
+    """SDL2 for --toolchain linux: (include folder, link arguments). Headers from --sdl DIR or sdl2-config;
+    the library: the runtime libSDL2-2.0.so.0 itself (SteamOS has no development link libSDL2.so)."""
+    import subprocess
+    inc = ""
+    if args.sdl:
+        for d in (os.path.join(args.sdl, "include", "SDL2"), os.path.join(args.sdl, "include")):
+            if os.path.isfile(os.path.join(d, "SDL.h")):
+                inc = d
+    elif shutil.which("sdl2-config"):
+        flags = subprocess.run(["sdl2-config", "--cflags"], capture_output=True, text=True).stdout.split()
+        inc = next((f[2:] for f in flags if f.startswith("-I") and os.path.isfile(os.path.join(f[2:], "SDL.h"))), "")
+    if not inc and os.path.isfile("/usr/include/SDL2/SDL.h"):
+        inc = "/usr/include/SDL2"
+    if not inc:
+        sys.exit("configure: SDL2 headers not found (install libsdl2-dev, or --sdl DIR with include/SDL2/SDL.h)")
+    libdirs = [os.path.join(args.sdl, "lib")] if args.sdl else []
+    libdirs += ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib", "/usr/lib/aarch64-linux-gnu"]
+
+    def find(names, what):
+        for d in libdirs:
+            for name in names:
+                if os.path.exists(os.path.join(d, name)):
+                    return os.path.join(d, name)
+        sys.exit("configure: the %s library (%s) was not found; install it (SteamOS has it)" % (what, names[0]))
+    # OpenGL 1.1 calls are linked (the rest is loaded through SDL_GL_GetProcAddress): libglvnd's libGL
+    return inc, "%s %s" % (find(("libSDL2-2.0.so.0", "libSDL2.so"), "SDL2"), find(("libGL.so.1", "libGL.so"), "OpenGL"))
+
+
 with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     n = Writer(f)
     n.variable("ninja_required_version", "1.10")
@@ -164,7 +200,27 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                 if pred(d):
                     return d
             return ""
-        if args.toolchain == "mingw":
+        if args.toolchain == "linux":
+            sdl_inc, sdl_lib = linux_sdl()
+            cc = args.cc or os.environ.get("CC") or ("clang" if shutil.which("clang") else "gcc")
+            cxx = args.cxx or os.environ.get("CXX") or {"clang": "clang++", "gcc": "g++"}.get(cc, "")
+            if not cxx and cc.split()[-1:] == ["cc"]:
+                cxx = cc[:-2] + "c++"  # "zig cc" -> "zig c++"
+            if not cxx:
+                sys.exit("configure: say which C++ compiler goes with %s (--cxx)" % cc)
+            n.variable("cc", cc)
+            n.variable("cxx", cxx)
+            hostinc = "%s -I%s -DSDL_MAIN_HANDLED -D_GNU_SOURCE -pthread" % (inc, sdl_inc)
+            n.variable("cflags", "-std=gnu11 -g " + hostinc)
+            n.variable("cxxflags", "-std=c++20 -g " + hostinc)
+            # the program finds libSDL2 in the system (or next to itself: $ORIGIN); static C++ runtime
+            # so a Steam Deck needs nothing besides SDL2 and OpenGL, which SteamOS has
+            # zig's linker takes no -Map (and links its own libc++ statically anyway)
+            is_zig = "zig" in os.path.basename(cxx.split()[0]) or cxx.split()[0] == "zig"
+            n.variable("ldflags", "-g -pthread %s -ldl -lm -Wl,-rpath,'$$ORIGIN' %s" % (sdl_lib, "" if is_zig else
+                       "-static-libstdc++ -static-libgcc -Wl,-Map=%s/sonicriders.map" % OUT))
+            sdl_dll = ""
+        elif args.toolchain == "mingw":
             lm = args.llvm_mingw.replace("\\", "/")
             if not os.path.isfile(os.path.join(lm, "bin", "x86_64-w64-mingw32-clang.exe")):
                 sys.exit("llvm-mingw not found (--llvm-mingw DIR)")
@@ -194,7 +250,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             n.variable("cxxflags", "-std=c++20 -g %s -I%s/include -DSDL_MAIN_HANDLED -D_CRT_SECURE_NO_WARNINGS" % (inc, sdl))
             n.variable("ldflags", "-g -fuse-ld=lld -L%s/lib/x64 -lSDL2 -lopengl32 -lwinmm -lws2_32 -Wl,/MAP:%s/sonicriders.map" % (sdl, OUT))
             sdl_dll = sdl + "/lib/x64/SDL2.dll"
-        exe = OUT + "/sonicriders.exe"
+        exe = OUT + ("/sonicriders" if args.toolchain == "linux" else "/sonicriders.exe")
     elif args.target == "android":
         t = atools
         sdl_inc, sdl_link = android_build.sdl_flags(t, args.abi)
@@ -362,7 +418,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("vpk", "%s/bin/vita-pack-vpk -s %s/param.sfo -b %s/eboot.bin $out" % (vsdk, OUT, OUT), description="VPK $out")
         n.build(OUT + "/sonicriders.vpk", "vpk", [OUT + "/eboot.bin", OUT + "/param.sfo"])
         n.default(OUT + "/sonicriders.vpk")
-    if args.target == "host":
+    if args.target == "host" and sdl_dll:
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
         n.build(OUT + "/SDL2.dll", "copy", sdl_dll)
         n.default(OUT + "/SDL2.dll")

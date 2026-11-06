@@ -4,15 +4,29 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**Project paused by the user after 2026-11-06** (Vita paused too; resume only when asked). **Decision (user,
-2026-11-06): screen recording on Android is not supported; no more work on it** (README and INSTALL say so).
-**Next focus: online play (phase 3/4, see "Online"), set up and tested without the user; the user's hardware
-tests (two PCs, Switch-Switch) come last.**
+**Decisions (user, 2026-11-06):** Android screen recording is not supported (no more work on it); Vita and iOS
+paused until the user says otherwise. **Next (user's order): ultrawide without stretching + FOV setting
+(docs/notes/ultrawide-fov.md, Discussions #15), then online play (phase 3/4, see "Online"); the boost camera effect
+(docs/notes/boost-effect.md, #16) after ultrawide. The user's hardware tests (two PCs, PC-Switch, Switch-Switch)
+come last.**
 
 Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
 `Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
 (both folders) [confirmed]; crash dialog checked on the S23 Ultra and the emulator [confirmed]. Not yet seen by a
 user. Vita code: branch `vita` only.
+
+## Linux / Steam Deck (new, 2026-11-06; on `main`, not released)
+
+- `configure.py --toolchain linux` -> `build/host-linux/sonicriders` (system clang/gcc or zig cc; links the runtime
+  libSDL2-2.0.so.0 + libGL.so.1, no -dev packages). `SonicRidersSetup.sh` -> `tools/setup_linux.py`; release
+  flavor `make_release.py --flavor linux`. Notes: docs/notes/build-and-test.md "Host (Linux / Steam Deck)".
+- Tested in WSL Ubuntu 24.04 only (system clang 18; and from the release zip in a no-compiler sandbox with zig):
+  system clang: perf test to the end, demos 0.84 / 0.78 game ms per step (fps 19: WSL's GL on the Intel iGPU,
+  not a Deck measure); zig, from the v0.5.0-test zip with no compiler, headers or sdl2-config: setup -> menu
+  entry, launcher, `sonicriders.log`, perf test to the end (0.88 / 0.85 ms), clean exit; race frame right [confirmed].
+- Published as a GitHub pre-release (Linux zip only), not marked latest.
+- Not tested on a Steam Deck, Game Mode, Steam Input or a real Linux GPU driver. First Deck test: the gbatemp
+  user (reply drafted for the user to post).
 
 ## Windows host build (the fast test loop)
 
@@ -31,9 +45,7 @@ user. Vita code: branch `vita` only.
 
 - Runs the whole game from the Homebrew Menu in title mode, or from the forwarder NSP on the home screen (works on
   hardware, hw16). Sound works; sleep/wake fixed (hw22).
-- Graphics: face culling, see-through surfaces, palette address bits (#5, UI colours), specular NaN and the uam
-  lighting miscompile (#11, teal characters, fixed in v0.3.3), padded copy textures (dark picture), fog: all fixed.
-  Characters match Dolphin on hardware (2026-10-29).
+- Graphics: matches Dolphin on hardware (2026-10-29) after the #5/#11 and fog/copy fixes.
 - **Overclocked** (CPU 1785 / GPU 1152 / MEM 2133): 1P races ~60 (perf test: 58.1 fps 1P demo, 56.4 fps 2P demo,
   full speed, game thread 13.5 ms/step); 3P mostly 55-60 with dips to ~48 at 6,000+ draws (hw23/24); 4P a steady
   30 fps (hw25, game core ~17-19 ms of work per frame).
@@ -42,23 +54,15 @@ user. Vita code: branch `vita` only.
   (hw33, hw36). GPU 7-13 ms per race frame after the shader-key fix (v0.3.2).
 - Specialized shaders cover every state (hw36: 2,563,268 of 2,563,268) once keys ignore unused bits.
 
-## Last hardware tests
-
-- **2026-10-30, overclocked Switch (switch-remote):** det route and a replayed PC recording identical to the PC on
-  all 7,700 frames; PC-Switch lockstep desync at 6919 (NaN sign, x86 vs ARM, see Online). Perf record:
-  `perf/results/2026-10-30-switch.json`.
+Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/results/2026-10-30-switch.json`.
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
-- **Open, known issue since v0.4.0: device lost (crash) while screen recording.** 2026-11-06 (on `main`, not
-  released): the renderer now rebuilds itself after a device loss (`device_recover`; ~250 ms device + ~110 ms
-  pipelines; fake losses in the intro and a race recover with a right picture [confirmed]; normal perf test
-  unchanged: 59.4-59.7 / 59.9 fps, race GPU 12.3-12.5 ms in an alternating A/B [confirmed]). With `screenrecord`
-  the rebuilt device is lost again every ~10 frames, so after the 4th loss in 10 s it still ends in the fatal
-  error: **not fixed** (every recording run today). Bisect leads (docs/notes/android.md "Open: device lost"): only
-  "one pipeline per pass" and "depth writes forced on" survive, both with a wrong picture [uncertain lead: depth
-  state].
-
+- Screen recording: not supported (user decision 2026-11-06). On `main` (not released): the renderer rebuilds itself
+  after a single device loss (`device_recover`) [confirmed]; under `screenrecord` losses repeat and it still ends in
+  the fatal error. Details: HISTORY 2026-11-06, docs/notes/android.md "Open: device lost".
+- #14 music stops on an Adreno 810 phone: asked for the attached log, model and a 30 fps test (lead: 70-150 ms
+  game-code hitches starving the CRI stream thread) [uncertain].
 - **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
   dialog after a normal stop) and the emulator (also kill -SEGV). Reddit "crashes on launch": ask for the report.
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
@@ -73,25 +77,12 @@ user. Vita code: branch `vita` only.
 - **Next after the crash:** GPU needs a profiler (packed vertices tried: no gain); leads in notes/android.md: EFB passes on the tiler, per-draw UBO
   size), pre-rotation, 2P with two pads.
 
-## After Android (user's wish list, 2026-11-03)
+## Wish list / paused
 
-Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
-(user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
-**Vita probe (branch `vita`, 2026-11-04)** [CPU 500 / GPU 222]: headless demos run; game thread ~36 ms/step
-with the fixed memory base (0x90000000, [likely 4-9%]) vs 33 needed for the 30 fps mode; GP thread 51-65 ms per
-drawn race frame; race profile flat; float-typed locals bit-exact but no gain (off). USB camera plugin off (the
-Vita charges). Details: docs/notes/vita-research.md.
+Picture enhancements (resolution scale, bloom, HD textures); ultrawide/FOV and the boost effect are planned (top).
+PS4/PS5 on hold; Vita (branch `vita`, notes/vita-research.md) and iOS paused by the user.
 
-**Vita: PAUSED by the user (2026-11-06).** When resumed: start the GXM renderer (chosen over leaving the device
-range unmapped + kubridge faults: ~50,000 GX pipe stores per race frame go to 0xCC008000 inside that range, so
-faults would first need the recompiler to send pipe stores to the pipe directly; docs/notes/vita-research.md).
-
-**iOS: researched (2026-11-05)**, docs/notes/ios-research.md: build on the user's M1 Pro MacBook with Xcode 27,
-free Apple account (7-day reinstall), test phone iPhone 17 Pro on iOS 27.0; Android Vulkan renderer over MoltenVK.
-Waiting on the user (still on 2026-11-06): Mac update to Tahoe 26.6+ (was 26.5.1), Xcode 27, and a way to run
-commands on the Mac (e.g. SSH); then a first `--target ios`.
-
-## Online play: NEXT FOCUS (paused 2026-11-03 for Android; resumes next session)
+## Online play (next after ultrawide/FOV)
 
 Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-done in the tree):
 - Done: determinism (`SR_DETCLOCK`), input record/replay, lockstep with desync check (`SR_NET`), generated online
@@ -104,26 +95,23 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Online play phase 3/4 (next focus, see "Online"). Android screen recording: not supported (user decision
-   2026-11-06; recovery from single device losses is in). Android GPU cost later. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
-2. #14 Android music stops mid-play, sound effects keep playing (v0.4.1, reporter rsomethin, 2026-11-05). Asked
-   (no reply by 2026-11-06) for sonicriders.log, phone model, when, whether it comes back. Guess [uncertain]: music stream starves on disc
-   reads (look for `[dvd]` fatal/late lines). Could try to reproduce on the S23 (ask the user first).
-3. #12 PC at 13 fps (v0.3.4): answered 2026-11-04 (Intel UHD 620, OpenGL draw calls); waiting on the reporter.
-4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
-5. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
-6. Audio in Auto at stock clocks crackled (hw27); mixer priority raised. Needs a log: "mixes started late" ~0, 200 lists/s. HISTORY 2026-10-25 (evening).
-7. #3 speed blur weaker than GameCube: padded copies fixed most of it on PC; the overlay/particles may still differ. HISTORY 2026-10-23 (night), 2026-10-26 (night).
-8. #6 rare "Now Loading" hang: not seen since the progressive disc DMA fix (2026-10-18), not proven fixed.
-9. #4 story cutscene monitor garbled (frame ~18000 of the story route); unverified against Dolphin.
-10. #7 lens flare: EFB Z peeks return 0. HISTORY 2026-10-16 (b).
-11. Switch `[applet]` hook never logs; `rt_log` lines from different threads can interleave. HISTORY 2026-10-23 (hw22).
-12. Untested on hardware: single sideways Joy-Con mapping, mods on the Switch (`sdmc:/switch/sonicriders/mods`).
-13. Small graphics: Player Entry sprite ~8 levels lighter than the real game; faint see-through billboards; dark
+1. Ultrawide without stretching + FOV (notes/ultrawide-fov.md), then online play phase 3/4, then the boost effect
+   (notes/boost-effect.md). Linux: wait for the first Deck report.
+2. #12 PC at 13 fps: answered (Intel UHD 620; GL draw cost; 2x EFB fixed on PC). #14 Android music: waiting.
+3. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
+4. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
+5. Audio in Auto at stock clocks crackled (hw27); mixer priority raised. Needs a log: "mixes started late" ~0, 200 lists/s. HISTORY 2026-10-25 (evening).
+6. #3 speed blur weaker than GameCube: padded copies fixed most of it on PC; the overlay/particles may still differ. HISTORY 2026-10-23 (night), 2026-10-26 (night).
+7. #6 rare "Now Loading" hang: not seen since the progressive disc DMA fix (2026-10-18), not proven fixed.
+8. #4 story cutscene monitor garbled (frame ~18000 of the story route); unverified against Dolphin.
+9. #7 lens flare: EFB Z peeks return 0. HISTORY 2026-10-16 (b).
+10. Switch `[applet]` hook never logs; `rt_log` lines from different threads can interleave. HISTORY 2026-10-23 (hw22).
+11. Untested on hardware: single sideways Joy-Con mapping, mods on the Switch (`sdmc:/switch/sonicriders/mods`).
+12. Small graphics: Player Entry sprite ~8 levels lighter than the real game; faint see-through billboards; dark
     translucent dome over the Metal City start gate; fog range adjustment (BP 0xE8-0xED) and dynamic indirect
     matrices not implemented.
-14. #9 hardware reports wanted (Lite, original model, docked); #10 PNG screenshots (good first issue).
-15. Later / on request: mods (stats by name, tracks), Super Shadow (verify the racer's gear-id field first),
+13. #9 hardware reports wanted (Lite, original model, docked); #10 PNG screenshots (good first issue).
+14. Later / on request: mods (stats by name, tracks), Super Shadow (verify the racer's gear-id field first),
     C-stick look-back camera (camera writer not found), picture grading sliders, PGO, float-typed register locals.
 
 ## Next hardware-test checklist

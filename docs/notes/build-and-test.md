@@ -62,6 +62,26 @@ build/host/sonicriders.exe "baserom/Sonic Riders (USA) (En,Ja,Fr,De,Es,It).iso"
 ```
 After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-data guard).
 
+## Host (Linux / Steam Deck): build, WSL test loop (2026-11-06)
+
+- Build: `python3 configure.py --target host --toolchain linux [--cc "zig cc" --cxx "zig c++"] [--sdl DIR]; ninja`
+  -> `build/host-linux/sonicriders`. Links the runtime `libSDL2-2.0.so.0` and `libGL.so.1` by full path (no -dev
+  package needed; SteamOS has none); GL 1.1 calls are linked, the rest via `SDL_GL_GetProcAddress`. Static
+  libstdc++/libgcc, `rpath $ORIGIN`. On Linux the log goes to stderr; `Sonic Riders.sh` (written by the setup)
+  sends it to `sonicriders.log` unless stderr is a terminal.
+- Setup: `SonicRidersSetup.sh` -> `tools/setup_linux.py` (6 steps; tools in `~/.local/share/SonicRidersSetup/tools`,
+  pinned in `setup/toolchain.json` "linux": dtk, ninja, zig 0.17.1, SDL2 headers; per `uname -m`). Release:
+  `make_release.py --flavor linux` (`.sh` mode 0755 in the zip).
+- WSL test loop on this PC (Ubuntu 24.04; clang 18, libsdl2-dev, gdb, bubblewrap, unzip installed): mirror the
+  tree into `~/sr` with rsync (not /mnt/c: slow, and it would share build.ninja), plus baserom and build/gen.
+  Drive WSL from Git Bash with `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -- bash -c ...`; PowerShell 5.1 mangles
+  quotes, so longer commands go into a script file (strip CRs). WSLg gives llvmpipe by default; `GALLIUM_DRIVER=d3d12`
+  uses the default Windows adapter (the Intel iGPU here). Both are slow in races: not a Deck measure.
+- Deck-like run: bubblewrap with `/usr/include` on tmpfs and every compiler, linker, `sdl2-config` and
+  `pkg-config` bound to `/bin/false` (bind the resolved real file: bwrap can't mount over a symlink).
+- glibc pitfall: `exit()` runs C++ static destructors, and glibc's `pthread_cond_destroy` waits for waiters
+  (menu.cpp's helper thread), so exit hung on Linux only; that condition variable is now never destroyed.
+
 ## Setup tool, releases, PC icon
 
 **Setup tool and releases (2026-10-22):** `SonicRidersSetup.bat` → `setup/setup.ps1` builds everything from the user's disc image with a SHA-256-pinned toolchain (`setup/toolchain.json`; downloads through Windows' `curl.exe`, since devkitPro's server refuses .NET's web client even with the pacman user agent). PC builds from it use llvm-mingw (`configure.py --toolchain mingw`, output `build/host-mingw/`). `tools/make_release.py --version X` zips the files tracked at HEAD (guard-checked) plus a `VERSION` file; the port logs `[build] <version or git describe>` first (`build/<target>/gen/version.c`, written by configure.py). Hardware performance so far is with an overclock (CPU 1785 / GPU 1152 / MEM 2133); stock clocks run poorly.

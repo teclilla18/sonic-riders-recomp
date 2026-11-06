@@ -6,6 +6,7 @@
 - [Install on Switch](#install-on-switch)
 - [Install on PC](#install-on-pc)
 - [Install on Android](#install-on-android)
+- [Install on Linux / Steam Deck](#install-on-linux--steam-deck)
 - [Updating to a new version](#updating-to-a-new-version)
 - [If something goes wrong](#if-something-goes-wrong)
 - [What the setup does](#what-the-setup-does)
@@ -22,7 +23,8 @@
 - **A Windows 10 (version 1803 or newer) or Windows 11 PC**, 64-bit, with an internet connection the
   first time and about 4 GB of free disk space. The PC does the conversion; nothing is downloaded from
   the game. Nothing else to install: the setup downloads its own tools (no Python, Visual Studio,
-  devkitPro or 7-Zip needed).
+  devkitPro or 7-Zip needed). **Linux / Steam Deck** builds on the Linux machine itself instead: see
+  [For Linux and the Steam Deck](#for-linux-and-the-steam-deck).
 
 **For the Switch:**
 
@@ -128,18 +130,45 @@ any file manager) and send it with your bug report.
 the game again and again until it closes (seen on the Galaxy S23 Ultra). A single reset without recording (rare,
 on a very warm phone) is survived after the next update: the game pauses for about a third of a second and goes on.
 
+**For Linux and the Steam Deck:**
+
+- A **64-bit Linux** (x86_64) with **Python 3**, **SDL2** and **OpenGL 3.3**. SteamOS has all three.
+  No compiler, root rights or package installs needed: the setup downloads its own tools, including the
+  zig compiler (about 60 MB) when the system has no clang or gcc. About 4 GB free and internet the first time.
+- The Linux version is **new and not yet tested on a Steam Deck** (tested on Ubuntu 24.04). Reports welcome.
+
+## Install on Linux / Steam Deck
+
+1. **Download** `SonicRiders-Linux-Setup-<version>.zip` from the [Linux test pre-release](../../../releases/tag/v0.5.0-linux-test)
+   (later releases will include it).
+   On the Steam Deck, do steps 1-4 in **Desktop Mode** (Power → Switch to Desktop).
+2. **Extract** the whole zip to a folder **you'll keep**, for example `~/Games/SonicRiders` (right-click
+   the zip → Extract). The game, your saves and your settings live in that folder. Your disc image can stay
+   where it is (on the SD card too); the setup links to it.
+3. **Double-click `Install Sonic Riders (Linux).sh`** (choose *Execute* or *Run* if asked). It opens a
+   terminal; pick your disc image. Or in a terminal: `sh 'Install Sonic Riders (Linux).sh'`
+   (`--iso /path/to/image.iso` skips the file dialog).
+4. **Wait** 10–30 minutes the first time. It ends with "Done" and adds **Sonic Riders** to the application
+   menu (Games), plus a launcher `Sonic Riders.sh` in the folder.
+5. **Steam Deck Game Mode:** in Desktop Mode open Steam → *Games* → *Add a Non-Steam Game to My Library*,
+   tick **Sonic Riders** and click *Add*. Back in Game Mode it's in your library under *Non-Steam*, and
+   the Deck's controls work as a game controller (hold *View* for the settings menu).
+
+The game's log is `sonicriders.log` in the install folder (attach it to bug reports); the setup's log is
+`setup.log`. The downloaded tools are kept in `~/.local/share/SonicRidersSetup/tools` for updates.
+
 ## Updating to a new version
 
 1. Download the new zip for your platform from the [latest release](../../../releases/latest) and
    extract it to a **new** folder.
 2. Run its installer (`Install Sonic Riders (Switch).bat`, `Install Sonic Riders (PC).bat` or
-   `Install Sonic Riders (Android).bat`) with the same disc image (and, for the Switch, the same SD card;
+   `Install Sonic Riders (Android).bat`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc image (and, for the Switch, the same SD card;
    for Android, the phone connected).
 3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
    minutes).
 
 Your saves and settings are kept: on the Switch they're on the SD card, which the update doesn't touch.
-On PC they're in the old install folder: copy its `saves` folder into the new one, then delete the old
+On PC and Linux they're in the old install folder: copy its `saves` folder into the new one, then delete the old
 folder. On Android the update installs over the app and keeps its saves; it must be built **on the same PC**,
 because Android only accepts an update signed with the same key (the setup keeps it in
 `%LOCALAPPDATA%\SonicRidersSetup\tools\android\`; don't delete it). From another PC you would have to
@@ -161,6 +190,8 @@ then **Custom** → **Releases**. What changed in each version is in the [CHANGE
 | Switch: slow motion / low frame rate | Set the frame rate to *30 fps* or *60 fps* (hold Minus for the settings), or overclock (see [What you need](#what-you-need)). |
 | PC: the game doesn't start | Check `sonicriders.log` in the install folder; update your graphics driver (OpenGL 3.3 is needed). |
 | PC: no sound | Check Windows' default playback device; the game uses it. |
+| Linux: double-clicking the installer opens it in a text editor | Right-click it → *Properties* → *Permissions* → tick *Is executable*, or run `sh 'Install Sonic Riders (Linux).sh'` in a terminal in that folder. |
+| Linux: "SDL2 library ... was not found" | Install your distribution's SDL2 package (`libsdl2-2.0-0` on Debian/Ubuntu, `sdl2` on Arch/SteamOS, `SDL2` on Fedora). |
 | Android: "0 Android devices are connected" | Unlock the phone, use a data cable (not charge-only), choose File transfer, turn on USB debugging and tap Allow on the phone, then run the installer again. |
 | Android: "signatures do not match" (INSTALL_FAILED_UPDATE_INCOMPATIBLE) | The installed app was built on another PC (or the signing key was deleted). Uninstall the app (this deletes its saves) and install again. |
 | Android: the game closes on launch or while playing | Open it again and tap **Share report** (the report is also in `Download/SonicRiders/`); attach it to a [bug report](../../../issues/new/choose). |
@@ -185,6 +216,10 @@ sdmc:/switch/sonicriders/
     settings.ini                settings menu choices
     sonicriders.log             log of the last run (sonicriders.prev.log: the one before)
 ```
+
+On Linux the install folder ends up with `Sonic Riders.sh` (the launcher), `build/host-linux/sonicriders`,
+`baserom/` (a link to your disc image), `saves/` and `sonicriders.log`, and the menu entry is
+`~/.local/share/applications/sonicriders.desktop`.
 
 The PC install folder ends up with `Sonic Riders.lnk` (the shortcut), `build\host-mingw\sonicriders.exe`
 (the game), `baserom\` (a link to your disc image), `saves\` (memory card and settings) and
