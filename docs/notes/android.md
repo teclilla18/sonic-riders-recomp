@@ -115,3 +115,28 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - 2026-11-05, v0.4.2, a normal play session while recording (via the new crash report): same pattern at 2,769
   draws/frame (not ~6,000), `present` 297 ms per frame for 4 frames, then device lost. One recording session
   before it did not crash: intermittent.
+- **2026-11-06: device-loss recovery** (render_vk.c `device_recover`): on VK_ERROR_DEVICE_LOST (submit, present,
+  fence waits, acquire) the frame is dropped; the next frame tears down everything on the VkDevice (the instance
+  and surface stay), makes it again (`device_setup`), reloads the pipeline cache file, rebuilds this run's
+  pipelines (prewarm, waited for) and re-uploads textures from their pixels (EFB-copy textures come back with the
+  game's next copy). Log: `[vk] device lost, recovered (N): device ~250 ms, pipelines ~110 ms`. A 4th loss within
+  10 s ends with `rt_fatal` (crash report as before). Tested: `SR_VK_FAKELOST` in the intro and in the 1P race,
+  pictures right 2 frames after [confirmed, S23 Ultra]; real losses: 3 rebuilds each worked [confirmed].
+- **The screenrecord repro still ends in the fatal error** (rebuilt device lost again ~10 frames later, 4 of 4
+  runs today). Bisect with recording (`build/old/rec_repro.sh`, ~90 s per run): still lost with fewer swapchain
+  images (3), pre-rotation (images 1440x3088, transform = current), queue priority low or high
+  (VK_EXT_global_priority), frames in parts of 300 draws with the GPU idle between parts, 30 fps mode, no dual-source
+  blending, no push descriptors, fixed uniform offsets, the ubershader only, at most 20 pipeline switches per
+  frame, 3 indices per draw (GPU frame then 32 ms), depth write as dynamic state, depth formats D32 / D32S8, an
+  empty opposite-compare draw at each pass start (LRZ-off trick). **Survived**: no draws at all; ≤1,000 draws per
+  frame (but many 340 ms presents); one pipeline per pass (`SR_VK_ONEPIPE`); depth writes forced on
+  (`SR_VK_FORCE=dwrite`, also `depth`), but that picture is badly wrong (the sky dome hides the track) and its GPU
+  frame drops to 7.6 ms, so "depth-write changes are the trigger" is [uncertain]. A race frame: ~6,200 draws, ~111
+  pipeline switches, all blended, no lines/points/indirect; ~800 draws with depth test on and write off.
+- Timing: the slow frames' own GPU time is ~12 ms (timestamps); the ~330 ms is spent in `vkQueuePresentKHR` (or
+  submit), fence waits 0. The driver writes no snapshot (`panel.gpuSnapshotPath is not set`); full logcat shows
+  nothing from SurfaceFlinger or the codec. Experiments patch (local):
+  `build/old/android-devicelost-experiments-2026-11-06.patch`.
+- Next ideas: an Adreno GPU profiler / snapshot (needs root or Snapdragon Profiler); test another Adreno phone or
+  recorder; try a Vulkan render pass object instead of dynamic rendering; recording via the phone's own recorder
+  (MediaProjection) to see whether it differs from `screenrecord`.

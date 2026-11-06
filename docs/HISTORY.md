@@ -397,3 +397,31 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   `FATAL: [vk] vkQueueSubmit ... failed: -4` (device lost), SIGABRT stack through rt_fatal. Same pattern as the
   open issue: 4 frames of 299-339 ms each, all in `present` (297 ms), 2,769 draws/frame (fewer than the ~6,000 seen
   before), then the loss; the window before showed GPU 8.3 ms/frame avg, max 25 ms. So (d) was luck, not a fix.
+
+## 2026-11-06: Android device-loss recovery; screen-recording loss bisected, not fixed
+
+- Issues: no replies on #14 (music stops) or #12, no crash report from the Reddit "crashes on launch" user yet.
+- **Recovery** (render_vk.c `device_recover`, `device_setup` / `device_teardown`): VK_ERROR_DEVICE_LOST at submit,
+  present, fence waits or acquire drops the frame; the next frame destroys everything on the VkDevice, makes it
+  again, reloads the pipeline cache file, waits for this run's pipelines (prewarm) and re-uploads textures; a 4th
+  loss within 10 s is fatal as before. `SR_VK_FAKELOST=600,4500` on the S23 Ultra: recovered in 364 / 359 ms,
+  captures 2 frames after each are right (intro, 1P race with HUD and blur) [confirmed]. Real losses with
+  `screenrecord`: each rebuild worked, but the new device was lost again ~10 frames later, 3 times, then fatal: the
+  repro does **not** survive (4 of 4 runs, plus every bisect run below) [confirmed]. Normal perf test, alternating
+  A/B (base / new / base / new): 1P 59.74 / 59.43 / 59.68 / 59.65 fps, 2P 59.94 all, race GPU 12.27 / 12.46 /
+  12.43 / 12.41 ms: no change [confirmed, S23 Ultra].
+- **Bisect with recording** (~90 s per run, details: docs/notes/android.md "Open: device lost"): no draws or ≤1,000
+  draws per frame survive; the slow frames' GPU time is ~12 ms while present blocks ~330 ms. Still lost with: 3
+  swapchain images, pre-rotation, queue priority low/high, 300-draw parts with idle GPU between, 30 fps, no
+  dual-source blending, no push descriptors, fixed UBO offsets, ubershader only, ≤20 pipeline switches, 3 indices
+  per draw, dynamic depth write, D32/D32S8 depth, an LRZ-off draw. Survived: one pipeline per pass, depth writes
+  forced on; but the forced picture is badly wrong and much lighter on the GPU, so the depth-state lead is
+  [uncertain]. A crash found on the way (recording into a command buffer after a lost part submit) was in the
+  split experiment only, which was removed.
+- Kept as test switches: `SR_VK_FAKELOST`, `SR_VK_DRAWS`, `SR_VK_ONEPIPE`, `SR_VK_FORCE`, `SR_VK_SWAPIMAGES`,
+  `SR_VK_PRETRANSFORM` (pre-rotation: renders right per the log, picture not checked on the panel); the rest is in
+  `build/old/android-devicelost-experiments-2026-11-06.patch` (local). `[hitch]` lines now give the frame's
+  pipeline switches and the last GPU frame time; the 300-frame report gives switches per frame.
+- Vita paused by the user (GXM renderer chosen over the fault-handler idea: ~50,000 GX pipe stores per race frame
+  go through the device range, so faults there are not an option without recompiler work). iOS: the Mac is not
+  updated yet.

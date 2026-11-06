@@ -1,8 +1,10 @@
-# State (2026-11-05)
+# State (2026-11-06)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
+
+**Project paused by the user after 2026-11-06** (Vita paused too; resume only when asked).
 
 Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
 `Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
@@ -45,10 +47,14 @@ user. Vita code: branch `vita` only.
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
-- **Open, known issue in v0.4.0: device lost (crash) while screen recording**, also once on a warm phone without
-  recording. Reproduces 4 of 4 with `SR_PERFTEST=1` + `adb shell screenrecord`. Four fixes tried and ruled out;
-  next ideas (device-loss recovery, smaller present surface + pre-rotation): docs/notes/android.md "Open: device
-  lost". Experiments patch: `build/old/android-devicelost-experiments-2026-11-04.patch` (local).
+- **Open, known issue since v0.4.0: device lost (crash) while screen recording.** 2026-11-06 (on `main`, not
+  released): the renderer now rebuilds itself after a device loss (`device_recover`; ~250 ms device + ~110 ms
+  pipelines; fake losses in the intro and a race recover with a right picture [confirmed]; normal perf test
+  unchanged: 59.4-59.7 / 59.9 fps, race GPU 12.3-12.5 ms in an alternating A/B [confirmed]). With `screenrecord`
+  the rebuilt device is lost again every ~10 frames, so after the 4th loss in 10 s it still ends in the fatal
+  error: **not fixed** (every recording run today). Bisect leads (docs/notes/android.md "Open: device lost"): only
+  "one pipeline per pass" and "depth writes forced on" survive, both with a wrong picture [uncertain lead: depth
+  state].
 
 - **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
   dialog after a normal stop) and the emulator (also kill -SEGV). Reddit "crashes on launch": ask for the report.
@@ -84,7 +90,8 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android device lost while recording (v0.4.0 known issue, see "Android" above); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
+1. Android device lost while recording (see "Android" above): recovery in, recording repro not survived; next
+   ideas in notes/android.md (GPU snapshot/profiler, another Adreno phone, the phone's own recorder); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
 2. Online phase 3/4 (paused, see above).
 3. #12 PC at 13 fps (v0.3.4): read the attached log (GPU? vsync? software GL?).
 4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
