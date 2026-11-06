@@ -7,6 +7,8 @@ Flavors (one download per platform, for players):
   switch  SonicRiders-Switch-Setup-<version>.zip: "Install Sonic Riders (Switch).bat" + README-FIRST.txt
   pc      SonicRiders-PC-Setup-<version>.zip: "Install Sonic Riders (PC).bat" + README-FIRST.txt
   android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).bat" + README-FIRST.txt
+  linux   SonicRiders-Linux-Setup-<version>.zip: "Install Sonic Riders (Linux).sh" (SonicRidersSetup.sh) +
+          README-FIRST.txt, for Linux PCs and the Steam Deck (tools/setup_linux.py)
   source  sonic-riders-recomp-<version>-<commit>.zip: the tree as is (SonicRidersSetup.bat asks)
 
 The zip holds every file tracked in git at REF (default HEAD) under one top folder, plus a VERSION
@@ -31,7 +33,7 @@ def git(*args):
     return subprocess.run(("git",) + args, capture_output=True, check=True).stdout
 
 
-PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android")}
+PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android"), "linux": ("Linux", "linux")}
 
 
 def launcher(flavor):
@@ -50,6 +52,8 @@ def launcher(flavor):
 
 
 def readme_first(flavor, version):
+    if flavor == "linux":
+        return readme_linux(version)
     common = [
         "Sonic Riders native port %s - unofficial fan project, not affiliated with SEGA or Nintendo." % version,
         "",
@@ -129,12 +133,49 @@ def readme_first(flavor, version):
     return ("\r\n".join(common + body + tail) + "\r\n").encode()
 
 
+def readme_linux(version):
+    lines = [
+        "Sonic Riders native port %s - unofficial fan project, not affiliated with SEGA or Nintendo." % version,
+        "",
+        "This download contains NO game files. You need your own Sonic Riders (USA) disc image:",
+        "GXEE8P, revision 0, a clean full .iso (1,459,978,240 bytes). The setup checks it.",
+        "",
+        "PLAY ON LINUX OR THE STEAM DECK (no emulator: the game runs natively)",
+        "",
+        "Needs: a 64-bit Linux with Python 3, SDL2 and OpenGL 3.3 (SteamOS has all three), about 4 GB",
+        "free and internet the first time. Nothing is installed into the system and no root rights are",
+        "needed: the setup downloads its own build tools (and a compiler if the system has none).",
+        "",
+        "1. Extract this whole zip to a folder you'll keep (for example ~/Games/SonicRiders). On the Steam",
+        "   Deck do this in Desktop Mode. The game, your saves and settings live in that folder.",
+        '2. Double-click "Install Sonic Riders (Linux).sh" (choose Execute / Run if asked), or in a terminal:',
+        "     cd ~/Games/SonicRiders && sh 'Install Sonic Riders (Linux).sh'",
+        "   Pick your disc image. The first run takes 10-30 minutes.",
+        '3. Start the game with "Sonic Riders" in the application menu (Games), or ./"Sonic Riders.sh".',
+        "",
+        "Steam Deck Game Mode: in Desktop Mode open Steam > Games > Add a Non-Steam Game to My Library, tick",
+        '"Sonic Riders" and click Add. It then starts from Game Mode with the Deck\'s controls.',
+        "",
+        "Controls: a game controller works (Xbox-style; up to 4 players with more controllers).",
+        "Keyboard: WASD = move, J = A, K = B, L = X, I = Y, Enter = START, U / O = L / R, P = Z,",
+        "arrow keys = C-stick, T F G H = D-pad.",
+        "Hold F1 (or the controller's Back/View button) = settings menu. F11 or Alt+Enter = fullscreen.",
+        "",
+        "Updating: download the new version, extract it to a new folder and run the installer again.",
+        "Problems or bugs: https://github.com/teclilla18/sonic-riders-recomp/issues (attach setup.log or",
+        "sonicriders.log from the game folder; never attach game files).",
+        "",
+        "Never share your disc image or the files the setup builds from it.",
+    ]
+    return ("\n".join(lines) + "\n").encode()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
     ap.add_argument("--ref", default="HEAD", help="commit to package (default: HEAD)")
     ap.add_argument("--out", default=os.path.join("build", "release"), help="output folder")
-    ap.add_argument("--flavor", choices=["switch", "pc", "android", "source"], default="source")
+    ap.add_argument("--flavor", choices=["switch", "pc", "android", "linux", "source"], default="source")
     args = ap.parse_args()
 
     root = git("rev-parse", "--show-toplevel").decode().strip()
@@ -167,8 +208,13 @@ def main():
         plat = PLAT[args.flavor][0]
         top = "SonicRiders-%s-%s" % (plat, args.version)
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
-        files = [(n, d) for n, d in files if n != "SonicRidersSetup.bat"]
-        files.append(("Install Sonic Riders (%s).bat" % plat, launcher(args.flavor)))
+        if args.flavor == "linux":
+            setup_sh = [d for n, d in files if n == "SonicRidersSetup.sh"][0]
+            files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
+            files.append(("Install Sonic Riders (Linux).sh", setup_sh))
+        else:
+            files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
+            files.append(("Install Sonic Riders (%s).bat" % plat, launcher(args.flavor)))
         files.append(("README-FIRST.txt", readme_first(args.flavor, args.version)))
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, zipname)
@@ -177,7 +223,9 @@ def main():
         for n, data in files:
             info = zipfile.ZipInfo("%s/%s" % (top, n), date_time=(2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
+            # shell scripts executable (unzip and file managers keep the mode)
+            info.external_attr = (0o755 if n.endswith(".sh") else 0o644) << 16
+            info.create_system = 3  # Unix, so the mode above is used
             z.writestr(info, data)
     os.replace(tmp, path)
     print("make_release: %s (%d files, %d bytes, commit %s)" % (path, len(files), os.path.getsize(path), commit))

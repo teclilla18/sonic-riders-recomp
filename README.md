@@ -1,7 +1,7 @@
 # Sonic Riders native port
 
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
-**Windows PC** or an **Android phone**. The game is rebuilt on your own PC from **your own disc image**; this project contains
+**Windows PC**, an **Android phone**, or **Linux / Steam Deck** (new, untested on a Deck). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
 > [!IMPORTANT]
@@ -17,10 +17,12 @@ no game files.
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
+| **Linux** or a **Steam Deck** (new) | `SonicRiders-Linux-Setup-<version>.zip` | [Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck) |
 
 **In short:** extract the zip, double-click the `Install Sonic Riders` file, pick your disc image, and
 wait 10–30 minutes the first time (Android: 20–40, then it installs over a USB cable). Every version is
-built on a Windows 10/11 PC.
+built on a Windows 10/11 PC, except Linux / Steam Deck, which builds on the Linux machine itself
+(no compiler or root rights needed).
 
 **You need:** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full 1.4 GB `.iso`) and a
 64-bit Windows 10 (1803+) or 11 PC with internet the first time. Switch: custom firmware with the

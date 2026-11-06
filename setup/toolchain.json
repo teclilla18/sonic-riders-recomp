@@ -86,5 +86,21 @@
              "sha256": "98518ecf554465057ee5509462631deeee374bc368c12a411d225cd29381f84b", "kind": "zip", "dir": "jdk17", "strip": "jdk-17.0.21+9" },
     "sdl2_src": { "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.zip",
                   "sha256": "12b2dc2eb8f2836100a7916b5d394a0c82f1f7e32693f95f98305403af242f08", "kind": "zip", "dir": "sdl2-src", "strip": "SDL2-2.32.10" }
+  },
+  "linux": {
+    "_comment": "Linux / Steam Deck setup (SonicRidersSetup.sh, tools/setup_linux.py), per CPU (uname -m). dtk and ninja: the digests GitHub publishes for the release assets. zig (a C/C++ compiler in one folder, used only where the system has no clang/gcc, e.g. SteamOS): the shasum in ziglang.org/download/index.json. SDL2: only the headers of the source release are used (the game links against the system's SDL2).",
+    "dtk": {
+      "x86_64": { "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-linux-x86_64", "sha256": "7c86b1994401bde0cad1d308e6c04cccb65e85453ccc5062ac12baab3b03d320", "kind": "file", "dir": "dtk", "name": "dtk" },
+      "aarch64": { "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-linux-aarch64", "sha256": "889a551d57916772f21a29c997579e0508f268c96bcbc946a0a66bff029cf97c", "kind": "file", "dir": "dtk", "name": "dtk" }
+    },
+    "ninja": {
+      "x86_64": { "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip", "sha256": "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6", "kind": "zip", "dir": "ninja" },
+      "aarch64": { "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux-aarch64.zip", "sha256": "fd2cacc8050a7f12a16a2e48f9e06fca5c14fc4c2bee2babb67b58be17a607fc", "kind": "zip", "dir": "ninja" }
+    },
+    "zig": {
+      "x86_64": { "url": "https://ziglang.org/download/0.17.1/zig-x86_64-linux-0.17.1.tar.xz", "sha256": "3581863e3cbcfd0fce0efc682ce7e9e93da96668a977791d356a26d2a7e9b17a", "kind": "tar", "dir": "zig", "strip": "zig-x86_64-linux-0.17.1" },
+      "aarch64": { "url": "https://ziglang.org/download/0.17.1/zig-aarch64-linux-0.17.1.tar.xz", "sha256": "a1546d5646eb184437918d6635ca6b762a0e889eac09cef720ee7a1ed3fe7795", "kind": "tar", "dir": "zig", "strip": "zig-aarch64-linux-0.17.1" }
+    },
+    "sdl2_headers": { "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.zip", "sha256": "12b2dc2eb8f2836100a7916b5d394a0c82f1f7e32693f95f98305403af242f08", "kind": "zip", "dir": "sdl2-headers", "strip": "SDL2-2.32.10" }
   }
 }

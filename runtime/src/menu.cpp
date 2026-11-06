@@ -69,7 +69,9 @@ struct Job {
     double ms;
 };
 std::mutex g_mx;
-std::condition_variable g_cv;
+/* never destroyed: the helper thread waits on it for the whole run, and glibc's destructor waits for
+ * the waiters, so exit() (window closed, perf test done) hung forever on Linux */
+std::condition_variable& g_cv = *new std::condition_variable;
 Job* g_job;        /* waiting for the helper (render thread -> helper) */
 Job* g_done;       /* drawn (helper -> render thread) */
 bool g_busy;       /* a job is out (render thread only) */
