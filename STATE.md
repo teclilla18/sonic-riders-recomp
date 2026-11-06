@@ -4,7 +4,10 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**Project paused by the user after 2026-11-06** (Vita paused too; resume only when asked).
+**Project paused by the user after 2026-11-06** (Vita paused too; resume only when asked). **Decision (user,
+2026-11-06): screen recording on Android is not supported; no more work on it** (README and INSTALL say so).
+**Next focus: online play (phase 3/4, see "Online"), set up and tested without the user; the user's hardware
+tests (two PCs, Switch-Switch) come last.**
 
 Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
 `Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
@@ -88,7 +91,7 @@ free Apple account (7-day reinstall), test phone iPhone 17 Pro on iOS 27.0; Andr
 Waiting on the user (still on 2026-11-06): Mac update to Tahoe 26.6+ (was 26.5.1), Xcode 27, and a way to run
 commands on the Mac (e.g. SSH); then a first `--target ios`.
 
-## Online play: PAUSED (2026-11-03, for the Android port)
+## Online play: NEXT FOCUS (paused 2026-11-03 for Android; resumes next session)
 
 Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-done in the tree):
 - Done: determinism (`SR_DETCLOCK`), input record/replay, lockstep with desync check (`SR_NET`), generated online
@@ -101,27 +104,26 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android device lost while recording (see "Android" above): recovery in, recording repro not survived; next
-   ideas in notes/android.md (GPU snapshot/profiler, another Adreno phone, the phone's own recorder); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
+1. Online play phase 3/4 (next focus, see "Online"). Android screen recording: not supported (user decision
+   2026-11-06; recovery from single device losses is in). Android GPU cost later. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
 2. #14 Android music stops mid-play, sound effects keep playing (v0.4.1, reporter rsomethin, 2026-11-05). Asked
    (no reply by 2026-11-06) for sonicriders.log, phone model, when, whether it comes back. Guess [uncertain]: music stream starves on disc
    reads (look for `[dvd]` fatal/late lines). Could try to reproduce on the S23 (ask the user first).
-3. Online phase 3/4 (paused, see above).
-4. #12 PC at 13 fps (v0.3.4): answered 2026-11-04 (Intel UHD 620, OpenGL draw calls); waiting on the reporter.
-5. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
-6. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
-7. Audio in Auto at stock clocks crackled (hw27); mixer priority raised. Needs a log: "mixes started late" ~0, 200 lists/s. HISTORY 2026-10-25 (evening).
-8. #3 speed blur weaker than GameCube: padded copies fixed most of it on PC; the overlay/particles may still differ. HISTORY 2026-10-23 (night), 2026-10-26 (night).
-9. #6 rare "Now Loading" hang: not seen since the progressive disc DMA fix (2026-10-18), not proven fixed.
-10. #4 story cutscene monitor garbled (frame ~18000 of the story route); unverified against Dolphin.
-11. #7 lens flare: EFB Z peeks return 0. HISTORY 2026-10-16 (b).
-12. Switch `[applet]` hook never logs; `rt_log` lines from different threads can interleave. HISTORY 2026-10-23 (hw22).
-13. Untested on hardware: single sideways Joy-Con mapping, mods on the Switch (`sdmc:/switch/sonicriders/mods`).
-14. Small graphics: Player Entry sprite ~8 levels lighter than the real game; faint see-through billboards; dark
+3. #12 PC at 13 fps (v0.3.4): answered 2026-11-04 (Intel UHD 620, OpenGL draw calls); waiting on the reporter.
+4. #1 stock-clock performance: 60 fps in busy views needs ~20% less game-thread work. HISTORY 2026-10-26.
+5. #2 3-4 player races at 30 fps (game core ~17-19 ms/frame in 4P). HISTORY 2026-10-23 (hw25), 2026-10-22.
+6. Audio in Auto at stock clocks crackled (hw27); mixer priority raised. Needs a log: "mixes started late" ~0, 200 lists/s. HISTORY 2026-10-25 (evening).
+7. #3 speed blur weaker than GameCube: padded copies fixed most of it on PC; the overlay/particles may still differ. HISTORY 2026-10-23 (night), 2026-10-26 (night).
+8. #6 rare "Now Loading" hang: not seen since the progressive disc DMA fix (2026-10-18), not proven fixed.
+9. #4 story cutscene monitor garbled (frame ~18000 of the story route); unverified against Dolphin.
+10. #7 lens flare: EFB Z peeks return 0. HISTORY 2026-10-16 (b).
+11. Switch `[applet]` hook never logs; `rt_log` lines from different threads can interleave. HISTORY 2026-10-23 (hw22).
+12. Untested on hardware: single sideways Joy-Con mapping, mods on the Switch (`sdmc:/switch/sonicriders/mods`).
+13. Small graphics: Player Entry sprite ~8 levels lighter than the real game; faint see-through billboards; dark
     translucent dome over the Metal City start gate; fog range adjustment (BP 0xE8-0xED) and dynamic indirect
     matrices not implemented.
-15. #9 hardware reports wanted (Lite, original model, docked); #10 PNG screenshots (good first issue).
-16. Later / on request: mods (stats by name, tracks), Super Shadow (verify the racer's gear-id field first),
+14. #9 hardware reports wanted (Lite, original model, docked); #10 PNG screenshots (good first issue).
+15. Later / on request: mods (stats by name, tracks), Super Shadow (verify the racer's gear-id field first),
     C-stick look-back camera (camera writer not found), picture grading sliders, PGO, float-typed register locals.
 
 ## Next hardware-test checklist
