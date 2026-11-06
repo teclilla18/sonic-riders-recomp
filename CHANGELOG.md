@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Android: when the phone's graphics driver resets (Vulkan "device lost"), the game now rebuilds its renderer and
+  carries on after a pause of about a third of a second, instead of closing. While the screen is being recorded on
+  the Galaxy S23 Ultra the reset still repeats every few frames in races, and after the fourth one within 10 s the
+  game closes with a crash report as before; that known issue is still open.
+
 ## v0.4.2 (2026-11-05)
 
 - Android: crash reports you can send from the phone. When the game crashed or stopped with an error last time,

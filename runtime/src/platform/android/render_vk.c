@@ -78,12 +78,15 @@ static PFN_vkCmdBeginRenderingKHR p_begin_rendering;
 static PFN_vkCmdEndRenderingKHR p_end_rendering;
 static PFN_vkCmdPushDescriptorSetKHR p_push_desc;
 static VkFormat g_depth_fmt;
+static int g_core13;  /* Vulkan 1.3 core on both sides (else the dynamic rendering extension) */
 
 /* ---- swapchain ---- */
 static VkSurfaceKHR g_surf;
 static VkSwapchainKHR g_swap;
 static VkFormat g_swap_fmt = VK_FORMAT_UNDEFINED;
-static VkExtent2D g_ext;
+static VkExtent2D g_ext;      /* the screen as the game sees it (landscape) */
+static VkExtent2D g_img_ext;  /* the swapchain images: g_ext, or its sides swapped when pre-rotated */
+static float g_rot[4] = {1, 0, 0, 1};  /* clip-space rotation of the screen quads (pre-rotation, SR_VK_PRETRANSFORM=1) */
 static uint32_t g_nimg;
 static VkImage g_simg[8];
 static VkImageView g_sview[8];
@@ -91,6 +94,26 @@ static VkImageLayout g_slayout[8];
 static VkSemaphore g_sdone[8];
 static int g_swap_can_read;
 static int g_swap_bad;  /* needs making again before the next present */
+/* VK_ERROR_DEVICE_LOST seen (the GPU was reset): the frame is dropped and execute() rebuilds the device first.
+ * Seen on Adreno while the screen is recorded (docs/notes/android.md "Open: device lost"). */
+static int g_lost;
+/* device-lost bisect tools (2026-11-06, docs/notes/android.md): SR_VK_DRAWS=lo-hi sends only draws lo..hi-1 of
+ * each frame to the GPU; SR_VK_ONEPIPE=1 keeps a pass's first pipeline (wrong picture) */
+static unsigned g_draw_lo, g_draw_hi = ~0u;
+static int g_one_pipe;
+static unsigned g_fr_binds, g_binds_sum;  /* GX pipeline switches this frame, and summed for the report */
+static uint64_t g_last_gpu_ns;  /* the last measured frame's GPU time (for the [hitch] line) */
+
+/* a call's result where the device can be lost: 1 if it worked, 0 if lost (noted), else a fatal error */
+static int vk_ok(VkResult r, const char* what) {
+    if (r == VK_SUCCESS) return 1;
+    if (r == VK_ERROR_DEVICE_LOST) {
+        if (!g_lost) rt_log("[vk] device lost (%s)", what);
+        g_lost = 1;
+        return 0;
+    }
+    rt_fatal("[vk] %s failed: %d", what, (int)r);
+}
 
 /* ---- frame slots ---- */
 static VkBuffer g_sbuf[2];
@@ -144,6 +167,7 @@ typedef struct VkImg {
     VkImage img;
     VkImageView view;
     VkImageLayout layout;
+    VkDeviceMemory mem;  /* own memory (images outside the pool), else VK_NULL_HANDLE */
     uint32_t off, size, w, h;
     int live;
     uint32_t gen;
@@ -257,6 +281,7 @@ static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUs
         VkDeviceMemory m;
         VKC(vkAllocateMemory(g_dev, &ai, NULL, &m));
         VKC(vkBindImageMemory(g_dev, t->img, m, 0));
+        t->mem = m;
     }
     int depth = fmt == g_depth_fmt && (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
     VkImageViewCreateInfo vi = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, NULL, 0, t->img, VK_IMAGE_VIEW_TYPE_2D, fmt,
@@ -521,7 +546,6 @@ static int prewarm_thread(void* arg) {
 }
 
 static void prewarm_start(void) {
-    mtx_init(&g_pw_lock, mtx_plain);
     FILE* f = fopen(PIPE_KEYS_FILE, "rb");
     uint32_t hd[2] = {0, 0};
     if (f && fread(hd, sizeof hd, 1, f) == 1 && hd[0] == PIPE_KEYS_MAGIC && hd[1] < (1u << 20)) {
@@ -623,17 +647,35 @@ static int swap_create(void) {
     /* identity: the system rotates the picture to the panel (pre-rotation is a later optimisation) */
     VkSurfaceTransformFlagBitsKHR tf = (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
                                            ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : caps.currentTransform;
+    /* SR_VK_PRETRANSFORM=1: draw already rotated to the panel, so the compositor need not rotate the picture */
+    const char* pt = getenv("SR_VK_PRETRANSFORM");
+    VkExtent2D iext = ext;
+    g_rot[0] = 1; g_rot[1] = 0; g_rot[2] = 0; g_rot[3] = 1;
+    if (pt && atoi(pt) && (caps.supportedTransforms & caps.currentTransform)) {
+        tf = caps.currentTransform;
+        if (tf == VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR || tf == VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+            iext.width = ext.height;
+            iext.height = ext.width;
+        }
+        /* (x, y) -> (r0 x + r2 y, r1 x + r3 y): 90 = (-y, x), 180 = (-x, -y), 270 = (y, -x) */
+        if (tf == VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) { g_rot[0] = 0; g_rot[1] = 1; g_rot[2] = -1; g_rot[3] = 0; }
+        if (tf == VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) { g_rot[0] = -1; g_rot[3] = -1; }
+        if (tf == VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) { g_rot[0] = 0; g_rot[1] = -1; g_rot[2] = 1; g_rot[3] = 0; }
+    }
     VkCompositeAlphaFlagBitsKHR ca = (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
                                          ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR : VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     uint32_t n = caps.minImageCount + 1;
     if (caps.maxImageCount && n > caps.maxImageCount) n = caps.maxImageCount;
     if (n > 8) n = 8;
+    const char* si_env = getenv("SR_VK_SWAPIMAGES");  /* test: swapchain length */
+    if (si_env && atoi(si_env) >= (int)caps.minImageCount && atoi(si_env) <= 8) n = (uint32_t)atoi(si_env);
     g_swap_can_read = (caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0;
-    VkSwapchainCreateInfoKHR ci = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0, g_surf, n, fmt.format, fmt.colorSpace, ext, 1,
+    VkSwapchainCreateInfoKHR ci = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0, g_surf, n, fmt.format, fmt.colorSpace, iext, 1,
                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (g_swap_can_read ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
                                    VK_SHARING_MODE_EXCLUSIVE, 0, NULL, tf, ca, VK_PRESENT_MODE_FIFO_KHR, VK_TRUE, VK_NULL_HANDLE};
     if (vkCreateSwapchainKHR(g_dev, &ci, NULL, &g_swap) != VK_SUCCESS) return 0;
     g_ext = ext;
+    g_img_ext = iext;
     g_nimg = 8;
     vkGetSwapchainImagesKHR(g_dev, g_swap, &g_nimg, g_simg);
     for (uint32_t i = 0; i < g_nimg; i++) {
@@ -644,7 +686,7 @@ static int swap_create(void) {
         VKC(vkCreateSemaphore(g_dev, &si, NULL, &g_sdone[i]));
         g_slayout[i] = VK_IMAGE_LAYOUT_UNDEFINED;
     }
-    rt_log("[vk] screen %ux%u, format %d, %u images, transform %X (current %X)", ext.width, ext.height, fmt.format, g_nimg, tf,
+    rt_log("[vk] screen %ux%u (images %ux%u), format %d, %u images, transform %X (current %X)", ext.width, ext.height, iext.width, iext.height, fmt.format, g_nimg, tf,
            caps.currentTransform);
     g_swap_bad = 0;
     return 1;
@@ -664,6 +706,8 @@ static int swap_recreate(void) {
     }
     return 1;
 }
+
+static void device_setup(void);
 
 static void vk_setup(void) {
     unsigned n = 0;
@@ -695,9 +739,14 @@ static void vk_setup(void) {
         if (!strcmp(de[i].extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) has_dr = 1;
     }
     free(de);
-    int core13 = g_props.apiVersion >= VK_API_VERSION_1_3 && iv >= VK_API_VERSION_1_3;
+    int core13 = g_core13 = g_props.apiVersion >= VK_API_VERSION_1_3 && iv >= VK_API_VERSION_1_3;
     if (!core13 && !has_dr) rt_fatal("[vk] this GPU's driver has no dynamic rendering (Vulkan 1.3 or VK_KHR_dynamic_rendering)");
     if (getenv("SR_VK_NOPUSH")) g_push_desc = 0;
+    g_one_pipe = getenv("SR_VK_ONEPIPE") != NULL;
+    if (getenv("SR_VK_DRAWS")) {
+        sscanf(getenv("SR_VK_DRAWS"), "%u-%u", &g_draw_lo, &g_draw_hi);
+        rt_log("[vk] SR_VK_DRAWS: only draws %u-%u of each frame", g_draw_lo, g_draw_hi);
+    }
     if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) rt_fatal("[vk] surface: %s", SDL_GetError());
     uint32_t nq = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(g_pd, &nq, NULL);
@@ -711,6 +760,14 @@ static void vk_setup(void) {
         if ((qf[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && pres) g_qfi = i;
     }
     if (g_qfi == UINT32_MAX) rt_fatal("[vk] no graphics queue that can present");
+    mtx_init(&g_pw_lock, mtx_plain);
+    device_setup();
+    prewarm_start();
+}
+
+/* everything that belongs to the VkDevice: made at start-up and again after a device loss (device_recover) */
+static void device_setup(void) {
+    int core13 = g_core13;
     float prio = 1.0f;
     VkDeviceQueueCreateInfo qci = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, NULL, 0, g_qfi, 1, &prio};
     const char* dext[4];
@@ -776,7 +833,7 @@ static void vk_setup(void) {
     VkDescriptorSetLayout gl[2] = {g_dsl_ubo, g_dsl_tex};
     VkPipelineLayoutCreateInfo pli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 2, gl, 0, NULL};
     VKC(vkCreatePipelineLayout(g_dev, &pli, NULL, &g_pl_gx));
-    VkPushConstantRange pcr = {VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 64};
+    VkPushConstantRange pcr = {VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 80};
     VkPipelineLayoutCreateInfo qli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1, &g_dsl_one, 1, &pcr};
     VKC(vkCreatePipelineLayout(g_dev, &qli, NULL, &g_pl_quad));
 
@@ -886,6 +943,11 @@ static void vk_setup(void) {
         g_pool_type = mem_type(mr.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         VkMemoryAllocateInfo ai = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, IMAGE_POOL, g_pool_type};
         VKC(vkAllocateMemory(g_dev, &ai, NULL, &g_pool_mem));
+        while (g_free_list) {  /* after a device loss: the old pool's free list */
+            Block* b = g_free_list;
+            g_free_list = b->next;
+            free(b);
+        }
         g_free_list = malloc(sizeof *g_free_list);
         g_free_list->off = 0; g_free_list->size = IMAGE_POOL; g_free_list->next = NULL;
     }
@@ -935,7 +997,6 @@ static void vk_setup(void) {
         VkQueryPoolCreateInfo qi = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, NULL, 0, VK_QUERY_TYPE_TIMESTAMP, 4, 0};
         if (vkCreateQueryPool(g_dev, &qi, NULL, &g_qpool) != VK_SUCCESS) g_qpool = VK_NULL_HANDLE;
     }
-    prewarm_start();
     rt_log("[vk] ready: EFB %dx%d, depth format %d, image pool %u MiB", EFB_W, EFB_H, g_depth_fmt, IMAGE_POOL >> 20);
 }
 
@@ -997,8 +1058,10 @@ static void quad(int kind, int target, VkColorComponentFlags mask, VkImageView t
                  const float px[4], const float uv[4], const float color[4], const float shape[4]) {
     vkCmdBindPipeline(g_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, quad_pipe(kind, target, mask));
     g_bound = VK_NULL_HANDLE;
-    VkViewport vp = {0, 0, w, h, 0, 1};
-    VkRect2D sc = {{0, 0}, {(uint32_t)w, (uint32_t)h}};
+    int rot = target == TGT_SWAP;  /* the screen: pre-rotated images are g_img_ext */
+    float vw = rot ? (float)g_img_ext.width : w, vh = rot ? (float)g_img_ext.height : h;
+    VkViewport vp = {0, 0, vw, vh, 0, 1};
+    VkRect2D sc = {{0, 0}, {(uint32_t)vw, (uint32_t)vh}};
     vkCmdSetViewport(g_cmd, 0, 1, &vp);
     vkCmdSetScissor(g_cmd, 0, 1, &sc);
     g_dyn_valid = 0;
@@ -1016,12 +1079,14 @@ static void quad(int kind, int target, VkColorComponentFlags mask, VkImageView t
         vkUpdateDescriptorSets(g_dev, 1, &wd, 0, NULL);
         vkCmdBindDescriptorSets(g_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, g_pl_quad, 0, 1, &s, 0, NULL);
     }
-    float pc[16] = {px[0] / w * 2 - 1, px[1] / h * 2 - 1, px[2] / w * 2 - 1, px[3] / h * 2 - 1};
+    float pc[20] = {px[0] / w * 2 - 1, px[1] / h * 2 - 1, px[2] / w * 2 - 1, px[3] / h * 2 - 1};
     static const float uv01[4] = {0, 0, 1, 1}, white[4] = {1, 1, 1, 1}, zero[4] = {0, 0, 0, 0};
     memcpy(pc + 4, uv ? uv : uv01, 16);
     memcpy(pc + 8, color ? color : white, 16);
     memcpy(pc + 12, shape ? shape : zero, 16);
-    vkCmdPushConstants(g_cmd, g_pl_quad, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 64, pc);
+    static const float ident[4] = {1, 0, 0, 1};
+    memcpy(pc + 16, rot ? g_rot : ident, 16);
+    vkCmdPushConstants(g_cmd, g_pl_quad, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 80, pc);
     vkCmdDraw(g_cmd, 4, 1, 0, 0);
 }
 
@@ -1079,6 +1144,19 @@ static uint64_t state_key(const GxUniforms* u, int prim) {
     uint64_t cv = cull == 0 ? VK_CULL_MODE_NONE : cull == 1 ? VK_CULL_MODE_BACK_BIT : cull == 2 ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_FRONT_AND_BACK;
     uint64_t topo = prim == GXP_TRIANGLES ? VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST : prim == GXP_LINES ? VK_PRIMITIVE_TOPOLOGY_LINE_LIST
                                                                                                     : VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    static int force = -1;  /* SR_VK_FORCE=cull,depth,dtest,dwrite,dalways,blend (test): fixed fields */
+    if (force < 0) {
+        const char* e = getenv("SR_VK_FORCE");
+        force = !e ? 0 : (strstr(e, "cull") ? 1 : 0) | (strstr(e, "depth") ? 2 : 0) | (strstr(e, "blend") ? 4 : 0) |
+                         (strstr(e, "dtest") ? 8 : 0) | (strstr(e, "dwrite") ? 16 : 0) | (strstr(e, "dalways") ? 32 : 0);
+        if (force) rt_log("[vk] SR_VK_FORCE=%s: those pipeline fields fixed", e);
+    }
+    if (force & 1) cv = VK_CULL_MODE_NONE;
+    if (force & 2) zt = 1, zw = 1, zc = VK_COMPARE_OP_LESS_OR_EQUAL;
+    if (force & 8) zt = 1;
+    if (force & 16) zw = 1;
+    if ((force & 32) && !zt) zt = 1, zc = VK_COMPARE_OP_ALWAYS;  /* test off = test on, always passing */
+    if (force & 4) blend = 1, revsub = 0, s = sa = VK_BLEND_FACTOR_SRC_ALPHA, d = dA = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, mask = 15;
     return ind | blend << 1 | revsub << 2 | s << 3 | d << 8 | sa << 13 | dA << 18 | mask << 23 | zt << 27 | zw << 28 | zc << 29 |
            cv << 32 | topo << 34;
 }
@@ -1158,6 +1236,7 @@ static int acquire(void) {
         r = vkAcquireNextImageKHR(g_dev, g_swap, 1000000000ull, g_acq[g_slot], VK_NULL_HANDLE, &idx);
     }
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
+        if (r == VK_ERROR_DEVICE_LOST) vk_ok(r, "vkAcquireNextImageKHR");
         g_swap_bad = 1;
         return 0;
     }
@@ -1192,7 +1271,7 @@ static void present_picture(const GxCmd* c) {
     picture_rect(aspect, px);
     to_layout(&g_efb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    target_begin(g_sview[g_swap_idx], g_ext.width, g_ext.height, 1);
+    target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 1);
     quad(Q_TEX_OPAQUE, TGT_SWAP, 15, g_efb.view, g_samp_lin, (float)g_ext.width, (float)g_ext.height, px, uv, NULL, NULL);
     p_end_rendering(g_cmd);
     to_layout(&g_efb, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -1239,7 +1318,7 @@ static void draw_overlay_and_touch(void) {
     int nt = touch_shapes(ts, 16, (int)W, (int)H);
     if (!(img && g_ov_box[0] < g_ov_box[2]) && !nt) return;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    target_begin(g_sview[g_swap_idx], g_ext.width, g_ext.height, 0);
+    target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 0);
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
     for (int i = 0; i < nt; i++) {
         float px[4] = {ts[i].cx - ts[i].r, ts[i].cy - ts[i].r, ts[i].cx + ts[i].r, ts[i].cy + ts[i].r};
@@ -1281,7 +1360,7 @@ static int shot_wanted(unsigned n) {
 static void shot_request(void) {
     unsigned n = g_presented;
     if (!shot_wanted(n) || !g_swap_can_read) return;
-    uint32_t bytes = g_ext.width * g_ext.height * 4;
+    uint32_t bytes = g_img_ext.width * g_img_ext.height * 4;
     if (!g_shot_buf || g_shot_w * g_shot_h * 4 < bytes) {
         if (g_shot_buf) {
             vkDestroyBuffer(g_dev, g_shot_buf, NULL);
@@ -1298,8 +1377,8 @@ static void shot_request(void) {
         VKC(vkBindBufferMemory(g_dev, g_shot_buf, g_shot_mem, 0));
         VKC(vkMapMemory(g_dev, g_shot_mem, 0, bytes, 0, (void**)&g_shot_map));
     }
-    g_shot_w = g_ext.width;
-    g_shot_h = g_ext.height;
+    g_shot_w = g_img_ext.width;  /* pre-rotated: the picture as the panel gets it */
+    g_shot_h = g_img_ext.height;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     VkBufferImageCopy r = {0, 0, 0, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {g_shot_w, g_shot_h, 1}};
     vkCmdCopyImageToBuffer(g_cmd, g_simg[g_swap_idx], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, g_shot_buf, 1, &r);
@@ -1346,13 +1425,18 @@ static int shot_thread(void* arg) {
 static void slot_reclaim(unsigned slot) {
     if (g_fenced[slot]) {
         uint64_t t0 = platform_now_ns();
-        vkWaitForFences(g_dev, 1, &g_fence[slot], VK_TRUE, UINT64_MAX);
+        VkResult wr = vkWaitForFences(g_dev, 1, &g_fence[slot], VK_TRUE, UINT64_MAX);
         g_fr_wait_ns += platform_now_ns() - t0;
+        if (wr != VK_SUCCESS) {
+            vk_ok(wr, "vkWaitForFences");
+            g_ts_written[slot] = 0;
+        }
         if (g_qpool && g_ts_written[slot]) {
             uint64_t ts[2];
             if (vkGetQueryPoolResults(g_dev, g_qpool, slot * 2, 2, sizeof ts, ts, 8, VK_QUERY_RESULT_64_BIT) == VK_SUCCESS && ts[1] > ts[0]) {
                 uint64_t ns = (uint64_t)((double)(ts[1] - ts[0]) * g_props.limits.timestampPeriod);
                 g_gpu_ns_sum += ns;
+                g_last_gpu_ns = ns;
                 if (ns > g_gpu_ns_max) g_gpu_ns_max = ns;
                 g_gpu_frames++;
             }
@@ -1422,12 +1506,157 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 static uint64_t g_busy_ns;
 static unsigned g_busy_frames, g_draws_sum;
 
+/* ---------------------------------------------------------------- device loss */
+/* SR_VK_FAKELOST=<frame>[,<frame>...]: act as if the device were lost after those frames (tests the rebuild) */
+static int fake_lost_due(void) {
+    static unsigned at[8], n;
+    static int parsed;
+    if (!parsed) {
+        parsed = 1;
+        const char* e = getenv("SR_VK_FAKELOST");
+        while (e && *e && n < 8) {
+            char* end;
+            unsigned long v = strtoul(e, &end, 10);
+            if (end == e) break;
+            at[n++] = (unsigned)v;
+            e = *end == ',' ? end + 1 : end;
+        }
+        if (n) rt_log("[vk] SR_VK_FAKELOST: %u fake device losses", n);
+    }
+    for (unsigned i = 0; i < n; i++)
+        if (at[i] == g_frames_done) return 1;
+    return 0;
+}
+
+static void img_destroy(VkImg* t) {  /* an image outside the pool, or (pool gone) one inside it */
+    if (!t->live) return;
+    vkDestroyImageView(g_dev, t->view, NULL);
+    vkDestroyImage(g_dev, t->img, NULL);
+    if (t->mem) vkFreeMemory(g_dev, t->mem, NULL);
+    memset(t, 0, sizeof *t);
+}
+
+/* everything device_setup made (and what frames made since), in reverse order; the instance and surface stay */
+static void device_teardown(void) {
+    vkDeviceWaitIdle(g_dev);  /* returns at once on a lost device */
+    for (uint32_t i = 0; i < g_pipes_cap; i++)
+        if (g_pipes[i].p) vkDestroyPipeline(g_dev, g_pipes[i].p, NULL);
+    if (g_pipes) memset(g_pipes, 0, g_pipes_cap * sizeof *g_pipes);
+    g_pipes_total = 0;
+    for (int i = 0; i < g_tex_cap; i++) img_destroy(&g_tex[i]);
+    for (int s = 0; s < 2; s++) {  /* textures waiting for their slot's fence: nothing on the GPU any more */
+        for (uint32_t i = 0; i < g_nretired[s]; i++) gx_texture_free(g_retired[s][i]);
+        g_nretired[s] = 0;
+    }
+    img_destroy(&g_efb);
+    img_destroy(&g_depth);
+    img_destroy(&g_ov);
+    img_destroy(&g_dummy);
+    img_destroy(&g_icons);
+    vkFreeMemory(g_dev, g_pool_mem, NULL);
+    g_pool_mem = VK_NULL_HANDLE;
+    swap_destroy();
+    if (g_shot_buf) {
+        vkDestroyBuffer(g_dev, g_shot_buf, NULL);
+        vkFreeMemory(g_dev, g_shot_mem, NULL);
+        g_shot_buf = VK_NULL_HANDLE;
+        g_shot_mem = VK_NULL_HANDLE;
+        g_shot_w = g_shot_h = 0;
+    }
+    if (g_qpool) vkDestroyQueryPool(g_dev, g_qpool, NULL);
+    g_qpool = VK_NULL_HANDLE;
+    vkDestroyDescriptorPool(g_dev, g_dpool_static, NULL);
+    for (int i = 0; i < 2; i++) {
+        if (g_dpool_frame[i]) vkDestroyDescriptorPool(g_dev, g_dpool_frame[i], NULL);
+        g_dpool_frame[i] = VK_NULL_HANDLE;
+    }
+    vkDestroyCommandPool(g_dev, g_cpool, NULL);
+    for (int i = 0; i < 2; i++) {
+        vkUnmapMemory(g_dev, g_smem[i]);
+        vkDestroyBuffer(g_dev, g_sbuf[i], NULL);
+        vkFreeMemory(g_dev, g_smem[i], NULL);
+        vkDestroyFence(g_dev, g_fence[i], NULL);
+        vkDestroySemaphore(g_dev, g_acq[i], NULL);
+        g_cb[i] = VK_NULL_HANDLE;
+    }
+    for (int i = 0; i < 36; i++) vkDestroySampler(g_dev, g_samp[i], NULL);
+    vkDestroyPipelineCache(g_dev, g_pcache, NULL);
+    vkDestroyPipelineLayout(g_dev, g_pl_gx, NULL);
+    vkDestroyPipelineLayout(g_dev, g_pl_quad, NULL);
+    vkDestroyDescriptorSetLayout(g_dev, g_dsl_ubo, NULL);
+    vkDestroyDescriptorSetLayout(g_dev, g_dsl_tex, NULL);
+    vkDestroyDescriptorSetLayout(g_dev, g_dsl_one, NULL);
+    for (int i = 0; i < GX_SPEC_COUNT; i++)
+        if (g_spec_sm[i]) vkDestroyShaderModule(g_dev, g_spec_sm[i], NULL);
+    memset(g_spec_sm, 0, sizeof g_spec_sm);
+    VkShaderModule sm[7] = {g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch};
+    for (int i = 0; i < 7; i++) vkDestroyShaderModule(g_dev, sm[i], NULL);
+    vkDestroyDevice(g_dev, NULL);
+    g_dev = VK_NULL_HANDLE;
+    /* per-frame state that pointed at the old objects */
+    g_cmd = VK_NULL_HANDLE;
+    g_slot = 0;
+    g_fenced[0] = g_fenced[1] = 0;
+    g_ts_written[0] = g_ts_written[1] = 0;
+    g_swap_idx = -1;
+    g_swap_bad = 0;
+    g_shot_pending = 0;
+    g_ov_version = ~0u;
+    g_in_efb = 0;
+    g_bound = VK_NULL_HANDLE;
+    g_dyn_valid = 0;
+    g_tex_valid = 0;
+}
+
+static void pump(void);
+
+/* after VK_ERROR_DEVICE_LOST: a new device with everything on it, the textures upload again from their pixels
+ * (EFB copies come back with the game's next copy), the recorded pipelines are rebuilt before going on */
+static void device_recover(void) {
+    static uint64_t lost_at[3];
+    static unsigned nlost;
+    uint64_t t0 = platform_now_ns();
+    if (nlost >= 3 && t0 - lost_at[nlost % 3] < 10000000000ull)
+        rt_fatal("[vk] device lost %u times within %.1f s (VK_ERROR_DEVICE_LOST): giving up", 4u, (t0 - lost_at[nlost % 3]) / 1e9);
+    lost_at[nlost % 3] = t0;
+    nlost++;
+    rt_log("[vk] device lost after frame %u: rebuilding the renderer", g_frames_done);
+    keys_save();
+    while (g_pw_running) {
+        struct timespec ts = {0, 2000000};
+        thrd_sleep(&ts, NULL);
+    }
+    pipe_drain();
+    device_teardown();
+    g_lost = 0;
+    device_setup();
+    uint64_t t_dev = platform_now_ns();
+    if (g_nkeys) {  /* the pipelines this run used, before the game goes on (the "short pause") */
+        g_pw_nkeys = g_nkeys;
+        g_pw_keys = malloc(g_nkeys * sizeof *g_pw_keys);
+        memcpy(g_pw_keys, g_keys, g_nkeys * sizeof *g_pw_keys);
+        g_pw_running = 1;
+        rt_thread_start(prewarm_thread, NULL);
+        while (g_pw_running && platform_now_ns() - t_dev < 5000000000ull) {
+            pump();
+            pipe_drain();
+            struct timespec ts = {0, 4000000};
+            thrd_sleep(&ts, NULL);
+        }
+        pipe_drain();
+    }
+    rt_log("[vk] device lost, recovered (%u): device %.0f ms, pipelines %.0f ms%s", nlost, (t_dev - t0) / 1e6,
+           (platform_now_ns() - t_dev) / 1e6, g_pw_running ? " (prewarm still running)" : "");
+}
+
 static void execute(GxFrame* f) {
     uint64_t t_start = platform_now_ns();
     g_fr_pipe_ns = g_fr_wait_ns = g_fr_img_ns = g_fr_acq_ns = 0;
     g_fr_pipe_n = g_fr_img_n = 0;
+    if (g_lost) device_recover();
     pipe_drain();
     slot_reclaim(g_slot);
+    if (g_lost) device_recover();  /* found by the fence wait */
     g_s = settings_internal_scale();
     g_cmd = g_cb[g_slot];
     vkResetCommandBuffer(g_cmd, 0);
@@ -1486,6 +1715,7 @@ static void execute(GxFrame* f) {
     uint32_t dyn[2] = {0, 0};
     int sets_bound = 0;
     unsigned draws = 0;
+    g_fr_binds = 0;
     for (uint32_t i = 0; i < f->ncmds; i++) {
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
@@ -1519,7 +1749,8 @@ static void execute(GxFrame* f) {
             uint64_t key = state_key(cur, c->prim) | cur_spec;
             if (!g_bound || key != g_cur_key) {
                 VkPipeline p = gx_pipe(key);
-                if (p != g_bound) {
+                if (p != g_bound && !(g_bound && g_one_pipe)) {  /* SR_VK_ONEPIPE (test) */
+                    g_fr_binds++;
                     vkCmdBindPipeline(g_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p);
                     g_bound = p;
                 }
@@ -1531,7 +1762,7 @@ static void execute(GxFrame* f) {
             }
             apply_dynamic(cur);
             bind_textures(c, cur);
-            vkCmdDrawIndexed(g_cmd, c->b, 1, c->a, 0, 0);
+            if (draws >= g_draw_lo && draws < g_draw_hi) vkCmdDrawIndexed(g_cmd, c->b, 1, c->a, 0, 0);
             draws++;
             break;
         }
@@ -1583,24 +1814,28 @@ static void execute(GxFrame* f) {
         vkCmdWriteTimestamp(g_cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_qpool, g_slot * 2 + 1);
         g_ts_written[g_slot] = 1;
     }
-    VKC(vkEndCommandBuffer(g_cmd));
+    int ended = vk_ok(vkEndCommandBuffer(g_cmd), "vkEndCommandBuffer");
     uint64_t t_sub = platform_now_ns();
     VkPipelineStageFlags wst = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, presenting ? 1u : 0u, &g_acq[g_slot], &wst, 1, &g_cmd,
                        presenting ? 1u : 0u, presenting ? &g_sdone[g_swap_idx] : NULL};
-    VKC(vkQueueSubmit(g_q, 1, &si, g_fence[g_slot]));
-    g_fenced[g_slot] = 1;
+    if (ended && vk_ok(vkQueueSubmit(g_q, 1, &si, g_fence[g_slot]), "vkQueueSubmit")) g_fenced[g_slot] = 1;
+    else presenting = 0;  /* lost: the frame is dropped */
     uint64_t t_pres = platform_now_ns();
     if (presenting) {
         uint32_t idx = (uint32_t)g_swap_idx;
         VkPresentInfoKHR pi = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, NULL, 1, &g_sdone[idx], 1, &g_swap, &idx, NULL};
         VkResult r = vkQueuePresentKHR(g_q, &pi);
         if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_ERROR_SURFACE_LOST_KHR) g_swap_bad = 1;
+        if (r == VK_ERROR_DEVICE_LOST) vk_ok(r, "vkQueuePresentKHR");
         g_slayout[idx] = VK_IMAGE_LAYOUT_UNDEFINED;  /* contents not kept between frames */
         g_swap_idx = -1;
     }
+    if (fake_lost_due()) vk_ok(VK_ERROR_DEVICE_LOST, "SR_VK_FAKELOST");  /* test: everything below as after a real loss */
+    if (g_shot_pending && (g_lost || !g_fenced[g_slot] ||
+                           vkWaitForFences(g_dev, 1, &g_fence[g_slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS))
+        g_shot_pending = 0;  /* no picture from a lost frame */
     if (g_shot_pending) {
-        vkWaitForFences(g_dev, 1, &g_fence[g_slot], VK_TRUE, UINT64_MAX);
         Shot* sh = malloc(sizeof *sh);
         sh->w = g_shot_w;
         sh->h = g_shot_h;
@@ -1624,17 +1859,18 @@ static void execute(GxFrame* f) {
     g_ph_pres += t_end - t_pres;
     g_busy_ns += busy;
     g_draws_sum += draws;
+    g_binds_sum += g_fr_binds;
     g_passes_sum += g_passes;
     if (busy > 50000000ull)
         rt_log("[hitch] render thread: a frame took %.0f ms (%u draws): %u new pipelines %.0f ms, GPU wait %.0f ms, "
-               "%u new images %.0f ms, %u KB staged; copy-in %.0f, recording %.0f, acquire %.0f, submit %.0f, present %.0f ms%s",
+               "%u new images %.0f ms, %u KB staged, %u pipeline switches; copy-in %.0f, recording %.0f, acquire %.0f, submit %.0f, present %.0f ms; last GPU frame %.1f ms%s",
                busy / 1e6, draws, g_fr_pipe_n, g_fr_pipe_ns / 1e6, g_fr_wait_ns / 1e6, g_fr_img_n, g_fr_img_ns / 1e6,
-               g_stage_off >> 10, (t_rec - t_start) / 1e6, (t_sub - t_rec - g_fr_acq_ns) / 1e6, g_fr_acq_ns / 1e6,
-               (t_pres - t_sub) / 1e6, (t_end - t_pres) / 1e6, g_pw_running ? " (prewarm still running)" : "");
+               g_stage_off >> 10, g_fr_binds, (t_rec - t_start) / 1e6, (t_sub - t_rec - g_fr_acq_ns) / 1e6, g_fr_acq_ns / 1e6,
+               (t_pres - t_sub) / 1e6, (t_end - t_pres) / 1e6, g_last_gpu_ns / 1e6, g_pw_running ? " (prewarm still running)" : "");
     if (++g_busy_frames == 300) {
-        rt_log("[vk] %.2f ms/frame on the render thread, %u draws/frame, %u pipelines, %u frames presented; "
+        rt_log("[vk] %.2f ms/frame on the render thread, %u draws/frame (%u pipeline switches), %u pipelines, %u frames presented; "
                "specialized shaders for %llu of %llu states", g_busy_ns / 300 / 1e6,
-               g_draws_sum / 300, g_pipes_total, g_presented, g_spec_hits, g_spec_hits + g_spec_misses);
+               g_draws_sum / 300, g_binds_sum / 300, g_pipes_total, g_presented, g_spec_hits, g_spec_hits + g_spec_misses);
         g_spec_hits = g_spec_misses = 0;
         rt_log("[vk]   parts, ms/frame: copy-in %.2f, recording %.2f, acquire %.2f, submit %.2f, present %.2f",
                g_ph_in / 300 / 1e6, g_ph_rec / 300 / 1e6, g_ph_acq / 300 / 1e6, g_ph_sub / 300 / 1e6, g_ph_pres / 300 / 1e6);
@@ -1646,6 +1882,7 @@ static void execute(GxFrame* f) {
         g_gpu_frames = g_passes_sum = 0;
         g_busy_ns = 0;
         g_draws_sum = 0;
+        g_binds_sum = 0;
         g_busy_frames = 0;
     }
     g_frames_done++;

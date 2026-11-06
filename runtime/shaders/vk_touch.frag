@@ -4,7 +4,7 @@
 // 5 pause (the word START), 6 menu); shape.z: 1 while pressed. color: tint (rgb) and overall opacity (a).
 // Shared-GLSL rules apply (no runtime index into a vector or array).
 layout(location = 0) in vec2 v_uv;
-layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; } pc;
+layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
 layout(location = 0) out vec4 o_color;
 
 float seg(vec2 p, vec2 a, vec2 b) {  // distance to a line segment

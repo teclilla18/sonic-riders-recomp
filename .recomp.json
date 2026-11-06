@@ -1,0 +1,16 @@
+{
+  "$schema": "https://recomp.fyi/schema/v1.json",
+  "game": "Sonic Riders",
+  "system": "GameCube",
+  "type": "recomp",
+  "original": { "region": "USA", "revision": "0", "serial": "GXEE8P" },
+  "project": "Sonic Riders Recomp",
+  "status": "released",
+  "targets": ["Windows", "Android", "Switch"],
+  "toolchain": ["Decomp-toolkit"],
+  "approach": "Static recompilation of the PowerPC code to C, with HLE of the GameCube devices and native renderers (deko3d, OpenGL, Vulkan)",
+  "started": "2026-10-15",
+  "notes": "Playable on Switch, Windows and Android. Each player builds it locally from their own copy of the game; the repository holds only our source. Online play supported. A PS Vita port is being researched.",
+  "maintainers": [{ "name": "teclilla18", "link": "https://github.com/teclilla18" }],
+  "links": [{ "label": "Releases", "url": "https://github.com/teclilla18/sonic-riders-recomp/releases" }]
+}

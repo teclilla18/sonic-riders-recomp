@@ -15,7 +15,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.
 - `SR_SCREENSHOT=<frame>[,...]` / `list` (PC): `build/shot_<frame>.png`, up to 512 frames. `SR_SHOTSTEP`: capture by frame end (from 1).
 - `SR_SHOTS=1` or `SR_SHOTS=a,b,c` (Switch): `shot_<frame>.bmp` at 300 … 7200, or those frames. Off by default.
-- Android only: `SR_TOUCH=0` hides the touch controls (picture compares); `SR_VK_TINYSCISSOR=1` (1-pixel scissor: GPU cost without pixels) and `SR_VK_FULLAREA=1` (whole-EFB render area) are GPU cost tests; `SR_VK_NOPUSH=1` no push descriptors.
+- Android only: `SR_TOUCH=0` hides the touch controls (picture compares); `SR_VK_TINYSCISSOR=1` (1-pixel scissor: GPU cost without pixels) and `SR_VK_FULLAREA=1` (whole-EFB render area) are GPU cost tests; `SR_VK_NOPUSH=1` no push descriptors. Device-lost tools (2026-11-06): `SR_VK_FAKELOST=<frame>[,...]` acts as if the device were lost after those frames (tests the rebuild); `SR_VK_DRAWS=lo-hi` sends only those draws of each frame; `SR_VK_ONEPIPE=1` keeps each pass's first pipeline; `SR_VK_FORCE=cull,depth,dtest,dwrite,dalways,blend` fixes those pipeline fields (wrong picture); `SR_VK_SWAPIMAGES=<n>` swapchain length; `SR_VK_PRETRANSFORM=1` renders pre-rotated to the panel (swapchain transform = current).
 - `SR_INPUT="1500:START,1510:-START,7300:2.START,4000:SX=50,..."`: scripted buttons/stick at VI field counts, port prefix `N.`; up to 1024 steps; PC and Switch (input_script.c).
 - `SR_PADS=N`: connect ports 1..N without gamepads (PC). `SR_CARD=<path>`: memory card image (both targets).
 - `SR_TEST_MENU=1` / `<tab>` / `mods`: start with the settings menu open on that tab.

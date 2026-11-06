@@ -340,6 +340,15 @@ PCH-2000 at CPU 500 / bus 222 / GPU 222 / xbar 166, `SR_PERFTEST=1`, probe witho
 - Next ideas from this: the device test on non-stack accesses (3 instructions each) could go if the device range
   of the window (offset 0x08000000) were left unmapped and faults emulated through kubridge's exception handler
   (bigger change, [uncertain] cost of a fault); the game thread still needs ~36 ms vs 33 for 30 fps.
+- **Estimate (2026-11-06), decision: start the GXM renderer first.** The device-range idea is much costlier than it
+  looked: every GX command goes to the write-gather pipe at 0xCC008000, inside the range, through `mmio_write`;
+  the Android logs show **~50,000 pipe stores per race frame** (`[perf] GX pipe: N stores/frame`, up to 51,255).
+  With the range unmapped each would fault (at even ~1 us per fault ~50 ms per frame), so faults are only usable
+  if the recompiler first sends pipe stores straight to the pipe (base register known from a `lis 0xCC01` in the
+  block) and faults catch only the rest; the leftover rate is unknown until built. Expected gain ~5-10% of the
+  game thread (3 instructions per access + less register pressure), not measurable before it is all built. The
+  GP thread (51-65 ms per drawn race frame) is the bigger gap, and the renderer design decides it. Paused by the
+  user the same day before any code.
 
 ## Sources (read 2026-11-03)
 

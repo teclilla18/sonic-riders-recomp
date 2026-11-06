@@ -1,8 +1,10 @@
-# State (2026-11-05)
+# State (2026-11-06)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
+
+**Project paused by the user after 2026-11-06** (Vita paused too; resume only when asked).
 
 Latest release: **v0.4.2** (2026-11-05, tag at b790304): Android crash reports (next-launch dialog + report in
 `Download/SonicRiders`); PC and Switch unchanged since v0.4.1. Cold Windows Sandbox PC + Android PASS on b790304
@@ -45,10 +47,14 @@ user. Vita code: branch `vita` only.
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
-- **Open, known issue in v0.4.0: device lost (crash) while screen recording**, also once on a warm phone without
-  recording. Reproduces 4 of 4 with `SR_PERFTEST=1` + `adb shell screenrecord`. Four fixes tried and ruled out;
-  next ideas (device-loss recovery, smaller present surface + pre-rotation): docs/notes/android.md "Open: device
-  lost". Experiments patch: `build/old/android-devicelost-experiments-2026-11-04.patch` (local).
+- **Open, known issue since v0.4.0: device lost (crash) while screen recording.** 2026-11-06 (on `main`, not
+  released): the renderer now rebuilds itself after a device loss (`device_recover`; ~250 ms device + ~110 ms
+  pipelines; fake losses in the intro and a race recover with a right picture [confirmed]; normal perf test
+  unchanged: 59.4-59.7 / 59.9 fps, race GPU 12.3-12.5 ms in an alternating A/B [confirmed]). With `screenrecord`
+  the rebuilt device is lost again every ~10 frames, so after the 4th loss in 10 s it still ends in the fatal
+  error: **not fixed** (every recording run today). Bisect leads (docs/notes/android.md "Open: device lost"): only
+  "one pipeline per pass" and "depth writes forced on" survive, both with a wrong picture [uncertain lead: depth
+  state].
 
 - **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
   dialog after a normal stop) and the emulator (also kill -SEGV). Reddit "crashes on launch": ask for the report.
@@ -68,25 +74,19 @@ user. Vita code: branch `vita` only.
 
 Picture enhancements (resolution scale on PC/Android, bloom, HD texture replacement). **PS4/PS5 port: ON HOLD**
 (user: two jailbroken PS4s, no PS5; research in docs/notes/ps4-ps5-research.md). **PS Vita: researched** (docs/notes/vita-research.md):
-**Vita probe (branch `vita`, 2026-11-04)** [confirmed, CPU 500 / GPU 222]: V1a headless runs the demos; after this
-session's fixes (clock reads, 64-bit divide, log) 1P 21 steps/s, game thread ~40 ms/step (was 10.5 steps/s, 49 ms),
-2P 22 steps/s, ~40 ms; still ~1.3x too slow for the game's 30 fps mode, GP thread 51-65 ms per drawn race frame.
-Run-to-run noise ~±10%. Session 5: float-typed single-precision locals are now **bit-exact** (PC det route 0 of
-11,305 steps differ; cause was float-only expressions such as ps_madd) but give **no measurable gain** on the Vita
-(1P ~38 ms/step either way; GCC already narrows most single ops, conversions drop only 2.5%), so they stay off.
-Audio mixer cheap wins: bit-exact (WAV identical), Vita mixing 7.4 -> 6.6 ms/frame, audio thread -9% [confirmed].
-Session 6: an exact-attribution profile (`RECOMP_PROFEXACT=1`) shows the race profile is flat (PSMTX/PSVEC 5.5%,
-not 12%; top function 6%) and conversions are only ~2.3% of executed instructions, so FPR halves as float is
-dropped. **Fixed memory base** (window reserved at 0x90000000, base a constant; `--vita-base`, default on the
-Vita): 1P 36.4 vs 37.9 ms/step, 2P 33.4 vs 36.6 in an alternating A/B [likely]. Still ~36 ms vs 33 needed for the
-30 fps mode. Next: device-range test on non-stack accesses (unmapped range + kubridge fault handler?), or start
-the renderer (gxm) since only code-generation-wide gains remain. USB camera (udcd_uvc) is off again (line
-commented in ur0:tai/config.txt, 2026-11-04 night): the Vita charges over USB. Details: docs/notes/vita-research.md "Exact profile and fixed memory base", "Game-thread
-profile", "Float-typed locals prototype".
+**Vita probe (branch `vita`, 2026-11-04)** [CPU 500 / GPU 222]: headless demos run; game thread ~36 ms/step
+with the fixed memory base (0x90000000, [likely 4-9%]) vs 33 needed for the 30 fps mode; GP thread 51-65 ms per
+drawn race frame; race profile flat; float-typed locals bit-exact but no gain (off). USB camera plugin off (the
+Vita charges). Details: docs/notes/vita-research.md.
+
+**Vita: PAUSED by the user (2026-11-06).** When resumed: start the GXM renderer (chosen over leaving the device
+range unmapped + kubridge faults: ~50,000 GX pipe stores per race frame go to 0xCC008000 inside that range, so
+faults would first need the recompiler to send pipe stores to the pipe directly; docs/notes/vita-research.md).
 
 **iOS: researched (2026-11-05)**, docs/notes/ios-research.md: build on the user's M1 Pro MacBook with Xcode 27,
 free Apple account (7-day reinstall), test phone iPhone 17 Pro on iOS 27.0; Android Vulkan renderer over MoltenVK.
-Waiting on the user: Mac update to Tahoe 26.6+ (was 26.5.1) and Xcode 27 install; then a first `--target ios`.
+Waiting on the user (still on 2026-11-06): Mac update to Tahoe 26.6+ (was 26.5.1), Xcode 27, and a way to run
+commands on the Mac (e.g. SSH); then a first `--target ios`.
 
 ## Online play: PAUSED (2026-11-03, for the Android port)
 
@@ -101,9 +101,10 @@ Where it stands (details: docs/ONLINE.md "Phase 3"; all on `main`, nothing half-
 
 ## Open items, in priority order
 
-1. Android device lost while recording (v0.4.0 known issue, see "Android" above); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
-2. #14 Android music stops mid-play, sound effects keep playing (v0.4.1, reporter rsomethin, 2026-11-05). New; asked
-   for sonicriders.log, phone model, when, whether it comes back. Guess [uncertain]: music stream starves on disc
+1. Android device lost while recording (see "Android" above): recovery in, recording repro not survived; next
+   ideas in notes/android.md (GPU snapshot/profiler, another Adreno phone, the phone's own recorder); then GPU cost. Story/other modes may use other values of `8021B8C0` (watch `[touch] game mode` lines).
+2. #14 Android music stops mid-play, sound effects keep playing (v0.4.1, reporter rsomethin, 2026-11-05). Asked
+   (no reply by 2026-11-06) for sonicriders.log, phone model, when, whether it comes back. Guess [uncertain]: music stream starves on disc
    reads (look for `[dvd]` fatal/late lines). Could try to reproduce on the S23 (ask the user first).
 3. Online phase 3/4 (paused, see above).
 4. #12 PC at 13 fps (v0.3.4): answered 2026-11-04 (Intel UHD 620, OpenGL draw calls); waiting on the reporter.
