@@ -25,6 +25,15 @@ void rt_log(const char* fmt, ...) {
         va_end(ap2);
         __android_log_write(ANDROID_LOG_INFO, "sonicriders", buf);
     }
+#elif defined(SR_IOS)
+    {   /* stderr is the log file in Documents (platform_host.c); stdout reaches the Mac live
+         * (tools/ios_run.py run: devicectl --console); flushed with the log below */
+        va_list ap2;
+        va_copy(ap2, ap);
+        vfprintf(stdout, fmt, ap2);
+        va_end(ap2);
+        fputc('\n', stdout);
+    }
 #endif
     vfprintf(stderr, fmt, ap);
     va_end(ap);
@@ -36,6 +45,9 @@ void rt_log(const char* fmt, ...) {
     if (sync || now - atomic_load(&last) >= 40500000ull) {
         atomic_store(&last, now);
         fflush(stderr);
+#ifdef SR_IOS
+        fflush(stdout);
+#endif
     }
 }
 
@@ -50,6 +62,17 @@ _Noreturn void rt_fatal(const char* fmt, ...) {
         vsnprintf(buf, sizeof buf, fmt, ap2);
         va_end(ap2);
         __android_log_print(ANDROID_LOG_FATAL, "sonicriders", "FATAL: %s", buf);
+    }
+#endif
+#ifdef SR_IOS
+    {
+        va_list ap2;
+        va_copy(ap2, ap);
+        fputs("FATAL: ", stdout);
+        vfprintf(stdout, fmt, ap2);
+        va_end(ap2);
+        fputc('\n', stdout);
+        fflush(stdout);
     }
 #endif
     fputs("FATAL: ", stderr);

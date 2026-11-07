@@ -86,13 +86,13 @@ static int game_thread(void* arg) {
 
 extern const char g_build_version[]; /* build/<target>/gen/version.c, written by configure.py */
 
-#ifdef __ANDROID__
-#include <SDL_main.h>  /* SDLActivity starts the program at SDL_main */
+#if defined(__ANDROID__) || defined(SR_IOS)
+#include <SDL_main.h>  /* SDLActivity (Android) / SDL's UIKit app delegate (iOS) start the program at SDL_main */
 int platform_android_args(int argc, char** argv);
 #endif
 
 int main(int argc, char** argv) {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(SR_IOS)
     argc = platform_android_args(argc, argv);  /* launch arguments KEY=VALUE -> environment */
 #endif
     platform_init();
@@ -146,6 +146,9 @@ int main(int argc, char** argv) {
      * this thread only waits */
     profile_start();
     rt_thread_start(game_thread, NULL);
+#ifdef SR_IOS
+    { void render_main_loop(void); render_main_loop(); }  /* never returns (render_vk.c) */
+#endif
     for (;;) {
         struct timespec ts = {3600, 0};
         thrd_sleep(&ts, NULL);

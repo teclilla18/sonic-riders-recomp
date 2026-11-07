@@ -713,6 +713,11 @@ static int swap_recreate(void) {
 }
 
 static void device_setup(void);
+#ifdef __APPLE__
+/* MoltenVK (iOS): a "portability" implementation; the spec requires enabling VK_KHR_portability_subset
+ * when the device lists it */
+static int g_portability;
+#endif
 
 static void vk_setup(void) {
     unsigned n = 0;
@@ -742,6 +747,9 @@ static void vk_setup(void) {
     for (uint32_t i = 0; i < nde; i++) {
         if (!strcmp(de[i].extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) g_push_desc = 1;
         if (!strcmp(de[i].extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) has_dr = 1;
+#ifdef __APPLE__
+        if (!strcmp(de[i].extensionName, "VK_KHR_portability_subset")) g_portability = 1;
+#endif
     }
     free(de);
     int core13 = g_core13 = g_props.apiVersion >= VK_API_VERSION_1_3 && iv >= VK_API_VERSION_1_3;
@@ -775,9 +783,12 @@ static void device_setup(void) {
     int core13 = g_core13;
     float prio = 1.0f;
     VkDeviceQueueCreateInfo qci = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, NULL, 0, g_qfi, 1, &prio};
-    const char* dext[4];
+    const char* dext[5];
     uint32_t ndx = 0;
     dext[ndx++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+#ifdef __APPLE__
+    if (g_portability) dext[ndx++] = "VK_KHR_portability_subset";
+#endif
     if (g_push_desc) dext[ndx++] = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
     if (!core13) {
         dext[ndx++] = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
@@ -1962,6 +1973,9 @@ static int render_thread(void* arg) {
     rt_thread_pin(1);
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#ifdef SR_IOS
+    SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");  /* edge swipes need a second swipe to leave the game */
+#endif
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) rt_fatal("SDL video: %s", SDL_GetError());
     g_win = SDL_CreateWindow("Sonic Riders", 0, 0, 0, 0, SDL_WINDOW_VULKAN | SDL_WINDOW_FULLSCREEN);
     if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
@@ -2009,5 +2023,14 @@ void render_start(void) {
     g_nfree = 2;
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();
+#ifdef SR_IOS
+    /* iOS: UIKit wants the window and the event pump on the main thread; main() runs render_main_loop()
+     * there after starting the game thread */
+#else
     rt_thread_start(render_thread, NULL);
+#endif
 }
+
+#ifdef SR_IOS
+void render_main_loop(void) { render_thread(NULL); }
+#endif

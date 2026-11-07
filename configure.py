@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
 from ninja_syntax import Writer  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--target", choices=["host", "switch", "android"], default="host")
+ap.add_argument("--target", choices=["host", "switch", "android", "ios"], default="host")
 ap.add_argument("--toolchain", choices=["msvc", "mingw", "linux"],
                 default="linux" if sys.platform.startswith("linux") else "msvc", help="host compiler setup")
 ap.add_argument("--cc", default="", help="C compiler command (host, --toolchain linux), e.g. clang or \"zig cc\"")
@@ -43,6 +43,9 @@ ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-to
 ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
 ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAVA_HOME)")
 ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
+ap.add_argument("--team", default="", help="ios: Apple Team ID (default: from the Mac's Apple Development certificate)")
+ap.add_argument("--bundle-id", default="", help="ios: app bundle ID (default: net.srnative.sonicriders.t<hash of the team>)")
+ap.add_argument("--moltenvk", default="", help="ios: MoltenVK folder holding include/ and static/ (default build/ext/MoltenVK/MoltenVK)")
 ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
 ap.add_argument("--icon", default="", help="your own program icon (.ico; android also .png) instead of the game's save icon "
@@ -60,6 +63,9 @@ if args.target == "android":
     if args.abi == "both":
         sys.exit("configure: the game is built for one ABI at a time (--abi arm64-v8a or x86_64)")
     atools = android_build.Tools(args)
+if args.target == "ios":
+    import ios_build  # noqa: E402
+    itools = ios_build.Tools(args, ROOT)
 GEN = "build/gen"
 OUT = "build/%s" % ("host-" + args.toolchain if args.target == "host" and args.toolchain in ("mingw", "linux") else
                     "android-" + args.abi if args.target == "android" else args.target)
@@ -78,13 +84,14 @@ gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/
 rt_c = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.c")))
 rt_cpp = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.cpp")))
 plats = ["runtime/src/platform/%s" % args.target]
-if args.target == "android":
+if args.target in ("android", "ios"):
     # the desktop's SDL2 layer (paths, threads, audio, input) plus Android's own renderer; not the GL one
+    # (iOS: the same, the Vulkan renderer on MoltenVK; docs/notes/ios.md)
     plats = ["runtime/src/platform/host", "runtime/src/platform/android"]
 for plat in plats:
     rt_c += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.c")))
     rt_cpp += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.cpp")))
-if args.target == "android":
+if args.target in ("android", "ios"):
     rt_c = [p for p in rt_c if not p.endswith("/render_gl.c")]
 
 def build_version():
@@ -265,6 +272,15 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.variable("ldflags", "-shared -g -Wl,-soname,libmain.so -Wl,--no-undefined -Wl,-z,max-page-size=16384 "
                    "-Wl,--build-id=sha1 -Wl,--gc-sections -Wl,-Map=%s/sonicriders.map %s -lvulkan -landroid -llog -ldl -lm" % (OUT, sdl_link))
         exe = OUT + "/libmain.so"
+    elif args.target == "ios":
+        t = itools
+        iosinc = "%s %s" % (inc, t.inc())
+        n.variable("cc", t.cc())
+        n.variable("cxx", t.cc(cxx=True))
+        n.variable("cflags", "-std=gnu11 -g " + iosinc)
+        n.variable("cxxflags", "-std=c++20 -g -fno-exceptions -fno-rtti " + iosinc)
+        n.variable("ldflags", "")
+        exe = None  # a static library, linked and signed by Xcode (tools/ios_build.py)
     else:
         dkp =(args.devkitpro or os.environ.get("DEVKITPRO", "")).replace("\\", "/")
         if not os.path.isdir(os.path.join(dkp, "devkitA64")):  # msys-style /opt/devkitpro from a Windows shell
@@ -304,12 +320,13 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
     shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
                   "runtime/shaders/overlay.vert", "runtime/shaders/overlay.frag", "tools/embed_shaders.py"]
-    if args.target == "android":
-        # SPIR-V for the Vulkan backend (platform/android/render_vk.c), compiled with the NDK's glslc
+    if args.target in ("android", "ios"):
+        glslc = atools.glslc if args.target == "android" else itools.glslc
+        # SPIR-V for the Vulkan backend (platform/android/render_vk.c), compiled with the NDK's glslc (iOS: shaderc's)
         shader_h = OUT + "/gen/gx_shaders_spv.h"
         shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_tex.frag", "runtime/shaders/vk_fill.frag",
                        "runtime/shaders/vk_touch.frag"]
-        n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, atools.glslc, OUT), description="GLSLC $out")
+        n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, glslc, OUT), description="GLSLC $out")
         # the touch controls' pictures (android/touch_icons; order = TOUCH_IMG_* in touch_android.h)
         icons = ["android/touch_icons/%s.png" % k for k in ("stick_base", "stick_knob", "jump_a", "boost_b", "drift_r", "tornado_lr")]
         icons_h = OUT + "/gen/touch_icons.h"
@@ -336,11 +353,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                                         "runtime/shaders/gx_common.glsl"] + key_files,
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h]
-    elif args.target == "android":
+    elif args.target in ("android", "ios"):
         # the same specialized fragment shaders as SPIR-V (keys: config/GXEE8P/shader_keys.txt + build/shaderkeys/)
         key_files = shader_key_files()
         spec_h = OUT + "/gen/gx_spec_spv.h"
-        n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, atools.glslc, OUT),
+        n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, glslc, OUT),
                description="SPEC $out")
         n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
                                         "runtime/shaders/gx_common.glsl"] + key_files,
@@ -379,7 +396,10 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.build(OUT + "/obj/icon.res.o", "rc", rc, implicit=[icon])
         objs.append(OUT + "/obj/icon.res.o")
     # Android: libSDL2.so comes from the SDL2 step; without the dependency a fresh build could link first
-    n.build(exe, "link", objs, implicit=[android_build.sdl_lib(args.abi)] if args.target == "android" else None)
+    if args.target == "ios":
+        exe = ios_build.add_build(n, itools, objs, OUT, py)  # libsonicriders.a, SDL2, the signed .app
+    else:
+        n.build(exe, "link", objs, implicit=[android_build.sdl_lib(args.abi)] if args.target == "android" else None)
     if args.target == "switch":
         n.rule("nacp", "%s/tools/bin/nacptool.exe --create \"Sonic Riders\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,
                description="NACP $out")

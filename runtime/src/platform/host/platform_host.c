@@ -95,7 +95,11 @@ void platform_sample_threads(void) {}
 #include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
+#ifdef __APPLE__
+#include <sys/ucontext.h>  /* <ucontext.h> needs _XOPEN_SOURCE on Apple; only the type is used */
+#else
 #include <ucontext.h>
+#endif
 #include <unistd.h>
 #include <unwind.h>
 #ifdef __ANDROID__
@@ -157,7 +161,12 @@ static void crash_signal(int sig, siginfo_t* si, void* uctx) {
                   (unsigned long long)((uintptr_t)si->si_addr - (uintptr_t)ppc_mem_base_var));
     ucontext_t* uc = uctx;
     (void)uc;
-#if defined(__aarch64__)
+#if defined(__APPLE__) && defined(__aarch64__)
+    crash_add("[crash] at:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext->__ss.__pc);
+    crash_add("[crash] lr:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext->__ss.__lr);
+#elif defined(__aarch64__)
     crash_add("[crash] at:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext.pc);
     crash_add("[crash] lr:\n");
@@ -201,16 +210,26 @@ static void crash_install(void) {
 }
 #endif
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(SR_IOS)
 #include <SDL_system.h>
 #include <unistd.h>
 /* Android: everything lives in the app's own folder, /sdcard/Android/data/<package>/files (adb push/pull
  * reach it; uninstalling the app deletes it): baserom/<image>.iso, saves/, mods/, env.txt and the log.
- * env.txt holds KEY=VALUE lines (as on the Switch); launch arguments (SonicRidersActivity "args") win. */
+ * env.txt holds KEY=VALUE lines (as on the Switch); launch arguments (SonicRidersActivity "args") win.
+ * iOS: the same layout in the app's Documents folder (Files app "On My iPhone", Finder, devicectl copy;
+ * deleting the app deletes it); environment from `devicectl ... launch --environment-variables` wins. */
 static void android_files(void) {
+#ifdef SR_IOS
+    static char docs[1024];
+    const char* home = getenv("HOME");
+    snprintf(docs, sizeof docs, "%s/Documents", home ? home : ".");
+    const char* dir = docs;
+    if (chdir(dir) != 0) dir = NULL;
+#else
     const char* dir = SDL_AndroidGetExternalStoragePath();
     if (!dir || chdir(dir) != 0) dir = SDL_AndroidGetInternalStoragePath();
     if (dir && chdir(dir) != 0) dir = NULL;
+#endif
     remove("sonicriders.prev.log");
     rename("sonicriders.log", "sonicriders.prev.log");
     freopen("sonicriders.log", "w", stderr);
@@ -248,7 +267,7 @@ int platform_android_args(int argc, char** argv) {
 #endif
 
 void platform_init(void) {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(SR_IOS)
     android_files();
 #endif
 #ifdef _WIN32
@@ -496,6 +515,16 @@ void platform_game_step_work(uint64_t work_ns) {
     }
     if (work_ns > 0 && work_ns < 2000000000ull) report(s, (int64_t)work_ns);
 }
+#elif defined(SR_IOS)
+/* iOS: no affinity or nice for apps; quality-of-service classes instead. The pinned runtime threads (game 0,
+ * render 1, GP / devices 2) are user-interactive, the watchdog (3) utility; the audio mixer stays
+ * user-interactive (SDL's CoreAudio thread is real-time already). */
+#include <pthread/qos.h>
+void rt_thread_pin(int core) {
+    pthread_set_qos_class_self_np(core == 3 ? QOS_CLASS_UTILITY : QOS_CLASS_USER_INTERACTIVE, 0);
+}
+void rt_thread_lower_priority(void) { pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0); }
+void rt_thread_raise_priority(void) { pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0); }
 #else
 void rt_thread_pin(int core) { (void)core; }
 void rt_thread_lower_priority(void) {}
