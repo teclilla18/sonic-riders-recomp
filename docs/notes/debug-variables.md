@@ -38,6 +38,8 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 **Profiling and performance**
 - `SR_PROFILE=1`: PC sampling profiler (`tools/profile_report.py`); Switch `[profile]` lines every 10 s ("last function entered": a caller's work after a call is charged to the callee). `SR_PROFILE_WINDOW=FROM,TO`, `SR_PROFILE_OUT=<path>` (PC).
 - `SR_PERFTEST=1` (+ `SR_PERFTEST_OUT=<path>`): the standard performance test, see docs/PERF.md.
+- Android: `SR_NOPIN=1` (no fast-core placement / nice values), `SR_NOHINT=1` (no ADPF performance hint session).
+- `SR_DET_SLOWREAD=<ms>` (SR_DETCLOCK, testing): every disc read takes that long, like a slow SD card.
 - `SR_GPU_AB=1` (Switch): GPU timestamps and shader counters, alternating XF paths per frame.
 
 **Graphics debugging**

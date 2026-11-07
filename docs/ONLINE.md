@@ -216,6 +216,17 @@ right, A) through Metal City. In lockstep each copy gets its own player's part o
 - The 2P race route script must be rebuilt (old scratchpad lost): online save, `SR_PADS=2`; note SR_SHOTSTEP
   names files `shot_<step+1>.png`.
 
+**2026-11-07 [measured]:**
+- Route: `tools/net_route_2p.py` (`p1`; `p2` with the `2.` prefix for offline SR_PADS=2; `p2local` for the joining
+  copy; `both`). Offline recording: `SR_DETCLOCK=1 SR_ONLINE_SAVE=1 SR_PADS=2 SR_RECORD=...`. The race is 3 laps
+  (choosing 1 lap in Track Select's "Rule Settings" is still to do).
+- **x86 vs ARM:** the PC's recording replayed on the Switch: full RAM equal on all 7300 hashed frames, including the
+  race frames where the NaN sign differed before (the phase 4 NaN fix works here). After the disc-read backstop fix
+  (vi.c, di.c) the replay's checksums match on all 23847 frames (menus, 3-lap race, results).
+- **Lockstep, two copies on one PC over localhost:** 35,400 frames, every checksum equal, full RAM equal for 8400.
+- Next: PC-PC on two PCs over the LAN (laptop), Switch-Switch, PC-Switch with this build; player docs (how to
+  host/join, UDP port 7777, firewall).
+
 
 ## Save data for online races (decided, 2026-10-30)
 

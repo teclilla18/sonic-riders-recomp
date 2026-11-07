@@ -590,3 +590,35 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - **v0.5.3 published** (tag at ef97b2d; 4 zips; cold sandbox PC PASS 3 min, Android PASS): the Track Select fix.
   Like v0.5.2 before it, it is the only listed release (v0.5.2 delisted, tag kept; the user's rule: only the
   latest release is listed). OLED and S23 (cover-art icon) run v0.5.3.
+
+## 2026-11-07 (afternoon): #14 thread placement + ADPF merged; Switch screenshot fix; online: PC = Switch on a 2P race
+- **#14 Android thread placement** (branch `android-thread-placement`, rebased and fast-forwarded into main): S23
+  Ultra (Android 17) `SR_PERFTEST`, one run each: placement 1P 59.96 speed / 59.06 fps, 2P 59.95 / 59.19;
+  `SR_NOPIN=1` 59.95 / 58.51, 59.94 / 59.57; 0 of 1800 steps over 16.7 ms in all. `[android] 8 cores, fast ones:
+  3-7`, no affinity/priority failures. No worse [confirmed on the S23]; whether it helps the reporter's Adreno 810
+  phone is unproven (the S23 never stalled).
+- **ADPF performance hint** (`platform_game_step_work`, platform_host.c, fed from hle_frame_end): the game thread
+  reports its work per step, target 16.7 ms; APerformanceHint looked up with dlsym (Android 13+). S23, two A/B
+  pairs: no difference (59.9 speed, 0 slow steps; a 51+60 ms render-thread hitch at the 2P race start shows up with
+  and without it). On by default, `SR_NOHINT=1` off. Help on stalling phones: [uncertain].
+- **Switch "Save screenshot" still showed the menu on v0.5.3** [confirmed, OLED, shot_1756, FPS counter on]. Cause:
+  Switch/Android draw the overlay from the helper thread's last finished picture, still the menu's for a frame or
+  two after closing; the FPS counter keeps the overlay drawn. Fix (menu.cpp): each picture records whether the menu
+  was open; the request waits until the shown picture is menu-free. OLED: shot_1507 shows the game + FPS counter
+  only [confirmed]. Android: same code path, not clicked on the phone.
+- **Online: 2P race route rebuilt** (`tools/net_route_2p.py`; player 1's part recovered from the Switch's
+  env.online.txt; player 2 joins at 3500, RIGHT x2 = Knuckles; race from ~5900; checked by PC screenshots). The race
+  is 3 laps: the lap count is in Track Select's "Rule Settings" box; X/Y/Z do nothing there (next: d-pad onto it +
+  A).
+- **PC recording replayed on the Switch (ARM), OLED handheld 1785/614/2133:** full SR_RAMHASH equal on all 7300
+  hashed frames (boot, menus, ~1400 race frames, where the NaN sign differed on 2026-10-30) [confirmed: the x86 NaN
+  fix works on this route]. The replay then differed from frame 20161 (results screen): a `[det] backstop` fired
+  during a 159 ms SD-card disc read. Fix (di.c/vi.c): no retrace backstop while a disc read is copied or pending.
+  Proof: `SR_DET_SLOWREAD=250` PC replays: without the fix 40 backstops and differences from frame 3; with it 0
+  backstops, 0 differences through frame 18000 [confirmed]. Switch replay with the fix: all 23847 frames match (that run had no slow
+  read, so on the Switch it is "not reproduced"; the PC test is the proof).
+- **Two PC copies over localhost** (`SR_NET=host:127.0.0.1:7777` / `join:...`, the route split per player): 35,400
+  frames in lockstep, every checksum equal, full RAM equal for 8400 frames, no backstop [confirmed]. Not yet: two
+  machines (PC-PC LAN, Switch-Switch, PC-Switch with this build).
+- Lead from the user: Tag Force Recomp (PSP; github.com/Artknighty/tagforcerecomp-preview): plugin mods (C ABI DLL
+  hooks), HD texture/movie replacement, cheats (docs/notes/plans-2026-11.md).

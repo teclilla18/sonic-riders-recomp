@@ -140,3 +140,11 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Next ideas: an Adreno GPU profiler / snapshot (needs root or Snapdragon Profiler); test another Adreno phone or
   recorder; try a Vulkan render pass object instead of dynamic rendering; recording via the phone's own recorder
   (MediaProjection) to see whether it differs from `screenrecord`.
+
+## Thread placement and ADPF hint (#14, 2026-11-07, on main)
+- `rt_thread_pin` (platform_host.c, Android): every pinned runtime thread goes to the cores above the slowest
+  max-frequency tier (cpufreq `cpuinfo_max_freq`; S23 Ultra: 3-7) with nice game -10, audio mixer -16, render / GP /
+  devices -4, watchdog 0. Log: `[android] N cores, fast ones: ...`. `SR_NOPIN=1` off.
+- ADPF: `platform_game_step_work` creates an APerformanceHint session for the game thread (dlsym, Android 13+;
+  target 16.7 ms) and reports each step's work from hle_frame_end. Log: `[android] performance hint session ...`.
+  `SR_NOHINT=1` off. S23 A/B (both features): no difference; the S23 never stalls.

@@ -1,4 +1,4 @@
-# State (2026-11-07, late night)
+# State (2026-11-07, afternoon)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -14,8 +14,12 @@ Hardware: OLED handheld (CPU 1785 / GPU 614 / MEM 2133) perf test 59.9 / 59.9 fp
 0.15+ high must be the same height within 10%; tested PC 16:9 + 21:9 and on the OLED). Only the latest release is
 listed on GitHub (user's rule; older ones delisted, tags kept). OLED and S23 run v0.5.3.
 
-Consoles: OLED (switch-remote, 10.0.0.44) and two more Switch SD cards (son's, secondary) got the fast build +
-forwarder NSPs this session; S23 has v0.5.3 (APK with the OLED's cover-art icon). User's clocks: handheld
+**Next session (user): the iOS version.** Online play is paused at a clean point (section below). On `main`,
+unreleased: Switch/Android screenshot fix, Android fast-core threads + ADPF hint (#14), disc-read backstop fix
+(determinism). OLED back on v0.5.3 (the dev build is on the SD as `sonicriders.dev-20261107.nro`); the S23 has a
+dev APK from `main` (e025a8a, cover-art icon), not v0.5.3.
+
+Consoles: OLED (switch-remote, 10.0.0.44) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
 
 ## v0.5.x contents (released)
@@ -26,7 +30,7 @@ forwarder NSPs this session; S23 has v0.5.3 (APK with the OLED's cover-art icon)
   Not checked: later in-engine story cutscenes, 3-4P, Tag/Survival/story races. Not accepted by the user yet.
 - HOME icon: setup asks y/n, keys at %USERPROFILE%\.switch\prod.keys or a file picker, optional picture [accepted].
 - Linux build compiles and runs in WSL (llvmpipe) [not on a Deck]. Race tests: use 1 lap (stage select options).
-- Found: the Switch "Save screenshot" (shot_7748, v0.5.1) still showed the settings menu [uncertain].
+- Switch "Save screenshot" captured the menu (FPS counter on): fixed on `main` 2026-11-07, tested on the OLED.
 
 ## Steam Deck / Linux (gbatemp #19/#20; in v0.5.1 as a test zip)
 
@@ -38,20 +42,17 @@ forwarder NSPs this session; S23 has v0.5.3 (APK with the OLED's cover-art icon)
 
 Look-back camera (no public code found; plans A render-only / B camera writer), nitrous-style hold-B boost
 option, a windowed launcher (SwitchWakerHD's Avalonia installer studied; MPL-2.0), building on Linux/Deck and
-Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not yet).
+Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not yet). Tag Force Recomp ideas (plugin mods, HD textures).
 
 ## Windows host build (the fast test loop)
 
 - Plays the whole game: intro FMV, menus, saves, story mode (cutscenes with voices), 1-4 player races at 60 fps,
   with sound (native AX microcode, `ax.c`, mixed on a worker thread). [confirmed]
-- Controllers: keyboard + SDL gamepads (Xbox One S tested by the user); round 25% stick dead zone (2026-10-23).
 - Settings menu: Dear ImGui (F1 / controller Back held 0.5 s); tabs Display, Performance, Controls, Gameplay, Mods,
   About. Frame rate modes: 60 / 30 (full speed) / Auto (default).
 - Mods layer 1 (file replacement, `mods/`) and stat mods (`[gear.*]`, `[memory]`, `[gecko]`): working on PC; not
   verified that a race uses changed gear stats.
 - `SR_DETCLOCK` determinism: whole-run identical memory every frame on PC, and PC = Switch on the det route.
-- Perf test (2026-10-30, 3 runs): both demo races 59.9 speed/fps, game thread 2.4 ms per step.
-- Open report #12: a player's PC runs races at 13 fps (v0.3.4, log attached, not analysed yet).
 
 ## Switch build
 
@@ -61,61 +62,47 @@ Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not
 - **Overclocked, dev builds** (docked CPU 1785 / GPU 1152 / MEM 2133): 1P races ~60 (perf test: 58.1 fps 1P demo, 56.4 fps 2P demo,
   full speed, game thread 13.5 ms/step); 3P mostly 55-60 with dips to ~48 at 6,000+ draws (hw23/24); 4P a steady
   30 fps (hw25, game core ~17-19 ms of work per frame).
-- **Stock clocks, handheld (384 MHz GPU profile)**: 30 fps mode is a steady 30 at full speed in every race block;
-  60 fps mode drops to 30 in views with 5,000-7,000 draws because the game thread needs 15-21 ms per frame
-  (hw33, hw36). GPU 7-13 ms per race frame after the shader-key fix (v0.3.2).
-- Specialized shaders cover every state (hw36: 2,563,268 of 2,563,268) once keys ignore unused bits.
+- **Stock clocks, handheld**: 30 fps mode steady; 60 fps mode drops to 30 in 5,000-7,000-draw views (hw33/36).
 
-Last hardware test: 2026-11-07 (OLED, switch-remote): v0.5.2 perf test handheld 59.9/59.9 fps (`perf/results/2026-11-07-switch-handheld.json`); Track Select fix.
+Last hardware test: 2026-11-07 afternoon (OLED handheld 1785/614/2133, switch-remote): screenshot fix; PC 2P recording replayed (matches PC on all 23847 frames).
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
 - Screen recording: not supported (user, 2026-11-06); device_recover handles one loss (HISTORY 2026-11-06).
-- #14 music stops on an Adreno 810 phone: asked for the attached log, model and a 30 fps test (lead: 70-150 ms
-  game-code hitches starving the CRI stream thread) [uncertain].
-- **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
-  dialog after a normal stop) and the emulator (also kill -SEGV). Reddit "crashes on launch": ask for the report.
+- #14 stalls on an Adreno 810 phone: fast-core threads + ADPF hint on `main` (notes/android.md) [untested there].
+- Crash reports (v0.4.2) tested on the S23 and the emulator. Reddit "crashes on launch": ask for the report.
 - Runs on the S23 Ultra (Android 17): Vulkan renderer, picture = PC on 16 det-route frames, pipeline prewarm,
   background/resume, touch controls, Xbox Series X pad over Bluetooth. [confirmed]
-- Perf (S23 Ultra, Android 17, `SR_PERFTEST`): **specialized fragment shaders** (2026-11-03, tested by A/B on the
-  phone, not yet seen by the user): 1P demo 55.1 → 59.3 fps, 2P demo 58.4 → 59.8 fps; GPU 1P race ~12-13 ms/frame
-  (was 14-18), title 1.7 ms (was ~10). Pictures identical to the ubershader. Game thread ~5 ms/step.
+- Perf (S23 Ultra): 1P demo 59.3 fps, 2P 59.8 with specialized shaders; GPU 1P race ~12-13 ms; game ~2 ms/step.
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
-- **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**: stick, menu taps, START, triggers.
-  App icon: the user's own .ico built locally with `--icon` (never committed). Right stick → C-stick: code only.
+- Touch/controller round 2 accepted (2026-11-03). App icon: the user's .ico via local `--icon` (never committed).
 - Next on Android: GPU profiler leads (notes/android.md), pre-rotation, 2P with two pads.
 
 ## Wish list / paused
 
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
-PS4/PS5 on hold; Vita (branch `vita`, notes/vita-research.md) and iOS paused by the user.
+PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is next (user; earlier iOS notes: `grep -n iOS docs/HISTORY.md`).
 
-## Online play (not worked on 2026-11-07; after the release)
+## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
 
-Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
-- Done before: determinism, record/replay, lockstep with desync check (`SR_NET`), online save, own view. PC-Switch
-  session 2026-10-30 identical to frame 6917, then a desync from a NaN sign (x86 vs ARM).
-- **Implemented 2026-11-06, in v0.5.0, untested between machines:** host's camera aspect for everyone (protocol 3,
-  recordings too); backstops off during sessions; x86 NaN creation -> +NaN (ppc_nan2/3 in recompiled float ops).
-- Next: rebuild the 2P race route script (scratchpad lost; online save, SR_PADS=2, player 2 joins at Player Entry,
-  Knuckles, extra A for the course, START ~4700, stick forward SY=100 + SX steering); record it on PC and replay
-  in Eden (ARM): frames 6918-7103 must match (NaN fix proof); two PC copies over localhost (`SR_NET=host:127.0.0.1:
-  7777` / `join:127.0.0.1:7777`); player setup docs (how to host/join, ports, firewall); then the user's
-  PC-PC / Switch-Switch / PC-Switch hardware tests.
+- Done: determinism, record/replay, lockstep with desync check (`SR_NET`), online save, own view, host camera
+  aspect, backstops off in sessions, x86 NaN fix, disc-read backstop fix. 2P race route: `tools/net_route_2p.py`.
+- **Proven 2026-11-07:** PC recording replayed on the Switch: full RAM equal on 7300 frames (NaN window included),
+  checksums equal on all 23847 (menus, 3-lap race, results). Two PC copies over localhost: 35,400 frames in
+  lockstep, all equal.
+- Next: 1 lap in the route (Track Select "Rule Settings" box: d-pad onto it + A; X/Y/Z do nothing); PC-PC over
+  the LAN (laptop), Switch-Switch, PC-Switch with a build from `main`; player docs (host/join, UDP 7777, firewall).
+  Local helpers (not tracked): `build/online/run_try.sh`, `run_lan.sh`, `cmphash.py`.
 
 ## Open items, in priority order
 
-1. **#14 Android stalls**: branch `android-thread-placement` (implemented, builds, **untested**): fast cores + nice
-   (game -10, audio -16, helpers -4), `SR_NOPIN=1` for A/B. Next: S23 perf test with/without, check the
-   `[android]` log line, then merge; later an ADPF hint session. Then **online play** (above).
-2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
-   Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
-   or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
-   stick mapping (Android right stick already maps to the C-stick).
+1. **iOS** (next session, user). Then **online play** (above).
+   #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
+   user before posting on #14 (draft: ask for a v0.5.3 log; their v0.4.2 log had 0 fast shaders).
+2. **Right-stick camera / look back** (user request 2026-11-06): research how Tournament Edition (or a mod) does
+   it; find the race camera's writer; then a C-stick / right-stick mapping. Plans: notes/plans-2026-11.md.
 3. Boost camera effect (docs/notes/boost-effect.md, #16).
-4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: log in (Nothing Phone 3a, Adreno 810): 50-150
-   ms game-thread stalls even on the title; lead: no thread placement / ADPF performance hint on Android.
-   Reply posted (asked for a v0.5.1 log). Their v0.4.2 log had `[vk] 0 specialized`: v0.5.2 has 32; ask for a v0.5.2 log (not posted yet).
+4. #12 PC at 13 fps: answered (Intel UHD 620). #14: reply posted asking for a v0.5.1 log (Nothing Phone 3a).
 5. #1 stock-clock performance; #2 3-4 player races at 30 fps; audio crackle at stock clocks (logs needed).
 6. #3 speed blur weaker than GameCube; #6 rare "Now Loading" hang (unproven fixed); #4 story monitor; #7 lens flare.
 7. Small graphics, Switch `[applet]` log, single Joy-Con, mods on Switch, #9/#10, PGO etc. (see HISTORY).

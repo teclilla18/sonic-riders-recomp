@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **"Save screenshot" on Switch and Android no longer captures the settings menu** (it did when the FPS counter
+  was on).
+- **Android: the game's threads run on the fast CPU cores at a higher priority**, and the game tells Android how
+  much work each frame needs (performance hint), against the short stalls some phones showed (#14). No change on a
+  Galaxy S23 Ultra, which never stalled; untested on an affected phone.
+- Online play groundwork: a slow disc read (e.g. from a slow SD card) could make two machines' games drift apart.
+
 ## v0.5.3 (2026-11-07)
 
 - **Track Select in Fit window / 16:9 / ultrawide:** the row of course pictures was torn apart (the outer pictures
