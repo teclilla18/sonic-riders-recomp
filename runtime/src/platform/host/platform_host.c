@@ -5,6 +5,10 @@
 #include <time.h>
 
 #include "runtime.h"
+#include <SDL.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -404,3 +408,124 @@ void rt_thread_raise_priority(void) {
 #endif
 }
 void platform_set_handheld_gpu(int on) { (void)on; }
+
+/* ---- "Save a bug report" (settings menu, About): one zip in the game folder with what a report needs:
+ * sonicriders.log (this run, flushed first), sonicriders.prev.log, setup.log, saves/settings.ini, crash.txt
+ * and info.txt (version, system). Stored (uncompressed) zip: no library needed. Not on Android (its own
+ * crash reports, CrashReport.java). Returns 0 and the file's name, or -1. */
+#ifndef __ANDROID__
+extern const char g_build_version[];
+static uint32_t zip_crc(const uint8_t* p, size_t n) {
+    uint32_t c = 0xFFFFFFFFu;
+    for (size_t i = 0; i < n; i++) {
+        c ^= p[i];
+        for (int k = 0; k < 8; k++) c = (c >> 1) ^ (0xEDB88320u & (0u - (c & 1)));
+    }
+    return ~c;
+}
+static void put16(FILE* f, unsigned v) { fputc(v & 0xFF, f); fputc((v >> 8) & 0xFF, f); }
+static void put32(FILE* f, uint32_t v) { put16(f, v & 0xFFFF); put16(f, v >> 16); }
+static uint8_t* slurp(const char* path, size_t* n) {
+    FILE* f = fopen(path, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (len < 0 || len > 64L * 1024 * 1024) { fclose(f); return NULL; }
+    uint8_t* b = malloc((size_t)len + 1);
+    *n = b ? fread(b, 1, (size_t)len, f) : 0;
+    fclose(f);
+    return b;
+}
+static void system_info(char* out, size_t n) {
+    size_t k = (size_t)snprintf(out, n, "Sonic Riders native port bug report\r\nversion: %s\r\n", g_build_version);
+    time_t t = time(NULL);
+    k += strftime(out + k, n - k, "saved: %Y-%m-%d %H:%M:%S\r\n", localtime(&t));
+#ifdef _WIN32
+    OSVERSIONINFOA vi = {sizeof vi};
+    typedef LONG(WINAPI * RtlGetVersionFn)(OSVERSIONINFOA*);
+    RtlGetVersionFn rgv = (RtlGetVersionFn)(void*)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlGetVersion");
+    if (rgv) rgv(&vi);
+    k += (size_t)snprintf(out + k, n - k, "system: Windows %lu.%lu build %lu\r\n", vi.dwMajorVersion,
+                          vi.dwMinorVersion, vi.dwBuildNumber);
+    SYSTEM_INFO si;
+    GetNativeSystemInfo(&si);
+    MEMORYSTATUSEX ms = {sizeof ms};
+    GlobalMemoryStatusEx(&ms);
+    k += (size_t)snprintf(out + k, n - k, "cpu threads: %lu, memory: %llu MB\r\n", si.dwNumberOfProcessors,
+                          (unsigned long long)(ms.ullTotalPhys >> 20));
+#else
+    FILE* f = fopen("/etc/os-release", "r");
+    char line[256];
+    while (f && fgets(line, sizeof line, f))
+        if (!strncmp(line, "PRETTY_NAME=", 12)) k += (size_t)snprintf(out + k, n - k, "system: %s", line + 12);
+    if (f) fclose(f);
+    f = fopen("/proc/cpuinfo", "r");
+    while (f && fgets(line, sizeof line, f))
+        if (!strncmp(line, "model name", 10)) { k += (size_t)snprintf(out + k, n - k, "cpu: %s", strchr(line, ':') + 2); break; }
+    if (f) fclose(f);
+    const char* envs[] = {"SteamDeck", "GAMESCOPE_WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE",
+                          "WAYLAND_DISPLAY", "DISPLAY", "SDL_VIDEODRIVER"};
+    for (size_t i = 0; i < sizeof envs / sizeof envs[0]; i++)
+        k += (size_t)snprintf(out + k, n - k, "%s=%s\n", envs[i], getenv(envs[i]) ? getenv(envs[i]) : "");
+#endif
+    (void)k;
+}
+int platform_bug_report(char* name, size_t n) {
+    fflush(stderr);
+    time_t t = time(NULL);
+    strftime(name, n, "bug-report-%Y%m%d-%H%M%S.zip", localtime(&t));
+    FILE* z = fopen(name, "wb");
+    if (!z) return -1;
+    static const char* files[] = {"info.txt", "sonicriders.log", "sonicriders.prev.log", "setup.log",
+                                  "saves/settings.ini", "crash.txt"};
+    struct { const char* name; uint32_t crc, size, off; } ent[8];
+    int ne = 0;
+    char info[4096];
+    system_info(info, sizeof info);
+    for (size_t i = 0; i < sizeof files / sizeof files[0]; i++) {
+        size_t len = 0;
+        uint8_t* data = i == 0 ? (uint8_t*)info : slurp(files[i], &len);
+        if (i == 0) len = strlen(info);
+        if (!data) continue;
+        uint32_t crc = zip_crc(data, len), off = (uint32_t)ftell(z);
+        size_t nl = strlen(files[i]);
+        put32(z, 0x04034b50); put16(z, 10); put16(z, 0); put16(z, 0); put16(z, 0); put16(z, 0x21);
+        put32(z, crc); put32(z, (uint32_t)len); put32(z, (uint32_t)len); put16(z, (unsigned)nl); put16(z, 0);
+        fwrite(files[i], 1, nl, z);
+        fwrite(data, 1, len, z);
+        if (i) free(data);
+        ent[ne].name = files[i], ent[ne].crc = crc, ent[ne].size = (uint32_t)len, ent[ne].off = off, ne++;
+    }
+    uint32_t cd = (uint32_t)ftell(z);
+    for (int i = 0; i < ne; i++) {
+        size_t nl = strlen(ent[i].name);
+        put32(z, 0x02014b50); put16(z, 20); put16(z, 10); put16(z, 0); put16(z, 0); put16(z, 0); put16(z, 0x21);
+        put32(z, ent[i].crc); put32(z, ent[i].size); put32(z, ent[i].size); put16(z, (unsigned)nl);
+        put16(z, 0); put16(z, 0); put16(z, 0); put16(z, 0); put32(z, 0); put32(z, ent[i].off);
+        fwrite(ent[i].name, 1, nl, z);
+    }
+    uint32_t cdlen = (uint32_t)ftell(z) - cd;
+    put32(z, 0x06054b50); put16(z, 0); put16(z, 0); put16(z, (unsigned)ne); put16(z, (unsigned)ne);
+    put32(z, cdlen); put32(z, cd); put16(z, 0);
+    int bad = ferror(z);
+    fclose(z);
+    if (bad) return -1;
+    rt_log("[report] saved %s (%d files)", name, ne);
+    return 0;
+}
+/* show the game folder (the bug report is there) */
+void platform_open_game_folder(void) {
+    char dir[1024], url[1100];
+#ifdef _WIN32
+    if (!GetCurrentDirectoryA(sizeof dir, dir)) return;
+    for (char* c = dir; *c; c++)
+        if (*c == '\\') *c = '/';
+    snprintf(url, sizeof url, "file:///%s", dir);
+#else
+    if (!getcwd(dir, sizeof dir)) return;
+    snprintf(url, sizeof url, "file://%s", dir);
+#endif
+    SDL_OpenURL(url);
+}
+#endif

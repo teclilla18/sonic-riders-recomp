@@ -29,6 +29,11 @@ int mods_count(void);
 const char* mods_title(int i);
 int mods_enabled(int i);
 void mods_set_enabled(int i, int on);
+#if !defined(__SWITCH__) && !defined(__ANDROID__)
+#define HAVE_BUG_REPORT 1
+int platform_bug_report(char* name, size_t n);  /* platform_host.c */
+void platform_open_game_folder(void);
+#endif
 }
 
 namespace {
@@ -408,9 +413,12 @@ void tab_controls() {
 
 void tab_gameplay() {
     heading("Unlocks");
-    if (check("Unlock the Chaos Emerald gear", &g_settings.chaos_emerald,
-              "Makes the Chaos Emerald gear available from the start (Super Sonic). Nothing else is unlocked."))
+    if (check("Chaos Emerald gear in the Shop for 0 rings", &g_settings.chaos_emerald,
+              "Off by default. When on, the Chaos Emerald gear (Super Sonic) shows up in the Shop for 0 rings: "
+              "buy it there once and it is yours, also in that save. Nothing else is "
+              "unlocked."))
         settings_apply();
+    note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
 }
 
 void tab_mods() {
@@ -440,6 +448,24 @@ void tab_about() {
         g_shot_request = 1;
     }
     help("Saves the next picture next to the game's log, for bug reports.");
+#ifdef HAVE_BUG_REPORT
+    static char report[64];
+    static int report_failed;
+    ImGui::SameLine();
+    if (ImGui::Button("Save a bug report")) {
+        report_failed = platform_bug_report(report, sizeof report) != 0;
+        if (!report_failed) platform_open_game_folder();
+    }
+    help("Puts the game's log, the setup log, your settings and system information into one .zip in the game's "
+         "folder and opens that folder. Attach the .zip (and screenshots) to your report on GitHub. It holds "
+         "folder names from your PC (in the logs): look through it first if that matters to you.");
+    if (report_failed) note("Could not write the bug report in the game's folder.");
+    else if (report[0]) {
+        char line[160];
+        snprintf(line, sizeof line, "Saved %s in the game's folder (the folder is open now).", report);
+        note(line);
+    }
+#endif
 }
 
 void quit_row() {

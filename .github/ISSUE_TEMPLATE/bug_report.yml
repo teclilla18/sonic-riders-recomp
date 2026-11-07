@@ -56,8 +56,9 @@ body:
     attributes:
       label: Logs
       description: |
-        Attach sonicriders.log and sonicriders.prev.log from switch/sonicriders/ on the SD card (or
-        setup.log for setup problems). Copy them soon after the problem: each start of the game moves
+        PC, Linux, Steam Deck: settings menu (F1) > About > "Save a bug report", then attach the
+        bug-report-<date>.zip from the game's folder. Switch: attach sonicriders.log and
+        sonicriders.prev.log from switch/sonicriders/ on the SD card (or setup.log for setup problems). Copy them soon after the problem: each start of the game moves
         the last log to sonicriders.prev.log and deletes the older one.
     validations:
       required: true

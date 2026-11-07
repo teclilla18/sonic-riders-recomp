@@ -32,6 +32,10 @@
 #define GAME_TOP_MODE        0x8021B8C0u
 #define GAME_TOP_MODE_MENUS  1u
 #define GAME_TOP_MODE_RACE   8u   /* demo and Free Race seen (notes/game-addresses.md) */
+/* mode 8 is not "racing": it can stay on in menus (Player Entry seen; the user's Extras/Theater after
+ * story mode). This .sdata word is 1 in every menu dumped and 0 in races, paused or not (2026-11-07,
+ * RAM dumps: Free Race, pause, quit dialog vs title, Player Entry, Normal Race, Extras) [likely]. */
+#define GAME_MENU_FLAG       0x8021C1ACu
 
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */

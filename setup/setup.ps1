@@ -19,7 +19,11 @@ Parameters (all optional; asked for when missing):
   -NoSd              build only, do not copy to an SD card
   -CopyIso yes|no    also copy the disc image to the SD card (the Switch build needs it there once)
   -DesktopShortcut yes|no   PC: also put a "Sonic Riders" shortcut on the desktop
-  -Icon PATH         PC / Android: your own program icon (.ico; Android also .png) instead of the game's save icon
+  -Icon PATH         your own icon picture for PC / Android / the Switch HOME screen (.ico or .png; other
+                     pictures are converted) instead of the game's save icon
+  -HomeIcon yes|no   Switch: also make a HOME-screen icon (a forwarder .nsp); needs -Keys
+  -Keys PATH         Switch HOME-screen icon: your console's prod.keys (dumped with Lockpick_RCM; read in
+                     place, never copied)
   -ToolsDir PATH     where the downloaded toolchain is kept (default %LOCALAPPDATA%\SonicRidersSetup\tools)
   -Yes               no questions: use the defaults (needs -Iso and -Target; -Sd or -NoSd)
 
@@ -38,6 +42,8 @@ param(
     [ValidateSet("", "yes", "no")][string]$DesktopShortcut = "",
     [string]$ToolsDir,
     [string]$Icon,
+    [ValidateSet("", "yes", "no")][string]$HomeIcon = "",
+    [string]$Keys,
     [switch]$Yes
 )
 
@@ -200,6 +206,83 @@ if ($doSwitch -and -not $NoSd) {
     }
 }
 
+# the Switch HOME-screen icon (forwarder NSP): asked up front, it needs the console's keys
+function Pick-File([string]$title, [string]$filter) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $d = New-Object System.Windows.Forms.OpenFileDialog
+    $d.Title = $title
+    $d.Filter = $filter
+    if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { return $d.FileName }
+    return $null
+}
+if ($doSwitch -and -not $HomeIcon) {
+    if ($Yes) { $HomeIcon = $(if ($Keys) { "yes" } else { "no" }) }
+    else {
+        Log ""
+        Log "Optional: a Sonic Riders icon on the Switch HOME screen (opens the game directly, no need to hold R)."
+        Log "  It needs your console's prod.keys (dump them with Lockpick_RCM). They are read where they are, never"
+        Log "  copied or uploaded. The icon is a 256 x 256 picture: yours (square works best), or the game's own."
+        Log "  Installing the icon needs DBI or Goldleaf and up-to-date sigpatches on the console."
+        $HomeIcon = (Ask "Make the HOME-screen icon? (y/n)" "n") -replace "^[yY].*", "yes" -replace "^[nN].*", "no"
+    }
+}
+if ($HomeIcon -eq "yes") {
+    if (-not $Keys -and -not $Yes) {
+        $default = Join-Path $env:USERPROFILE ".switch\prod.keys"
+        if (Test-Path -LiteralPath $default) {
+            if ((Ask "Use your keys at $default ? (y/n)" "y") -match "^[yY]") { $Keys = $default }
+        }
+        if (-not $Keys) { $Keys = Pick-File "Select your Switch's prod.keys (from Lockpick_RCM)" "Switch keys (prod.keys)|*.keys|All files (*.*)|*.*" }
+    }
+    if (-not $Keys -or -not (Test-Path -LiteralPath $Keys -PathType Leaf)) {
+        Log "No prod.keys: the HOME-screen icon is skipped (the game still works from the Homebrew Menu)." "Yellow"
+        $HomeIcon = "no"
+    } else {
+        $Keys = (Resolve-Path -LiteralPath $Keys).Path
+        Log "Keys: $Keys (read in place)"
+        if (-not $Icon -and -not $Yes) {
+            if ((Ask "Use your own picture for the icon? Otherwise the game's memory card icon. (y/n)" "n") -match "^[yY]") {
+                $Icon = Pick-File "Select a picture for the icon (square, 256 x 256 or bigger looks best)" "Pictures|*.png;*.ico;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*"
+            }
+        }
+    }
+}
+if ($Icon) {
+    if (-not (Test-Path -LiteralPath $Icon -PathType Leaf)) { Fail "Icon picture not found: $Icon" }
+    $Icon = (Resolve-Path -LiteralPath $Icon).Path
+    if ($Icon -notmatch "\.(png|ico)$") {
+        # .jpg / .bmp / .gif: converted to .png (the build tools read .png and .ico)
+        Add-Type -AssemblyName System.Drawing
+        $png = Join-Path $Root "build\icon_picture.png"
+        New-Item -ItemType Directory -Force -Path (Split-Path $png) | Out-Null
+        $img = [System.Drawing.Image]::FromFile($Icon)
+        try { $img.Save($png, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $img.Dispose() }
+        Log "Icon picture converted to $png"
+        $Icon = $png
+    }
+    Log "Icon picture: $Icon"
+}
+$IconIco = $Icon
+if ($Icon -and $doPc -and $Icon -notmatch "\.ico$") {
+    # the PC program icon must be an .ico: the picture at 256 x 256 as a PNG inside one
+    Add-Type -AssemblyName System.Drawing
+    $src = [System.Drawing.Image]::FromFile($Icon)
+    $bmp = New-Object System.Drawing.Bitmap 256, 256
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    try {
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $s = [Math]::Min(256 / $src.Width, 256 / $src.Height)
+        $w = [int]($src.Width * $s); $h = [int]($src.Height * $s)
+        $g.DrawImage($src, [int]((256 - $w) / 2), [int]((256 - $h) / 2), $w, $h)
+        $ms = New-Object IO.MemoryStream
+        $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+        $pngBytes = $ms.ToArray()
+    } finally { $g.Dispose(); $bmp.Dispose(); $src.Dispose() }
+    $IconIco = Join-Path $Root "build\icon_picture.ico"
+    $hdr = [byte[]](0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 32, 0) + [BitConverter]::GetBytes([uint32]$pngBytes.Length) + [BitConverter]::GetBytes([uint32]22)
+    [IO.File]::WriteAllBytes($IconIco, [byte[]]($hdr + $pngBytes))
+}
+
 # ---------------------------------------------------------------- toolchain
 Step "3/7  Toolchain (downloaded once, checked by SHA-256)"
 $tc = Get-Content -Raw (Join-Path $PSScriptRoot "toolchain.json") | ConvertFrom-Json
@@ -348,6 +431,10 @@ if ($doSwitch) {
     Log "Switch toolchain ready (devkitA64, libnx, deko3d, uam, switch-tools)."
 }
 $llvm = $null; $sdl = $null
+if ($HomeIcon -eq "yes" -and -not $doPc) {
+    $llvm = Ensure-Tool $tc.llvm_mingw  # a C compiler for the icon's packer (hacBrewPack)
+    Log "C compiler for the HOME-screen icon ready (llvm-mingw)."
+}
 if ($doPc) {
     $llvm = Ensure-Tool $tc.llvm_mingw
     $sdl = Ensure-Tool $tc.sdl2
@@ -405,9 +492,18 @@ if ($doSwitch) {
     if (-not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
 }
+$builtNsp = $null
+if ($doSwitch -and $HomeIcon -eq "yes") {
+    $builtNsp = Join-Path $Root "build\nsp\SonicRiders-HOME-icon.nsp"
+    $fwArgs = @("tools\nsp\make_forwarder.py", "--devkitpro", $dkp, "--cc", (Join-Path $llvm "bin\x86_64-w64-mingw32-clang.exe"), "--keys", $Keys, "--out", $builtNsp)
+    if ($Icon) { $fwArgs += @("--icon", $Icon) }
+    Run "make the HOME-screen icon (forwarder .nsp)" $python $fwArgs
+    if (-not (Test-Path $builtNsp)) { Fail "The HOME-screen icon was not made (see setup.log)." }
+    Log "HOME-screen icon: $builtNsp (yours only: it is packed with your keys, never share it)" "Green"
+}
 if ($doPc) {
     $pcArgs = @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
-    if ($Icon) { $pcArgs += @("--icon", $Icon) }
+    if ($IconIco) { $pcArgs += @("--icon", $IconIco) }
     Run "configure (PC)" $python $pcArgs
     Run "build the PC test build" $ninja @()
     $builtExe = Join-Path $Root "build\host-mingw\sonicriders.exe"
@@ -455,11 +551,26 @@ if ($sdDir) {
         if ((Get-FileHash -LiteralPath $isoSd -Algorithm SHA1).Hash.ToLower() -ne $IsoSha1) { Fail "The disc image on the SD card does not match (card failing?)." }
         Log "Disc image on the SD card verified." "Green"
     }
+    if ($builtNsp) {
+        $nspDir = Join-Path $sdRoot "NSP"
+        New-Item -ItemType Directory -Force -Path $nspDir | Out-Null
+        Copy-Item $builtNsp (Join-Path $nspDir "SonicRiders-HOME-icon.nsp") -Force
+        Log "Copied the HOME-screen icon to $nspDir\SonicRiders-HOME-icon.nsp"
+    }
     Log ""
     Log "Done. Eject the SD card safely, put it in the Switch, hold R while starting any game to open the" "Green"
     Log "Homebrew Menu with full memory, and start 'Sonic Riders'." "Green"
+    if ($builtNsp) {
+        Log ""
+        Log "HOME-screen icon: install it once on the Switch:" "Green"
+        Log "  DBI: Browse SD card > NSP > SonicRiders-HOME-icon.nsp > Install (to SD card)." "Green"
+        Log "  or Goldleaf: Explore SD card > NSP > SonicRiders-HOME-icon.nsp > Install > SD card." "Green"
+        Log "  It needs up-to-date sigpatches. The icon starts switch/sonicriders/sonicriders.nro: keep it there." "Green"
+        Log "  You can delete the .nsp from the SD card afterwards." "Green"
+    }
 } elseif ($builtNro) {
     Log "Switch: copy build\switch\sonicriders.nro and your disc image to sdmc:/switch/sonicriders/ on the SD card." "Green"
+    if ($builtNsp) { Log "HOME-screen icon: $builtNsp - copy it to the SD card and install it with DBI or Goldleaf (docs\INSTALL.md)." "Green" }
 }
 if ($builtExe) {
     # shortcuts start the game in this folder (its disc image link, saves\ and settings live here)

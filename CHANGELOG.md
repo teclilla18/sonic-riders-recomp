@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **v0.5.0 was pulled by the user** for its ultrawide bugs. Fixed since (PC, Fit window at 21:9):
+  - menus, the Extras screens and movie subtitles after story mode had their text torn to the screen edges
+    (the race-only HUD placement stayed on); the race's quit dialog too;
+  - the dark bars of the menus now reach the screen edges;
+  - "Save screenshot" no longer captures the settings menu itself (PC, Switch, Android).
+- **Switch HOME-screen icon**: the setup can make a forwarder `.nsp` (asks up front; needs your console's
+  `prod.keys`; optional picture of your own, 256 x 256) and copies it to `NSP\` on the SD card. Install it once
+  with DBI or Goldleaf (docs/INSTALL.md).
+- Your own icon picture may now be .png/.jpg/.bmp for the PC build too (made into an .ico).
+- **Chaos Emerald option: off by default** and renamed "Chaos Emerald gear in the Shop for 0 rings" (buy it in
+  the Shop, then pick it for Sonic). The setting starts off again for everyone once.
+- **Steam Deck / gamescope**: the window opens at the screen's size and the first run defaults to fullscreen
+  and Fit window (16:10, no 4:3 bars).
+- **Save a bug report** (settings menu > About; PC, Linux, Steam Deck): one zip with both logs, setup.log,
+  settings and system info in the game's folder, which opens.
+
 ## v0.5.0 (2026-11-06)
 
 - **Ultrawide without stretching, and a field of view setting** (Discussions #15; settings menu > Display).

@@ -7,7 +7,8 @@
 #include "runtime.h"
 #include "settings.h"
 
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 1, 0, FR_AUTO, 1, 0, 100};
+/* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100};
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -77,6 +78,12 @@ static void apply(void) {
     platform_set_handheld_gpu(g_settings.handheld_gpu);
 }
 
+/* a Steam Deck or another gamescope session (Linux): Steam sets SteamDeck=1, gamescope its display */
+int settings_handheld_pc(void) {
+    const char* deck = getenv("SteamDeck");
+    return (deck && atoi(deck) == 1) || getenv("GAMESCOPE_WAYLAND_DISPLAY") != NULL;
+}
+
 void settings_load(void) {
     FILE* f = fopen(platform_settings_path(), "r");
     if (f) {
@@ -89,7 +96,8 @@ void settings_load(void) {
             if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
             else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
-            else if (!strcmp(line, "chaos_emerald")) g_settings.chaos_emerald = v != 0;
+            /* a new key: older builds saved "chaos_emerald" as on by default */
+            else if (!strcmp(line, "chaos_emerald_shop")) g_settings.chaos_emerald = v != 0;
             else if (!strcmp(line, "fullscreen")) g_settings.fullscreen = v != 0;
             else if (!strcmp(line, "framerate") && v >= 0 && v < FR_MODES) g_settings.framerate = v;
             else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
@@ -97,6 +105,11 @@ void settings_load(void) {
             else if (!strcmp(line, "fov") && v >= FOV_MIN && v <= FOV_MAX) g_settings.fov = v;
         }
         fclose(f);
+    } else if (settings_handheld_pc()) {
+        /* first run on a Steam Deck (or under gamescope): fill the screen. gamescope scales the window to
+         * the display, so a 4:3 picture got bars (gbatemp report, 2026-11-06) */
+        g_settings.screen = SCREEN_FIT;
+        g_settings.fullscreen = 1;
     }
     const char* fr = getenv("SR_FRAMERATE");  /* testing: 0 = 60 fps, 1 = Auto, 2 = 30 fps (not saved unless changed in the menu) */
     if (fr && atoi(fr) >= 0 && atoi(fr) < FR_MODES) g_settings.framerate = atoi(fr);
@@ -137,7 +150,7 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov);

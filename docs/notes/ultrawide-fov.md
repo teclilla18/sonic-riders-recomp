@@ -31,9 +31,16 @@ Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on S
     half the taller one, each at least 0.1 clip units wide) that together cover the width are all stretched
     (the title's top/bottom bands, menu bars). The last 64 2D draws of a frame are remembered; earlier draws are
     re-marked (the frame is drawn only once complete). Narrow draws (letters of a text line) never join.
-  - Edges (`GX_WIDE_HUD_EDGES`): only in Fit window **and** `GAME_TOP_MODE` == 8 (races): a draw whose middle is
-    left of -0.3 goes left, right of +0.3 goes right, else middle. Menus (mode 1) stay 4:3 in the middle: edge
-    anchoring split their text lines and icon rows (tried, 2026-11-06).
+  - Edges (`GX_WIDE_HUD_EDGES`): only in Fit window **and** a race: `GAME_TOP_MODE` == 8 and `GAME_MENU_FLAG`
+    (0x8021C1AC) 0, with 8 menu frames in a row needed to leave (the flag blips for single frames in races).
+    Mode 8 alone stayed on in menus after story mode and tore the Extras, Theater subtitles and help lines
+    apart (user's v0.5.0 screenshots, 2026-11-07). A draw whose middle is left of -0.3 goes left, right of
+    +0.3 goes right, else middle. Menus stay 4:3 in the middle: edge anchoring splits icon rows.
+  - **Text lines** (2026-11-07): the game draws each letter as its own draw. Consecutive narrow draws
+    (< 0.15 wide) on the same row (Y within a quarter of the height, gaps under 0.15) are one line and get the
+    anchor of the line's middle (the race's quit dialog was torn apart before).
+  - Bands of thin pieces (< 0.15 high) may share only 35 % of their height (the menus' dark bars are offset
+    pieces, 43 % shared); bigger pieces still need half (the round menu backgrounds must not join).
   - Flags: Fit = HUD_43 | EDGES (in races); 16:9 = HUD_43, or 0 with hud_stretch (everything stretched).
   - `[wide] frame N: game mode M, HUD flags F` logs each change; `SR_ANCHORLOG=<frame>` logs that frame's 2D draws
     with extents and anchors.
@@ -57,5 +64,10 @@ Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on S
   "Are you ready") right, race pause menu right. 32:9 and 16:9 right. Eden and Android emulator same as PC.
 - Phones: in Fit window the edge HUD now sits under the touch buttons (menu button over the ring counter, START
   over the map) [seen in the emulator]; may need a touch-layout or default change.
-- Not checked: race results screen (mode 8, so edges apply), story cutscenes, 3-4P, Tag/Survival modes.
+- 2026-11-07 (PC 21:9, det routes): race HUD at the edges, pause menu and quit dialog whole, Normal Race / Mode
+  Select / Extras / Gear Gallery menus 4:3 with their bars reaching the edges. v0.5.0 was pulled by the user
+  for the bugs above.
+- Not checked: race results screen, story cutscenes and the Theater with story movies (the user's subtitle
+  case; covered by the menu flag and the text-line rule, not seen), Options, Records, Audio Room, 3-4P,
+  Tag/Survival modes. Thin 1-pixel vertical seams in menu bars (user's shots) remain.
 - Known: at 32:9 and at FOV 130 % the speed-blur geometry's outline shows at the right edge.

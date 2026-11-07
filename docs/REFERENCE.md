@@ -13,6 +13,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/architecture.md](notes/architecture.md) | Reference | project goal, GLSL (uam) rules, device/HLE boundary, shader cache plan, architecture decisions, SDK map, naming |
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |
 | [notes/ultrawide-fov.md](notes/ultrawide-fov.md) | Plan | ultrawide without stretching (fit-window mode, wider EFB, 2D at 4:3 proportions) and a FOV setting; FOV input of `fn_800645DC` |
+| [notes/plans-2026-11.md](notes/plans-2026-11.md) | Plan | look-back camera, nitrous-style boost toggle, windowed launcher, building on Linux/Deck/Android, custom icons per device |
 | [notes/boost-effect.md](notes/boost-effect.md) | Plan | NFS-style boost camera (FOV kick, pull-back, edge radial blur) at boost levels 2/3; research on speed cues; steps |
 | [notes/ps4-ps5-research.md](notes/ps4-ps5-research.md) | Investigation | PS4/PS5 homebrew scene (2026-11-03): jailbreak firmware, PS5 RADV Vulkan driver, recomp ports, suggested order |
 | [notes/vita-research.md](notes/vita-research.md) | Investigation | PS Vita scene (2026-11-03): HENlo/Enso, VitaSDK, vitaGL/GXM, Vita recomp ports, CPU estimate, remote control (vitacompanion), probe build |

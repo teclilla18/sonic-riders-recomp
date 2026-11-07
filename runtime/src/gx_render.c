@@ -86,13 +86,19 @@ static GxFrame* frame(void) {
         memcpy(&g_gx.xf_reg[GX_XR_WIDE_K], &k, 4);
         /* fit window: the race HUD at the screen edges; menus stay 4:3 in the middle (their rows of
          * text and icons would come apart) */
+        /* the menu flag blips to 1 for single frames during races: the HUD leaves the edges only after
+         * 8 menu frames in a row */
+        static unsigned menu_frames;
+        menu_frames = ld32(GAME_MENU_FLAG) ? menu_frames + 1 : 0;
+        int racing = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && menu_frames < 8;
         g_gx.xf_reg[GX_XR_WIDE_FLAGS] =
-            g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE ? GX_WIDE_HUD_EDGES : 0u)
+            g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (racing ? GX_WIDE_HUD_EDGES : 0u)
             : g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
         {
             static uint32_t last_fl = ~0u;
             if (g_gx.xf_reg[GX_XR_WIDE_FLAGS] != last_fl && k > 1.0f)
-                rt_log("[wide] frame %llu: game mode %u, HUD flags %u", g_frames, ld32(GAME_TOP_MODE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
+                rt_log("[wide] frame %llu: game mode %u, menu flag %u, HUD flags %u", g_frames, ld32(GAME_TOP_MODE),
+                       ld32(GAME_MENU_FLAG), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
             last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
         }
         float fov = (float)g_fov_scale;
@@ -600,13 +606,15 @@ static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uin
  * only once it is complete). */
 #define ANCHOR_DEAD_ZONE 0.3f  /* clip units around the middle that stay in the middle (TIME, PRESS START) */
 #define ANCHOR_MAX 64          /* 2D draws of a frame remembered for the bands */
+#define ANCHOR_LETTER_W 0.15f  /* clip units: narrower draws may be letters of a text line */
+#define ANCHOR_LETTER_GAP 0.15f /* the widest gap between letters of one line (a word space) */
 typedef struct { uint32_t v0, n; float x0, x1, y0, y1; int code, full; } Anchored;
 static Anchored g_anch[ANCHOR_MAX];
 static void anchor_set(GxFrame* f, Anchored* a, int code) {
     a->code = code;
     for (uint32_t i = 0; i < a->n; i++) f->verts[a->v0 + i].nrm[3] = (float)code;
 }
-/* side by side: X ranges meet or overlap a little, Y ranges mostly the same (text on a band is not
+/* side by side: X ranges meet or overlap a little, Y ranges overlap by a good part (text on a band is not
  * part of it); draws that span the width alone (backgrounds) and narrow ones (the letters of a line
  * of text, side by side too) join nothing */
 #define ANCHOR_BAND_MIN_W 0.1f  /* clip units (32 of the 640 columns) */
@@ -614,7 +622,10 @@ static int anchor_touch(const Anchored* a, const Anchored* b) {
     if (a->full || b->full || a->x1 - a->x0 < ANCHOR_BAND_MIN_W || b->x1 - b->x0 < ANCHOR_BAND_MIN_W) return 0;
     float yover = (a->y1 < b->y1 ? a->y1 : b->y1) - (a->y0 > b->y0 ? a->y0 : b->y0);
     float ha = a->y1 - a->y0, hb = b->y1 - b->y0;
-    if (yover < 0.5f * (ha > hb ? ha : hb)) return 0;
+    /* thin bars may be offset a little (the menus' dark bars: pieces 0.108 and 0.100 high, 43% shared);
+     * bigger pieces must share half their height (the round menu backgrounds must not join) */
+    float hmax = ha > hb ? ha : hb;
+    if (yover < (hmax < 0.15f ? 0.35f : 0.5f) * hmax) return 0;
     float over = (a->x1 < b->x1 ? a->x1 : b->x1) - (a->x0 > b->x0 ? a->x0 : b->x0);
     float wa = a->x1 - a->x0, wb = b->x1 - b->x0;
     return over >= -0.01f && over <= 0.5f * (wa < wb ? wa : wb);
@@ -657,6 +668,27 @@ static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
     if (g_nanch == ANCHOR_MAX) {  /* keep the newer half */
         memmove(g_anch, g_anch + ANCHOR_MAX / 2, sizeof g_anch[0] * (ANCHOR_MAX / 2));
         g_nanch = ANCHOR_MAX / 2;
+    }
+    /* a line of text: the game draws each letter as its own draw, one after another on the same row.
+     * At the edges the letters left of the dead zone went left and the others right, tearing subtitles
+     * and dialog lines apart; the whole run of letters is anchored by the middle of the line instead */
+    if ((fl & GX_WIDE_HUD_EDGES) && code != GX_ANCHOR_STRETCH) {
+        static struct { GxFrame* f; unsigned long long frame; uint32_t v0, vend; float lo, hi, y0, y1; } run;
+        float h = yhi - ylo, gap = lo - run.hi;
+        int narrow = hi - lo < ANCHOR_LETTER_W && h > 0.0f;
+        if (narrow && run.f == f && run.frame == g_frames && run.vend == v0 && fabsf(ylo - run.y0) < 0.25f * h &&
+            fabsf(yhi - run.y1) < 0.25f * h && gap > -0.02f && gap < ANCHOR_LETTER_GAP) {
+            if (lo < run.lo) run.lo = lo;
+            if (hi > run.hi) run.hi = hi;
+            run.vend = v0 + count;
+            float mid = 0.5f * (run.lo + run.hi);
+            code = mid < -ANCHOR_DEAD_ZONE ? GX_ANCHOR_LEFT : mid > ANCHOR_DEAD_ZONE ? GX_ANCHOR_RIGHT : GX_ANCHOR_MIDDLE;
+            for (uint32_t i = run.v0; i < v0; i++) f->verts[i].nrm[3] = (float)code;
+        } else if (narrow) {
+            run.f = f; run.frame = g_frames; run.v0 = v0; run.vend = v0 + count;
+            run.lo = lo; run.hi = hi; run.y0 = ylo; run.y1 = yhi;
+        } else
+            run.f = NULL;
     }
     Anchored* me = &g_anch[g_nanch++];
     if (anchor_log())
