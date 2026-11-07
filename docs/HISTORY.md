@@ -615,7 +615,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   fix works on this route]. The replay then differed from frame 20161 (results screen): a `[det] backstop` fired
   during a 159 ms SD-card disc read. Fix (di.c/vi.c): no retrace backstop while a disc read is copied or pending.
   Proof: `SR_DET_SLOWREAD=250` PC replays: without the fix 40 backstops and differences from frame 3; with it 0
-  backstops, 0 differences through frame 18000 [confirmed]. Switch replay with the fix: all 23847 frames match (that run had no slow
+  backstops, all 23847 frames match [confirmed]. Switch replay with the fix: all 23847 frames match (that run had no slow
   read, so on the Switch it is "not reproduced"; the PC test is the proof).
 - **Two PC copies over localhost** (`SR_NET=host:127.0.0.1:7777` / `join:...`, the route split per player): 35,400
   frames in lockstep, every checksum equal, full RAM equal for 8400 frames, no backstop [confirmed]. Not yet: two
