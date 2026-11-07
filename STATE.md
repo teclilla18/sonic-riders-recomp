@@ -1,22 +1,21 @@
-# State (2026-11-07, night)
+# State (2026-11-07, late night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.2 released 2026-11-07** (tag at 8db1dc6) and it is **the only GitHub release**: the user had every older
-release delisted (tags kept). Cold sandbox tests PASS (PC, Android). It fixes the "Switch regression": **release
+**v0.5.2 released 2026-11-07** (tag at 8db1dc6). Cold sandbox tests PASS (PC, Android). It fixes the "Switch regression": **release
 builds never had specialized shaders** (keys lived only in the dev PC's `build/shaderkeys/`), so every zip build
 (v0.4.x, v0.5.x; Switch and Android) drew races with the ubershader (GPU 30-45 ms/frame, 20-35 fps). The key list
 is now tracked: `config/GXEE8P/shader_keys.txt` (32 keys; CLAUDE.md rule 1 exception, user's decision).
 Hardware: OLED handheld (CPU 1785 / GPU 614 / MEM 2133) perf test 59.9 / 59.9 fps, every state specialized.
 
-**On `main`, not released:** Track Select fix in Fit window / wide modes (band rule: pieces 0.15+ high must be the
-same height within 10%); tested PC 16:9 + 21:9 and on the OLED. The OLED has this build (v0.5.2 backup on the SD:
-`sonicriders.v052.nro`). Release it with the next batch (sandbox tests first; ask the user).
+**v0.5.3 released 2026-11-07** (tag at ef97b2d): the Track Select fix in Fit window / wide modes (band rule: pieces
+0.15+ high must be the same height within 10%; tested PC 16:9 + 21:9 and on the OLED). Only the latest release is
+listed on GitHub (user's rule; older ones delisted, tags kept). OLED and S23 run v0.5.3.
 
 Consoles: OLED (switch-remote, 10.0.0.44) and two more Switch SD cards (son's, secondary) got the fast build +
-forwarder NSPs this session; S23 has v0.5.2 (APK with the OLED's cover-art icon). User's clocks: handheld
+forwarder NSPs this session; S23 has v0.5.3 (APK with the OLED's cover-art icon). User's clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
 
 ## v0.5.x contents (released)

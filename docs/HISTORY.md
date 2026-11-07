@@ -587,3 +587,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   height. Tested: PC 16:9 and 21:9 (Mode Select, Normal Race, Track Select, Player Entry bars to the edges; race
   HUD identical to the old rule at 21:9) and OLED Fit window (mode not checked): Track Select whole, also scrolled to Babylon
   Garden [confirmed]. Not released yet (in "Unreleased"); other menus with mixed-height pieces unchecked.
+- **v0.5.3 published** (tag at ef97b2d; 4 zips; cold sandbox PC PASS 3 min, Android PASS): the Track Select fix.
+  Like v0.5.2 before it, it is the only listed release (v0.5.2 delisted, tag kept; the user's rule: only the
+  latest release is listed). OLED and S23 (cover-art icon) run v0.5.3.
