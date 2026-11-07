@@ -1,34 +1,33 @@
-# State (2026-11-07)
+# State (2026-11-07, evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs.** Fixes are on `main`, not
-released. Next session (user's order): check GitHub issues and Discussions first; then the ultrawide checks
-below; then the user tests the HOME-screen icon; then release **v0.5.1** (user, 2026-11-07: keep the v0.5.0 tag;
-v0.5.0-linux-test pre-release is still up with the old bugs; cold sandbox tests first).
+**v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs; the tag is kept.** v0.5.1 is
+prepared on `main` (zips in build/release/), **not published**. Next (user's order): the user tests the HOME-screen
+icon NSP on the console; cold sandbox tests PC + Android (ask the user first); then publish v0.5.1.
 
-## Top priority: ultrawide fixes + Switch HOME-screen icon (both on `main`, unreleased)
+## Top priority: release v0.5.1
 
-- Ultrawide (notes/ultrawide-fov.md): edge HUD only while racing (`GAME_MENU_FLAG` 0x8021C1AC), letters of a
-  line anchored together, menu bars reach the edges, screenshots without the F1 menu. Checked on PC 21:9 det
-  routes (race, pause, quit dialog, Mode Select, Normal Race, Extras, Gear Gallery). **Still to check:** story
-  cutscenes and Theater story movies (the user's subtitle case: needs a story save), Options, Records, Audio
-  Room, results screen, 16:9 and 32:9 again, 2P split; 1-pixel seams in menu bars (user's shots).
-  The user's v0.5.0 screenshots: build/uw2/user/; test routes: build/uw2/route_*.txt (SR_DETCLOCK=1).
-- HOME icon: setup.ps1 asks after "What to build" (prod.keys + optional picture) -> tools/nsp/make_forwarder.py
-  -> `<sd>\NSP\SonicRiders-HOME-icon.nsp`, install with DBI/Goldleaf (docs/INSTALL.md). Built here with the
-  user's keys and icon: build/nsp/test/SonicRiders.nsp (NPDM identical to the hw16 one that worked). **Needs:**
-  the user to install it on the console; one end-to-end setup run with the question (not run yet).
-- User's side question answered: v0.4.2's setup never made a forwarder (only a manual script); now it does.
+- Ultrawide (notes/ultrawide-fov.md) **tested on PC 21:9 Fit window by frames** (2026-11-07 b): race HUD at the
+  edges for a whole 3-lap Free Race, results screen whole (new `GAME_RACE_PHASE` gate), pause/quit dialog,
+  Options, Extra, Audio Room, Records, Theater menu, story intro movie + subtitles (movies now 4:3 with black
+  bars), det route at 21:9 / 32:9 / 16:9 and 2P. Not checked: later in-engine story cutscenes (needs a story
+  save; the user's subtitle case), 3-4P, Tag/Survival/story races, 2P with one player finished. Not accepted by
+  the user yet (3440x1440).
+- HOME icon: setup run end to end with the questions (Switch, -NoSd; y / keys at the default place / no own
+  picture): built build/switch/sonicriders.nro and build/nsp/SonicRiders-HOME-icon.nsp (game's card icon)
+  [confirmed on PC]. Also build/nsp/test/SonicRiders.nsp (user's own icon, NPDM identical to hw16's). **Needs:**
+  the user's install with DBI/Goldleaf and a launch + quit on the console.
+- Linux build compiles and runs in WSL (llvmpipe); bug-report zip OK on Linux [not on a Deck].
+- Race tests: the stage select's race options set the lap count (user tip): use 1 lap.
 
 ## Steam Deck / Linux (gbatemp #19/#20, on v0.5.0-linux-test)
 
 - Done on `main`, untested on a Deck: under gamescope / SteamDeck=1 the window opens at the screen size and a
   first run defaults to fullscreen + Fit window; Chaos Emerald option off by default with clear text (Shop, 0
   rings); "Save a bug report" zip (F1 > About; tested on Windows; Linux build not compiled this session).
-- Reply to RonnieD drafted in the session summary (16:9 stretch removed -> 16:9 widescreen / Fit window).
 
 ## Plans (docs/notes/plans-2026-11.md)
 
@@ -66,9 +65,7 @@ Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/r
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
-- Screen recording: not supported (user decision 2026-11-06). On `main` (not released): the renderer rebuilds itself
-  after a single device loss (`device_recover`) [confirmed]; under `screenrecord` losses repeat and it still ends in
-  the fatal error. Details: HISTORY 2026-11-06, docs/notes/android.md "Open: device lost".
+- Screen recording: not supported (user, 2026-11-06); device_recover handles one loss (HISTORY 2026-11-06).
 - #14 music stops on an Adreno 810 phone: asked for the attached log, model and a 30 fps test (lead: 70-150 ms
   game-code hitches starving the CRI stream thread) [uncertain].
 - **Crash reports (released in v0.4.2):** tested on the S23 Ultra (missing disc -> dialog, report, Close; no
@@ -79,7 +76,6 @@ Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/r
   phone, not yet seen by the user): 1P demo 55.1 → 59.3 fps, 2P demo 58.4 → 59.8 fps; GPU 1P race ~12-13 ms/frame
   (was 14-18), title 1.7 ms (was ~10). Pictures identical to the ubershader. Game thread ~5 ms/step.
 - Scope (user): local split screen up to 2 players with pads; 3-4 players only online (one screen each).
-- Touch pictures `android/touch_icons/*.png` are the user's art, committed (guard `OWN_ART` SHA-1s).
 - **Touch/controller round 2: accepted by the user (2026-11-03, S23 Ultra)**: stick, menu taps, START, triggers.
   App icon: the user's own .ico built locally with `--icon` (never committed). Right stick → C-stick: code only.
 - Next on Android: GPU profiler leads (notes/android.md), pre-rotation, 2P with two pads.
@@ -104,13 +100,15 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 ## Open items, in priority order
 
-1. Issues/Discussions, ultrawide checks, HOME icon test, release. Then online play (above).
+1. HOME icon hardware test, sandbox tests, publish v0.5.1. Then online play (above).
 2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
    Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
    or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
    stick mapping (Android right stick already maps to the C-stick).
 3. Boost camera effect (docs/notes/boost-effect.md, #16).
-4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: waiting.
+4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: log in (Nothing Phone 3a, Adreno 810): 50-150
+   ms game-thread stalls even on the title; lead: no thread placement / ADPF performance hint on Android.
+   Reply drafted, not posted.
 5. #1 stock-clock performance; #2 3-4 player races at 30 fps; audio crackle at stock clocks (logs needed).
 6. #3 speed blur weaker than GameCube; #6 rare "Now Loading" hang (unproven fixed); #4 story monitor; #7 lens flare.
 7. Small graphics, Switch `[applet]` log, single Joy-Con, mods on Switch, #9/#10, PGO etc. (see HISTORY).
