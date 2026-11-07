@@ -47,8 +47,10 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 
 # The one exception to "no binary files" (the user's OK, 2026-11-03): the touch-control pictures, the
 # maintainer's own art (not from the game), exactly these files with exactly this content. A new or changed
-# picture is refused until its SHA-1 is put here.
+# picture is refused until its SHA-1 is put here. Also the launcher banner (the user's OK, 2026-11-07): public
+# fan art the user chose, not from the game.
 OWN_ART = {
+    "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     "android/touch_icons/boost_b.png": "e91d748d8a99c76b0aad985ea40ae1437c10e982",
     "android/touch_icons/drift_r.png": "45e1558994abaad8f85966ad7c8ff32ee5cde5ac",
     "android/touch_icons/jump_a.png": "d1ff0d81d64478b89993997059c635d42cd3c331",
@@ -59,7 +61,7 @@ OWN_ART = {
 
 
 def check(path, data):
-    if OWN_ART.get(path) == hashlib.sha1(data).hexdigest() and data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) <= MAX_BYTES:
+    if OWN_ART.get(path) == hashlib.sha1(data).hexdigest() and (data[:8] == b"\x89PNG\r\n\x1a\n" or data[:3] == b"\xff\xd8\xff") and len(data) <= MAX_BYTES:
         return []
     problems = []
     low = path.lower()

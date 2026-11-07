@@ -1009,6 +1009,13 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     GetModuleFileNameW(nullptr, exe, MAX_PATH);
     g_root = exe;
     g_root = g_root.substr(0, g_root.find_last_of(L"\\/"));
+    /* started from a build folder (e.g. build\launcher\): use the nearest parent that holds the port (setup\) */
+    for (std::wstring d = g_root; !exists(g_root + L"\\setup\\setup.ps1");) {
+        size_t cut = d.find_last_of(L"\\/");
+        if (cut == std::wstring::npos) break;
+        d = d.substr(0, cut);
+        if (exists(d + L"\\setup\\setup.ps1")) { g_root = d; break; }
+    }
     SetCurrentDirectoryW(g_root.c_str());
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
