@@ -1,4 +1,7 @@
 /* Desktop platform layer: paths, threads. */
+#if defined(__ANDROID__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE  /* cpu_set_t, sched_setaffinity (rt_thread_pin) */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -401,6 +404,62 @@ void rt_thread_start(int (*fn)(void*), void* arg) {
 #endif
 
 double platform_gpu_frame_ms(void) { return -1.0; }  /* not measured by the GL renderer */
+#ifdef __ANDROID__
+/* Android (#14: 50-150 ms game-thread stalls on an Adreno 810 phone, even on the title): the scheduler may park
+ * a thread on a little core or behind other work. The threads the runtime pins (game 0, render 1, GP / devices 2,
+ * watchdog 3) go to the fast cores (every core above the slowest max-frequency tier) and get a higher priority
+ * than normal app threads: game -10, audio mixer -16 (raise), render / GP helpers -4 (lower). Android lets apps
+ * lower nice to -20 (RLIMIT_NICE). SR_NOPIN=1 turns it off (A/B). */
+#include <sched.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+static cpu_set_t g_fast_cpus;
+static int g_fast_n;  /* 0: off or unknown */
+static void find_fast_cpus(void) {
+    if (getenv("SR_NOPIN")) {
+        rt_log("[android] thread placement off (SR_NOPIN)");
+        return;
+    }
+    long f[64], lo = 0, hi = 0;
+    int n = 0;
+    for (; n < 64; n++) {
+        char p[96];
+        snprintf(p, sizeof p, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", n);
+        FILE* fp = fopen(p, "r");
+        if (!fp) break;
+        if (fscanf(fp, "%ld", &f[n]) != 1) f[n] = 0;
+        fclose(fp);
+        if (f[n] && (!lo || f[n] < lo)) lo = f[n];
+        if (f[n] > hi) hi = f[n];
+    }
+    if (!n || !hi) {
+        rt_log("[android] core frequencies unknown: threads not pinned");
+        return;
+    }
+    char list[256] = "";
+    CPU_ZERO(&g_fast_cpus);
+    for (int i = 0; i < n; i++)
+        if (f[i] > lo || hi == lo) {
+            CPU_SET(i, &g_fast_cpus);
+            g_fast_n++;
+            snprintf(list + strlen(list), sizeof list - strlen(list), " %d (%ld MHz)", i, f[i] / 1000);
+        }
+    rt_log("[android] %d cores, fast ones:%s; game threads go there", n, list);
+}
+static void set_nice(int nice) {
+    if (g_fast_n && setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), nice))
+        rt_log("[android] setpriority(%d) failed", nice);
+}
+void rt_thread_pin(int core) {
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, find_fast_cpus);
+    if (!g_fast_n) return;
+    if (sched_setaffinity(0, sizeof g_fast_cpus, &g_fast_cpus)) rt_log("[android] sched_setaffinity failed");
+    set_nice(core == 0 ? -10 : core == 3 ? 0 : -4);
+}
+void rt_thread_lower_priority(void) { set_nice(-4); }
+void rt_thread_raise_priority(void) { set_nice(-16); }
+#else
 void rt_thread_pin(int core) { (void)core; }
 void rt_thread_lower_priority(void) {}
 void rt_thread_raise_priority(void) {
@@ -408,6 +467,7 @@ void rt_thread_raise_priority(void) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
 }
+#endif
 void platform_set_handheld_gpu(int on) { (void)on; }
 
 /* ---- "Save a bug report" (settings menu, About): one zip in the game folder with what a report needs:
