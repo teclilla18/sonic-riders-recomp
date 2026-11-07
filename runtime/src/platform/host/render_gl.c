@@ -388,6 +388,14 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
             p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                 GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            /* the menu's "Save screenshot": the game's picture without the menu on top (read before the
+             * overlay is drawn; the user's first shots showed the settings window over the game) */
+            uint8_t* menu_px = NULL;
+            if (g_same_k < 0 && overlay_take_screenshot_request()) {
+                menu_px = malloc((size_t)ww * wh * 4);
+                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
+                glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, menu_px);
+            }
             draw_overlay(ww, wh);
             if (g_same_k >= 0) {  /* SR_SKIPSAME: a repeat of this frame; saved, not counted */
                 uint8_t* px = malloc((size_t)ww * wh * 4);
@@ -401,14 +409,17 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 goto presented;
             }
             g_presented++;
-            int menu_shot = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
+            int menu_shot = menu_px != NULL;
             int listed = 0;
             for (int k = 0; k < g_nshots; k++) listed |= g_presented == (unsigned)g_shot_list[k];
             if (listed) g_shot_at = (int)g_presented;
             if (menu_shot || (g_shot_at && g_presented == (unsigned)g_shot_at)) {
-                uint8_t* px = malloc((size_t)ww * wh * 4);
-                p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
-                glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
+                uint8_t* px = menu_px;
+                if (!px) {
+                    px = malloc((size_t)ww * wh * 4);
+                    p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_pres_fbo);
+                    glReadPixels(0, 0, ww, wh, GL_RGBA, GL_UNSIGNED_BYTE, px);
+                }
                 /* opaque: the picture's alpha is the EFB's, and viewers composite it over white */
                 for (size_t k = 3; k < (size_t)ww * wh * 4; k += 4) px[k] = 255;
                 char path[64];
@@ -818,6 +829,9 @@ static int render_thread(void* arg) {
         int win_w = 1280, win_h = 960;  /* SR_WINDOW=WxH: the window's first size (wide screen captures) */
         if (getenv("SR_WINDOW")) sscanf(getenv("SR_WINDOW"), "%dx%d", &win_w, &win_h);
         if (win_w < 160 || win_h < 120) win_w = 1280, win_h = 960;
+        SDL_DisplayMode dm;  /* Steam Deck / gamescope: the window as big as the screen (it is scaled to it) */
+        if (!getenv("SR_WINDOW") && settings_handheld_pc() && SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 640)
+            win_w = dm.w, win_h = dm.h;
         g_win = SDL_CreateWindow("Sonic Riders (native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, win_w, win_h,
                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());

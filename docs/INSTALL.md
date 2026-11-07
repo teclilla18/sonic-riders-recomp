@@ -73,9 +73,28 @@
 Hold **−** (Minus) in the game for the settings menu. Your saves and settings stay on the SD card in
 `switch/sonicriders/`.
 
-**Optional home-screen icon:** `tools/nsp/` builds a small forwarder NSP that starts the `.nro` from
-the home menu. It needs your own console keys and is for users who already know how to install NSPs;
-see `tools/nsp/build_nsp.ps1`.
+### Optional: a Sonic Riders icon on the HOME screen
+
+The setup can also make a small **HOME-screen icon** (a "forwarder" `.nsp`): it opens the game directly, with
+full memory, without holding R over a game. The setup asks for it right after "What to build":
+
+- **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM](https://github.com/saneki/Lockpick_RCM)
+  (the setup finds them in `%USERPROFILE%\.switch\prod.keys` or asks where they are; they are read where they
+  are, never copied or uploaded), and on the console **DBI** or **Goldleaf** plus **up-to-date sigpatches**.
+- **The picture (optional):** your own picture (`.png`, `.ico`, `.jpg`, `.bmp`; square, **256 x 256** or bigger
+  looks best; it is made into the 256 x 256 JPEG the HOME menu shows), or the game's own memory-card icon.
+  The same picture is used for the PC and Android icons when you build those too.
+- With an SD card selected, the setup copies it to `NSP\SonicRiders-HOME-icon.nsp` on the card (else it stays
+  in `build\nsp\`). **Install it once:** DBI → *Browse SD card* → `NSP` → `SonicRiders-HOME-icon.nsp` →
+  *Install* (to the SD card); or Goldleaf → *Explore SD card* → the `.nsp` → *Install* → *SD card*. Go back to
+  HOME: the icon is there, and the `.nsp` on the card can be deleted.
+- The icon starts `switch/sonicriders/sonicriders.nro`: keep the game there. Updating the game = replacing the
+  `.nro`; the icon stays. If opening the icon shows an error, update your sigpatches.
+- The `.nsp` is packed with your keys: it is yours only, never share it.
+
+Already built the game? Run the setup again (it reuses the downloaded tools) and answer **y** to the HOME-screen
+icon question, or by hand: `python tools\nsp\make_forwarder.py --devkitpro <tools>\devkitpro --cc
+<tools>\llvm-mingw\bin\x86_64-w64-mingw32-clang.exe --keys <prod.keys> [--icon <picture>]`.
 
 ## Install on PC
 

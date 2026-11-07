@@ -494,3 +494,32 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Steam Deck: first user report on gbatemp (works; fullscreen borderless shows 4:3 borders, "16:9 stretch" did
   not work (now removed), Chaos Emerald gear option did not work) -> next session.
 - Released v0.5.0 (PC, Android, Switch, Linux zips) after the cold sandbox tests.
+
+## 2026-11-07: ultrawide fixes after the user pulled v0.5.0; Switch HOME icon in the setup; Deck items
+
+- **User report (3440x1440, Fit window, v0.5.0 PC):** screenshots of Extras/Options menus and Theater movies.
+  Every shot also showed the F1 menu: "Save screenshot" captured the frame that drew the menu. Fixed on PC
+  (pixels read before the overlay), Switch and Android (request taken before the overlay is drawn, so the next
+  frame, menu closed, is saved) [likely; PC path built, button not clicked in a test].
+- **Torn text** ("That's reall ... dar signal!", "Check Ex ... obtained."): the race edge rule was gated on
+  `GAME_TOP_MODE` 8, which stays on in menus after story mode (user log: mode 8 from frame 22668 to the end).
+  Found `GAME_MENU_FLAG` 0x8021C1AC by RAM dumps (det route: Free Race, pause, quit dialog vs title, Player
+  Entry, Normal Race, Extras); edges now need mode 8 + flag 0 (8 menu frames to leave; the flag blips in
+  races). Also the race's quit dialog was torn (each letter is its own draw): consecutive letters on one row
+  now share the line's anchor. Menu bars: thin offset pieces now join bands (35 % shared height for pieces
+  < 0.15 high; 35 % for all pieces stretched the round backgrounds, tried and reverted). Checked at 21:9 on PC:
+  race HUD, pause, quit dialog, Mode Select, Normal Race, Extras, Gear Gallery [confirmed]. Not seen: story
+  cutscenes / Theater story movies (the user's subtitle case), Options, Records, results screen [uncertain].
+- **HOME-screen icon (user: same priority as ultrawide):** tools/nsp/make_forwarder.py (own code, stdlib):
+  pinned nx-hbloader 82b9512 + hacBrewPack 745b16e downloaded and tree-hashed, patched, loader built with the
+  setup's devkitA64/switch-tools, hacBrewPack with llvm-mingw clang, NACP + 256x256 JPEG icon (own JPEG
+  writer; game save icon by default), packed with the user's prod.keys. Built here in 15 s; packed NPDM
+  byte-identical to the hw16 forwarder that worked on hardware [likely; the new NSP not installed yet].
+  setup.ps1 asks after "What to build" (keys from %USERPROFILE%\.switch or a file dialog, optional picture),
+  copies to <sd>\NSP\, prints DBI/Goldleaf steps. Setup prompts not run end to end [uncertain].
+  build_nsp.ps1 and the .patch file removed (superseded).
+- Chaos Emerald option default off (was on), new key `chaos_emerald_shop`, clearer text. Steam Deck: gamescope
+  / SteamDeck=1 -> window at display size, first run fullscreen + Fit [untested on a Deck]. "Save a bug
+  report" zip (PC/Linux): tested on Windows with SR_BUGREPORT=1 (zip valid, 5 files) [Linux not compiled].
+- Research: no public look-back camera code found; plans in docs/notes/plans-2026-11.md (look-back, boost
+  toggle, launcher, building on Linux/Android, icons per device). Online play: not worked on this session.

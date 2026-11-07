@@ -33,6 +33,7 @@ extern volatile double g_aspect_scale;  /* camera aspect multiplier (config/GXEE
 extern volatile double g_fov_scale;     /* camera field of view multiplier (config/GXEE8P/patches.txt) */
 
 void settings_load(void);   /* at start-up: reads the file, applies */
+int settings_handheld_pc(void);  /* Steam Deck / gamescope (first-run defaults, window size) */
 void settings_apply(void);  /* after a change: applies, saves and logs */
 float settings_display_aspect(void);  /* of the presented picture: 4/3, 16/9 or the window's */
 /* the wide modes draw a wider EFB instead of stretching: its width is 640 x this (1 = the original);

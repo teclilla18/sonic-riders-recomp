@@ -507,6 +507,9 @@ static unsigned g_presented;
 static DkMemBlock g_shot_mem;
 static unsigned g_shot_pending;  /* frame number captured into g_shot_mem by this command list */
 
+/* the menu's "Save screenshot", taken before the overlay is drawn: the frame that chose it still shows
+ * the menu, the next one does not */
+static int g_menu_shot;
 static void shot_request(DkImageView const* fv) {
     unsigned n = ++g_presented;
     static int on = -1;
@@ -517,7 +520,8 @@ static void shot_request(DkImageView const* fv) {
         for (const char* q = e; q && *q && nlist < 32; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
             if (atoi(q) > 1) list[nlist++] = (unsigned)atoi(q);
     }
-    int want = overlay_take_screenshot_request();  /* the menu's "Save screenshot" */
+    int want = g_menu_shot;
+    g_menu_shot = 0;
     if (!on && !want) return;
     if (on && nlist)
         for (unsigned i = 0; i < nlist; i++) want |= list[i] == n;
@@ -969,6 +973,7 @@ static void execute(GxFrame* f) {
         }
     }
     if (g_fb_slot >= 0) {
+        g_menu_shot |= overlay_take_screenshot_request();
         draw_overlay(cpu, gpu);
         /* screenshots show what the screen shows (the menu's own "Save screenshot" closes it first) */
         DkImageView fv;

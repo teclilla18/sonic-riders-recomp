@@ -1,36 +1,39 @@
-# State (2026-11-06, night)
+# State (2026-11-07)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**Decisions (user, 2026-11-06):** Android screen recording is not supported; Vita and iOS paused. **v0.5.0 released
-2026-11-06; the user is checking it.** Next (user's order after the clear): Steam Deck fixes from the gbatemp report
-+ easy issue reporting on Linux/Deck; then online play (below); right-stick camera research; boost effect (#16).
+**v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs.** Fixes are on `main`, not
+released. Next session (user's order): check GitHub issues and Discussions first; then the ultrawide checks
+below; then the user tests the HOME-screen icon; then a new release (cold sandbox tests first).
 
-## Steam Deck / Linux (first real-Deck report, gbatemp #19, 2026-11-06, on v0.5.0-linux-test)
+## Top priority: ultrawide fixes + Switch HOME-screen icon (both on `main`, unreleased)
 
-- User RonnieD: "It works on steam deck just minor issues like the Full Screen Borderless (can put up with 4:3
-  borders for now) and 16:9 Stretch option not working. The chaos board cheat doesn't work as well (not that it
-  matters, I plan on unlocking naturally)." Our reply (#20): Chaos Emerald option unlocks it in the shop for 0 rings;
-  fixes coming.
-- To do: (1) fullscreen on the Deck (Game Mode/gamescope: borderless fullscreen with 4:3 bars; v0.5.0's Fit window
-  should fill 16:10; check `SDL_WINDOW_FULLSCREEN_DESKTOP` under gamescope and whether Fit is the right Deck
-  default); (2) "16:9 stretch" is gone in v0.5.0 (16:9 widescreen / Fit instead): tell the user; (3) explain the
-  Chaos Emerald gear (shop, 0 rings) in the menu text/docs, check it works on Linux; (4) **make reporting issues easy
-  on Linux/Deck** (user request): e.g. a menu button / launcher entry that bundles sonicriders.log + setup.log +
-  system info into one file in an obvious place and says where, like the Android crash reports; docs link.
-- Linux build: `configure.py --toolchain linux`, `make_release.py --flavor linux`; notes/build-and-test.md.
+- Ultrawide (notes/ultrawide-fov.md): edge HUD only while racing (`GAME_MENU_FLAG` 0x8021C1AC), letters of a
+  line anchored together, menu bars reach the edges, screenshots without the F1 menu. Checked on PC 21:9 det
+  routes (race, pause, quit dialog, Mode Select, Normal Race, Extras, Gear Gallery). **Still to check:** story
+  cutscenes and Theater story movies (the user's subtitle case: needs a story save), Options, Records, Audio
+  Room, results screen, 16:9 and 32:9 again, 2P split; 1-pixel seams in menu bars (user's shots).
+  The user's v0.5.0 screenshots: build/uw2/user/; test routes: build/uw2/route_*.txt (SR_DETCLOCK=1).
+- HOME icon: setup.ps1 asks after "What to build" (prod.keys + optional picture) -> tools/nsp/make_forwarder.py
+  -> `<sd>\NSP\SonicRiders-HOME-icon.nsp`, install with DBI/Goldleaf (docs/INSTALL.md). Built here with the
+  user's keys and icon: build/nsp/test/SonicRiders.nsp (NPDM identical to the hw16 one that worked). **Needs:**
+  the user to install it on the console; one end-to-end setup run with the question (not run yet).
+- User's side question answered: v0.4.2's setup never made a forwarder (only a manual script); now it does.
 
-## Ultrawide + FOV (released in v0.5.0; docs/notes/ultrawide-fov.md)
+## Steam Deck / Linux (gbatemp #19/#20, on v0.5.0-linux-test)
 
-- Modes 4:3, 16:9 (HUD 4:3 middle, option stretch), Fit window (race HUD at the edges, menus middle with
-  backgrounds stretched). "16:9 stretched" removed. Mirage and gradient fixed (per-draw 2D anchors).
-- Tested: PC det route 16:9/21:9/32:9 + 2P split, menu route + pause at 21:9, Eden, Android emulator. Not seen by
-  the user yet; not on Switch hardware or a phone. Unchecked: results screen, story, 3-4P.
-- Phones in Fit window: the edge HUD sits under the touch buttons (seen in the emulator): needs a decision.
-- PC mouse in the F1 menu (released): click/tabs/sliders tested with posted messages; wheel and the fullscreen
-  cursor untested.
+- Done on `main`, untested on a Deck: under gamescope / SteamDeck=1 the window opens at the screen size and a
+  first run defaults to fullscreen + Fit window; Chaos Emerald option off by default with clear text (Shop, 0
+  rings); "Save a bug report" zip (F1 > About; tested on Windows; Linux build not compiled this session).
+- Reply to RonnieD drafted in the session summary (16:9 stretch removed -> 16:9 widescreen / Fit window).
+
+## Plans (docs/notes/plans-2026-11.md)
+
+Look-back camera (no public code found; plans A render-only / B camera writer), nitrous-style hold-B boost
+option, a windowed launcher (SwitchWakerHD's Avalonia installer studied; MPL-2.0), building on Linux/Deck and
+Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not yet).
 
 ## Windows host build (the fast test loop)
 
@@ -85,7 +88,7 @@ Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/r
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
 PS4/PS5 on hold; Vita (branch `vita`, notes/vita-research.md) and iOS paused by the user.
 
-## Online play (after the Deck fixes)
+## Online play (not worked on 2026-11-07; after the release)
 
 Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 - Done before: determinism, record/replay, lockstep with desync check (`SR_NET`), online save, own view. PC-Switch
@@ -100,7 +103,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 ## Open items, in priority order
 
-1. Steam Deck fixes + Linux issue reporting (above). Then online play (above).
+1. Issues/Discussions, ultrawide checks, HOME icon test, release. Then online play (above).
 2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
    Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
    or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
@@ -115,6 +118,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
+- [ ] HOME-screen icon: install build/nsp/test/SonicRiders.nsp (or the setup's) with DBI; open it; quit the game.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9 (EFB 854 x 2 columns).
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.

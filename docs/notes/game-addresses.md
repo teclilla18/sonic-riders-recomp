@@ -8,6 +8,12 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 - `8021B8C0` (.sdata, `GAME_TOP_MODE`): 1 = intro / title / attract / menus (Player Entry seen), 8 = races (demo
   and Free Race seen). Found 2026-11-03 by RAM dumps on the phone + a PC menu route; other modes unchecked.
+  **Not "racing now":** 8 can stay on in menus (Player Entry in a non-deterministic run; the user's Extras and
+  Theater after story mode).
+- `8021C1AC` (.sdata, `GAME_MENU_FLAG`): 1 in every menu dumped (title, save select, Player Entry, Normal Race,
+  Extras), 0 in races, paused or in the quit dialog; blips to 1 for single frames during a race (found
+  2026-11-07, RAM dumps, det route) [likely]. `8021C2FC` looks like a screen id (2 title, 1 Normal Race menu,
+  0 Extras, 0x10 race) [uncertain].
 
 Guest addresses as the port sees them (REL linked at 0x81800000; original GameCube REL addresses + 0x01404300).
 `fn_`/`f_` names are dtk's. Where they were found: grep the address in HISTORY.md.

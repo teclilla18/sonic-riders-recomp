@@ -1347,6 +1347,7 @@ static VkDeviceMemory g_shot_mem;
 static uint8_t* g_shot_map;
 static unsigned g_shot_pending;
 static uint32_t g_shot_w, g_shot_h;
+static int g_menu_shot;  /* the menu's "Save screenshot", taken before the overlay is drawn */
 
 static int shot_wanted(unsigned n) {
     static int init;
@@ -1357,7 +1358,8 @@ static int shot_wanted(unsigned n) {
         for (const char* q = e; q && *q && nlist < 64; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL)
             if (atoi(q) > 0) list[nlist++] = (unsigned)atoi(q);
     }
-    int want = overlay_take_screenshot_request();
+    int want = g_menu_shot;
+    g_menu_shot = 0;
     for (unsigned i = 0; i < nlist; i++) want |= list[i] == n;
     return want;
 }
@@ -1813,6 +1815,7 @@ static void execute(GxFrame* f) {
     int presenting = g_swap_idx >= 0;
     if (presenting) {
         g_presented++;
+        g_menu_shot |= overlay_take_screenshot_request();  /* before the overlay: the next frame, menu closed */
         draw_overlay_and_touch();
         shot_request();
         barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
