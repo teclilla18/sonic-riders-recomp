@@ -554,3 +554,26 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   warning; fix next session [cause unknown].
 - HOME-screen icon: the user installed the NSP made by the v0.5.1 setup; it opens the game [accepted]. The
   v0.5.0-linux-test pre-release was deleted (tag kept).
+
+## 2026-11-07 (b): Switch "regression" = release builds never had specialized shaders; v0.5.2
+
+- **What was wrong:** the user's v0.5.1 log (built from the release zip) said `[deko3d] 0 specialized fragment
+  shaders`, "specialized shaders for 0 of 33520 states": races drew everything with the ubershader, GPU 30-45 ms
+  per frame, 20-35 fps; game work only 3-7 ms. The keys came only from `build/shaderkeys/` on the dev PC
+  (game-derived, never shipped) and the setup never made any, so **every release build** (v0.4.x and v0.5.x,
+  Switch and Android) lacked them [confirmed: the v0.4.2 zip build's gen header says `GX_SPEC_COUNT 0`; a v0.4.2
+  build on a second console logged 0 shaders and GPU 32-38 ms; the #14 Android v0.4.2 log says `[vk] 0`]. The
+  "v0.4.2 ran at ~60" memory was dev builds. v0.4.2..v0.5.1 per-frame changes (wide_anchor on 2D draws, wide
+  EFB 1708 columns in 16:9) are small next to this; gx.frag unchanged.
+- **Key coverage:** dev set 32 keys (normalized); the user's v0.5.1 session 30 keys, all in the set; a 6-min
+  unattended PC attract run records 21 of them (SR_HEADLESS records none: no rendering).
+- **Fix (user's decision):** the key list is tracked at `config/GXEE8P/shader_keys.txt` (CLAUDE.md rule 1 has
+  this one exception); configure.py reads it plus local `build/shaderkeys/*.txt`.
+- **Tested:** Switch build with only the shipped list: 32 shaders. OLED **handheld** (CPU 1785 / GPU 614 / MEM
+  2133) `SR_PERFTEST`, Fit window: demo 1P 59.9 fps, demo 2P 59.9 fps, game 8.4/8.8 ms mean, 0 steps over 16 ms,
+  33536 of 33536 states specialized, GPU <= 9.4 ms/frame [confirmed] (`perf/results/2026-11-07-switch-handheld.json`).
+- The user's clocks, corrected: handheld 1785 / 614 / 2133, docked 1785 / 1152 / 2133 (older entries said 1152
+  for all).
+- Side work: fast build + forwarders installed on two more consoles' SD cards (user's request); a .gci save
+  imported into a card image (loads on PC). Found: the Switch "Save screenshot" still captured the settings
+  menu in v0.5.1 (shot_7748) [uncertain: maybe pressed with the menu staying open].
