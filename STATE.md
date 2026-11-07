@@ -6,7 +6,8 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 
 **v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs; the tag is kept.** v0.5.1 is
 prepared on `main` (zips in build/release/), **not published**. Next (user's order): the user tests the HOME-screen
-icon NSP on the console; cold sandbox tests PC + Android (ask the user first); then publish v0.5.1.
+icon NSP on the console; then publish v0.5.1 (cold sandbox tests from the v0.5.1 zips, commit 900495f: PC PASS,
+Android PASS, both installs each, 2026-11-07). #14 reply posted.
 
 ## Top priority: release v0.5.1
 
@@ -108,7 +109,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 3. Boost camera effect (docs/notes/boost-effect.md, #16).
 4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: log in (Nothing Phone 3a, Adreno 810): 50-150
    ms game-thread stalls even on the title; lead: no thread placement / ADPF performance hint on Android.
-   Reply drafted, not posted.
+   Reply posted (asked for a v0.5.1 log).
 5. #1 stock-clock performance; #2 3-4 player races at 30 fps; audio crackle at stock clocks (logs needed).
 6. #3 speed blur weaker than GameCube; #6 rare "Now Loading" hang (unproven fixed); #4 story monitor; #7 lens flare.
 7. Small graphics, Switch `[applet]` log, single Joy-Con, mods on Switch, #9/#10, PGO etc. (see HISTORY).

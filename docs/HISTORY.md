@@ -545,4 +545,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - **Setup end to end with the HOME-icon question** (Switch, -NoSd, answers piped: y / y / n): see STATE.
 - **Linux build** (WSL Ubuntu 24.04, clang): compiles; runs (llvmpipe); "Save a bug report" zip has its 5
   files on Linux [confirmed in WSL, not on a Deck].
+- **Release prep v0.5.1:** zips (Switch/PC/Android/Linux) from 900495f; cold Windows Sandbox: PC PASS (2 + 1
+  min), Android PASS (2 + 2 min) [confirmed]. Not published: waits for the user's HOME-icon hardware test.
 - User tip: the stage select has race options with the lap count; set 1 lap for quick race tests.
