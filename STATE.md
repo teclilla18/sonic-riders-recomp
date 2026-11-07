@@ -4,10 +4,11 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs; the tag is kept.** v0.5.1 is
-prepared on `main` (zips in build/release/), **not published**. Next (user's order): the user tests the HOME-screen
-icon NSP on the console; then publish v0.5.1 (cold sandbox tests from the v0.5.1 zips, commit 900495f: PC PASS,
-Android PASS, both installs each, 2026-11-07). #14 reply posted.
+**v0.5.1 released 2026-11-07** (tag at 900495f; v0.5.0 tag kept, its release pulled). Cold sandbox tests PASS (PC,
+Android). **Top issue: Switch performance regression** (user, v0.5.1 built from the release zip: struggles to
+hold 30 fps even overclocked, resolution/screen mode changes don't help; v0.4.2 was ~60 overclocked). The
+release notes tell Switch players to stay on v0.4.2. Next session (after the user's go): find the cause (bisect
+v0.4.2..v0.5.1 on hardware, `[perf]`/`[pace]` lines of the user's log). HOME-icon NSP: not reported yet.
 
 ## Top priority: release v0.5.1
 
