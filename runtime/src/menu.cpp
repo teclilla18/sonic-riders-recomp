@@ -410,6 +410,8 @@ void tab_controls() {
     heading("Controllers");
     note("Xbox and other controllers work as player 1 (more controllers: players 2 to 4). "
          "Hold Back (View) to open this menu.");
+    note("These are the defaults: the launcher (SonicRidersLauncher.exe, Controls page) changes the keys and "
+         "controller buttons, from the next start.");
 #endif
 }
 

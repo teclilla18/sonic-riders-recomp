@@ -33,6 +33,15 @@ def main():
     out_dir = os.path.join(ROOT, "build", "launcher")
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, "SonicRidersLauncher.exe")
+    # the program icon (tools/launcher_icon.py draws it) as resource APPICON
+    ico = os.path.join(out_dir, "launcher.ico")
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools", "launcher_icon.py"), ico], check=True)
+    rc, res = os.path.join(out_dir, "launcher.rc"), os.path.join(out_dir, "launcher_res.o")
+    with open(rc, "w") as f:
+        f.write('APPICON ICON "%s"\n' % ico.replace("\\", "/"))
+    windres = os.path.join(a.llvm_mingw, "bin", "x86_64-w64-mingw32-windres.exe")
+    subprocess.run([windres, rc, "-O", "coff", "-o", res], check=True)
+    srcs.append(res)
     cmd = [cxx, "-std=c++17", "-O2", "-municode", "-mwindows", "-static", "-s",
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [

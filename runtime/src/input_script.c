@@ -3,11 +3,14 @@
  * SR_INPUT="900:START,910:-START,1500:A" presses (or releases, "-") buttons at the given VI field
  * counts (with SR_DETCLOCK, game frames, so a script gives the same input on the same frame in every
  * run and on every machine); names: A B X Y START L R Z UP DOWN LEFT RIGHT, prefixed "2." .. "4." for
- * ports 2-4 ("1500:2.START"); "SX=<n>" / "SY=<n>" set the main stick's offset from centre. */
+ * ports 2-4 ("1500:2.START"); "SX=<n>" / "SY=<n>" set the main stick's offset from centre. Prefix "M." for the
+ * settings menu's buttons (overlay.h): M.MENU (hold 0.5 s to open) M.UP M.DOWN M.LEFT M.RIGHT M.ACCEPT M.BACK
+ * M.TABL M.TABR, e.g. "600:M.MENU,640:-M.MENU,700:M.DOWN,705:-M.DOWN". */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "overlay.h"
 #include "runtime.h"
 
 enum { B_LEFT = 0x1, B_RIGHT = 0x2, B_DOWN = 0x4, B_UP = 0x8, B_Z = 0x10, B_R = 0x20, B_L = 0x40,
@@ -19,6 +22,7 @@ static Step g_script[1024];
 static int g_nscript;
 static uint16_t g_script_held[PORTS];
 static int g_script_stick[PORTS][2];
+static volatile unsigned g_script_menu;  /* M. buttons held (OV_*), read by the platform's menu input */
 
 unsigned long long gx_frames_presented(void);
 int ppc_detclock(void);
@@ -33,6 +37,18 @@ static uint16_t button_mask(const char* n) {
     return 0;
 }
 
+static uint16_t menu_mask(const char* n) {
+    static const struct { const char* name; uint16_t m; } t[] = {
+        {"MENU", OV_MENU}, {"UP", OV_UP}, {"DOWN", OV_DOWN}, {"LEFT", OV_LEFT}, {"RIGHT", OV_RIGHT},
+        {"ACCEPT", OV_ACCEPT}, {"BACK", OV_BACK}, {"TABL", OV_TAB_L}, {"TABR", OV_TAB_R}};
+    for (size_t i = 0; i < sizeof t / sizeof t[0]; i++)
+        if (!strcmp(n, t[i].name)) return t[i].m;
+    return 0;
+}
+
+/* the scripted settings-menu buttons now held (OV_* bits), ORed into the platform's own */
+unsigned input_script_menu(void) { return g_script_menu; }
+
 void input_script_init(void) {
     const char* s = getenv("SR_INPUT");
     if (!s) return;
@@ -46,8 +62,9 @@ void input_script_init(void) {
         int press = 1, port = 0;
         if (*name == '-') { press = 0; name++; }
         if (name[0] >= '1' && name[0] <= '4' && name[1] == '.') { port = name[0] - '1'; name += 2; }
+        else if (name[0] == 'M' && name[1] == '.') { port = -1; name += 2; }
         int axis = (name[0] == 'S' && (name[1] == 'X' || name[1] == 'Y') && name[2] == '=') ? 1 + (name[1] == 'Y') : 0;
-        g_script[g_nscript++] = (Step){(uint32_t)atoi(tok), axis ? 0 : button_mask(name), press, port, axis, axis ? atoi(name + 3) : 0};
+        g_script[g_nscript++] = (Step){(uint32_t)atoi(tok), axis ? 0 : port < 0 ? menu_mask(name) : button_mask(name), press, port, axis, axis ? atoi(name + 3) : 0};
     }
     rt_log("[input] scripted input: %d steps", g_nscript);
 }
@@ -59,8 +76,14 @@ void input_script_apply(int chan, GcPad* out) {
     uint32_t f = ppc_detclock() ? ppc_detclock_steps() : vi_field_count();
     static int next;
     while (next < g_nscript && g_script[next].field <= f) {
-        uint16_t* held = &g_script_held[g_script[next].port];
         rt_log("[input] script step at field %u = presented frame %llu", g_script[next].field, gx_frames_presented());
+        if (g_script[next].port < 0) {
+            if (g_script[next].press) g_script_menu |= g_script[next].mask;
+            else g_script_menu &= ~(unsigned)g_script[next].mask;
+            next++;
+            continue;
+        }
+        uint16_t* held = &g_script_held[g_script[next].port];
         if (g_script[next].axis) g_script_stick[g_script[next].port][g_script[next].axis - 1] = g_script[next].value;
         else if (g_script[next].press) *held |= g_script[next].mask;
         else *held &= (uint16_t)~g_script[next].mask;

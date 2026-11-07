@@ -58,8 +58,11 @@ static void stick8(int x, int y, uint8_t* ox, uint8_t* oy) {
     *oy = axis8((int)lround(fy * s * 32767.0 / 100.0), 100);
 }
 
+static void controls_load(void);
+
 void input_init(void) {
     input_script_init();
+    controls_load();
     const char* n = getenv("SR_PADS");
     if (n) {
         g_forced_ports = atoi(n);
@@ -84,6 +87,63 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 static int g_trig_peak[PORTS][2];
 static int g_trig_press[PORTS][2];   /* the deepest point of the press going on (0: released) */
 static int g_trig_logged[PORTS][2];  /* the deepest press logged so far */
+
+/* the button map: a key and a controller button for each GameCube input. Defaults below; saves/controls.ini
+ * (written by the PC launcher's Controls page) changes them: "key.A=J" (SDL key names), "pad.A=a" (SDL controller
+ * button names, plus lefttrigger / righttrigger, or none). Controller sticks stay the sticks. */
+enum { IN_A, IN_B, IN_X, IN_Y, IN_Z, IN_L, IN_R, IN_START, IN_DUP, IN_DDOWN, IN_DLEFT, IN_DRIGHT, IN_PADS,
+       IN_SUP = IN_PADS, IN_SDOWN, IN_SLEFT, IN_SRIGHT, IN_CUP, IN_CDOWN, IN_CLEFT, IN_CRIGHT, IN_COUNT };
+static const char* const k_in_name[IN_COUNT] = {
+    "A", "B", "X", "Y", "Z", "L", "R", "START", "DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT",
+    "STICK_UP", "STICK_DOWN", "STICK_LEFT", "STICK_RIGHT", "C_UP", "C_DOWN", "C_LEFT", "C_RIGHT"};
+static const uint16_t k_in_mask[IN_PADS] = {B_A, B_B, B_X, B_Y, B_Z, B_L, B_R, B_START, B_UP, B_DOWN, B_LEFT, B_RIGHT};
+static SDL_Scancode g_key[IN_COUNT] = {
+    SDL_SCANCODE_J, SDL_SCANCODE_K, SDL_SCANCODE_L, SDL_SCANCODE_I, SDL_SCANCODE_P, SDL_SCANCODE_U, SDL_SCANCODE_O,
+    SDL_SCANCODE_RETURN, SDL_SCANCODE_T, SDL_SCANCODE_G, SDL_SCANCODE_F, SDL_SCANCODE_H,
+    SDL_SCANCODE_W, SDL_SCANCODE_S, SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN,
+    SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT};
+enum { PAD_NONE = -1, PAD_LT = 100, PAD_RT = 101 };  /* besides SDL_GameControllerButton values */
+static int g_padsrc[IN_PADS] = {
+    SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B, SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y,
+    SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, PAD_LT, PAD_RT, SDL_CONTROLLER_BUTTON_START,
+    SDL_CONTROLLER_BUTTON_DPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+    SDL_CONTROLLER_BUTTON_DPAD_RIGHT};
+
+static void controls_load(void) {
+    char file[512];
+    snprintf(file, sizeof file, "%s", platform_settings_path());
+    char* slash = strrchr(file, '/');
+    snprintf(slash ? slash + 1 : file, sizeof file - (size_t)(slash ? slash + 1 - file : 0), "controls.ini");
+    FILE* f = fopen(file, "r");
+    if (!f) return;
+    char line[160];
+    int changed = 0;
+    while (fgets(line, sizeof line, f)) {
+        line[strcspn(line, "\r\n")] = 0;
+        char* eq = strchr(line, '=');
+        int pad = !strncmp(line, "pad.", 4);
+        if (!eq || line[0] == '#' || (!pad && strncmp(line, "key.", 4))) continue;
+        *eq = 0;
+        const char* v = eq + 1;
+        for (int i = 0; i < IN_COUNT; i++) {
+            if (strcmp(line + 4, k_in_name[i])) continue;
+            if (!pad) {
+                SDL_Scancode sc = SDL_GetScancodeFromName(v);
+                if (sc != SDL_SCANCODE_UNKNOWN || !strcmp(v, "none")) { g_key[i] = sc; changed++; }
+                else rt_log("[input] controls.ini: unknown key \"%s\" for %s", v, k_in_name[i]);
+            } else if (i < IN_PADS) {
+                int b = !strcmp(v, "none") ? PAD_NONE : !strcmp(v, "lefttrigger") ? PAD_LT
+                      : !strcmp(v, "righttrigger") ? PAD_RT : (int)SDL_GameControllerGetButtonFromString(v);
+                if (b != SDL_CONTROLLER_BUTTON_INVALID) { g_padsrc[i] = b; changed++; }
+                else rt_log("[input] controls.ini: unknown controller button \"%s\" for %s", v, k_in_name[i]);
+            }
+        }
+    }
+    fclose(f);
+    rt_log("[input] %s: %d entries", file, changed);
+}
+
+static int key_down(const Uint8* k, int in) { return g_key[in] != SDL_SCANCODE_UNKNOWN && k[g_key[in]]; }
 
 static void trigger(int port, int side, int v, uint8_t* analog, uint16_t* buttons, uint16_t click) {
     int* peak = &g_trig_peak[port][side];
@@ -114,17 +174,21 @@ static void read_gamepad(SDL_GameController* c, int port, GcPad* p) {
     int rx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTX), ry = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTY);
     stick8(lx, ly, &p->stick_x, &p->stick_y);
     stick8(rx, ry, &p->c_x, &p->c_y);
-    int tl = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERLEFT), tr = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-    trigger(port, 0, tl, &p->trig_l, &p->buttons, B_L);
-    trigger(port, 1, tr, &p->trig_r, &p->buttons, B_R);
-    static const struct { SDL_GameControllerButton b; uint16_t m; } map[] = {
-        {SDL_CONTROLLER_BUTTON_A, B_A}, {SDL_CONTROLLER_BUTTON_B, B_B}, {SDL_CONTROLLER_BUTTON_X, B_X},
-        {SDL_CONTROLLER_BUTTON_Y, B_Y}, {SDL_CONTROLLER_BUTTON_START, B_START},
-        {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, B_Z}, {SDL_CONTROLLER_BUTTON_DPAD_UP, B_UP},
-        {SDL_CONTROLLER_BUTTON_DPAD_DOWN, B_DOWN}, {SDL_CONTROLLER_BUTTON_DPAD_LEFT, B_LEFT},
-        {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, B_RIGHT}};
-    for (size_t i = 0; i < sizeof map / sizeof map[0]; i++)
-        if (SDL_GameControllerGetButton(c, map[i].b)) p->buttons |= map[i].m;
+    int tv[2] = {SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERLEFT),
+                 SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_TRIGGERRIGHT)};
+    for (int i = 0; i < IN_PADS; i++) {  /* the button map (controls_load) */
+        int src = g_padsrc[i];
+        if (src == PAD_NONE) continue;
+        uint8_t* analog = i == IN_L ? &p->trig_l : i == IN_R ? &p->trig_r : NULL;
+        if (src == PAD_LT || src == PAD_RT) {
+            int side = src == PAD_RT;
+            if (analog) trigger(port, side, tv[side], analog, &p->buttons, k_in_mask[i]);
+            else if (tv[side] > 16000) p->buttons |= k_in_mask[i];
+        } else if (SDL_GameControllerGetButton(c, (SDL_GameControllerButton)src)) {
+            p->buttons |= k_in_mask[i];
+            if (analog) *analog = 255;
+        }
+    }
     static int rumbling[PORTS];
     if (g_rumble[port] != rumbling[port]) {
         rumbling[port] = g_rumble[port];
@@ -168,26 +232,16 @@ void input_pump(void) {
     GcPad p = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     const Uint8* k = SDL_GetKeyboardState(NULL);
     if (k) {
-        /* keyboard: WASD stick, arrows C-stick, J/K/L/I = A/B/X/Y, U/O/P = L/R/Z, Enter START,
-         * T/G/F/H the D-pad */
-        int sx = (k[SDL_SCANCODE_D] ? 1 : 0) - (k[SDL_SCANCODE_A] ? 1 : 0);
-        int sy = (k[SDL_SCANCODE_W] ? 1 : 0) - (k[SDL_SCANCODE_S] ? 1 : 0);
-        int cx = (k[SDL_SCANCODE_RIGHT] ? 1 : 0) - (k[SDL_SCANCODE_LEFT] ? 1 : 0);
-        int cy = (k[SDL_SCANCODE_UP] ? 1 : 0) - (k[SDL_SCANCODE_DOWN] ? 1 : 0);
+        /* keyboard (default WASD stick, arrows C-stick, J/K/L/I = A/B/X/Y, U/O/P = L/R/Z, Enter START, T/G/F/H the
+         * D-pad; controls_load) */
+        int sx = key_down(k, IN_SRIGHT) - key_down(k, IN_SLEFT), sy = key_down(k, IN_SUP) - key_down(k, IN_SDOWN);
+        int cx = key_down(k, IN_CRIGHT) - key_down(k, IN_CLEFT), cy = key_down(k, IN_CUP) - key_down(k, IN_CDOWN);
         p.stick_x = (uint8_t)(0x80 + sx * 100); p.stick_y = (uint8_t)(0x80 + sy * 100);
         p.c_x = (uint8_t)(0x80 + cx * 100); p.c_y = (uint8_t)(0x80 + cy * 100);
-        if (k[SDL_SCANCODE_J]) p.buttons |= B_A;
-        if (k[SDL_SCANCODE_K]) p.buttons |= B_B;
-        if (k[SDL_SCANCODE_L]) p.buttons |= B_X;
-        if (k[SDL_SCANCODE_I]) p.buttons |= B_Y;
-        if (k[SDL_SCANCODE_RETURN]) p.buttons |= B_START;
-        if (k[SDL_SCANCODE_P]) p.buttons |= B_Z;
-        if (k[SDL_SCANCODE_U]) { p.buttons |= B_L; p.trig_l = 0xFF; }
-        if (k[SDL_SCANCODE_O]) { p.buttons |= B_R; p.trig_r = 0xFF; }
-        if (k[SDL_SCANCODE_T]) p.buttons |= B_UP;
-        if (k[SDL_SCANCODE_G]) p.buttons |= B_DOWN;
-        if (k[SDL_SCANCODE_F]) p.buttons |= B_LEFT;
-        if (k[SDL_SCANCODE_H]) p.buttons |= B_RIGHT;
+        for (int i = 0; i < IN_PADS; i++)
+            if (key_down(k, i)) p.buttons |= k_in_mask[i];
+        if (key_down(k, IN_L)) p.trig_l = 0xFF;
+        if (key_down(k, IN_R)) p.trig_r = 0xFF;
     }
     update_gamepads();
     GcPad pads[PORTS];
@@ -236,6 +290,7 @@ void input_pump(void) {
         logged++;
     }
     prev_ov = ov;
+    ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
     (void)overlay_take_controllers_request();  /* nothing to set up on the desktop */
     for (int i = 0; i < PORTS; i++) {

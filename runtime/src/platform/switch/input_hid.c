@@ -198,6 +198,7 @@ void input_pump(void) {
                 break;
             }
     /* the settings menu (overlay.h) is driven by player 1; while it is open every port is neutral */
+    ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));
 }

@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
@@ -742,18 +743,229 @@ void page_mods(float w) {
     if (ImGui::Button("Look again")) mods_load();
 }
 
+/* ---------------------------------------------------------------- saves\controls.ini (the game's button map) */
+
+/* the inputs, names and defaults of runtime/src/platform/host/input_sdl.c (controls_load). Keys are SDL key names,
+ * controller buttons SDL controller button names (+ lefttrigger / righttrigger); pad nullptr = keyboard only */
+struct Bind { const char* id; const char* label; const char* key; const char* pad; };
+const Bind kBinds[] = {
+    {"A", "A", "J", "a"}, {"B", "B", "K", "b"}, {"X", "X", "L", "x"}, {"Y", "Y", "I", "y"},
+    {"Z", "Z", "P", "rightshoulder"}, {"L", "L", "U", "lefttrigger"}, {"R", "R", "O", "righttrigger"},
+    {"START", "START", "Return", "start"}, {"DPAD_UP", "D-pad up", "T", "dpup"},
+    {"DPAD_DOWN", "D-pad down", "G", "dpdown"}, {"DPAD_LEFT", "D-pad left", "F", "dpleft"},
+    {"DPAD_RIGHT", "D-pad right", "H", "dpright"}, {"STICK_UP", "Stick up", "W", nullptr},
+    {"STICK_DOWN", "Stick down", "S", nullptr}, {"STICK_LEFT", "Stick left", "A", nullptr},
+    {"STICK_RIGHT", "Stick right", "D", nullptr}, {"C_UP", "C-stick up", "Up", nullptr},
+    {"C_DOWN", "C-stick down", "Down", nullptr}, {"C_LEFT", "C-stick left", "Left", nullptr},
+    {"C_RIGHT", "C-stick right", "Right", nullptr}};
+constexpr int kNBinds = (int)(sizeof kBinds / sizeof kBinds[0]);
+std::string g_key[kNBinds], g_pad[kNBinds];
+bool g_ctl_dirty;
+
+/* controller buttons: SDL name, what the launcher shows (Xbox layout), XInput bit (0: read from the triggers) */
+struct PadButton { const char* sdl; const char* shown; unsigned xinput; };
+const PadButton kPadButtons[] = {
+    {"a", "A (bottom)", 0x1000}, {"b", "B (right)", 0x2000}, {"x", "X (left)", 0x4000}, {"y", "Y (top)", 0x8000},
+    {"leftshoulder", "LB", 0x0100}, {"rightshoulder", "RB", 0x0200}, {"lefttrigger", "LT", 0},
+    {"righttrigger", "RT", 0}, {"start", "Start / Menu", 0x0010}, {"back", "Back / View", 0x0020},
+    {"leftstick", "Left stick press", 0x0040}, {"rightstick", "Right stick press", 0x0080},
+    {"dpup", "D-pad up", 0x0001}, {"dpdown", "D-pad down", 0x0002}, {"dpleft", "D-pad left", 0x0004},
+    {"dpright", "D-pad right", 0x0008}, {"none", "(none)", 0}};
+const char* pad_shown(const std::string& sdl) {
+    for (const PadButton& b : kPadButtons)
+        if (sdl == b.sdl) return b.shown;
+    return sdl.c_str();
+}
+
+void controls_defaults() {
+    for (int i = 0; i < kNBinds; i++) {
+        g_key[i] = kBinds[i].key;
+        g_pad[i] = kBinds[i].pad ? kBinds[i].pad : "";
+    }
+}
+void controls_load() {
+    controls_defaults();
+    for (const std::string& l : split_lines(read_text(path(L"saves\\controls.ini")))) {
+        size_t eq = l.find('=');
+        if (eq == std::string::npos || l.size() < 4 || (l.compare(0, 4, "key.") && l.compare(0, 4, "pad."))) continue;
+        std::string id = l.substr(4, eq - 4), v = l.substr(eq + 1);
+        for (int i = 0; i < kNBinds; i++)
+            if (id == kBinds[i].id) {
+                if (l[0] == 'k') g_key[i] = v;
+                else if (kBinds[i].pad) g_pad[i] = v;
+            }
+    }
+}
+void controls_save() {
+    CreateDirectoryW(path(L"saves").c_str(), nullptr);
+    std::string s = "# Button map for the PC version (saved by the launcher's Controls page). key.* = SDL key names,\n"
+                    "# pad.* = SDL controller buttons (a b x y leftshoulder rightshoulder lefttrigger righttrigger start\n"
+                    "# back leftstick rightstick dpup dpdown dpleft dpright) or none. Delete this file for the defaults.\n";
+    for (int i = 0; i < kNBinds; i++) s += std::string("key.") + kBinds[i].id + "=" + g_key[i] + "\n";
+    for (int i = 0; i < kNBinds; i++)
+        if (kBinds[i].pad) s += std::string("pad.") + kBinds[i].id + "=" + g_pad[i] + "\n";
+    write_text(path(L"saves\\controls.ini"), s);
+    g_ctl_dirty = false;
+}
+
+/* the SDL key name of an ImGui key ("" for keys the game cannot use here) */
+std::string sdl_key_name(ImGuiKey k) {
+    if ((k >= ImGuiKey_A && k <= ImGuiKey_Z) || (k >= ImGuiKey_0 && k <= ImGuiKey_9) || (k >= ImGuiKey_F2 && k <= ImGuiKey_F10) ||
+        k == ImGuiKey_F12)
+        return ImGui::GetKeyName(k);  /* F1 (menu) and F11 (fullscreen) are the port's own */
+    if (k >= ImGuiKey_Keypad0 && k <= ImGuiKey_Keypad9) return "Keypad " + std::to_string(k - ImGuiKey_Keypad0);
+    static const struct { ImGuiKey k; const char* n; } t[] = {
+        {ImGuiKey_Enter, "Return"}, {ImGuiKey_Space, "Space"}, {ImGuiKey_Tab, "Tab"}, {ImGuiKey_Backspace, "Backspace"},
+        {ImGuiKey_LeftShift, "Left Shift"}, {ImGuiKey_RightShift, "Right Shift"}, {ImGuiKey_LeftCtrl, "Left Ctrl"},
+        {ImGuiKey_RightCtrl, "Right Ctrl"}, {ImGuiKey_LeftAlt, "Left Alt"}, {ImGuiKey_RightAlt, "Right Alt"},
+        {ImGuiKey_UpArrow, "Up"}, {ImGuiKey_DownArrow, "Down"}, {ImGuiKey_LeftArrow, "Left"}, {ImGuiKey_RightArrow, "Right"},
+        {ImGuiKey_Comma, ","}, {ImGuiKey_Period, "."}, {ImGuiKey_Slash, "/"}, {ImGuiKey_Semicolon, ";"},
+        {ImGuiKey_Apostrophe, "'"}, {ImGuiKey_LeftBracket, "["}, {ImGuiKey_RightBracket, "]"}, {ImGuiKey_Backslash, "\\"},
+        {ImGuiKey_Minus, "-"}, {ImGuiKey_Equal, "="}, {ImGuiKey_GraveAccent, "`"}, {ImGuiKey_Insert, "Insert"},
+        {ImGuiKey_Delete, "Delete"}, {ImGuiKey_Home, "Home"}, {ImGuiKey_End, "End"}, {ImGuiKey_PageUp, "PageUp"},
+        {ImGuiKey_PageDown, "PageDown"}, {ImGuiKey_KeypadEnter, "Keypad Enter"}, {ImGuiKey_CapsLock, "CapsLock"}};
+    for (auto& e : t)
+        if (e.k == k) return e.n;
+    return "";
+}
+
+/* XInput (Xbox-style controllers), loaded when present, for "press a controller button" */
+struct XInputPad { WORD buttons; BYTE lt, rt; };
+DWORD(WINAPI* g_xinput_get)(DWORD, void*);
+bool read_xinput(DWORD user, XInputPad* p) {
+    static bool tried;
+    if (!tried) {
+        tried = true;
+        HMODULE m = LoadLibraryW(L"xinput1_4.dll");
+        if (!m) m = LoadLibraryW(L"xinput9_1_0.dll");
+        if (m) g_xinput_get = (DWORD(WINAPI*)(DWORD, void*))GetProcAddress(m, "XInputGetState");
+    }
+    struct { DWORD packet; WORD buttons; BYTE lt, rt; SHORT lx, ly, rx, ry; } st = {};
+    if (!g_xinput_get || g_xinput_get(user, &st) != 0) return false;
+    *p = {st.buttons, st.lt, st.rt};
+    return true;
+}
+/* the controller button pressed since the last call (SDL name), or "" */
+std::string xinput_new_press(bool reset) {
+    static XInputPad prev[4];
+    std::string hit;
+    for (DWORD u = 0; u < 4; u++) {
+        XInputPad p = {};
+        if (!read_xinput(u, &p)) continue;
+        if (!reset && hit.empty()) {
+            WORD down = p.buttons & ~prev[u].buttons;
+            for (const PadButton& b : kPadButtons)
+                if (b.xinput && (down & b.xinput)) { hit = b.sdl; break; }
+            if (hit.empty() && p.lt > 128 && prev[u].lt <= 128) hit = "lefttrigger";
+            if (hit.empty() && p.rt > 128 && prev[u].rt <= 128) hit = "righttrigger";
+        }
+        prev[u] = p;
+    }
+    return hit;
+}
+
+int g_cap_row = -1;   /* the cell waiting for a press */
+bool g_cap_pad;
+double g_cap_t0;
+
 void page_controls(float w) {
-    (void)w;
-    section("KEYBOARD");
-    ImGui::TextWrapped("WASD = control stick   J / K / L / I = A / B / X / Y   Enter = START   U / O = L / R   P = Z   "
-                       "T F G H = D-pad");
-    ImGui::TextWrapped("F1 held = the in-game settings menu (Q / E switch tabs)   F11 = fullscreen");
+    section("BUTTONS");
+    note("Click a box, then press the key or the controller button you want (Escape cancels). Xbox-style controllers "
+         "are read here; for others pick the button from the list (\xE2\x96\xBE). Used the next time the game starts.");
     ImGui::Spacing();
-    section("CONTROLLERS");
-    ImGui::TextWrapped("Xbox and other controllers work as player 1; more controllers are players 2 to 4. "
-                       "Hold Back (View) to open the in-game menu.");
+    /* a cell waiting for a press */
+    if (g_cap_row >= 0) {
+        bool done = false;
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::GetTime() - g_cap_t0 > 8) done = true;
+        else if (!g_cap_pad) {
+            for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END && !done; k++)
+                if (ImGui::IsKeyPressed((ImGuiKey)k, false)) {
+                    std::string n = sdl_key_name((ImGuiKey)k);
+                    if (!n.empty()) {
+                        g_key[g_cap_row] = n;
+                        g_ctl_dirty = done = true;
+                    }
+                }
+        } else {
+            std::string b = xinput_new_press(false);
+            if (!b.empty()) {
+                g_pad[g_cap_row] = b;
+                g_ctl_dirty = done = true;
+            }
+        }
+        if (done) g_cap_row = -1;
+    }
+    float colw = std::min(220 * g_dpi, (w - 150 * g_dpi) / 2);
+    auto dup = [](const std::string* arr, int row) {
+        if (arr[row].empty() || arr[row] == "none") return false;
+        for (int j = 0; j < kNBinds; j++)
+            if (j != row && arr[j] == arr[row]) return true;
+        return false;
+    };
+    if (ImGui::BeginTable("binds", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("GameCube", ImGuiTableColumnFlags_WidthFixed, 130 * g_dpi);
+        ImGui::TableSetupColumn("Keyboard", ImGuiTableColumnFlags_WidthFixed, colw);
+        ImGui::TableSetupColumn("Controller", ImGuiTableColumnFlags_WidthFixed, colw);
+        ImGui::TableHeadersRow();
+        for (int i = 0; i < kNBinds; i++) {
+            ImGui::PushID(i);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(kBinds[i].label);
+            for (int col = 0; col < 2; col++) {
+                ImGui::TableNextColumn();
+                bool pad = col == 1;
+                if (pad && !kBinds[i].pad) {
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextColored(kDim, pad && i >= 16 ? "right stick" : "left stick");
+                    continue;
+                }
+                ImGui::PushID(col);
+                bool waiting = g_cap_row == i && g_cap_pad == pad;
+                const std::string& v = pad ? g_pad[i] : g_key[i];
+                std::string shown = waiting ? (pad ? "press a button..." : "press a key...")
+                                            : pad ? pad_shown(v) : (v == "Return" ? std::string("Enter") : v);
+                bool clash = !waiting && dup(pad ? g_pad : g_key, i);
+                if (clash) ImGui::PushStyleColor(ImGuiCol_Text, kRed);
+                if (ImGui::Button(shown.c_str(), ImVec2(colw - (pad ? 34 * g_dpi : 0), 0))) {
+                    g_cap_row = waiting ? -1 : i;
+                    g_cap_pad = pad;
+                    g_cap_t0 = ImGui::GetTime();
+                    if (pad) xinput_new_press(true);
+                }
+                if (clash) {
+                    ImGui::PopStyleColor();
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Also used by another button.");
+                }
+                if (pad) {
+                    ImGui::SameLine(0, 4 * g_dpi);
+                    if (ImGui::Button("\xE2\x96\xBE", ImVec2(30 * g_dpi, 0))) ImGui::OpenPopup("list");
+                    if (ImGui::BeginPopup("list")) {
+                        for (const PadButton& b : kPadButtons)
+                            if (ImGui::Selectable(b.shown, g_pad[i] == b.sdl)) {
+                                g_pad[i] = b.sdl;
+                                g_ctl_dirty = true;
+                            }
+                        ImGui::EndPopup();
+                    }
+                }
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
     ImGui::Spacing();
-    note("Changing the buttons is coming to this page.");
+    if (ImGui::Button("Reset to the defaults")) {
+        controls_defaults();
+        g_ctl_dirty = true;
+    }
+    ImGui::Spacing();
+    section("ALWAYS");
+    note("F1 held (or the controller's Back held) = the in-game settings menu; in it arrows / WASD move, Enter / J choose, "
+         "Escape / K go back, Q / E switch tabs. F11 = fullscreen. Controller sticks stay the sticks. Controllers 2 to 4 "
+         "use the same map as player 1.");
 }
 
 std::string g_version;
@@ -791,6 +1003,7 @@ void page_about(float w) {
 void play() {
     if (g_set_dirty) settings_save();
     if (g_mods_dirty) mods_save();
+    if (g_ctl_dirty) controls_save();
     std::wstring cmd = L"\"" + path(L"build\\host-mingw\\sonicriders.exe") + L"\"";
     if (start_child(g_game, cmd, {}, false, false, nullptr)) g_status = "Running";
     else g_status = "Could not start the game.";
@@ -902,6 +1115,75 @@ void draw_ui(float W, float H) {
         play();
     }
     ImGui::End();
+}
+
+/* SR_LAUNCHER_TEST="<seconds>[;key=value,...]" (testing): sets those settings as the pages would, presses PLAY,
+ * presses Stop after <seconds> (unless the game closed itself), and writes build\launcher\test.txt: start, stop,
+ * exit code, and the settings read back after the game closed (the F1 menu's changes) */
+const char* g_test;
+std::string g_test_log;
+void test_note(const char* fmt, ...) {
+    char b[512];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(b, sizeof b, fmt, ap);
+    va_end(ap);
+    g_test_log += b;
+    g_test_log += "\n";
+}
+std::string settings_text() {
+    char b[256];
+    snprintf(b, sizeof b, "screen=%d show_fps=%d chaos_emerald_shop=%d fullscreen=%d framerate=%d hud_stretch=%d fov=%d",
+             g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.hud_stretch,
+             g_set.fov);
+    return b;
+}
+/* called once a frame; true when the test is over */
+bool test_step(int frame) {
+    static double t0;
+    static int phase;  /* 0 waiting, 1 game running, 2 game closed */
+    if (phase == 0 && frame == 20) {
+        std::string spec = g_test;
+        size_t semi = spec.find(';');
+        if (semi != std::string::npos) {
+            std::string sets = spec.substr(semi + 1) + ",";
+            for (size_t a = 0, b; (b = sets.find(',', a)) != std::string::npos; a = b + 1) {
+                std::string kv = sets.substr(a, b - a);
+                size_t eq = kv.find('=');
+                if (eq == std::string::npos) continue;
+                if (int* p = setting_ptr(kv.substr(0, eq))) {
+                    *p = atoi(kv.c_str() + eq + 1);
+                    g_set_dirty = true;
+                }
+                for (int i = 0; i < kNBinds; i++)  /* key.A=Space, pad.Z=leftshoulder: as the Controls page would */
+                    if (kv.compare(4, eq - 4, kBinds[i].id) == 0 && eq > 4) {
+                        if (!kv.compare(0, 4, "key.")) g_key[i] = kv.substr(eq + 1);
+                        else if (!kv.compare(0, 4, "pad.") && kBinds[i].pad) g_pad[i] = kv.substr(eq + 1);
+                        else continue;
+                        g_ctl_dirty = true;
+                    }
+            }
+        }
+        test_note("before PLAY: %s", settings_text().c_str());
+        play();
+        test_note("PLAY: %s", g_status.c_str());
+        t0 = ImGui::GetTime();
+        phase = 1;
+    } else if (phase == 1) {
+        bool on = child_running(g_game);
+        if (on && ImGui::GetTime() - t0 > atof(g_test)) {
+            test_note("still running after %.0f s: Stop", ImGui::GetTime() - t0);
+            stop_child(g_game);
+        } else if (!on) {
+            test_note("game closed after %.1f s, exit code %lu", ImGui::GetTime() - t0, (unsigned long)g_game.exit_code);
+            phase = 2;
+        }
+    } else if (phase == 2) {  /* poll_children has read the settings again */
+        test_note("after the game: %s; status \"%s\"", settings_text().c_str(), g_status.c_str());
+        write_text(path(L"build\\launcher\\test.txt"), g_test_log);
+        return true;
+    }
+    return false;
 }
 
 /* the install's next steps, checked every frame */
@@ -1037,8 +1319,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         return 1;
     }
     g_shot_file = getenv("SR_LAUNCHER_SHOT");  /* testing: save the window's picture and quit */
+    g_test = getenv("SR_LAUNCHER_TEST");
     if (const char* pg = getenv("SR_LAUNCHER_PAGE")) g_page = std::clamp(atoi(pg), 0, P_COUNT - 1);
-    if (g_shot_file) {  /* drawn off-screen, without taking the focus */
+    if (g_shot_file || g_test) {  /* drawn off-screen, without taking the focus */
         SetWindowPos(hwnd, nullptr, -10000, -10000, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     } else {
@@ -1056,6 +1339,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
 
     settings_load();
     mods_load();
+    controls_load();
     refresh_ready();
     reload_banner();
 
@@ -1086,21 +1370,25 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         g_ctx->ClearRenderTargetView(g_rtv, clear);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
         static int frames;
-        if (g_shot_file && ++frames == 20) {  /* fonts and textures settled */
+        ++frames;
+        if (g_test && test_step(frames)) break;
+        if (g_shot_file && frames == 20) {  /* fonts and textures settled */
             save_backbuffer(widen(g_shot_file));
             break;
         }
         g_swap->Present(1, 0);
         /* settings are written when they change (and before PLAY), so the game always reads the latest */
         static double last_save;
-        if ((g_set_dirty || g_mods_dirty) && ImGui::GetTime() - last_save > 0.5) {
+        if ((g_set_dirty || g_mods_dirty || g_ctl_dirty) && ImGui::GetTime() - last_save > 0.5) {
             if (g_set_dirty && !child_running(g_game)) settings_save();
             if (g_mods_dirty) mods_save();
+            if (g_ctl_dirty) controls_save();
             last_save = ImGui::GetTime();
         }
     }
     if (g_set_dirty) settings_save();
     if (g_mods_dirty) mods_save();
+    if (g_ctl_dirty) controls_save();
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
