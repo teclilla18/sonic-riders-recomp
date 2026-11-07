@@ -137,6 +137,13 @@ inc = "-Iruntime/include -Iruntime/src -I%s -DIMGUI_DISABLE_DEMO_WINDOWS -DIMGUI
 # generated code: no FMA contraction (Gekko rounds the product of fmadds; ppc.h models it exactly)
 gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
 
+def shader_key_files():
+    """the specialized-shader keys: the shipped list (config/GXEE8P/shader_keys.txt) plus any local extras
+    (build/shaderkeys/*.txt, e.g. keys a console reported that the list lacks)"""
+    files = ["config/GXEE8P/shader_keys.txt"] if os.path.exists(os.path.join(ROOT, "config/GXEE8P/shader_keys.txt")) else []
+    return files + sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+
+
 def cmd_path(p, program=False):
     """A path for a build command: relative to the repository when it can be (no spaces from the
     folders above it), backslashes for a program, quoted if it still has spaces."""
@@ -320,8 +327,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     if shader_h:
         n.build(shader_h, "shaders", shader_src)
     if args.target == "switch":
-        # specialized fragment shaders from the recorded keys (game-derived: build/shaderkeys/, not in git)
-        key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+        # specialized fragment shaders from config/GXEE8P/shader_keys.txt (+ local extras in build/shaderkeys/)
+        key_files = shader_key_files()
         spec_h = OUT + "/gen/gx_spec_dksh.h"
         n.rule("specshaders", "%s tools/gen_shaders.py $out %s/tools/bin/uam.exe %s/spec $in_keys" % (py, dkp, OUT),
                description="SPEC $out")
@@ -330,8 +337,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h]
     elif args.target == "android":
-        # the same specialized fragment shaders as SPIR-V (keys: build/shaderkeys/, game-derived, not in git)
-        key_files = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+        # the same specialized fragment shaders as SPIR-V (keys: config/GXEE8P/shader_keys.txt + build/shaderkeys/)
+        key_files = shader_key_files()
         spec_h = OUT + "/gen/gx_spec_spv.h"
         n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, atools.glslc, OUT),
                description="SPEC $out")

@@ -7,8 +7,10 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 
 1. **Game-data guard.** Never commit, paste or upload anything derived from the game: ISO/disc images, DOL, REL,
    `baserom/`, extracted assets, disassembly, recompiled output (`build/`, `build/gen/`), `.nro`/`.nsp`/`.exe`,
-   dtk output (`config/*/symbols.txt`, `splits.txt`), shader keys, saves, console keys. Small facts (addresses,
-   function names, register values) are fine; blocks of disassembly or recompiled code are not.
+   dtk output (`config/*/symbols.txt`, `splits.txt`), saves, console keys. Small facts (addresses,
+   function names, register values) are fine; blocks of disassembly or recompiled code are not. One exception
+   (user's decision, 2026-11-07): the shader-key list `config/GXEE8P/shader_keys.txt` (GPU TEV register settings)
+   is tracked, because release builds without it run Switch races at ~30 fps; other key files stay local.
 2. Before every commit and push run `python tools/check_no_game_data.py` and check `git status --ignored`. If
    anything questionable would be included, **stop and ask the user**. Never `--no-verify` or weaken the check.
 3. **Push to GitHub at the end of every session**, after rule 2 passes.
@@ -27,8 +29,8 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 - Eden: v0.1.1 only (v0.2.1 fails in dkDeviceCreate); never start it minimized (use `-WindowStyle Hidden`).
 - Look at frames through the port's own captures (`SR_SCREENSHOT`, `shot_*.bmp`, switch-remote screenshots), never
   desktop screenshots. PC test runs use `SR_MINIMIZED=1` (the user may be using the PC).
-- Switch CPU gains can't be measured on PC or Eden; only hardware. The test console is overclocked (CPU 1785 /
-  GPU 1152 / MEM 2133); state the clocks with every hardware number. Hardware `[profile]` charges a caller's work
+- Switch CPU gains can't be measured on PC or Eden; only hardware. The test console (OLED) is overclocked: docked CPU 1785
+  / GPU 1152 / MEM 2133, handheld CPU 1785 / GPU 614 / MEM 2133; state the mode and clocks with every hardware number. Hardware `[profile]` charges a caller's work
   after a call to the callee.
 - In hardware logs check `[deko3d]` "specialized shaders for N of M states": a fallback to the ubershader silently
   multiplies GPU time (shader keys must contain only bits the shader reads).

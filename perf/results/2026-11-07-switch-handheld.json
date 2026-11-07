@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "build": "v0.4.2-23-g0abde6d9-dirty",
+  "platform": "switch",
+  "settings": {"framerate": "Auto (keep speed)", "resolution": "1x (640x528, fastest)"},
+  "scenes": {
+    "demo_1p": {"speed": 59.949, "steps_per_s": 59.949, "fps": 59.949, "game_ms_mean": 8.352, "game_ms_p50": 8.331, "game_ms_p95": 10.101, "game_ms_max": 12.177, "steps_over_16ms": 0, "steps": 1800},
+    "demo_2p": {"speed": 59.944, "steps_per_s": 59.944, "fps": 59.911, "game_ms_mean": 8.787, "game_ms_p50": 8.704, "game_ms_p95": 11.973, "game_ms_max": 13.327, "steps_over_16ms": 0, "steps": 1800}
+  }
+}

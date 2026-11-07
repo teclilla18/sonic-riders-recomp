@@ -50,7 +50,7 @@ Implemented since (tools/gen_shaders.py, gx_shader_key.c); the original plan:
   - TEV stage count; per stage: order (map, coord, enable, channel), color/alpha env, ksel, swap selects, IND_CMD;
   - the indirect stage count and IREF; alpha test compare/logic; the EFB alpha-update rules.
   Register *values* (TEV colors, konst, matrices, alpha refs) stay uniforms, so one shader covers many materials.
-- **Collect:** the PC build logs every new key (`SR_SHADER_KEYS=<file>`). Play through the game, or merge key files from the user's Switch (`sdmc:/switch/sonicriders/shader_keys.txt`, written when a key misses the cache).
+- **Collect:** (the shipped list: `config/GXEE8P/shader_keys.txt`, tracked since v0.5.2; release builds before that had no keys and ran races on the ubershader) the PC build logs every new key (`SR_SHADER_KEYS=<file>`). Play through the game, or merge key files from the user's Switch (`sdmc:/switch/sonicriders/shader_keys.txt`, written when a key misses the cache).
 - **Build:** `tools/gen_shaders.py` emits straight-line GLSL per key (the gx.frag logic with every select resolved at generation time), compiles each with uam, and embeds a sorted key → dksh table. The GL backend can use the same generated GLSL to check equivalence against the ubershader on PC.
 - **Runtime:** look up the key per state; on a miss use the ubershader and record the key for the next build.
 

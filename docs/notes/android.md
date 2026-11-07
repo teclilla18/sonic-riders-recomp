@@ -80,11 +80,11 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 - As on the Switch: `tools/gen_shaders.py --vk` compiles one SPIR-V fragment shader per recorded state key (TEV
   setup folded into constants) with the NDK's glslc into `build/android-<abi>/gen/gx_spec_spv.h`; keys come from
-  `build/shaderkeys/*.txt` (game-derived, never committed; the Switch's files work unchanged).
+  `config/GXEE8P/shader_keys.txt` (tracked since v0.5.2) plus local extras in `build/shaderkeys/*.txt`.
 - render_vk.c: `spec_bits()` per state change (binary search by key hash) → pipeline key bits 36-59 (low 24 bits
   of the hash) + bit 60; `gx_pipe_make` picks the module. A key from an older table that no longer matches keeps the
   ubershader. Misses go to `shader_keys.txt` in the app folder: pull it (`--pull shader_keys.txt`) into
-  `build/shaderkeys/android_<date>.txt` and rebuild to cover them. `SR_NOSPEC=1`: ubershader only (A/B).
+  `build/shaderkeys/android_<date>.txt`, rebuild, and merge new keys into `config/GXEE8P/shader_keys.txt`. `SR_NOSPEC=1`: ubershader only (A/B).
 - Log: `[vk] ... specialized shaders for N of M states` every 300 frames.
 - A/B on the S23 Ultra (Android 17), same build, `SR_PERFTEST=1 SR_DETCLOCK=1 SR_FRAMERATE=0`: 1P demo 55.1 → 59.3
   fps, 2P demo 58.4 → 59.8 fps; GPU per frame: title 9-11 → 1.6-1.8 ms, 1P race 13.7-18.2 → 11.9-13.2 ms (first

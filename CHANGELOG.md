@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.2 (2026-11-07)
+
+- **Switch races are fast again (~60 fps overclocked).** Builds made from the release zips had none of the
+  fast "specialized" graphics shaders: they are built from a list of the game's graphics-chip settings that
+  was only on the developer's PC, so every release build (v0.4.x and v0.5.x alike) drew everything with the
+  slow general shader, 30-45 ms of GPU time per race frame. The list now ships with the source
+  (`config/GXEE8P/shader_keys.txt`), so your build has all of them. The log line
+  `[deko3d] 32 specialized fragment shaders` shows it worked (it said 0 before).
+- Android builds from the zip get the same shaders (on a test phone they took the 1P demo race from 55 to 59 fps).
+
 ## v0.5.1 (2026-11-07; v0.5.0 was pulled, its tag kept)
 
 - **Known issue: the Switch build is slower than v0.4.2** (user's test: under 30 fps even overclocked, any

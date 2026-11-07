@@ -11,7 +11,7 @@ compiled with uam (cached in WORKDIR by source hash) and embedded in OUT.h as a 
 hash; render_deko.c binds the matching shader per state and falls back to the ubershader otherwise.
 
 A shader that would need per-warp scratch memory is left out (see NOTES.md, session 4).
-Key files are game-derived state: keep them out of git (build/shaderkeys/).
+Keys: config/GXEE8P/shader_keys.txt (shipped) plus local extras in build/shaderkeys/.
 """
 import concurrent.futures
 import hashlib
