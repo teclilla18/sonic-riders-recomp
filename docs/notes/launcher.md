@@ -35,5 +35,6 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
   race not tested by us.
 - Icon: tools/launcher_icon.py draws it (gold ring + speed lines on blue; our own drawing, no file in git);
   build_launcher.py compiles it in as resource APPICON.
-- Next: the exe in make_release.py's PC zip (+
-  README-FIRST), an end-to-end install test in Windows Sandbox, later Switch/Android pages.
+- Next:
+  later Switch/Android pages. Done 2026-11-07: the exe in the PC zip (make_release.py builds it from the committed
+  source), cold Sandbox install through the launcher PASS (`sandbox_test.py --launcher`, SR_LAUNCHER_INSTALL).

@@ -1,24 +1,23 @@
-# State (2026-11-07, afternoon)
+# State (2026-11-07, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.2 released 2026-11-07** (tag at 8db1dc6). Cold sandbox tests PASS (PC, Android). It fixes the "Switch regression": **release
-builds never had specialized shaders** (keys lived only in the dev PC's `build/shaderkeys/`), so every zip build
-(v0.4.x, v0.5.x; Switch and Android) drew races with the ubershader (GPU 30-45 ms/frame, 20-35 fps). The key list
-is now tracked: `config/GXEE8P/shader_keys.txt` (32 keys; CLAUDE.md rule 1 exception, user's decision).
-Hardware: OLED handheld (CPU 1785 / GPU 614 / MEM 2133) perf test 59.9 / 59.9 fps, every state specialized.
+**v0.5.3 released 2026-11-07** (tag ef97b2d; Track Select fix in wide modes). v0.5.2 (8db1dc6) made release builds
+use specialized shaders (tracked `config/GXEE8P/shader_keys.txt`; OLED handheld 1785/614/2133: 59.9 fps). Only the
+latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run v0.5.3.
 
-**v0.5.3 released 2026-11-07** (tag at ef97b2d): the Track Select fix in Fit window / wide modes (band rule: pieces
-0.15+ high must be the same height within 10%; tested PC 16:9 + 21:9 and on the OLED). Only the latest release is
-listed on GitHub (user's rule; older ones delisted, tags kept). OLED and S23 run v0.5.3.
+**Next session: iOS, on the Mac** (user's Mac: M1 Pro, macOS Golden Gate 27.2, latest Xcode; iPhone 17 Pro on
+iOS 27.0; free Apple account). No iOS notes in docs yet: start with a research note (docs/notes/ios.md).
 
-**Next session: the Windows launcher** (notes/launcher.md; user's request, look of Tag Force Recomp's
-launcher). Implemented and two pages checked by self-capture; not yet: banner commit (needs the user's OK),
-PLAY/install run end to end, remapping, release packaging. iOS after that. Online play paused at a clean point
-(section below). On `main`, unreleased: screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop
-fix, launcher. OLED on v0.5.3 (dev build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
+**Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Banner (user's fan art) committed;
+PLAY/Stop + settings round trip with the F1 menu [confirmed, PC, scripted]; button remapping (saves\controls.ini,
+Controls page) [file path confirmed; real presses in a race untested]; drawn icon; make_release.py puts the exe in
+the PC zip; cold Windows Sandbox install through the launcher PASS. Not done: accepted by the user (play with it),
+Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
+remapping, screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop fix. OLED on v0.5.3 (dev
+build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
 Consoles: OLED (switch-remote, 10.0.0.44) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
@@ -82,7 +81,7 @@ Last hardware test: 2026-11-07 afternoon (OLED handheld 1785/614/2133, switch-re
 ## Wish list / paused
 
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
-PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is next (user; earlier iOS notes: `grep -n iOS docs/HISTORY.md`).
+PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is next (user; Mac now on Golden Gate 27.2 + latest Xcode).
 
 ## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
 
@@ -97,7 +96,8 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is nex
 
 ## Open items, in priority order
 
-1. **Launcher** (next session), then **iOS**, then **online play** (above).
+1. **iOS** (next session, on the Mac), then **online play** (above). Launcher: the user tries it (remapping with
+   real keys/pad); release when they accept it (cold Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
    user before posting on #14 (draft: ask for a v0.5.3 log; their v0.4.2 log had 0 fast shaders).
 2. **Right-stick camera / look back** (user request 2026-11-06): research how Tournament Edition (or a mod) does

@@ -7,8 +7,11 @@
 - **Android: the game's threads run on the fast CPU cores at a higher priority**, and the game tells Android how
   much work each frame needs (performance hint), against the short stalls some phones showed (#14). No change on a
   Galaxy S23 Ultra, which never stalled; untested on an affected phone.
-- **Windows launcher (work in progress, not in a release yet):** a window to install the game from your disc,
-  change settings and mods, and press PLAY.
+- **Windows launcher: SonicRidersLauncher.exe in the PC zip.** Pick your disc and press INSTALL AND PLAY; then
+  PLAY / Stop, the settings (shared with the in-game F1 menu), mods, and **button remapping** (Controls page:
+  click a box and press a key or controller button). Banner: fan art chosen by the maintainer.
+- **PC: keys and controller buttons can be remapped** (`saves\controls.ini`, written by the launcher). Without the
+  file the buttons are as before.
 - Online play groundwork: a slow disc read (e.g. from a slow SD card) could make two machines' games drift apart.
 
 ## v0.5.3 (2026-11-07)

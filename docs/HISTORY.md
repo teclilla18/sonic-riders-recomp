@@ -632,3 +632,22 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   user chose (not committed: the guard refuses binaries; asked the user). Tested: builds; Play and Graphics pages
   checked by self-capture (`SR_LAUNCHER_SHOT`) [confirmed]; PLAY, the install path and settings writes not run
   yet [untested]. First idea (banner captured from the player's disc, intro frame 2101) dropped for the fan art.
+
+## 2026-11-07 (night): launcher finished for the PC zip
+- Banner "not showing" (user report): the copy in build\launcher\ looked for launcher\banner.jpg, setup\ and
+  saves\ next to itself (gradient + "Not installed yet"); the root copy was fine. Fix: the root is the nearest
+  parent folder with setup\setup.ps1. Both copies' captures now identical [confirmed]. Banner committed with the
+  user's OK (exact-SHA-1 allow entry in the guard, JPEG accepted there).
+- PLAY / Stop and the settings round trip [confirmed, PC]: `SR_LAUNCHER_TEST` set fov 111, pressed PLAY; the game
+  logged fov 111; an `SR_INPUT` script with the new `M.` menu buttons opened F1, went to Gameplay and ticked the
+  Chaos Emerald option (captures checked); after Stop the launcher read chaos_emerald_shop=1 back.
+- Button remapping: `saves\controls.ini` read by input_sdl.c controls_load (defaults unchanged); Controls page edits
+  it (key press, XInput press, or list). The launcher's file was read with 32 entries, no unknown names
+  [confirmed]; real key/pad presses in a race not tested by us [uncertain].
+- Icon drawn by tools/launcher_icon.py (APPICON). make_release.py --flavor pc builds the launcher from the
+  committed source and adds it; README-FIRST points to it. `SR_LAUNCHER_INSTALL` + sandbox_test.py --launcher
+  for the clean-install test (result below).
+- **Cold Windows Sandbox install through the launcher: PASS** (dev zip at c535c77, `sandbox_test.py --launcher`):
+  zip marked as downloaded (mark-of-the-web on the exe), all tools downloaded fresh, setup exit 0, game built,
+  disc in baserom, launcher status "Installed. Press PLAY." [confirmed]. The game itself was not started in the
+  sandbox.
