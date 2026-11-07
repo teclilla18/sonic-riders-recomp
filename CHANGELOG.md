@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.3 (2026-11-07)
 
 - **Track Select in Fit window / 16:9 / ultrawide:** the row of course pictures was torn apart (the outer pictures
   pulled out of their frame toward the screen edges). It now stays together like on GameCube; the menu bars still
