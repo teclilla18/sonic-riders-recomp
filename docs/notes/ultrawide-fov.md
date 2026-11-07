@@ -35,6 +35,9 @@ Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on S
     half the taller one, each at least 0.1 clip units wide) that together cover the width are all stretched
     (the title's top/bottom bands, menu bars). The last 64 2D draws of a frame are remembered; earlier draws are
     re-marked (the frame is drawn only once complete). Narrow draws (letters of a text line) never join.
+    Pieces 0.15+ high must also be within 10% of the same height (2026-11-07, v0.5.2+): the Track Select row
+    (striped panel 0.45, arrow panels 0.39 to x +-1.17, course pictures 0.35) joined into a band and the outer
+    pictures were stretched out of their frame. `SR_ANCHORLOG` also prints "draw j touches draw m".
   - Edges (`GX_WIDE_HUD_EDGES`): only in Fit window **and** a race: `GAME_TOP_MODE` == 8 and `GAME_MENU_FLAG`
     (0x8021C1AC) 0, with 8 menu frames in a row needed to leave (the flag blips for single frames in races).
     Mode 8 alone stayed on in menus after story mode and tore the Extras, Theater subtitles and help lines

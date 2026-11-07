@@ -577,3 +577,13 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Side work: fast build + forwarders installed on two more consoles' SD cards (user's request); a .gci save
   imported into a card image (loads on PC). Found: the Switch "Save screenshot" still captured the settings
   menu in v0.5.1 (shot_7748) [uncertain: maybe pressed with the menu staying open].
+- **v0.5.2 published** (tag at 8db1dc6; 4 zips; cold sandbox PC PASS 2 min, Android PASS 2 min). At the user's
+  request every older release was delisted (tags kept): v0.5.2 is the only release. Clean v0.5.2 build
+  (v0.5.2-1-ge471b4e9) on the OLED; S23 updated with the APK (cover-art icon like the OLED's).
+- **Track Select torn in Fit window** (user report, OLED screenshot via switch-remote): the striped panel behind the
+  course row touched the arrow panels (x to +-1.17) and the outer course pictures, so the band rule stretched them
+  and pulled the pictures out of the cyan frame. A first try (no band when it runs past +-1.02) broke the Normal
+  Race / Mode Select bars (they overshoot too). Fix: pieces 0.15+ high join a band only within 10% of the same
+  height. Tested: PC 16:9 and 21:9 (Mode Select, Normal Race, Track Select, Player Entry bars to the edges; race
+  HUD identical to the old rule at 21:9) and OLED Fit window (mode not checked): Track Select whole, also scrolled to Babylon
+  Garden [confirmed]. Not released yet (in "Unreleased"); other menus with mixed-height pieces unchecked.

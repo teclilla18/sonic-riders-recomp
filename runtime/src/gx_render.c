@@ -594,6 +594,9 @@ static int anchor_touch(const Anchored* a, const Anchored* b) {
      * bigger pieces must share half their height (the round menu backgrounds must not join) */
     float hmax = ha > hb ? ha : hb;
     if (yover < (hmax < 0.15f ? 0.35f : 0.5f) * hmax) return 0;
+    /* bigger pieces of one bar have the same height; the Track Select row (panel 0.45, arrow panels 0.39,
+     * course pictures 0.35 high) is a frame with pictures, which stretching tore apart (v0.5.1, Fit window) */
+    if (hmax >= 0.15f && (ha < hb ? ha : hb) < 0.9f * hmax) return 0;
     float over = (a->x1 < b->x1 ? a->x1 : b->x1) - (a->x0 > b->x0 ? a->x0 : b->x0);
     float wa = a->x1 - a->x0, wb = b->x1 - b->x0;
     return over >= -0.01f && over <= 0.5f * (wa < wb ? wa : wb);
@@ -691,6 +694,7 @@ static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
             if (in & (1ull << j)) continue;
             for (uint32_t m = 0; m < g_nanch; m++)
                 if ((in & (1ull << m)) && anchor_touch(&g_anch[j], &g_anch[m])) {
+                    if (anchor_log()) rt_log("[anchor]   draw %u touches draw %u", j, m);
                     in |= 1ull << j;
                     if (g_anch[j].x0 < b0) b0 = g_anch[j].x0;
                     if (g_anch[j].x1 > b1) b1 = g_anch[j].x1;

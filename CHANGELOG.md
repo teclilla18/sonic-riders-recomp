@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Track Select in Fit window / 16:9 / ultrawide:** the row of course pictures was torn apart (the outer pictures
+  pulled out of their frame toward the screen edges). It now stays together like on GameCube; the menu bars still
+  reach the screen edges.
+
 ## v0.5.2 (2026-11-07)
 
 - **Switch races are fast again (~60 fps overclocked).** Builds made from the release zips had none of the

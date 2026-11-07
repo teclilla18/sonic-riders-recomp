@@ -1,28 +1,33 @@
-# State (2026-11-07, evening)
+# State (2026-11-07, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.1 released 2026-11-07** (tag at 900495f; v0.5.0 tag kept, its release pulled). Cold sandbox tests PASS (PC,
-Android). **Top issue: Switch performance regression** (user, v0.5.1 built from the release zip: struggles to
-hold 30 fps even overclocked, resolution/screen mode changes don't help; v0.4.2 was ~60 overclocked). The
-release notes tell Switch players to stay on v0.4.2. Next session (after the user's go): find the cause (bisect
-v0.4.2..v0.5.1 on hardware, `[perf]`/`[pace]` lines of the user's log). HOME-screen icon: **accepted** (user installed the setup's NSP from
-the v0.5.1 zip; it opens the game, 2026-11-07). v0.5.0-linux-test pre-release deleted (tag kept).
+**v0.5.2 released 2026-11-07** (tag at 8db1dc6) and it is **the only GitHub release**: the user had every older
+release delisted (tags kept). Cold sandbox tests PASS (PC, Android). It fixes the "Switch regression": **release
+builds never had specialized shaders** (keys lived only in the dev PC's `build/shaderkeys/`), so every zip build
+(v0.4.x, v0.5.x; Switch and Android) drew races with the ubershader (GPU 30-45 ms/frame, 20-35 fps). The key list
+is now tracked: `config/GXEE8P/shader_keys.txt` (32 keys; CLAUDE.md rule 1 exception, user's decision).
+Hardware: OLED handheld (CPU 1785 / GPU 614 / MEM 2133) perf test 59.9 / 59.9 fps, every state specialized.
 
-## v0.5.1 contents (released)
+**On `main`, not released:** Track Select fix in Fit window / wide modes (band rule: pieces 0.15+ high must be the
+same height within 10%); tested PC 16:9 + 21:9 and on the OLED. The OLED has this build (v0.5.2 backup on the SD:
+`sonicriders.v052.nro`). Release it with the next batch (sandbox tests first; ask the user).
 
-- Ultrawide (notes/ultrawide-fov.md) **tested on PC 21:9 Fit window by frames** (2026-11-07 b): race HUD at the
-  edges for a whole 3-lap Free Race, results screen whole (new `GAME_RACE_PHASE` gate), pause/quit dialog,
-  Options, Extra, Audio Room, Records, Theater menu, story intro movie + subtitles (movies now 4:3 with black
-  bars), det route at 21:9 / 32:9 / 16:9 and 2P. Not checked: later in-engine story cutscenes (needs a story
-  save; the user's subtitle case), 3-4P, Tag/Survival/story races, 2P with one player finished. Not accepted by
-  the user yet (3440x1440).
-- HOME icon: setup asks y/n, keys at %USERPROFILE%\.switch\prod.keys (asked only if present) or a file picker,
-  optional picture [accepted].
-- Linux build compiles and runs in WSL (llvmpipe); bug-report zip OK on Linux [not on a Deck].
-- Race tests: the stage select's race options set the lap count (user tip): use 1 lap.
+Consoles: OLED (switch-remote, 10.0.0.44) and two more Switch SD cards (son's, secondary) got the fast build +
+forwarder NSPs this session; S23 has v0.5.2 (APK with the OLED's cover-art icon). User's clocks: handheld
+1785 / 614 / 2133, docked 1785 / 1152 / 2133.
+
+## v0.5.x contents (released)
+
+- v0.5.2: specialized shaders in release builds (above).
+- Ultrawide (notes/ultrawide-fov.md) tested on PC 21:9 Fit window by frames: race HUD at the edges, results,
+  pause/quit, Options, Extra, Audio Room, Records, Theater, story intro movie + subtitles (4:3 with bars), 2P.
+  Not checked: later in-engine story cutscenes, 3-4P, Tag/Survival/story races. Not accepted by the user yet.
+- HOME icon: setup asks y/n, keys at %USERPROFILE%\.switch\prod.keys or a file picker, optional picture [accepted].
+- Linux build compiles and runs in WSL (llvmpipe) [not on a Deck]. Race tests: use 1 lap (stage select options).
+- Found: the Switch "Save screenshot" (shot_7748, v0.5.1) still showed the settings menu [uncertain].
 
 ## Steam Deck / Linux (gbatemp #19/#20; in v0.5.1 as a test zip)
 
@@ -54,7 +59,7 @@ Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not
 - Runs the whole game from the Homebrew Menu in title mode, or from the forwarder NSP on the home screen (works on
   hardware, hw16). Sound works; sleep/wake fixed (hw22).
 - Graphics: matches Dolphin on hardware (2026-10-29) after the #5/#11 and fog/copy fixes.
-- **Overclocked** (CPU 1785 / GPU 1152 / MEM 2133): 1P races ~60 (perf test: 58.1 fps 1P demo, 56.4 fps 2P demo,
+- **Overclocked, dev builds** (docked CPU 1785 / GPU 1152 / MEM 2133): 1P races ~60 (perf test: 58.1 fps 1P demo, 56.4 fps 2P demo,
   full speed, game thread 13.5 ms/step); 3P mostly 55-60 with dips to ~48 at 6,000+ draws (hw23/24); 4P a steady
   30 fps (hw25, game core ~17-19 ms of work per frame).
 - **Stock clocks, handheld (384 MHz GPU profile)**: 30 fps mode is a steady 30 at full speed in every race block;
@@ -62,7 +67,7 @@ Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not
   (hw33, hw36). GPU 7-13 ms per race frame after the shader-key fix (v0.3.2).
 - Specialized shaders cover every state (hw36: 2,563,268 of 2,563,268) once keys ignore unused bits.
 
-Last hardware test: 2026-10-30 (overclocked, switch-remote), see Online; `perf/results/2026-10-30-switch.json`.
+Last hardware test: 2026-11-07 (OLED, switch-remote): v0.5.2 perf test handheld 59.9/59.9 fps (`perf/results/2026-11-07-switch-handheld.json`); Track Select fix.
 
 ## Android port (released in v0.4.0; plan: docs/ANDROID_PLAN.md; history: HISTORY 2026-11-03/04 entries)
 
@@ -101,7 +106,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 ## Open items, in priority order
 
-1. **Switch performance regression in v0.5.1** (see top). Then online play (above).
+1. **#14 Android stalls** (lead: no thread placement / ADPF performance hint on Android), then **online play** (above).
 2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
    Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
    or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
@@ -109,7 +114,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 3. Boost camera effect (docs/notes/boost-effect.md, #16).
 4. #12 PC at 13 fps: answered (Intel UHD 620). #14 Android music: log in (Nothing Phone 3a, Adreno 810): 50-150
    ms game-thread stalls even on the title; lead: no thread placement / ADPF performance hint on Android.
-   Reply posted (asked for a v0.5.1 log).
+   Reply posted (asked for a v0.5.1 log). Their v0.4.2 log had `[vk] 0 specialized`: v0.5.2 has 32; ask for a v0.5.2 log (not posted yet).
 5. #1 stock-clock performance; #2 3-4 player races at 30 fps; audio crackle at stock clocks (logs needed).
 6. #3 speed blur weaker than GameCube; #6 rare "Now Loading" hang (unproven fixed); #4 story monitor; #7 lens flare.
 7. Small graphics, Switch `[applet]` log, single Joy-Con, mods on Switch, #9/#10, PGO etc. (see HISTORY).
