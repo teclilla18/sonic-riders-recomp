@@ -22,6 +22,7 @@ static unsigned long long g_read_bytes, g_read_ticks;
 static mtx_t g_di_lock;           /* g_di: the CPU's accesses vs. the completion thread */
 static cnd_t g_di_cv;
 static int64_t g_di_done_at = -1; /* rt_ticks() when the command in progress completes */
+static _Atomic int g_det_reading;  /* SR_DETCLOCK: execute() is copying a command's data */
 static _Atomic int g_det_pending;  /* SR_DETCLOCK: a command waits for di_det_poll() */
 /* a read's data arrives in pieces during the transfer, as on the hardware (the DI DMAs each 32-byte
  * block as the drive delivers it). The game's streaming decompressor (CRI's loader, REL f_819594F4)
@@ -128,8 +129,15 @@ static void execute(void) {
         if (ppc_detclock()) {
             void det_trace(char type, uint32_t what);
             det_trace('D', cmd == 0xA8 ? g_di[DICMD1] << 2 : cmd);
+            g_det_reading = 1;  /* a slow card read (159 ms on a Switch SD) is not the game standing still */
             if (g_di_dma.len) { dma_piece(g_di_dma.len); g_di_dma.len = 0; }
+            {   /* SR_DET_SLOWREAD=<ms> (testing): every read takes that long, like a slow SD card */
+                static int slow = -1;
+                if (slow < 0) slow = getenv("SR_DET_SLOWREAD") ? atoi(getenv("SR_DET_SLOWREAD")) : 0;
+                if (slow > 0 && bytes) platform_sleep_ns((uint64_t)slow * 1000000u);
+            }
             g_det_pending = 1;
+            g_det_reading = 0;
             return;
         }
     }
@@ -138,6 +146,8 @@ static void execute(void) {
 }
 
 int di_det_busy(void) { return g_det_pending != 0; }
+/* vi.c's retrace backstop: a disc command is being read or waits to complete (no game time passes) */
+int di_det_in_progress(void) { return g_det_pending || g_det_reading; }
 /* SR_DETCLOCK: complete the command started by execute() (game thread: frame end or idle) */
 void di_det_poll(void) {
     if (!g_det_pending) return;

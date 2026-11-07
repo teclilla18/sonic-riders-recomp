@@ -335,6 +335,10 @@ static int vi_thread(void* arg) {
          * while the render thread creates its GL context), and no game time passes meanwhile */
         { size_t gx_gp_backlog(void);
           if (gx_gp_backlog()) { atomic_store(&g_det_last_tick, rt_ticks()); } }
+        /* nor while a disc read is copied or waits to complete: the Switch replaying a PC recording fired the
+         * backstop during a 159 ms SD card read, and the replay no longer matched (2026-11-07) */
+        { int di_det_in_progress(void);
+          if (di_det_in_progress()) atomic_store(&g_det_last_tick, rt_ticks()); }
         if (atomic_load(&g_det_last_tick) > det_active) det_active = atomic_load(&g_det_last_tick);
         int netplay_in_session(void);
         int session = netplay_in_session();  /* online: no host-clock backstop, the game just waits */
