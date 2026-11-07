@@ -651,3 +651,18 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   zip marked as downloaded (mark-of-the-web on the exe), all tools downloaded fresh, setup exit 0, game built,
   disc in baserom, launcher status "Installed. Press PLAY." [confirmed]. The game itself was not started in the
   sandbox.
+
+## 2026-11-07, late: remapping accepted; F1 Controls tab; two sessions (PC "Mike", Mac "Mac")
+
+- The user played a race with remapped buttons through the launcher: remapping **accepted**. They saw the F1
+  menu's Controls tab still listing the default keys: it was fixed text. Now it reads the live map
+  (`input_map_row()` in input_sdl.c, table in menu.cpp) [confirmed: scripted F1 run with a changed controls.ini
+  (A=Space, Z=LB) shows them]. Commit 074b2a9.
+- iOS work runs in a second Claude session on the Mac (branch `ios`, not merged yet). The PC session checked
+  the branch: PC and Android build.ninja identical to main (except the version string); the changed C files
+  compile clean with llvm-mingw and the NDK clang [confirmed]; no full link or phone run [uncertain].
+- Launcher icon: a "fan-made" logo silhouette was turned down (looks extracted from an official Flash file and
+  copies the logo). Fan art with characters needs the artist's permission; a request was sent to one artist
+  (no reply yet). The committed banner's origin should be checked the same way.
+- Plan after iOS (user's order): higher internal resolution + anti-aliasing, then bloom + colour grading, then
+  per-pixel character lighting.
