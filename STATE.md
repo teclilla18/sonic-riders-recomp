@@ -24,7 +24,7 @@ the v0.5.1 zip; it opens the game, 2026-11-07). v0.5.0-linux-test pre-release de
 - Linux build compiles and runs in WSL (llvmpipe); bug-report zip OK on Linux [not on a Deck].
 - Race tests: the stage select's race options set the lap count (user tip): use 1 lap.
 
-## Steam Deck / Linux (gbatemp #19/#20, on v0.5.0-linux-test)
+## Steam Deck / Linux (gbatemp #19/#20; in v0.5.1 as a test zip)
 
 - Done on `main`, untested on a Deck: under gamescope / SteamDeck=1 the window opens at the screen size and a
   first run defaults to fullscreen + Fit window; Chaos Emerald option off by default with clear text (Shop, 0
