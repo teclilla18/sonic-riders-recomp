@@ -72,7 +72,9 @@ struct Job {
     int buf;
     int box[4];
     double ms;
+    bool open;  /* the picture shows the settings menu */
 };
+bool g_front_open;  /* g_front's picture shows the settings menu */
 std::mutex g_mx;
 /* never destroyed: the helper thread waits on it for the whole run, and glibc's destructor waits for
  * the waiters, so exit() (window closed, perf test done) hung forever on Linux */
@@ -606,6 +608,7 @@ void collect() {
     if (!j) return;
     memcpy(g_box[j->buf], j->box, sizeof j->box);
     g_front = j->buf;
+    g_front_open = j->open;
     g_version++;
     g_busy = false;
     static int logged;
@@ -654,6 +657,7 @@ void frame() {
     for (ImDrawList* l : dd->CmdLists) j->dd.CmdLists.push_back(l->CloneOutput());
     j->dd.CmdListsCount = j->dd.CmdLists.Size;
     j->buf = g_front ^ 1;
+    j->open = g_open;
     content_box(dd, j->box);
     if (!g_worker_started) {
         g_worker_started = true;
@@ -691,7 +695,11 @@ int overlay_take_controllers_request(void) {
 
 void overlay_request_screenshot(void) { g_shot_request = 1; }  /* SR_SHOTSTEP (frame_pacing.c) */
 
+/* Switch and Android draw the overlay from the helper thread's last finished picture, which can still be the
+ * menu's for a frame or two after "Save screenshot" closed it (seen with the FPS counter on: shot_1756, v0.5.3
+ * OLED). The request waits until the shown picture is one drawn with the menu closed. */
 int overlay_take_screenshot_request(void) {
+    if (g_shot_request && (g_open || g_front_open)) return 0;
     int r = g_shot_request;
     g_shot_request = 0;
     return r;
