@@ -5,7 +5,8 @@
 
 Flavors (one download per platform, for players):
   switch  SonicRiders-Switch-Setup-<version>.zip: "Install Sonic Riders (Switch).bat" + README-FIRST.txt
-  pc      SonicRiders-PC-Setup-<version>.zip: "Install Sonic Riders (PC).bat" + README-FIRST.txt
+  pc      SonicRiders-PC-Setup-<version>.zip: SonicRidersLauncher.exe (built here by tools/build_launcher.py
+          from the committed launcher source) + "Install Sonic Riders (PC).bat" + README-FIRST.txt
   android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).bat" + README-FIRST.txt
   linux   SonicRiders-Linux-Setup-<version>.zip: "Install Sonic Riders (Linux).sh" (SonicRidersSetup.sh) +
           README-FIRST.txt, for Linux PCs and the Steam Deck (tools/setup_linux.py)
@@ -113,13 +114,16 @@ def readme_first(flavor, version):
             "1. Extract this whole zip to a folder you'll keep (for example C:\\Games\\SonicRiders). Its path",
             "   must use only English letters and digits (not under a Windows user name with accents).",
             "   The game, your saves and settings live in that folder.",
-            '2. Double-click "Install Sonic Riders (PC).bat". If Windows warns, click More info > Run anyway.',
-            "   Pick your disc image. The first run takes 10-30 minutes.",
-            '3. Start the game with the "Sonic Riders" shortcut (in the folder, and on your desktop if you said yes).',
+            "2. Double-click SonicRidersLauncher.exe. If Windows warns, click More info > Run anyway.",
+            '   Click "Select disc...", pick your disc image and press INSTALL AND PLAY. The first run takes',
+            "   10-30 minutes; after that the launcher's PLAY button starts the game.",
+            "   The launcher also has the settings, mods and button remapping (Controls page).",
+            '   (Without the launcher: double-click "Install Sonic Riders (PC).bat", then use the "Sonic Riders"',
+            "   shortcut it makes.)",
             "",
             "Controls: a game controller works (Xbox-style; up to 4 players with more controllers).",
             "Keyboard: WASD = move, J = A, K = B, L = X, I = Y, Enter = START, U / O = L / R, P = Z,",
-            "arrow keys = C-stick, T F G H = D-pad.",
+            "arrow keys = C-stick, T F G H = D-pad. Change them on the launcher's Controls page.",
             "Hold F1 (or the controller's Back/View button) = settings menu. F11 or Alt+Enter = fullscreen.",
         ]
     tail = [
@@ -170,6 +174,21 @@ def readme_linux(version):
     return ("\n".join(lines) + "\n").encode()
 
 
+LAUNCHER_SRC = ["launcher", "tools/build_launcher.py", "tools/launcher_icon.py", "tools/make_icon.py"]
+
+
+def build_launcher(ref):
+    """the launcher exe, built now from the working tree, which must match REF for the launcher's files"""
+    if git("diff", "--name-only", ref, "--", *LAUNCHER_SRC).strip():
+        print("make_release: the launcher's files differ from %s (commit them first); no zip written." % ref)
+        return None
+    if subprocess.run([sys.executable, os.path.join("tools", "build_launcher.py")]).returncode:
+        print("make_release: the launcher did not build; no zip written.")
+        return None
+    with open(os.path.join("build", "launcher", "SonicRidersLauncher.exe"), "rb") as f:
+        return f.read()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
@@ -215,6 +234,11 @@ def main():
         else:
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (%s).bat" % plat, launcher(args.flavor)))
+        if args.flavor == "pc":
+            exe = build_launcher(args.ref)
+            if not exe:
+                return 1
+            files.append(("SonicRidersLauncher.exe", exe))
         files.append(("README-FIRST.txt", readme_first(args.flavor, args.version)))
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, zipname)
