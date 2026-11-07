@@ -548,3 +548,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - **Release prep v0.5.1:** zips (Switch/PC/Android/Linux) from 900495f; cold Windows Sandbox: PC PASS (2 + 1
   min), Android PASS (2 + 2 min) [confirmed]. Not published: waits for the user's HOME-icon hardware test.
 - User tip: the stage select has race options with the lap count; set 1 lap for quick race tests.
+- **v0.5.1 published** (tag v0.5.1 at 900495f, the zips' commit; 4 zips incl. Linux test). User built it from the
+  Switch zip on the console: **performance regression** (struggles to hold 30 fps overclocked; resolution and
+  screen mode changes don't help). Released anyway at the user's request with a "stay on v0.4.2 for Switch"
+  warning; fix next session [cause unknown].
