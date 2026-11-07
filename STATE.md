@@ -14,10 +14,11 @@ Hardware: OLED handheld (CPU 1785 / GPU 614 / MEM 2133) perf test 59.9 / 59.9 fp
 0.15+ high must be the same height within 10%; tested PC 16:9 + 21:9 and on the OLED). Only the latest release is
 listed on GitHub (user's rule; older ones delisted, tags kept). OLED and S23 run v0.5.3.
 
-**Next session (user): the iOS version.** Online play is paused at a clean point (section below). On `main`,
-unreleased: Switch/Android screenshot fix, Android fast-core threads + ADPF hint (#14), disc-read backstop fix
-(determinism). OLED back on v0.5.3 (the dev build is on the SD as `sonicriders.dev-20261107.nro`); the S23 has a
-dev APK from `main` (e025a8a, cover-art icon), not v0.5.3.
+**Next session: the Windows launcher** (notes/launcher.md; user's request, look of Tag Force Recomp's
+launcher). Implemented and two pages checked by self-capture; not yet: banner commit (needs the user's OK),
+PLAY/install run end to end, remapping, release packaging. iOS after that. Online play paused at a clean point
+(section below). On `main`, unreleased: screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop
+fix, launcher. OLED on v0.5.3 (dev build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
 Consoles: OLED (switch-remote, 10.0.0.44) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
@@ -96,7 +97,7 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is nex
 
 ## Open items, in priority order
 
-1. **iOS** (next session, user). Then **online play** (above).
+1. **Launcher** (next session), then **iOS**, then **online play** (above).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
    user before posting on #14 (draft: ask for a v0.5.3 log; their v0.4.2 log had 0 fast shaders).
 2. **Right-stick camera / look back** (user request 2026-11-06): research how Tournament Edition (or a mod) does

@@ -622,3 +622,13 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   machines (PC-PC LAN, Switch-Switch, PC-Switch with this build).
 - Lead from the user: Tag Force Recomp (PSP; github.com/Artknighty/tagforcerecomp-preview): plugin mods (C ABI DLL
   hooks), HD texture/movie replacement, cheats (docs/notes/plans-2026-11.md).
+
+## 2026-11-07 (evening): Tag Force Recomp studied; Windows launcher
+- User shared Tag Force Recomp (PSP recomp; release folder + github.com/Artknighty/tagforcerecomp-preview). Its
+  release exe has no game code: the launcher installs from the ISO, translates and compiles (TinyCC) on the
+  player's PC. Takeaways in notes/plans-2026-11.md (quick wins, launcher, runtime/game-code split, TinyCC risks).
+- **Launcher implemented** (notes/launcher.md): `launcher/launcher.cpp`, Win32 + D3D11 + ImGui, look modelled on
+  the user's Tag Force screenshot (sidebar, banner, ready check, quick settings, PLAY). Banner: public fan art the
+  user chose (not committed: the guard refuses binaries; asked the user). Tested: builds; Play and Graphics pages
+  checked by self-capture (`SR_LAUNCHER_SHOT`) [confirmed]; PLAY, the install path and settings writes not run
+  yet [untested]. First idea (banner captured from the player's disc, intro frame 2101) dropped for the fan art.
