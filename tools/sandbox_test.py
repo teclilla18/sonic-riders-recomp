@@ -9,7 +9,9 @@ your disc image) and an empty build/sandbox/results/<run>/, the only folder the 
 Inside the sandbox the logon script, like a new user:
   - copies the zip to Downloads and marks it as downloaded from the internet (Zone.Identifier ZoneId=3),
   - extracts it with the Explorer shell (so the mark-of-the-web reaches the .bat like after "Extract All"),
-  - runs "Install Sonic Riders (<Plat>).bat" with the unattended flags (README-FIRST's step),
+  - runs "Install Sonic Riders (<Plat>).bat" with the unattended flags (README-FIRST's step), or with
+    --launcher (pc) SonicRidersLauncher.exe with SR_LAUNCHER_INSTALL (its INSTALL AND PLAY; exit code 0 =
+    installed and PLAY ready; its launcher_test.txt is copied to the results too),
   - PASS = setup exit code 0 and the .exe / .apk exists; RESULT.txt is always written (also on a crash),
   - copies only setup.log, progress.txt and RESULT.txt to the results folder (never the image or a build).
 --space adds a second install in "C:\\Sonic Riders Test" (same sandbox, tools then already downloaded).
@@ -90,12 +92,25 @@ try {
                 param($src, $dst)
                 while ($true) { Start-Sleep -Seconds 30; try { Copy-Item $src $dst -Force } catch {} }
             }
-            # wait for cmd itself: Start-Process -Wait also waits for children left running (the adb server)
-            $p = [Diagnostics.Process]::Start((New-Object Diagnostics.ProcessStartInfo -Property @{
-                FileName = "cmd.exe"; Arguments = "/d /s /c `"$line`""; UseShellExecute = $false }))
+            if ($cfg.launcher) {
+                # README-FIRST's first way: the launcher's "Select disc..." + INSTALL AND PLAY (SR_LAUNCHER_INSTALL)
+                $exe = Join-Path $top "SonicRidersLauncher.exe"
+                $motw = [bool](Get-Item $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue)
+                P "run ${i}: launcher install instead (mark-of-the-web on the exe: $motw)"
+                $env:SR_LAUNCHER_INSTALL = $iso
+                $p = [Diagnostics.Process]::Start((New-Object Diagnostics.ProcessStartInfo -Property @{
+                    FileName = $exe; WorkingDirectory = $top; UseShellExecute = $false }))
+                $env:SR_LAUNCHER_INSTALL = $null
+            } else {
+                # wait for cmd itself: Start-Process -Wait also waits for children left running (the adb server)
+                $p = [Diagnostics.Process]::Start((New-Object Diagnostics.ProcessStartInfo -Property @{
+                    FileName = "cmd.exe"; Arguments = "/d /s /c `"$line`""; UseShellExecute = $false }))
+            }
             $p.WaitForExit()
             Stop-Job $logJob; Remove-Job $logJob -Force
             $code = $p.ExitCode
+            $rep = Join-Path $top "launcher_test.txt"
+            if (Test-Path $rep) { Copy-Item $rep (Join-Path $res "launcher_test-$i.txt") -Force }
             $missing = @($cfg.outputs | Where-Object { -not (Test-Path (Join-Path $top $_)) })
             if ($code -ne 0) { $why = "setup exit code $code" }
             elseif ($missing.Count) { $why = "exit code 0 but missing: $($missing -join ', ')" }
@@ -170,6 +185,8 @@ def main():
     ap.add_argument("--memory", type=int, default=8192, help="sandbox RAM in MB (default 8192)")
     ap.add_argument("--keep-open", action="store_true", help="leave the sandbox running after the result")
     ap.add_argument("--launch", action="store_true", help="start Windows Sandbox with the new .wsb")
+    ap.add_argument("--launcher", action="store_true", help="pc: install with SonicRidersLauncher.exe "
+                    "(SR_LAUNCHER_INSTALL) instead of the .bat; also checks its ready check")
     ap.add_argument("--run", help="run name (default <flavor>-<timestamp>)")
     a = ap.parse_args()
 
@@ -207,7 +224,7 @@ def main():
     dests = [r"C:\SonicRiders"] + ([r"C:\Sonic Riders Test"] if a.space else [])
     cfg = {"flavor": a.flavor, "zip": os.path.basename(zp), "top": top, "bat": bat, "files": len(names),
            "iso": os.path.basename(iso), "args": EXTRA_ARGS[a.flavor], "outputs": OUTPUT[a.flavor],
-           "dests": dests, "cache": bool(a.cache), "shutdown": not a.keep_open}
+           "dests": dests, "cache": bool(a.cache), "shutdown": not a.keep_open, "launcher": a.launcher}
     with open(os.path.join(rundir, "config.json"), "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=1)
     with open(os.path.join(rundir, "sandbox_logon.ps1"), "w", encoding="utf-8-sig", newline="\r\n") as f:

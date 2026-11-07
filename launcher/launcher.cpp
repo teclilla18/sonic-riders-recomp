@@ -1186,6 +1186,33 @@ bool test_step(int frame) {
     return false;
 }
 
+/* SR_LAUNCHER_INSTALL=<disc image> (testing, e.g. tools/sandbox_test.py --launcher): picks that disc and presses
+ * INSTALL AND PLAY, waits for the setup, writes launcher_test.txt in the game folder (result, last setup lines,
+ * the ready check) and quits with exit code 0 when the game is installed and PLAY is ready, else 1 */
+const char* g_install_test;
+int g_install_test_exit = 1;
+bool install_test_step(int frame) {
+    if (frame == 20) {
+        g_disc_choice = widen(g_install_test);
+        start_install(g_disc_choice);
+        return false;
+    }
+    if (frame < 20 || g_install == INST_RUNNING) return false;
+    refresh_ready();
+    bool ok = g_install == INST_DONE && g_ready.built && g_ready.disc;
+    std::string rep = std::string(ok ? "PASS" : "FAIL") + ": install " +
+                      (g_install == INST_DONE ? "done" : g_install == INST_FAILED ? "failed" : "not started") +
+                      ", setup exit code " + std::to_string(g_setup.exit_code) + ", game built " + (g_ready.built ? "yes" : "no") +
+                      ", disc in baserom " + (g_ready.disc ? "yes" : "no") + ", status \"" + g_status + "\"\n";
+    {
+        std::lock_guard<std::mutex> lk(g_log_mx);
+        for (size_t i = g_log.size() > 15 ? g_log.size() - 15 : 0; i < g_log.size(); i++) rep += "  " + g_log[i] + "\n";
+    }
+    write_text(path(L"launcher_test.txt"), rep);
+    g_install_test_exit = ok ? 0 : 1;
+    return true;
+}
+
 /* the install's next steps, checked every frame */
 void poll_children() {
     static bool game_was;
@@ -1320,8 +1347,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     }
     g_shot_file = getenv("SR_LAUNCHER_SHOT");  /* testing: save the window's picture and quit */
     g_test = getenv("SR_LAUNCHER_TEST");
+    g_install_test = getenv("SR_LAUNCHER_INSTALL");
     if (const char* pg = getenv("SR_LAUNCHER_PAGE")) g_page = std::clamp(atoi(pg), 0, P_COUNT - 1);
-    if (g_shot_file || g_test) {  /* drawn off-screen, without taking the focus */
+    if (g_shot_file || g_test || g_install_test) {  /* drawn off-screen, without taking the focus */
         SetWindowPos(hwnd, nullptr, -10000, -10000, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     } else {
@@ -1372,6 +1400,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         static int frames;
         ++frames;
         if (g_test && test_step(frames)) break;
+        if (g_install_test && install_test_step(frames)) break;
         if (g_shot_file && frames == 20) {  /* fonts and textures settled */
             save_backbuffer(widen(g_shot_file));
             break;
@@ -1394,5 +1423,5 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     ImGui::DestroyContext();
     if (g_setup.reader.joinable()) g_setup.reader.detach();
     if (g_game.reader.joinable()) g_game.reader.detach();
-    return 0;
+    return g_install_test ? g_install_test_exit : 0;
 }
