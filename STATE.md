@@ -6,7 +6,8 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 
 **v0.5.0 was pulled (deleted) by the user on 2026-11-07 for its ultrawide bugs.** Fixes are on `main`, not
 released. Next session (user's order): check GitHub issues and Discussions first; then the ultrawide checks
-below; then the user tests the HOME-screen icon; then a new release (cold sandbox tests first).
+below; then the user tests the HOME-screen icon; then release **v0.5.1** (user, 2026-11-07: keep the v0.5.0 tag;
+v0.5.0-linux-test pre-release is still up with the old bugs; cold sandbox tests first).
 
 ## Top priority: ultrawide fixes + Switch HOME-screen icon (both on `main`, unreleased)
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.1 (unreleased; v0.5.0 was pulled, its tag kept)
 
 - **v0.5.0 was pulled by the user** for its ultrawide bugs. Fixed since (PC, Fit window at 21:9):
   - menus, the Extras screens and movie subtitles after story mode had their text torn to the screen edges
