@@ -404,14 +404,26 @@ void tab_controls() {
          "triggers = L / R (pressed fully they click, as on a GameCube),  right shoulder = Z,  D-pad = D-pad. "
          "Hold Back (View / Select / Share) or press the phone's Back to open this menu.");
 #else
-    heading("Keyboard");
-    note("WASD = control stick,  J / K / L / I = A / B / X / Y,  Enter = START,  U / O = L / R,  P = Z,  "
-         "T F G H = D-pad. F1 held = this menu (Q / E switch its tabs), F11 = fullscreen.");
-    heading("Controllers");
-    note("Xbox and other controllers work as player 1 (more controllers: players 2 to 4). "
-         "Hold Back (View) to open this menu.");
-    note("These are the defaults: the launcher (SonicRidersLauncher.exe, Controls page) changes the keys and "
-         "controller buttons, from the next start.");
+    heading("Buttons");
+    if (ImGui::BeginTable("map", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH)) {
+        ImGui::TableSetupColumn("GameCube");
+        ImGui::TableSetupColumn("Keyboard");
+        ImGui::TableSetupColumn("Controller");
+        ImGui::TableHeadersRow();
+        const char *gc, *key, *pad;
+        for (int i = 0; input_map_row(i, &gc, &key, &pad); i++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(gc);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(key);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(pad);
+        }
+        ImGui::EndTable();
+    }
+    note("F1 held = this menu (Q / E switch its tabs), F11 = fullscreen. Controllers: Xbox and others; more "
+         "controllers are players 2 to 4 (the controller column is for all of them). Hold Back (View) to open "
+         "this menu.");
+    note("Change the buttons in the launcher (SonicRidersLauncher.exe, Controls page); they apply from the "
+         "next start.");
 #endif
 }
 

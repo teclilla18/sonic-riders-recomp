@@ -143,6 +143,28 @@ static void controls_load(void) {
     rt_log("[input] %s: %d entries", file, changed);
 }
 
+/* for the F1 menu's Controls tab: the map as it is now, with Xbox button names */
+int input_map_row(int i, const char** gc, const char** key, const char** pad) {
+    static const char* const k_gc[IN_COUNT] = {
+        "A", "B", "X", "Y", "Z", "L", "R", "START", "D-pad up", "D-pad down", "D-pad left", "D-pad right",
+        "Stick up", "Stick down", "Stick left", "Stick right", "C-stick up", "C-stick down", "C-stick left",
+        "C-stick right"};
+    static const char* const k_xbox[SDL_CONTROLLER_BUTTON_MAX] = {
+        "A", "B", "X", "Y", "View", "Guide", "Menu", "Left stick click", "Right stick click", "LB", "RB",
+        "D-pad up", "D-pad down", "D-pad left", "D-pad right", "Share", "Paddle 1", "Paddle 2", "Paddle 3",
+        "Paddle 4", "Touchpad"};
+    if (i < 0 || i >= IN_COUNT) return 0;
+    *gc = k_gc[i];
+    *key = g_key[i] == SDL_SCANCODE_UNKNOWN ? "-" : SDL_GetScancodeName(g_key[i]);
+    if (i >= IN_PADS) *pad = i < IN_CUP ? "Left stick" : "Right stick";
+    else {
+        int s = g_padsrc[i];
+        *pad = s == PAD_NONE ? "-" : s == PAD_LT ? "LT" : s == PAD_RT ? "RT"
+             : s >= 0 && s < SDL_CONTROLLER_BUTTON_MAX && k_xbox[s] ? k_xbox[s] : "?";
+    }
+    return 1;
+}
+
 static int key_down(const Uint8* k, int in) { return g_key[in] != SDL_SCANCODE_UNKNOWN && k[g_key[in]]; }
 
 static void trigger(int port, int side, int v, uint8_t* analog, uint16_t* buttons, uint16_t click) {

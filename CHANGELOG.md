@@ -11,7 +11,7 @@
   PLAY / Stop, the settings (shared with the in-game F1 menu), mods, and **button remapping** (Controls page:
   click a box and press a key or controller button). Banner: fan art chosen by the maintainer.
 - **PC: keys and controller buttons can be remapped** (`saves\controls.ini`, written by the launcher). Without the
-  file the buttons are as before.
+  file the buttons are as before. The F1 menu's Controls tab shows the buttons in use.
 - Online play groundwork: a slow disc read (e.g. from a slow SD card) could make two machines' games drift apart.
 
 ## v0.5.3 (2026-11-07)

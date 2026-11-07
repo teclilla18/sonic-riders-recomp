@@ -128,6 +128,8 @@ typedef struct GcPad {
 } GcPad;
 void input_get_pad(int chan, GcPad* out);
 int input_connected(int chan);  /* GameCube port 0-3 has a controller (port 0 always does) */
+/* SDL builds: row i of the button map (GameCube input, key, controller button); 0 past the end */
+int input_map_row(int i, const char** gc, const char** key, const char** pad);
 void input_set_rumble(int chan, int motor);
 void input_script_init(void);                    /* SR_INPUT (input_script.c) */
 void input_script_apply(int chan, GcPad* out);
