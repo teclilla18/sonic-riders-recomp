@@ -279,6 +279,13 @@ void gx_texture_set_copy(uint32_t addr, uint32_t w, uint32_t h, int id) {
     }
 }
 
+/* 1 if the game copied the EFB to addr (any size) */
+int gx_texture_is_copy(uint32_t addr) {
+    for (int i = 0; i < g_ncopies; i++)
+        if (g_copies[i].addr == addr) return 1;
+    return 0;
+}
+
 /* the EFB copy target texture for (addr, w, h), creating it if needed */
 int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h) {
     for (int i = 0; i < g_ncopies; i++)

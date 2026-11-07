@@ -14,6 +14,10 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Extras), 0 in races, paused or in the quit dialog; blips to 1 for single frames during a race (found
   2026-11-07, RAM dumps, det route) [likely]. `8021C2FC` looks like a screen id (2 title, 1 Normal Race menu,
   0 Extras, 0x10 race) [uncertain].
+- `801DFC80` (main.dol .bss, `GAME_RACE_PHASE`): 0x10 before a race, 0xE during it, 0xA from the player's
+  finish line through the results screen; steady over a whole Free Race (SR_RAMSAMPLE every step), 0xE in the
+  1P/2P demo races (2026-11-07) [likely]. Rejected as race/results flags: `8021C1B8` (0 racing but 1/3/7 for
+  seconds), the 8-racer array at `801D746C` (stride 0x128; 1 racing, 2 results, but 2 during jumps).
 
 Guest addresses as the port sees them (REL linked at 0x81800000; original GameCube REL addresses + 0x01404300).
 `fn_`/`f_` names are dtk's. Where they were found: grep the address in HISTORY.md.

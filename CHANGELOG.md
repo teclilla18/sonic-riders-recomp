@@ -6,6 +6,10 @@
   - menus, the Extras screens and movie subtitles after story mode had their text torn to the screen edges
     (the race-only HUD placement stayed on); the race's quit dialog too;
   - the dark bars of the menus now reach the screen edges;
+  - the race results screen (ranks, names, times) stays together in the middle instead of being torn to
+    the edges;
+  - movies (intro, story scenes, Theater) keep their 4:3 shape with black bars instead of being stretched
+    (16:9 widescreen and Fit window; "stretch HUD and menus" still stretches them);
   - "Save screenshot" no longer captures the settings menu itself (PC, Switch, Android).
 - **Switch HOME-screen icon**: the setup can make a forwarder `.nsp` (asks up front; needs your console's
   `prod.keys`; optional picture of your own, 256 x 256) and copies it to `NSP\` on the SD card. Install it once

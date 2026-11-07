@@ -17,6 +17,7 @@
 void gx_texture_load_tlut(void);
 int gx_texture_lookup(int map);
 int gx_texture_copy_target(uint32_t addr, uint32_t w, uint32_t h);
+int gx_texture_is_copy(uint32_t addr);
 int gx_texture_live(void);
 void gx_texture_decode_stats(unsigned long long* count, unsigned long long* bytes);
 void gx_texture_new_frame(void);
@@ -65,7 +66,8 @@ static GxFrame* frame(void) {
         /* the menu flag blips to 1 for single frames during races: the HUD leaves the edges only after
          * 8 menu frames in a row */
         static unsigned menu_frames;
-        menu_frames = ld32(GAME_MENU_FLAG) ? menu_frames + 1 : 0;
+        /* after the finish line (results screen: menu flag 0) the rank/name/time rows must stay together */
+        menu_frames = ld32(GAME_MENU_FLAG) || ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED ? menu_frames + 1 : 0;
         int racing = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && menu_frames < 8;
         g_gx.xf_reg[GX_XR_WIDE_FLAGS] =
             g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (racing ? GX_WIDE_HUD_EDGES : 0u)
@@ -73,8 +75,8 @@ static GxFrame* frame(void) {
         {
             static uint32_t last_fl = ~0u;
             if (g_gx.xf_reg[GX_XR_WIDE_FLAGS] != last_fl && k > 1.0f)
-                rt_log("[wide] frame %llu: game mode %u, menu flag %u, HUD flags %u", g_frames, ld32(GAME_TOP_MODE),
-                       ld32(GAME_MENU_FLAG), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
+                rt_log("[wide] frame %llu: game mode %u, menu flag %u, race phase %X, HUD flags %u", g_frames,
+                       ld32(GAME_TOP_MODE), ld32(GAME_MENU_FLAG), ld32(GAME_RACE_PHASE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
             last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
         }
         float fov = (float)g_fov_scale;
@@ -602,6 +604,18 @@ static int anchor_log(void) {
     if (at < 0) at = getenv("SR_ANCHORLOG") ? atoi(getenv("SR_ANCHORLOG")) : 0;
     return at && g_frames + 1 == (unsigned)at;
 }
+/* The game's movie player draws each frame as one screen-sized quad, one TEV stage, from a 640x480 RGBA8
+ * texture in RAM (decoded by the CPU). Backgrounds use other formats/sizes; the speed blur and pause
+ * backgrounds are EFB copies, which must stay stretched (the EFB itself is wide). Not with "stretch HUD". */
+static int is_movie_draw(void) {
+    if (!(g_gx.xf_reg[GX_XR_WIDE_FLAGS] & GX_WIDE_HUD_43)) return 0;
+    if ((g_gx.bp[0x00] >> 10) & 15) return 0;               /* more than one TEV stage */
+    uint32_t order = g_gx.bp[0x28] & 0xFFF;
+    if (!(order & 0x40) || (order & 7) != 0) return 0;     /* stage 0 samples texture map 0 */
+    uint32_t i0 = g_gx.bp[0x88];
+    if ((i0 & 0x3FF) != 639 || ((i0 >> 10) & 0x3FF) != 479 || ((i0 >> 20) & 15) != 6) return 0;
+    return !gx_texture_is_copy((g_gx.bp[0x94] & 0xFFFFFF) << 5);
+}
 static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
     GxVertex* v = &f->verts[v0];
     uint32_t fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
@@ -626,6 +640,12 @@ static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
         if (y > yhi) yhi = y;
     }
     int code = GX_ANCHOR_MIDDLE;
+    if (lo <= -0.99f && hi >= 0.99f && ylo <= -0.99f && yhi >= 0.99f && is_movie_draw()) {
+        /* a movie frame (story scenes, Theater, intro): kept 4:3 with black bars instead of stretched */
+        if (anchor_log()) rt_log("[anchor] draw %u: movie frame -> 4:3", g_nanch);
+        for (uint32_t i = 0; i < count; i++) v[i].nrm[3] = (float)GX_ANCHOR_MIDDLE;
+        return;
+    }
     if (lo <= -0.99f && hi >= 0.99f) code = GX_ANCHOR_STRETCH;
     else if (fl & GX_WIDE_HUD_EDGES) {
         float mid = 0.5f * (lo + hi);

@@ -27,6 +27,10 @@ Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on S
   matrix and the projection. The anchor goes into every vertex's `nrm[3]` (unused; zeroed by the decoder) and
   gx.vert applies it: `GX_ANCHOR_MIDDLE` x/k, `LEFT` x/k + (1/k - 1), `RIGHT` x/k + (1 - 1/k), `STRETCH` x.
   - A draw spanning the width (x <= -0.99 and >= 0.99): stretched (fades, backgrounds, the speed-blur copy).
+  - **Movies** (2026-11-07, `is_movie_draw`): the movie player draws each frame as one screen-sized quad, one
+    TEV stage, map 0 = a 640x480 RGBA8 texture in RAM (CPU-decoded) that is not an EFB copy target
+    (`gx_texture_is_copy`). That draw gets MIDDLE (4:3, black bars) unless HUD_43 is off (stretch HUD).
+    Subtitles stay as they were (band stretched, letters middle). Seen: story intro movie.
   - **Bands**: draws side by side (X ranges meet / overlap at most half the narrower one, Y ranges overlap at least
     half the taller one, each at least 0.1 clip units wide) that together cover the width are all stretched
     (the title's top/bottom bands, menu bars). The last 64 2D draws of a frame are remembered; earlier draws are
@@ -67,7 +71,14 @@ Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on S
 - 2026-11-07 (PC 21:9, det routes): race HUD at the edges, pause menu and quit dialog whole, Normal Race / Mode
   Select / Extras / Gear Gallery menus 4:3 with their bars reaching the edges. v0.5.0 was pulled by the user
   for the bugs above.
-- Not checked: race results screen, story cutscenes and the Theater with story movies (the user's subtitle
-  case; covered by the menu flag and the text-line rule, not seen), Options, Records, Audio Room, 3-4P,
-  Tag/Survival modes. Thin 1-pixel vertical seams in menu bars (user's shots) remain.
+- 2026-11-07 (PC 21:9 Fit window, routes in build/uw3/): Options (+ Audio and Language pages), Extra, Audio
+  Room, Records, Theater menu, story intro movie with subtitles, a whole 3-lap Free Race at Metal City and
+  its results screen; det route at 21:9, 32:9, 16:9 widescreen, 2P split [confirmed by frames]. Fixed:
+  movies were stretched (now 4:3, `is_movie_draw`); the results screen was torn like the user's v0.5.0 shot
+  (edges now also end at the finish line: `GAME_RACE_PHASE` 0x801DFC80 == 0xA, same 8-frame debounce).
+- Not checked: in-engine story cutscenes later in the story (the user's "That's really something" subtitle;
+  needs a story save), 3-4P, Tag/Survival, story races, 2P with one player finished (the phase word is global:
+  the other player's HUD may leave the edges early). 1-pixel seams in menu bars: not seen at 1680x720.
+- Known: big race texts made of wide letters (e.g. "5th STORM" trick ratings, "melon") can still split at the
+  edges (letters wider than 0.15 do not join a text line).
 - Known: at 32:9 and at FOV 130 % the speed-blur geometry's outline shows at the right edge.

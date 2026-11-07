@@ -36,6 +36,12 @@
  * story mode). This .sdata word is 1 in every menu dumped and 0 in races, paused or not (2026-11-07,
  * RAM dumps: Free Race, pause, quit dialog vs title, Player Entry, Normal Race, Extras) [likely]. */
 #define GAME_MENU_FLAG       0x8021C1ACu
+/* main.dol .bss: 0x10 before a race, 0xE during it (Free Race; 1P and 2P demo races), 0xA from the moment the
+ * player crosses the finish line through the results screen; never flickered over a whole 3-lap Free Race
+ * (2026-11-07, SR_RAMSAMPLE every step) [likely]. Story/Tag/Survival and 2P with one player finished: not
+ * seen. Rejected: 0x8021C1B8 and the racer array at 0x801D746C (both flip for seconds during races). */
+#define GAME_RACE_PHASE      0x801DFC80u
+#define GAME_RACE_FINISHED   0xAu
 
 /* dvd.c statics (hang dumps only) */
 #define DVD_EXECUTING        0x8021BD80u  /* DVDCommandBlock* */

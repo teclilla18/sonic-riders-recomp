@@ -243,6 +243,33 @@ static void ram_hash(void) {
             if (f) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, f); fclose(f); }
         }
     }
+    {   /* SR_RAMSAMPLE=<file>: hex addresses, one per line (up to 4096); logs "[ramsample] step N addr old new"
+         * whenever one of those u32s changes, to keep only the candidates of a RAM-dump diff that never flip */
+        static uint32_t* sa;
+        static uint32_t* sv;
+        static int sn = -1;
+        if (sn < 0) {
+            sn = 0;
+            FILE* f = getenv("SR_RAMSAMPLE") ? fopen(getenv("SR_RAMSAMPLE"), "r") : NULL;
+            if (f) {
+                sa = malloc(4096 * sizeof *sa);
+                sv = malloc(4096 * sizeof *sv);
+                unsigned a;
+                while (sa && sv && sn < 4096 && fscanf(f, "%x", &a) == 1) {
+                    sa[sn] = a & ~3u;
+                    sv[sn] = ld32(sa[sn]);
+                    sn++;
+                }
+                fclose(f);
+                rt_log("[ramsample] %d addresses", sn);
+            }
+        }
+        for (int i = 0; i < sn; i++) {
+            uint32_t v = ld32(sa[i]);
+            if (v != sv[i]) rt_log("[ramsample] step %u %08X %X %X", step, sa[i], sv[i], v);
+            sv[i] = v;
+        }
+    }
     char line[64 + 28 * 9];
     /* SR_RAMHASH_KEY=<address>: also log that u32 (e.g. 8021BB64, frames since the race scene started),
      * to line up two runs whose loading took a different number of frames */

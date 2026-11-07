@@ -523,3 +523,26 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   report" zip (PC/Linux): tested on Windows with SR_BUGREPORT=1 (zip valid, 5 files) [Linux not compiled].
 - Research: no public look-back camera code found; plans in docs/notes/plans-2026-11.md (look-back, boost
   toggle, launcher, building on Linux/Android, icons per device). Online play: not worked on this session.
+
+## 2026-11-07 (b): ultrawide checks finished; movies 4:3; results screen; setup icon run; Linux build
+
+- **Reports:** #14 (Android music stops): the reporter attached a log (Nothing Phone 3a, Adreno 810, v0.4.2,
+  30 fps mode). 489 hitches; most are 50-150 ms of "game code" even on the title screen (71 draws, normal
+  ~2.5 ms), so the game thread is stalled, not slow; audio "mixes started late" up to 20 ms. Lead: Android does
+  no thread placement or performance hints at all (platform_host.c `rt_thread_*` are empty there) [uncertain].
+  Discussions: nothing new.
+- **Ultrawide checks (PC, 21:9 Fit window, det clock, scripted routes from an empty card):** Options, Extra,
+  Audio Room, Records, Theater menu, story intro movie + subtitles, a full 3-lap Free Race with results; det
+  route at 21:9 / 32:9 / 16:9 widescreen, 2P split [confirmed by frames]. Two bugs found and fixed:
+  - Movies were stretched to the screen width (1.75x at 21:9). A movie frame is one screen quad, 1 stage,
+    640x480 RGBA8 texture that is not an EFB copy -> now 4:3 with black bars (`is_movie_draw`) [confirmed].
+  - The results screen was torn to the edges (the user's v0.5.0 shot): the menu flag is 0 there. RAM search:
+    `8021C1B8` and the racer array `801D746C` looked right in sparse dumps but flip during races (seen in the
+    `[wide]` log); new `SR_RAMSAMPLE` (log changes of up to 4096 words per step) found `801DFC80`
+    (`GAME_RACE_PHASE`): 0xE racing, 0xA from the finish line on, steady for a whole race. Edges now end at
+    the finish [confirmed: whole race at the edges, results whole]. Unproven: story/Tag/Survival, 2P with one
+    player finished.
+- **Setup end to end with the HOME-icon question** (Switch, -NoSd, answers piped: y / y / n): see STATE.
+- **Linux build** (WSL Ubuntu 24.04, clang): compiles; runs (llvmpipe); "Save a bug report" zip has its 5
+  files on Linux [confirmed in WSL, not on a Deck].
+- User tip: the stage select has race options with the lap count; set 1 lap for quick race tests.
