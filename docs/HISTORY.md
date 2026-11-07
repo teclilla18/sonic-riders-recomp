@@ -552,3 +552,5 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Switch zip on the console: **performance regression** (struggles to hold 30 fps overclocked; resolution and
   screen mode changes don't help). Released anyway at the user's request with a "stay on v0.4.2 for Switch"
   warning; fix next session [cause unknown].
+- HOME-screen icon: the user installed the NSP made by the v0.5.1 setup; it opens the game [accepted]. The
+  v0.5.0-linux-test pre-release was deleted (tag kept).

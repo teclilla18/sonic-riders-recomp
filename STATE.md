@@ -8,9 +8,10 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 Android). **Top issue: Switch performance regression** (user, v0.5.1 built from the release zip: struggles to
 hold 30 fps even overclocked, resolution/screen mode changes don't help; v0.4.2 was ~60 overclocked). The
 release notes tell Switch players to stay on v0.4.2. Next session (after the user's go): find the cause (bisect
-v0.4.2..v0.5.1 on hardware, `[perf]`/`[pace]` lines of the user's log). HOME-icon NSP: not reported yet.
+v0.4.2..v0.5.1 on hardware, `[perf]`/`[pace]` lines of the user's log). HOME-screen icon: **accepted** (user installed the setup's NSP from
+the v0.5.1 zip; it opens the game, 2026-11-07). v0.5.0-linux-test pre-release deleted (tag kept).
 
-## Top priority: release v0.5.1
+## v0.5.1 contents (released)
 
 - Ultrawide (notes/ultrawide-fov.md) **tested on PC 21:9 Fit window by frames** (2026-11-07 b): race HUD at the
   edges for a whole 3-lap Free Race, results screen whole (new `GAME_RACE_PHASE` gate), pause/quit dialog,
@@ -18,10 +19,8 @@ v0.4.2..v0.5.1 on hardware, `[perf]`/`[pace]` lines of the user's log). HOME-ico
   bars), det route at 21:9 / 32:9 / 16:9 and 2P. Not checked: later in-engine story cutscenes (needs a story
   save; the user's subtitle case), 3-4P, Tag/Survival/story races, 2P with one player finished. Not accepted by
   the user yet (3440x1440).
-- HOME icon: setup run end to end with the questions (Switch, -NoSd; y / keys at the default place / no own
-  picture): built build/switch/sonicriders.nro and build/nsp/SonicRiders-HOME-icon.nsp (game's card icon)
-  [confirmed on PC]. Also build/nsp/test/SonicRiders.nsp (user's own icon, NPDM identical to hw16's). **Needs:**
-  the user's install with DBI/Goldleaf and a launch + quit on the console.
+- HOME icon: setup asks y/n, keys at %USERPROFILE%\.switch\prod.keys (asked only if present) or a file picker,
+  optional picture [accepted].
 - Linux build compiles and runs in WSL (llvmpipe); bug-report zip OK on Linux [not on a Deck].
 - Race tests: the stage select's race options set the lap count (user tip): use 1 lap.
 
@@ -102,7 +101,7 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 ## Open items, in priority order
 
-1. HOME icon hardware test, sandbox tests, publish v0.5.1. Then online play (above).
+1. **Switch performance regression in v0.5.1** (see top). Then online play (above).
 2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
    Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
    or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
@@ -119,7 +118,6 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] HOME-screen icon: install build/nsp/test/SonicRiders.nsp (or the setup's) with DBI; open it; quit the game.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9 (EFB 854 x 2 columns).
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.
