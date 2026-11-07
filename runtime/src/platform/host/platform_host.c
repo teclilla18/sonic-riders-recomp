@@ -459,6 +459,43 @@ void rt_thread_pin(int core) {
 }
 void rt_thread_lower_priority(void) { set_nice(-4); }
 void rt_thread_raise_priority(void) { set_nice(-16); }
+
+/* ADPF performance hint session (#14): the game thread reports its work per game step, so the system can raise
+ * the CPU clock before a step misses its frame instead of after. Android 13+ (API 33) only: looked up at run
+ * time (the app supports Android 11). SR_NOHINT=1 turns it off (A/B). */
+#include <dlfcn.h>
+typedef struct APerformanceHintManager APerformanceHintManager;
+typedef struct APerformanceHintSession APerformanceHintSession;
+void platform_game_step_work(uint64_t work_ns) {
+    static int state;  /* 0 not tried, 1 on, -1 off */
+    static APerformanceHintSession* s;
+    static int (*report)(APerformanceHintSession*, int64_t);
+    if (state < 0) return;
+    if (!state) {
+        state = -1;
+        if (getenv("SR_NOHINT")) {
+            rt_log("[android] performance hint off (SR_NOHINT)");
+            return;
+        }
+        void* lib = dlopen("libandroid.so", RTLD_NOW);
+        APerformanceHintManager* (*get)(void) = lib ? (APerformanceHintManager * (*)(void)) dlsym(lib, "APerformanceHint_getManager") : NULL;
+        APerformanceHintSession* (*create)(APerformanceHintManager*, const int32_t*, size_t, int64_t) =
+            lib ? (APerformanceHintSession * (*)(APerformanceHintManager*, const int32_t*, size_t, int64_t))
+                      dlsym(lib, "APerformanceHint_createSession")
+                : NULL;
+        report = lib ? (int (*)(APerformanceHintSession*, int64_t))dlsym(lib, "APerformanceHint_reportActualWorkDuration") : NULL;
+        APerformanceHintManager* m = get ? get() : NULL;
+        int32_t tid = (int32_t)syscall(SYS_gettid);
+        s = m && create && report ? create(m, &tid, 1, 16666667) : NULL;
+        if (!s) {
+            rt_log("[android] performance hint not available (Android 13+ and device support needed)");
+            return;
+        }
+        state = 1;
+        rt_log("[android] performance hint session for the game thread (target 16.7 ms per step)");
+    }
+    if (work_ns > 0 && work_ns < 2000000000ull) report(s, (int64_t)work_ns);
+}
 #else
 void rt_thread_pin(int core) { (void)core; }
 void rt_thread_lower_priority(void) {}

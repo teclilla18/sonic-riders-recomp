@@ -377,8 +377,16 @@ static void frame_end_body(Cpu* c);
 void hle_frame_end(Cpu* c) {
     void perftest_frame_begin(void); void perftest_frame_done(void);
     perftest_frame_begin();  /* SR_PERFTEST (perftest.c): the game's work per step */
+#ifdef __ANDROID__
+    static uint64_t step_start;
+    uint64_t now = platform_now_ns();
+    if (step_start) platform_game_step_work(now - step_start);  /* ADPF hint (platform_host.c) */
+#endif
     frame_end_body(c);
     perftest_frame_done();
+#ifdef __ANDROID__
+    step_start = platform_now_ns();
+#endif
 }
 
 static void frame_end_body(Cpu* c) {

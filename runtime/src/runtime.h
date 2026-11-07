@@ -19,6 +19,9 @@ double platform_gpu_frame_ms(void);  /* GPU time of recent frames (Switch: times
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
 void platform_sleep_ns(uint64_t ns);  /* a precise sleep (sub-millisecond) */
+#ifdef __ANDROID__
+void platform_game_step_work(uint64_t work_ns);  /* the game thread's work for one step (ADPF hint) */
+#endif
 void rt_thread_start(int (*fn)(void*), void* arg);  /* a host thread with a large stack (guest code is deep) */
 void platform_sample_threads(void);  /* debugging: log where every other host thread is (desktop) */
 void rt_thread_pin(int core);  /* run the calling thread on CPU core `core` (Switch: 0 guest, 1 render, 2 timers) */
