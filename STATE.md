@@ -106,7 +106,9 @@ Where it stands (docs/ONLINE.md "Phase 3" + "2026-11-06"):
 
 ## Open items, in priority order
 
-1. **#14 Android stalls** (lead: no thread placement / ADPF performance hint on Android), then **online play** (above).
+1. **#14 Android stalls**: branch `android-thread-placement` (implemented, builds, **untested**): fast cores + nice
+   (game -10, audio -16, helpers -4), `SR_NOPIN=1` for A/B. Next: S23 perf test with/without, check the
+   `[android]` log line, then merge; later an ADPF hint session. Then **online play** (above).
 2. **Right-stick camera control / look back** (user request 2026-11-06): research. The user recalls Sonic Riders
    Tournament Edition (or another remake/mod) lets you look backwards; find how it does it (Gecko codes, TE source
    or docs), and find the race camera's writer (earlier attempt: "camera writer not found"). Then a C-stick/right
