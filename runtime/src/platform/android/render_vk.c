@@ -17,6 +17,9 @@
  * Not yet: specialized shaders (the ubershader runs every draw), GPU timestamps, pre-rotation. */
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#ifdef __ANDROID__
+#include <SDL_syswm.h>
+#endif
 #include <vulkan/vulkan.h>
 #include <math.h>
 #include <stdio.h>
@@ -703,6 +706,13 @@ static int swap_recreate(void) {
     if (!swap_create()) {
         if (g_surf) vkDestroySurfaceKHR(g_inst, g_surf, NULL);
         g_surf = VK_NULL_HANDLE;
+#ifdef __ANDROID__
+        /* no window (the app is being closed, or is in the background): SDL would read a null window
+         * (crash at app exit, S23 2026-11-08); skip the frame */
+        SDL_SysWMinfo wm;
+        SDL_VERSION(&wm.version);
+        if (!SDL_GetWindowWMInfo(g_win, &wm) || !wm.info.android.window) return 0;
+#endif
         if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) {
             g_surf = VK_NULL_HANDLE;
             return 0;

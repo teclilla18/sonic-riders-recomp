@@ -64,8 +64,10 @@ bool g_ready;
 uint64_t g_last_ns;
 uint64_t g_last_hash;
 bool g_had_image;
-/* overlay_set_banner: a message across the top (online play: desync, connection lost) */
-std::mutex g_banner_lock;
+/* overlay_set_banner: a message across the top (online play: desync, connection lost).
+ * The mutexes here are never destroyed: threads still use them while exit() runs the static destructors,
+ * and bionic aborts on a destroyed mutex (Android crash report at app exit, 2026-11-07). */
+std::mutex& g_banner_lock = *new std::mutex;
 char g_banner_next[256], g_banner[256];
 std::atomic<unsigned> g_banner_seq{0};
 unsigned g_shown_banner_seq;
@@ -79,7 +81,7 @@ struct Job {
     bool open;  /* the picture shows the settings menu */
 };
 bool g_front_open;  /* g_front's picture shows the settings menu */
-std::mutex g_mx;
+std::mutex& g_mx = *new std::mutex;
 /* never destroyed: the helper thread waits on it for the whole run, and glibc's destructor waits for
  * the waiters, so exit() (window closed, perf test done) hung forever on Linux */
 std::condition_variable& g_cv = *new std::condition_variable;

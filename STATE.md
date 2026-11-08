@@ -1,4 +1,4 @@
-# State (2026-11-07, late night)
+# State (2026-11-08)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -93,8 +93,9 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **Android abort at app exit** (S23, 2026-11-07, test build 9d7953e): SIGABRT in `std::mutex::lock` on a helper
-   thread while the app exited; next start shows a "game crashed" report. Reproduce + symbolize (HISTORY 2026-11-08).
+0. **Android crashes at app exit: fixed on `main`, unreleased** (HISTORY 2026-11-08 later): null window in
+   `swap_recreate` (reproduced, 5 clean closes after the fix) and the menu mutex destroyed at exit (not reproduced).
+   32-bit Android: waiting for the redditor's phone model (user); no build yet.
    Also: iOS release prep is the Mac's (end of notes/ios.md); `/switch/sonicriders/delete-me/` waits for the user.
 1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).

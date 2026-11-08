@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Android: no more "game crashed" report after closing the app.** Closing the game (swiping it away) could
+  crash it on the way out, so the next start showed a crash report.
+
 ## v0.6.0 (2026-11-07)
 
 - **PC: smooth (per-pixel) character lighting** in F1 > Display > Character lighting: shading and highlights on

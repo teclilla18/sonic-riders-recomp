@@ -782,3 +782,24 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   (static destructor order). Not symbolized (that build was replaced). Report saved:
   build/android/run/v060/crash-report-9d7953e.txt. Next: reproduce (start, then leave/close the app), symbolize
   with the NDK llvm-symbolizer on the same build, stop helper threads before exit.
+
+
+## 2026-11-08, later (PC "Mike"): Android crashes at app exit fixed
+
+- **Crash 1 (new, reproduced first try on the S23):** opening the game, pressing Back (it goes to the background
+  and keeps running), returning and removing its task (`cmd activity stack remove`, like a swipe from Recents)
+  gave SIGSEGV at address 0x98: the render thread found the swapchain out of date, `swap_recreate` called
+  `SDL_Vulkan_CreateSurface` after Android had destroyed the window (null ANativeWindow). Symbolized with the NDK
+  llvm-symbolizer (`swap_recreate` <- `acquire` <- `present_picture` <- `efb_copy`). Fix (render_vk.c, Android
+  only): no native window (`SDL_GetWindowWMInfo`) -> skip the frame. Tested: 5 closes in a row (3 straight, 2 with
+  Back + return first) end with the normal system kill (signal 9), no crash report on the next start; Home and
+  return still runs at 59.9 fps [likely: the crash happened once before the fix, so this is not proof].
+- **Crash 2 (the 2026-11-07 report, SIGABRT in `std::mutex::lock`):** `exit(0)` on the render thread runs the
+  C++ static destructors while the menu's helper thread still uses `g_mx`; bionic aborts on a destroyed mutex.
+  Fix (menu.cpp): `g_mx` and `g_banner_lock` are never destroyed (like `g_cv`). Not reproduced: the
+  `exit(0)` path (menu Quit, or SDL_QUIT) was not driven on the phone [likely, from the code and the report].
+- PC: builds, starts minimized, closes normally (exit 0). Mac's fd3afff (iOS clock hold) also checked on PC.
+- Local only: the user's new round icon (Downloads/SonicRidersFanIcon.png) for all local builds (NOTES.local.md).
+- 32-bit Android (redditor request): looked at, not built (user waits for the phone model). Needed: an
+  armeabi-v7a ABI in android_build.py/configure.py, a 32-bit SDL, a 512 MB guest window reservation that may not
+  fit, crash-handler registers; no 32-bit test device (the S23 cannot run 32-bit apps).
