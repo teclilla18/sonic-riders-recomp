@@ -20,57 +20,17 @@ VARY(6) out vec3 v_tex4;
  VARY(7) out vec3 v_tex5;
  VARY(8) out vec3 v_tex6;
  VARY(9) out vec3 v_tex7;
+#ifdef PERPIXEL_LIGHT
+/* PC per-pixel lighting (gx.frag): what the lighting needs, interpolated */
+out vec3 v_pv; out vec3 v_n; out vec4 v_vc0; out vec4 v_vc1;
+#endif
 
 #ifdef XF_UBO
 vec4 row(int a) { return uintBitsToFloat(xf[xfi(a) >> 2]); }  /* a is a multiple of 4: one vector */
 #else
 vec4 row(int a) { return vec4(XM(a), XM(a + 1), XM(a + 2), XM(a + 3)); }
 #endif
-/* the lit sum (ambient + lights), clamped; colour channels use .rgb, alpha channels .a. Returning a
-   vec4 for both: uam (deko3d) mixed up components of the old `alpha ? vec3(sum.a) : sum.rgb` once
-   both calls were inlined, and characters came out teal on the Switch (red lost; #11); the loop also
-   keeps no vec4 running sum seeded with the ambient and has no `continue` */
-vec4 lights(uint ctrl, vec3 pos, vec3 n, vec4 amb) {
-  vec3 acc = vec3(0.0); float acca = 0.0;  /* the lights' part; the ambient is added after the loop */
-  uint mask = bits(ctrl, 2, 4) | (bits(ctrl, 11, 4) << 4);
-  uint diff_fn = bits(ctrl, 7, 2); bool atten = bits(ctrl, 9, 1) != 0u; bool spot = bits(ctrl, 10, 1) != 0u;
-  for (int i = 0; i < 8; i++) {
-    if ((mask & (1u << uint(i))) != 0u) {
-    int b = 0x600 + i * 16;
-    vec4 lc = rgba8(XMU(b + 3));
-    vec3 ca = vec3(XM(b + 4), XM(b + 5), XM(b + 6)), da = vec3(XM(b + 7), XM(b + 8), XM(b + 9));
-    vec3 lp = vec3(XM(b + 10), XM(b + 11), XM(b + 12)), ld = vec3(XM(b + 13), XM(b + 14), XM(b + 15));
-    vec3 l; float att = 1.0;
-    if (atten && spot) {
-      l = lp - pos; float d2 = dot(l, l); float d = sqrt(d2); l = l / max(d, 1e-6);
-      float c = max(0.0, dot(l, ld));
-      att = max(0.0, ca.x + ca.y * c + ca.z * c * c) / max(1e-6, da.x + da.y * d + da.z * d2);
-    } else if (atten) {
-      /* specular: the light's direction from the vertex, as Dolphin. normalize(lp) alone was NaN for the
-         usual specular light at (0, 0, 0) and the term vanished: characters had no highlights (#11) */
-      l = DEBUG_TEV == 7 ? normalize(lp) : normalize(lp - pos);  /* 7: the old way (debugging) */
-      float c = dot(n, l) >= 0.0 ? max(0.0, dot(n, ld)) : 0.0;
-      att = max(0.0, ca.x + ca.y * c + ca.z * c * c) / max(1e-6, da.x + da.y * c + da.z * c * c);
-    } else {
-      l = normalize(lp - pos);
-    }
-    float df = dot(l, n);
-    df = diff_fn == 0u ? 1.0 : (diff_fn == 1u ? df : max(0.0, df));
-    acc += (att * df) * lc.rgb; acca += (att * df) * lc.a;
-    }
-  }
-  return clamp(amb + vec4(acc, acca), 0.0, 1.0);
-}
-vec4 channel(int c, vec4 vcol, vec3 pos, vec3 n) {
-  uint cc = XR(0x0E + c), ac = XR(0x10 + c);
-  vec4 matr = rgba8(XR(0x0C + c)), ambr = rgba8(XR(0x0A + c));
-  vec3 mat = bits(cc, 0, 1) != 0u ? vcol.rgb : matr.rgb;
-  float mata = bits(ac, 0, 1) != 0u ? vcol.a : matr.a;
-  vec3 rgb = mat; float a = mata;
-  if (bits(cc, 1, 1) != 0u) rgb = mat * lights(cc, pos, n, vec4(bits(cc, 6, 1) != 0u ? vcol.rgb : ambr.rgb, 0.0)).rgb;
-  if (bits(ac, 1, 1) != 0u) a = mata * lights(ac, pos, n, vec4(0.0, 0.0, 0.0, bits(ac, 6, 1) != 0u ? vcol.a : ambr.a)).a;
-  return vec4(rgb, a);
-}
+//@gx_light
 vec3 texgen(int i, vec3 pos_raw, vec3 n, vec4 c0, vec4 c1, float tmtx) {
   uint info = XR(0x40 + i);
   uint src = bits(info, 7, 5), type = bits(info, 4, 3);
@@ -140,6 +100,9 @@ void main() {
   uint nchan = bits(XR(0x09), 0, 2);
   v_col0 = nchan >= 1u ? channel(0, a_col0, pv, n) : vec4(0.0);
   v_col1 = nchan >= 2u ? channel(1, a_col1, pv, n) : vec4(0.0);
+#ifdef PERPIXEL_LIGHT
+  v_pv = pv; v_n = n; v_vc0 = a_col0; v_vc1 = a_col1;
+#endif
   uint ntex = bits(XR(0x3F), 0, 4);
   v_tex0 = ntex > 0u ? texgen(0, a_pos.xyz, a_nrm.xyz, v_col0, v_col1, a_tm0.x) : vec3(0, 0, 1);
   v_tex1 = ntex > 1u ? texgen(1, a_pos.xyz, a_nrm.xyz, v_col0, v_col1, a_tm0.y) : vec3(0, 0, 1);

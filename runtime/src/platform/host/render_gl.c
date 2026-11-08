@@ -279,6 +279,7 @@ static void gl_setup(void) {
     if ((e = getenv("SR_SCALE")) && *e) g_settings.pc_scale = atoi(e);  /* tests: internal resolution */
     if ((e = getenv("SR_MSAA")) && *e) g_settings.msaa = atoi(e);      /* tests: anti-aliasing samples */
     if ((e = getenv("SR_BLOOM")) && *e) g_settings.bloom = atoi(e);    /* tests: bloom 0-100 */
+    if ((e = getenv("SR_CHARLIGHT")) && *e) g_settings.char_light = atoi(e) != 0;  /* tests: per-pixel lighting */
     if ((e = getenv("SR_GRADE")) && *e)                                 /* tests: brightness,contrast,saturation,warmth */
         sscanf(e, "%d,%d,%d,%d", &g_settings.grade_bright, &g_settings.grade_contrast, &g_settings.grade_sat,
                &g_settings.grade_warm);
@@ -729,6 +730,11 @@ static void execute(GxFrame* f) {
                 for (const char* q = t + 6; q && *q && ncyc < 8; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) cyc[ncyc++] = atoi(q);
         }
         if (ncyc) p_glUniform1i(p_glGetUniformLocation(g_prog, "u_tev_debug"), cyc[(g_presented + 1) % (unsigned)ncyc]);
+    }
+    {   /* per-pixel lighting (setting char_light; gx.frag PERPIXEL_LIGHT) */
+        static GLint loc = -2;
+        if (loc == -2) loc = p_glGetUniformLocation(g_prog, "u_perpixel");
+        p_glUniform1i(loc, g_settings.char_light);
     }
     p_glBindVertexArray(g_vao);
     p_glBindBuffer(GL_ARRAY_BUFFER, g_vbo);

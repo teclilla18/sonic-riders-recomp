@@ -10,6 +10,19 @@ VARY(6) in vec3 v_tex4;
  VARY(7) in vec3 v_tex5;
  VARY(8) in vec3 v_tex6;
  VARY(9) in vec3 v_tex7;
+#ifdef PERPIXEL_LIGHT
+/* PC per-pixel lighting (setting char_light): the XF colour channels evaluated per pixel for lit 3D draws
+   (characters, boards, objects) from the interpolated position and normal, instead of per vertex */
+in vec3 v_pv; in vec3 v_n; in vec4 v_vc0; in vec4 v_vc1;
+uniform int u_perpixel;
+vec4 g_col0, g_col1;
+#define COL0 g_col0
+#define COL1 g_col1
+//@gx_light
+#else
+#define COL0 v_col0
+#define COL1 v_col1
+#endif
 
 SAMPLER(0) uniform sampler2D u_tex0;
 SAMPLER(1) uniform sampler2D u_tex1;
@@ -152,7 +165,7 @@ void tev_stage(int s, inout vec4 r0, inout vec4 r1, inout vec4 r2, inout vec4 r3
       tex = swizzle(sample_map(map, uv), bits(aenv, 2, 2));
     }
     uint ch = bits(order, 7, 3);
-    vec4 ras = ch == 0u ? v_col0 : ch == 1u ? v_col1 : vec4(0.0);
+    vec4 ras = ch == 0u ? COL0 : ch == 1u ? COL1 : vec4(0.0);
     ras = swizzle(clamp(ras, 0.0, 1.0), bits(aenv, 0, 2));
     uint ksel = CBP(0xF6 + s / 2);
     vec3 kc = kcolor(bits(ksel, (s & 1) != 0 ? 14 : 4, 5));
@@ -211,6 +224,15 @@ void tev_stage(int s, inout vec4 r0, inout vec4 r1, inout vec4 r2, inout vec4 r3
     if (adst == 0u) r0.a = ares; else if (adst == 1u) r1.a = ares; else if (adst == 2u) r2.a = ares; else r3.a = ares;
 }
 void main() {
+#ifdef PERPIXEL_LIGHT
+  g_col0 = v_col0; g_col1 = v_col1;
+  if (u_perpixel != 0 && XR(0x26) == 0u) {
+    vec3 n = dot(v_n, v_n) > 0.0 ? normalize(v_n) : v_n;
+    uint nchan = bits(XR(0x09), 0, 2);
+    if (nchan >= 1u && (bits(XR(0x0E), 1, 1) | bits(XR(0x10), 1, 1)) != 0u) g_col0 = channel(0, v_vc0, v_pv, n);
+    if (nchan >= 2u && (bits(XR(0x0F), 1, 1) | bits(XR(0x11), 1, 1)) != 0u) g_col1 = channel(1, v_vc1, v_pv, n);
+  }
+#endif
   vec4 r0 = tev_reg(0), r1 = tev_reg(1), r2 = tev_reg(2), r3 = tev_reg(3);
 #if GX_INDIRECT
   /* indirect texturing: the indirect stages' lookups, and the running coordinate for "add prev" */

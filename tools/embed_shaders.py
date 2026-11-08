@@ -29,7 +29,9 @@ PRELUDE_DK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(
 # (output id, source name, stage, extra defines): the GX ubershader (with gx_common.glsl) and the
 # overlay (menu / FPS counter). deko3d gets the fragment ubershader twice: indirect texturing raises
 # its register count (56 -> 76 GPRs, fewer pixels in flight), so only draws using it get that variant.
-PROGRAMS_GL = (("gx_vert", "gx", "vert", ""), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 1\n"),
+# PERPIXEL_LIGHT: the PC build's per-pixel lighting option (gx_light.glsl in the fragment shader too)
+PROGRAMS_GL = (("gx_vert", "gx", "vert", "#define PERPIXEL_LIGHT 1\n"),
+               ("gx_frag", "gx", "frag", "#define GX_INDIRECT 1\n#define PERPIXEL_LIGHT 1\n"),
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
 # The deko3d vertex shader reads XF memory from a per-state uniform buffer (XF_UBO); gx_vert_ssbo is the
 # old storage-buffer form, kept for the GPU cost test (SR_GPU_AB) to compare against.
@@ -81,6 +83,10 @@ def spv_main(out, glslc, work):
 def source(name, stage, prelude, defines):
     common = open(os.path.join(SHADERS, "gx_common.glsl")).read() + "\n" if name == "gx" else ""
     body = open(os.path.join(SHADERS, name + "." + stage)).read()
+    if name == "gx":  # the lighting functions: always in the vertex shader, in the fragment one for PERPIXEL_LIGHT
+        light = open(os.path.join(SHADERS, "gx_light.glsl")).read()
+        light = light[light.index("/*"):]  # without its own header comment (sources stay as they were)
+        body = body.replace("//@gx_light\n", light if stage == "vert" or "PERPIXEL_LIGHT" in defines else "")
     return prelude + defines + common + body
 
 

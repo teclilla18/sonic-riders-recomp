@@ -735,3 +735,16 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   stronger colours, HUD sharp; title frame identical except FPS counter; 60 fps. First strength (threshold 0.6,
   mix 0.8) too faint, raised to 0.5 / 1.6. Not tested: the menu sliders live, MSAA + bloom together, a weak GPU,
   story cutscenes. Not accepted by the user yet.
+
+## 2026-11-07, night (PC "Mike"): per-pixel lighting on PC
+
+- The XF colour-channel lighting (`lights()`, `channel()`) moved from gx.vert to runtime/shaders/gx_light.glsl;
+  tools/embed_shaders.py pastes it where gx.vert has `//@gx_light`, and into gx.frag only with PERPIXEL_LIGHT
+  (defined for the GL programs only). With it, gx.vert passes view position, normal and raw vertex colours, and
+  gx.frag re-evaluates lit channels per pixel for perspective draws when `u_perpixel` (setting `char_light`,
+  F1 > Display, `SR_CHARLIGHT`) is on. configure.py lists gx_light.glsl as a shader input.
+- Other platforms unchanged [confirmed]: all 17 generated sources identical after the move; after the change the
+  Switch dksh header (uam) and the Vulkan SPIR-V header (glslc) are byte-identical to before. Specialized shaders
+  (gen_shaders.py) read gx.frag without PERPIXEL_LIGHT: the new block compiles away [likely; not rebuilt].
+- PC tested [confirmed]: det route, off = earlier frames exactly (except FPS counter); on: smoother shading on
+  Sonic's quills, nothing else changed, 60 fps. Not tested: close-ups (character select, cutscenes), weak GPUs.

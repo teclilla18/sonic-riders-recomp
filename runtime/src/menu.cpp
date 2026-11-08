@@ -405,6 +405,17 @@ void tab_display() {
     slider("##gcontrast", &g_settings.grade_contrast, 50, 150, "Contrast %d%%", "Difference between dark and light.");
     slider("##gsat", &g_settings.grade_sat, 0, 200, "Saturation %d%%", "Colour strength; 0% is black and white.");
     slider("##gwarm", &g_settings.grade_warm, -50, 50, "Warmth %+d", "Bluer (left) or redder (right).");
+    heading("Character lighting");
+    if (radio("Original", !g_settings.char_light, "Lighting worked out at the corners of each triangle, as on the GameCube.")) {
+        g_settings.char_light = 0;
+        settings_apply();
+    }
+    ImGui::SameLine();
+    if (radio("Smooth (per pixel)", g_settings.char_light != 0,
+              "Lighting worked out for every pixel: smoother shading and highlights on characters and boards.")) {
+        g_settings.char_light = 1;
+        settings_apply();
+    }
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
         settings_apply();

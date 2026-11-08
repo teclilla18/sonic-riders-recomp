@@ -15,6 +15,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
   `pc_scale` / `msaa`, F1 > Display); the log's `[gl] EFB` line shows what is in use.
 - `SR_BLOOM=<0-100>` / `SR_GRADE=<brightness>,<contrast>,<saturation>,<warmth>` (PC): bloom and colour grading for
   this run (settings `bloom`, `grade_*`; neutral = `0,100,100,0`).
+- `SR_CHARLIGHT=1` (PC): per-pixel lighting for this run (setting `char_light`).
 - `SR_HEADLESS=1` (PC): no window. `SR_NOVSYNC=1` (PC): present without vsync.
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.
 - `SR_SCREENSHOT=<frame>[,...]` / `list` (PC): `build/shot_<frame>.png`, up to 512 frames. `SR_SHOTSTEP`: capture by frame end (from 1).

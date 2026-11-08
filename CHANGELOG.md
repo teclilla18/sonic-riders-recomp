@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **PC: smooth (per-pixel) character lighting** in F1 > Display > Character lighting: shading and highlights on
+  characters, boards and other lit models worked out per pixel instead of per vertex. Off by default.
 - **PC: bloom and colour grading** in F1 > Display: a Bloom slider (soft glow around bright parts) and Colour
   presets (Original, Vivid, Warm, Cool) with brightness, contrast, saturation and warmth sliders. Only the 3D
   picture changes; the HUD and menus stay as drawn. Off by default.

@@ -28,6 +28,7 @@ typedef struct Settings {
     int grade_contrast; /* contrast in percent, 50..150 (100 = as is) */
     int grade_sat;      /* saturation in percent, 0..200 (100 = as is) */
     int grade_warm;     /* warmth -50 (cooler, bluer)..50 (warmer, redder) */
+    int char_light;     /* PC: 1 = lighting of lit 3D draws per pixel (gx.frag PERPIXEL_LIGHT), 0 = per vertex */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

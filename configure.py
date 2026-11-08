@@ -325,7 +325,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     n.build(gen_c + [GEN + "/funcs.h"], "recomp", recomp_inputs)
 
     # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
-    shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
+    shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx_light.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
                   "runtime/shaders/overlay.vert", "runtime/shaders/overlay.frag", "tools/embed_shaders.py"]
     if args.target in ("android", "ios"):
         glslc = atools.glslc if args.target == "android" else itools.glslc
@@ -357,7 +357,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("specshaders", "%s tools/gen_shaders.py $out %s/tools/bin/uam.exe %s/spec $in_keys" % (py, dkp, OUT),
                description="SPEC $out")
         n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
-                                        "runtime/shaders/gx_common.glsl"] + key_files,
+                                        "runtime/shaders/gx_common.glsl", "runtime/shaders/gx_light.glsl"] + key_files,
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h]
     elif args.target in ("android", "ios"):
@@ -367,7 +367,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, glslc, OUT),
                description="SPEC $out")
         n.build(spec_h, "specshaders", ["tools/gen_shaders.py", "tools/embed_shaders.py", "runtime/shaders/gx.frag",
-                                        "runtime/shaders/gx_common.glsl"] + key_files,
+                                        "runtime/shaders/gx_common.glsl", "runtime/shaders/gx_light.glsl"] + key_files,
                 variables={"in_keys": " ".join(key_files)})
         shader_h = [shader_h, spec_h, icons_h]
     else:
