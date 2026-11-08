@@ -20,6 +20,8 @@ typedef struct Settings {
     int hud_stretch;    /* SCREEN_WIDE: 2D (HUD, menus) stretched to the width instead of 4:3 in the middle;
                            SCREEN_FIT always moves the HUD to the screen edges */
     int fov;            /* field of view in percent of the game's (FOV_MIN..FOV_MAX, 100 = original) */
+    int pc_scale;       /* PC: internal resolution, PC_SCALE_MIN..PC_SCALE_MAX x 640x528 (2 = the old fixed 2x) */
+    int msaa;           /* PC: anti-aliasing samples per pixel, 1 (off), 2, 4 or 8 */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -27,6 +29,7 @@ enum { FR_60, FR_AUTO, FR_30, FR_MODES };
 enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };
 
 enum { FOV_MIN = 80, FOV_MAX = 130 };
+enum { PC_SCALE_MIN = 1, PC_SCALE_MAX = 6 };
 
 extern Settings g_settings;
 extern volatile double g_aspect_scale;  /* camera aspect multiplier (config/GXEE8P/patches.txt) */

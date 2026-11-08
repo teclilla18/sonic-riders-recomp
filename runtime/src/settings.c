@@ -8,7 +8,7 @@
 #include "settings.h"
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1};
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -103,6 +103,8 @@ void settings_load(void) {
             else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
             else if (!strcmp(line, "hud_stretch")) g_settings.hud_stretch = v != 0;
             else if (!strcmp(line, "fov") && v >= FOV_MIN && v <= FOV_MAX) g_settings.fov = v;
+            else if (!strcmp(line, "pc_scale") && v >= PC_SCALE_MIN && v <= PC_SCALE_MAX) g_settings.pc_scale = v;
+            else if (!strcmp(line, "msaa") && (v == 1 || v == 2 || v == 4 || v == 8)) g_settings.msaa = v;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -150,9 +152,9 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
-            g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov);
+            g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa);
     fclose(f);
 }

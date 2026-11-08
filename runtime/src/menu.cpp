@@ -344,6 +344,28 @@ void tab_display() {
     }
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
 #elif !defined(__ANDROID__)  /* phones are always full screen */
+    heading("Resolution");
+    {
+        char fmt[48];
+        snprintf(fmt, sizeof fmt, "%%dx  (%dx%d)", 640 * g_settings.pc_scale, 528 * g_settings.pc_scale);
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
+        ImGui::SliderInt("##pcscale", &g_settings.pc_scale, PC_SCALE_MIN, PC_SCALE_MAX, fmt);
+        help("The size the game is drawn at, in times the GameCube's 640x528. 2x was the only choice before. "
+             "Higher is sharper and needs a stronger graphics card; 3x suits 1440p, 4x suits 4K.");
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
+    }
+    heading("Anti-aliasing");
+    for (int i = 0; i < 4; i++) {
+        static const int samples[4] = {1, 2, 4, 8};
+        static const char* const names[4] = {"Off", "2x MSAA", "4x MSAA", "8x MSAA"};
+        if (i) ImGui::SameLine();
+        if (radio(names[i], g_settings.msaa == samples[i],
+                  i ? "Smooths jagged edges of 3D models; more samples are smoother and cost more."
+                    : "No smoothing (the game's own look).")) {
+            g_settings.msaa = samples[i];
+            settings_apply();
+        }
+    }
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
         settings_apply();

@@ -23,7 +23,14 @@
 void input_init(void);
 void input_pump(void);
 
-#define EFB_SCALE 2
+/* internal resolution: g_sc x the native 640x528 (setting pc_scale, F1 menu; applied between frames, efb_config) */
+static int g_sc = 2;
+#define EFB_SCALE g_sc
+/* anti-aliasing (setting msaa): with g_samples > 1 the game draws into multisampled renderbuffers (g_ms_fbo),
+ * resolved into the EFB textures (g_fbo) before a copy reads them (efb_resolve) */
+static int g_samples = 1, g_max_samples = 1;
+static unsigned g_ms_fbo, g_ms_rb[2];
+#define DRAW_FBO (g_samples > 1 ? g_ms_fbo : g_fbo)
 #define EFB_H (EFB_HEIGHT * EFB_SCALE)
 /* the wide screen modes (gx_render.h GX_XR_WIDE_K): the EFB is 640 x k wide (in GX units), k from the
  * frame; X of viewports, scissors and copies is scaled by it */
@@ -47,7 +54,10 @@ static int wx(int x) { return (int)((float)x * g_wide_k + 0.5f) * EFB_SCALE; }  
     X(PFNGLGENFRAMEBUFFERSPROC, glGenFramebuffers) X(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer) \
     X(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D) X(PFNGLCHECKFRAMEBUFFERSTATUSPROC, glCheckFramebufferStatus) \
     X(PFNGLBLITFRAMEBUFFERPROC, glBlitFramebuffer) X(PFNGLACTIVETEXTUREPROC, glActiveTexture) \
-    X(PFNGLBLENDFUNCSEPARATEPROC, glBlendFuncSeparate) X(PFNGLBLENDEQUATIONPROC, glBlendEquation)     X(PFNGLTEXBUFFERPROC, glTexBuffer)
+    X(PFNGLBLENDFUNCSEPARATEPROC, glBlendFuncSeparate) X(PFNGLBLENDEQUATIONPROC, glBlendEquation)     X(PFNGLTEXBUFFERPROC, glTexBuffer) \
+    X(PFNGLGENRENDERBUFFERSPROC, glGenRenderbuffers) X(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer) \
+    X(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample) \
+    X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer)
 #define DECL(t, n) static t p_##n;
 GLFUNCS(DECL)
 #undef DECL
@@ -137,8 +147,73 @@ static void efb_resize(float k) {
     glDepthMask(GL_TRUE);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (g_efb_k != 0.0f) rt_log("[gl] EFB %d x %d (wide x%.3f)", w, EFB_H, k);
+    if (g_samples > 1) {
+        if (!g_ms_fbo) { p_glGenFramebuffers(1, &g_ms_fbo); p_glGenRenderbuffers(2, g_ms_rb); }
+        p_glBindRenderbuffer(GL_RENDERBUFFER, g_ms_rb[0]);
+        p_glRenderbufferStorageMultisample(GL_RENDERBUFFER, g_samples, GL_RGBA8, w, EFB_H);
+        p_glBindRenderbuffer(GL_RENDERBUFFER, g_ms_rb[1]);
+        p_glRenderbufferStorageMultisample(GL_RENDERBUFFER, g_samples, GL_DEPTH_COMPONENT24, w, EFB_H);
+        p_glBindFramebuffer(GL_FRAMEBUFFER, g_ms_fbo);
+        p_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, g_ms_rb[0]);
+        p_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_ms_rb[1]);
+        if (p_glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            rt_log("[gl] %dx anti-aliasing not supported here: off", g_samples);
+            g_samples = g_max_samples = 1;  /* not tried again this run */
+        } else
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+    p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
+    rt_log("[gl] EFB %d x %d (wide x%.3f, %dx resolution, MSAA %dx)", w, EFB_H, k, g_sc, g_samples);
     g_efb_k = k;
+}
+
+/* the multisampled EFB into the EFB textures (copies and the picture read those) */
+static void efb_resolve(void) {
+    if (g_samples <= 1) return;
+    int w = efb_w(g_efb_k);
+    p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_ms_fbo);
+    p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_fbo);
+    glDisable(GL_SCISSOR_TEST);
+    p_glBlitFramebuffer(0, 0, w, EFB_H, 0, 0, w, EFB_H, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+}
+
+/* a new internal resolution: the copy textures (made at the old one) are scaled into new ones, so a picture
+ * the game copied once (menus) stays */
+static void rescale_copies(int sc) {
+    static GLuint read_fbo;
+    if (!read_fbo) p_glGenFramebuffers(1, &read_fbo);
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(1, 1, 1, 1);
+    for (int id = 0; id < g_gltex_cap; id++) {
+        GxTexture* t = g_gltex[id] ? gx_texture_get(id) : NULL;
+        if (!t || !t->is_copy) continue;
+        GLuint n;
+        glGenTextures(1, &n);
+        glBindTexture(GL_TEXTURE_2D, n);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)(t->width * sc), (GLsizei)(t->height * sc), 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, NULL);
+        p_glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
+        p_glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gltex[id], 0);
+        p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_copy_fbo);
+        p_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, n, 0);
+        p_glBlitFramebuffer(0, 0, (GLint)(t->width * g_sc), (GLint)(t->height * g_sc), 0, 0, (GLint)(t->width * sc),
+                            (GLint)(t->height * sc), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glDeleteTextures(1, &g_gltex[id]);
+        g_gltex[id] = n;
+    }
+}
+
+/* the F1 menu's resolution / anti-aliasing: applied at the start of a frame (the EFB is made again) */
+static void efb_config(void) {
+    int sc = g_settings.pc_scale, ms = g_settings.msaa;
+    if (sc < PC_SCALE_MIN || sc > PC_SCALE_MAX) sc = 2;
+    if (ms > g_max_samples) ms = g_max_samples;
+    if (ms < 1) ms = 1;
+    if (sc == g_sc && ms == g_samples) return;
+    if (sc != g_sc) rescale_copies(sc);
+    g_sc = sc;
+    g_samples = ms;
+    g_efb_k = 0.0f;  /* efb_resize next */
 }
 
 static void gl_setup(void) {
@@ -195,6 +270,12 @@ static void gl_setup(void) {
     glGenTextures(1, &g_efb_color);
     glGenTextures(1, &g_efb_depth);
     p_glGenFramebuffers(1, &g_fbo);
+    glGetIntegerv(GL_MAX_SAMPLES, &g_max_samples);
+    if (g_max_samples < 1) g_max_samples = 1;
+    const char* e;
+    if ((e = getenv("SR_SCALE")) && *e) g_settings.pc_scale = atoi(e);  /* tests: internal resolution */
+    if ((e = getenv("SR_MSAA")) && *e) g_settings.msaa = atoi(e);      /* tests: anti-aliasing samples */
+    efb_config();
     efb_resize(1.0f);
     p_glGenFramebuffers(1, &g_copy_fbo);
 }
@@ -362,6 +443,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     if (g_debug_frame)
         rt_log("[gxdbg] copy %d,%d %dx%d xfb %u clear %u dest %08X exec %06X", x, y, w, h, c->copy[4], c->copy[5], c->copy[10],
                c->copy[9]);
+    efb_resolve();
     p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fbo);
     glDisable(GL_SCISSOR_TEST);
     if (c->copy[4]) {  /* to the XFB: show it */
@@ -453,7 +535,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             }
         }
     }
-    p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
     if (c->copy[5]) {  /* clear the copied rectangle */
         uint32_t argb = c->copy[6];
         uint32_t cm = u->bp[0x41];
@@ -469,8 +551,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
 
 static void execute(GxFrame* f) {
     g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
+    efb_config();
     if (g_wide_k != g_efb_k) efb_resize(g_wide_k);
-    p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
     p_glUseProgram(g_prog);
     {   /* SR_TEVDEBUG=cycle (modes 0-3) or cycle:a,b,...: one mode per frame, in turn (one moment several ways) */
         static int ncyc = -1, cyc[8];
@@ -726,7 +809,7 @@ static void execute(GxFrame* f) {
             glColorMask(1, 1, 1, 1);
             GLint bw = (GLint)(c->copy[2] * EFB_SCALE), bh = (GLint)(c->copy[3] * EFB_SCALE);
             p_glBlitFramebuffer(0, 0, bw, bh, 0, 0, bw, bh, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-            p_glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+            p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
             if (cur) apply_state(cur);
             break;
         }

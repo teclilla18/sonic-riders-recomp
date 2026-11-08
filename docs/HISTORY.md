@@ -666,3 +666,15 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   (no reply yet). The committed banner's origin should be checked the same way.
 - Plan after iOS (user's order): higher internal resolution + anti-aliasing, then bloom + colour grading, then
   per-pixel character lighting.
+
+## 2026-11-07, later (PC "Mike"): internal resolution 1x-6x and MSAA on PC
+
+- User's plan after iOS starts early, **PC only** (user: the picture upgrades are not for Switch/Android/iOS).
+  render_gl.c: the fixed `EFB_SCALE 2` became `g_sc` (setting `pc_scale`, 1-6, default 2); MSAA (setting `msaa`,
+  1/2/4/8, default off) draws into multisampled renderbuffers resolved into the EFB textures before each copy
+  (`efb_resolve`). A change in F1 > Display applies at the next frame; copy textures are scaled into new ones
+  (`rescale_copies`) so one-time copies (menus) stay. `SR_SCALE` / `SR_MSAA` for tests.
+- Tested [confirmed]: det route (`SR_PERFTEST=1 SR_DETCLOCK=1`) at 2x/off, 4x/4x MSAA, 1x/8x MSAA: EFB sizes as
+  expected (wide mode too), 60 fps, same scene at step 5300, edges smoother at 4x+MSAA. Not tested [uncertain]:
+  changing it live in the F1 menu (rescale path), 5x-6x, a weak GPU. Presenting a 4x+ EFB in a small window uses
+  a plain linear blit (2:1 at most is clean; more could shimmer): a proper downscale filter may follow.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **PC: internal resolution 1x-6x and anti-aliasing (2x / 4x / 8x MSAA)** in F1 > Display. The default stays
+  2x without anti-aliasing (the picture as before); 3x suits 1440p screens, 4x suits 4K.
 - **"Save screenshot" on Switch and Android no longer captures the settings menu** (it did when the FPS counter
   was on).
 - **Android: the game's threads run on the fast CPU cores at a higher priority**, and the game tells Android how
