@@ -2,15 +2,15 @@
 
 ## Unreleased
 
+## v0.6.0 (2026-11-07)
+
 - **PC: smooth (per-pixel) character lighting** in F1 > Display > Character lighting: shading and highlights on
   characters, boards and other lit models worked out per pixel instead of per vertex. Off by default.
 - **PC: bloom and colour grading** in F1 > Display: a Bloom slider (soft glow around bright parts) and Colour
   presets (Original, Vivid, Warm, Cool) with brightness, contrast, saturation and warmth sliders. Only the 3D
   picture changes; the HUD and menus stay as drawn. Off by default.
-- **iOS (early, build it yourself on a Mac):** the game boots to the title screen on an iPhone 17 Pro (iOS 27)
-  at 60 fps, signed with a free Apple account; touch controls and controllers work. Each build also leaves
-  `SonicRiders.ipa` in a "Sonic Riders iOS" folder on the Desktop, ready to reinstall with Sideloadly or AltStore
-  (your own copy: never share it). No release download.
+- **iOS: in progress, not in this release.** It plays on an iPhone already; a Mac setup for players comes in a
+  later release (an iOS app can't be offered as a download: everyone builds it from their own disc).
 - **PC: internal resolution 1x-4x and anti-aliasing (2x / 4x / 8x MSAA)** in F1 > Display. The default stays
   2x without anti-aliasing (the picture as before); 3x suits 1440p screens, 4x suits 4K.
 - **"Save screenshot" on Switch and Android no longer captures the settings menu** (it did when the FPS counter
