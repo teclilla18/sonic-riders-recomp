@@ -384,11 +384,13 @@ void tab_display() {
     {
         struct Preset { const char* name; int bright, contrast, sat, warm; const char* tip; };
         static const Preset presets[] = {
+            /* the user found the first set barely noticeable (2026-11-07): about twice as strong */
             {"Original", 0, 100, 100, 0, "The game's own colours."},
-            {"Vivid", 0, 110, 130, 0, "Stronger colours and a little more contrast."},
-            {"Warm", 4, 105, 110, 25, "Sunnier, a little red-orange."},
-            {"Cool", 0, 105, 105, -25, "Crisper, a little blue."},
+            {"Vivid", 0, 118, 160, 0, "Much stronger colours and more contrast."},
+            {"Warm", 8, 110, 120, 45, "Sunnier, red-orange."},
+            {"Cool", 0, 112, 110, -45, "Crisper, blue."},
         };
+        ImGui::PushID("grade");  /* "Original" is also a Character lighting choice: separate IDs */
         for (int i = 0; i < 4; i++) {
             const Preset& p = presets[i];
             int on = g_settings.grade_bright == p.bright && g_settings.grade_contrast == p.contrast &&
@@ -400,18 +402,19 @@ void tab_display() {
                 settings_apply();
             }
         }
+        ImGui::PopID();
     }
     slider("##gbright", &g_settings.grade_bright, -50, 50, "Brightness %+d", "Lighter or darker 3D picture.");
     slider("##gcontrast", &g_settings.grade_contrast, 50, 150, "Contrast %d%%", "Difference between dark and light.");
     slider("##gsat", &g_settings.grade_sat, 0, 200, "Saturation %d%%", "Colour strength; 0% is black and white.");
     slider("##gwarm", &g_settings.grade_warm, -50, 50, "Warmth %+d", "Bluer (left) or redder (right).");
     heading("Character lighting");
-    if (radio("Original", !g_settings.char_light, "Lighting worked out at the corners of each triangle, as on the GameCube.")) {
+    if (radio("Original##light", !g_settings.char_light, "Lighting worked out at the corners of each triangle, as on the GameCube.")) {
         g_settings.char_light = 0;
         settings_apply();
     }
     ImGui::SameLine();
-    if (radio("Smooth (per pixel)", g_settings.char_light != 0,
+    if (radio("Smooth (per pixel)##light", g_settings.char_light != 0,
               "Lighting worked out for every pixel: smoother shading and highlights on characters and boards.")) {
         g_settings.char_light = 1;
         settings_apply();

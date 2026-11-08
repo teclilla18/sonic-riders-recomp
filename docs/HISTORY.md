@@ -753,3 +753,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - All PC picture options together (4x, 4x MSAA, bloom 50, Vivid, per-pixel lighting) on the det route through the
   1P and 2P demo races [confirmed, this PC]: no errors, lowest fps samples 58.0 / 58.9 (loading), HUD clean in
   both. Not yet seen or accepted by the user; nothing released.
+- User played it (2026-11-07 late): bloom above 45% too much; colour presets barely noticeable; per-pixel lighting
+  hard to see; choosing Character lighting "Original" showed Dear ImGui's "conflicting ID" error and highlighted
+  Colour "Original" too (two radios with the same label = same ID). Fixed: `##light` IDs + PushID("grade");
+  bloom mix 0.72 (100% = the old 45%); presets about twice as strong (Vivid 118/160, Warm 8/110/120/45, Cool
+  112/110/-45) and warmth twice as strong per step. Menu test [confirmed]: SR_INPUT M.DOWN through the Display
+  tab: focus on lighting "Original" alone, no error. Not yet re-checked by the user.

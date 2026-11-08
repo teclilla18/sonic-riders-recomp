@@ -696,10 +696,10 @@ static void post_process(void) {
         }
     }
     p_glUseProgram(g_pp_prog[PP_COMP]);
-    p_glUniform1f(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_bloom"), bloom * 1.6f);
+    p_glUniform1f(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_bloom"), bloom * 0.72f);  /* 100% = the first build's 45% (above was too much) */
     p_glUniform4f(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_grade"), exp2f((float)g_settings.grade_bright / 100.0f),
                   (float)g_settings.grade_contrast / 100.0f, (float)g_settings.grade_sat / 100.0f,
-                  (float)g_settings.grade_warm / 50.0f * 0.08f);
+                  (float)g_settings.grade_warm / 50.0f * 0.16f);
     p_glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, g_bl_tex[0]);
     p_glActiveTexture(GL_TEXTURE2);
