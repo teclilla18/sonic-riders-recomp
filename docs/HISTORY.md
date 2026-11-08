@@ -691,12 +691,14 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Screenshots looked grey and skewed: BMP rows were not padded to 4 bytes (width 874); fixed in render_vk.c for
   every target [confirmed on iOS; Android/Switch widths were already multiples of 4].
 - User: touch controls looked jagged. The swapchain was in points (874x402) stretched 3x; `SDL_WINDOW_ALLOW_HIGHDPI`
-  on iOS gives 2622x1206 [confirmed by capture; the user has not looked at the new build yet]. 
+  on iOS gives 2622x1206 [confirmed by capture; later by the user].
 - App icon from the user's fan-art PNG through `--icon` (local only, not committed).
 - User tested the build: high-DPI touch buttons look right; an Xbox One pad works; F1 menu screen size and FPS
   toggles work [confirmed, user]. Touch did nothing in the game: `touch_apply()` in input_sdl.c was Android-only;
   now also iOS. F1 menu showed Fullscreen/F11: menu.cpp `SR_PHONE` (Android or iOS) hides the PC options; no
   bug-report button on iOS yet. User: touch works, Fullscreen gone [confirmed, user]. Commit a5fc9c5.
+  Android check of the same change: PC session's entry below [confirmed].
+- Every iOS build now leaves `SonicRiders.ipa` in `~/Desktop/Sonic Riders iOS/` for Sideloadly (7e2ae1d).
 - Unproven [uncertain]: a full race on touch, background/resume, iPad, perf in a race, 7-day reinstall.
 
 
