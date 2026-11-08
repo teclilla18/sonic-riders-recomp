@@ -209,7 +209,9 @@ iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
    Management*, tap your Apple ID and tap *Trust*.
 
 **Every 7 days** (free Apple ID): the app stops opening until it is installed again. Install the same
-`.ipa` with Sideloadly, or run the installer again; your saves and the disc image stay on the device.
+`.ipa` with Sideloadly; it is always on your Mac at **`~/Desktop/Sonic Riders iOS/SonicRiders.ipa`** (Finder:
+Desktop → *Sonic Riders iOS*; the build before it is `SonicRiders-prev.ipa` next to it). Or run the installer
+again with the device connected. Your saves and the disc image stay on the device.
 (Sideloadly gives the app its own ID the first time, a separate app with an empty folder: copy the disc
 image into that one once. Later reinstalls keep it.)
 

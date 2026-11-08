@@ -221,8 +221,9 @@ def main():
         log("Done. Sonic Riders is on your %s." % ("iPad" if "iPad" in d["model"] else "iPhone"), "green")
         log("First start: if iOS says 'Untrusted Developer', open Settings > General > VPN & Device Management,")
         log("tap your Apple ID under Developer App and tap Trust.")
-        log("A free Apple ID's apps stop opening after 7 days: run this setup again (or install the .ipa with")
-        log("Sideloadly) to renew. Your saves stay.")
+        log("A free Apple ID's apps stop opening after 7 days. To renew, install the .ipa again with Sideloadly:")
+        log("  %s" % ipa, "cyan")
+        log("(or run this setup again with the device connected). Your saves and the disc image stay.")
     else:
         log("Done. The app: %s" % ipa, "green")
         log("Install it with Sideloadly (sideloadly.io) or AltStore with your Apple ID:")
@@ -231,7 +232,9 @@ def main():
         log("     (iOS 16 or newer also needs Settings > Privacy & Security > Developer Mode: on.)")
         log("  3. Copy your disc image to the app: in Finder click the device, Files tab, drag the .iso onto")
         log("     Sonic Riders, and wait until Finder has finished before opening the game.")
-        log("  A free Apple ID's apps stop opening after 7 days: install the same .ipa again with Sideloadly.")
+        log("  A free Apple ID's apps stop opening after 7 days: install this same .ipa again with Sideloadly")
+        log("  to renew (your saves and the disc image stay):")
+        log("  %s" % ipa, "cyan")
     log("Keep this folder: a new version is built from it again. Never share the .ipa or your disc image.")
 
 
