@@ -93,6 +93,9 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
+0. **Android abort at app exit** (S23, 2026-11-07, test build 9d7953e): SIGABRT in `std::mutex::lock` on a helper
+   thread while the app exited; next start shows a "game crashed" report. Reproduce + symbolize (HISTORY 2026-11-08).
+   Also: iOS release prep is the Mac's (end of notes/ios.md); `/switch/sonicriders/delete-me/` waits for the user.
 1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
