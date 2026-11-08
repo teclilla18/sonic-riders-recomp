@@ -1,4 +1,5 @@
 /* CPU-side runtime for recompiled code: dispatch, supervisor state, timebase, diagnostics. */
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -60,11 +61,29 @@ void cpu_dump_trace(void) {
 void ppc_cr_poisoned(Cpu* c, int bit, uint32_t addr) { rt_fatal("CR bit %d read after it was dropped, at %08X", bit, addr); (void)c; }
 
 /* ---- timebase: 40.5 MHz (bus clock / 4) ---- */
-static uint64_t g_t0;
+static _Atomic uint64_t g_t0;
 /* a cheap monotonic clock (platform_now_ns): the game reads the time base constantly (mftb, OSGetTime)
  * and the renderer times its work; on the Switch, CLOCK_REALTIME went through the time service */
 static uint64_t host_ns(void) { return platform_now_ns(); }
-uint64_t rt_ticks(void) { return (host_ns() - g_t0) * 81 / 2000; }  /* ns * 40.5e6 / 1e9 */
+/* rt_clock_hold: while the host pauses the game (iOS background, lock screen) the time base stands still
+ * and carries on from the same value afterwards. A running clock made the pause look like a stalled disc
+ * read: the SDK's drive timeout alarm fired on waking and the game showed its "An error has occurred" screen. */
+static _Atomic int g_clock_held;
+static _Atomic uint64_t g_clock_held_ns;  /* time since boot when held */
+uint64_t rt_ticks(void) {
+    if (atomic_load(&g_clock_held)) return atomic_load(&g_clock_held_ns) * 81 / 2000;
+    return (host_ns() - atomic_load(&g_t0)) * 81 / 2000;  /* ns * 40.5e6 / 1e9 */
+}
+void rt_clock_hold(int on) {
+    if (on == atomic_load(&g_clock_held)) return;
+    if (on) {
+        atomic_store(&g_clock_held_ns, host_ns() - atomic_load(&g_t0));
+        atomic_store(&g_clock_held, 1);
+    } else {
+        atomic_store(&g_t0, host_ns() - atomic_load(&g_clock_held_ns));  /* before the flag clears */
+        atomic_store(&g_clock_held, 0);
+    }
+}
 /* SR_DETCLOCK=1 (online play groundwork, docs/ONLINE.md): the time the game reads follows the game, not
  * the host clock. Each game frame end (frame_pacing.c) moves it on by one 60 Hz frame; within a frame,
  * each guest thread has its own count that moves on one tick per read, so a thread's readings depend

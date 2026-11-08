@@ -63,6 +63,7 @@ void load_game(void);   /* DOL sections, boot info, FST, the REL module linked a
 /* cpu.c */
 void cpu_init(Cpu* c);
 uint64_t rt_ticks(void);  /* guest timebase ticks since boot (40.5 MHz) */
+void rt_clock_hold(int on);  /* cpu.c: stop/restart the time base (host pause) */
 
 /* sched.c: guest threads and interrupts */
 #define RT_IRQ_DEC    1u   /* decrementer: OSAlarm */

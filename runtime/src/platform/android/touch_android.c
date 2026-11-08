@@ -44,25 +44,48 @@ static unsigned g_pressed;             /* bit per control */
 static uint64_t g_start_until;         /* PAUSE held at least this long (the game polls once a frame) */
 static float g_ov[4] = {0, 0, 1, 1};   /* the menu image on screen */
 
+/* g_u: the size unit of the controls: the screen height (Android). On iOS a fixed physical size, 340 points
+ * (~55 mm) on the iPhone, 390 on an iPad (user, 2026-11-08: smaller, sized for fingers of kids and adults): A
+ * ~13.5 mm across, B/R ~10 mm, L+R and START ~7.5 mm drawn, ~9 mm with the 1.25x hit margin (thumb-target
+ * minimum in the touch literature: 9-10 mm). Never larger than the screen height. */
+static float g_u;
+static float g_lift;  /* iOS: the bottom controls sit this much higher (user: "slightly up", 2026-11-08) */
 static void layout(int w, int h) {
     if (w == g_w && h == g_h) return;
     g_w = w;
     g_h = h;
-    float H = (float)h, W = (float)w, mx = 0.09f * H;
-    float jx = W - mx - 0.15f * H, jy = H - 0.21f * H;
-    g_c[C_JUMP] = (Control){jx, jy, 0.12f * H, 1, B_A, {0.35f, 0.75f, 1.0f}};
-    g_c[C_BOOST] = (Control){jx - 0.28f * H, H - 0.13f * H, 0.09f * H, 2, B_B, {1.0f, 0.70f, 0.25f}};
-    g_c[C_DRIFT] = (Control){jx + 0.01f * H, jy - 0.28f * H, 0.09f * H, 3, B_R, {0.55f, 1.0f, 0.55f}};
-    g_c[C_TORNADO] = (Control){jx - 0.25f * H, jy - 0.24f * H, 0.065f * H, 4, B_L | B_R, {0.85f, 0.60f, 1.0f}};
-    g_c[C_PAUSE] = (Control){W - mx - 0.065f * H, 0.09f * H, 0.065f * H, 5, B_START, {0.9f, 0.9f, 0.9f}};
-    g_c[C_MENU] = (Control){mx + 0.05f * H, 0.085f * H, 0.05f * H, 6, 0, {0.9f, 0.9f, 0.9f}};
-    rt_log("[touch] layout for %dx%d", w, h);
+    float H = (float)h, W = (float)w, U = H;
+#ifdef SR_IOS
+    SDL_Rect r;
+    if (SDL_GetDisplayBounds(0, &r) == 0 && r.w > 0 && r.h > 0) {
+        float short_pt = (float)(r.w < r.h ? r.w : r.h), px_per_pt = (float)(w < h ? w : h) / short_pt;
+        float unit_pt = short_pt >= 600.0f ? 390.0f : 340.0f;  /* iPad: a bit bigger (user, 2026-11-08) */
+        if (unit_pt * px_per_pt < U) U = unit_pt * px_per_pt;
+    }
+#endif
+    g_u = U;
+#ifdef SR_IOS  /* ~5 mm on the iPhone, ~2.5 cm on an iPad (more spare height, thumbs rest higher) */
+    g_lift = 0.04f * H + 0.2f * (H - U);
+#endif
+    float mx = 0.09f * U, by = H - g_lift;  /* by: the bottom edge the lower controls are placed from */
+    float jx = W - mx - 0.15f * U, jy = by - 0.21f * U;
+    g_c[C_JUMP] = (Control){jx, jy, 0.12f * U, 1, B_A, {0.35f, 0.75f, 1.0f}};
+    g_c[C_BOOST] = (Control){jx - 0.28f * U, by - 0.13f * U, 0.09f * U, 2, B_B, {1.0f, 0.70f, 0.25f}};
+    g_c[C_DRIFT] = (Control){jx + 0.01f * U, jy - 0.28f * U, 0.09f * U, 3, B_R, {0.55f, 1.0f, 0.55f}};
+    g_c[C_TORNADO] = (Control){jx - 0.25f * U, jy - 0.24f * U, 0.065f * U, 4, B_L | B_R, {0.85f, 0.60f, 1.0f}};
+#ifdef SR_IOS  /* clear of the top-right corner, where a swipe down opens Control Center (user, 2026-11-08) */
+    g_c[C_PAUSE] = (Control){W - mx - 0.50f * U, 0.09f * U, 0.065f * U, 5, B_START, {0.9f, 0.9f, 0.9f}};
+#else
+    g_c[C_PAUSE] = (Control){W - mx - 0.065f * U, 0.09f * U, 0.065f * U, 5, B_START, {0.9f, 0.9f, 0.9f}};
+#endif
+    g_c[C_MENU] = (Control){mx + 0.05f * U, 0.085f * U, 0.05f * U, 6, 0, {0.9f, 0.9f, 0.9f}};
+    rt_log("[touch] layout for %dx%d (unit %.0f px, lifted %.0f px)", w, h, U, g_lift);
 }
 
-static float stick_r(void) { return 0.16f * (float)g_h; }
+static float stick_r(void) { return 0.16f * g_u; }
 static void stick_home(float* x, float* y) {  /* where the base is shown while no thumb is on it (user: a */
-    *x = 0.09f * (float)g_h + 0.27f * (float)g_h;    /* little north-east of the first layout, 2026-11-03) */
-    *y = (float)g_h - 0.31f * (float)g_h;
+    *x = 0.09f * g_u + 0.27f * g_u;              /* little north-east of the first layout, 2026-11-03) */
+    *y = (float)g_h - g_lift - 0.31f * g_u;
 }
 
 /* the control under a point (generous: 1.25 x its radius), nearest centre first; -1 if none */

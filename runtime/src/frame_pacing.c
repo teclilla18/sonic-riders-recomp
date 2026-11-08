@@ -376,7 +376,7 @@ static void poke_at(void) {
 /* the host pauses the game (iOS: Control Center, a call, the app leaving the screen): the game thread waits at
  * its next frame end, so the race, music and timers stop together. Set from the render loop. */
 static volatile int g_host_pause;
-void rt_host_pause(int on) { g_host_pause = on; }
+void rt_host_pause(int on) { g_host_pause = on; rt_clock_hold(on); }  /* timers stop too */
 
 static void frame_end_body(Cpu* c);
 void hle_frame_end(Cpu* c) {
