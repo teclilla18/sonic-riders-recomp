@@ -103,7 +103,7 @@ void settings_load(void) {
             else if (!strcmp(line, "handheld_gpu")) g_settings.handheld_gpu = v != 0;
             else if (!strcmp(line, "hud_stretch")) g_settings.hud_stretch = v != 0;
             else if (!strcmp(line, "fov") && v >= FOV_MIN && v <= FOV_MAX) g_settings.fov = v;
-            else if (!strcmp(line, "pc_scale") && v >= PC_SCALE_MIN && v <= PC_SCALE_MAX) g_settings.pc_scale = v;
+            else if (!strcmp(line, "pc_scale") && v >= PC_SCALE_MIN) g_settings.pc_scale = v > PC_SCALE_MAX ? PC_SCALE_MAX : v;
             else if (!strcmp(line, "msaa") && (v == 1 || v == 2 || v == 4 || v == 8)) g_settings.msaa = v;
         }
         fclose(f);

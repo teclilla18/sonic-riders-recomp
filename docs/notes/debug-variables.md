@@ -11,7 +11,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 
 **Running and capturing**
 - `SR_MINIMIZED=1` (PC): window stays in the background. Use for every test run (the user may be using the PC).
-- `SR_SCALE=<1-6>` / `SR_MSAA=<1|2|4|8>` (PC): internal resolution and anti-aliasing for this run (settings
+- `SR_SCALE=<1-4>` / `SR_MSAA=<1|2|4|8>` (PC): internal resolution and anti-aliasing for this run (settings
   `pc_scale` / `msaa`, F1 > Display); the log's `[gl] EFB` line shows what is in use.
 - `SR_HEADLESS=1` (PC): no window. `SR_NOVSYNC=1` (PC): present without vsync.
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.

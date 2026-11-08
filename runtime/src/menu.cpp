@@ -355,7 +355,7 @@ void tab_display() {
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
         ImGui::SliderInt("##pcscale", &g_settings.pc_scale, PC_SCALE_MIN, PC_SCALE_MAX, fmt);
         help("The size the game is drawn at, in times the GameCube's 640x528. 2x was the only choice before. "
-             "Higher is sharper and needs a stronger graphics card; 3x suits 1440p, 4x suits 4K.");
+             "Higher is sharper and needs a stronger graphics card; 3x suits 1440p, 4x suits 4K (the most).");
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
     }
     heading("Anti-aliasing");

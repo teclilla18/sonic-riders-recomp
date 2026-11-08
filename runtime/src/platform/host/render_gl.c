@@ -206,7 +206,8 @@ static void rescale_copies(int sc) {
 /* the F1 menu's resolution / anti-aliasing: applied at the start of a frame (the EFB is made again) */
 static void efb_config(void) {
     int sc = g_settings.pc_scale, ms = g_settings.msaa;
-    if (sc < PC_SCALE_MIN || sc > PC_SCALE_MAX) sc = 2;
+    if (sc < PC_SCALE_MIN) sc = 2;
+    if (sc > PC_SCALE_MAX) sc = PC_SCALE_MAX;
     if (ms > g_max_samples) ms = g_max_samples;
     if (ms < 1) ms = 1;
     if (sc == g_sc && ms == g_samples) return;

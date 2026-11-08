@@ -708,3 +708,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   counter [confirmed]. main 9d7953e (SR_PHONE rename, touch on iOS): Android APK on the S23 with SR_SHOTS + adb
   taps: touch START, touch menu button open/close, phone menu without Fullscreen/resolution, a tapped option is
   saved [confirmed]. Stale remote branch `ios` deleted (user's request; its content is on main).
+- User tried the PC build: above 4x the frame rate fell apart (their saved MSAA was 8x). Slider capped at 4x (4x =
+  2112 lines, about a 4K screen's height; more was supersampling through a plain linear blit); a saved 5-6 loads
+  as 4 [confirmed: SR_SCALE=6 run logs 4x].
