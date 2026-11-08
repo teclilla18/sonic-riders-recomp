@@ -20,7 +20,7 @@ Next on iOS: user re-tests Control Center; a 1-lap race on touch (perf, feel); i
 
 **Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Button remapping **accepted**
 (2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Banner origin to check
-(fan art needs the artist's permission; HISTORY 2026-11-07 late). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
+(fan art needs the artist's permission; HISTORY 2026-11-07 late; do not ask the user, they will bring it up). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
 remapping, screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop fix. OLED on v0.5.3 (dev
 build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
@@ -96,7 +96,7 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 0. **Android crashes at app exit: fixed on `main`, unreleased** (HISTORY 2026-11-08 later): null window in
    `swap_recreate` (reproduced, 5 clean closes after the fix) and the menu mutex destroyed at exit (not reproduced).
    32-bit Android: waiting for the redditor's phone model (user); no build yet.
-   Also: iOS release prep is the Mac's (end of notes/ios.md); `/switch/sonicriders/delete-me/` waits for the user.
+   Also: iOS release prep is the Mac's (end of notes/ios.md). OLED SD: `delete-me/` removed 2026-11-08 (saves kept).
 1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
