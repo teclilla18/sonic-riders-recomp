@@ -49,6 +49,7 @@ static unsigned long long g_feat_ind, g_feat_fog, g_feat_ztex;  /* draws using u
 static unsigned long long g_feat_copies, g_feat_copy_z;            /* EFB copies to textures, from depth */
 static uint32_t g_feat_copy_fmts;                                   /* their target formats seen (bit per code) */
 
+volatile int g_render_counts_fps;
 static uint32_t g_nanch;  /* 2D draws of this frame remembered for wide_anchor */
 static GxFrame* frame(void) {
     if (!g_frame) {
@@ -923,7 +924,7 @@ static void efb_copy(uint32_t v) {
         if (g_frames % 30 == 0) {  /* the overlay's FPS counter */
             static uint64_t t30;
             uint64_t now = rt_ticks();
-            if (t30) overlay_set_fps((float)(30.0 * 40500000.0 / (double)(now - t30)));
+            if (t30 && !g_render_counts_fps) overlay_set_fps((float)(30.0 * 40500000.0 / (double)(now - t30)));
             t30 = now;
         }
         /* performance line every 120 frames: presented frames and VI fields per second */

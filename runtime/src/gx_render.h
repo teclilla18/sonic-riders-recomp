@@ -91,6 +91,7 @@ typedef struct GxFrame {
 } GxFrame;
 
 /* backend (render_gl.c / render_deko.c) */
+extern volatile int g_render_counts_fps;      /* the backend shows the presented rate (PC in-between pictures) */
 void render_start(void);                      /* creates the window and the render thread */
 void render_submit(GxFrame* f);               /* hands a finished frame over; blocks while the
                                                  previous one is still being drawn */

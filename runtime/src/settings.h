@@ -29,9 +29,16 @@ typedef struct Settings {
     int grade_sat;      /* saturation in percent, 0..200 (100 = as is) */
     int grade_warm;     /* warmth -50 (cooler, bluer)..50 (warmer, redder) */
     int char_light;     /* PC: 1 = lighting of lit 3D draws per pixel (gx.frag PERPIXEL_LIGHT), 0 = per vertex */
+    int pc_fps;         /* PC: pictures per second, with in-between pictures (render_gl.c): 0 = the game's own
+                           (60, or 30 in its 30 fps mode), PC_FPS_UNLIMITED, or one of settings_pc_fps_presets */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
+enum { PC_FPS_UNLIMITED = -1 };
+/* the PC frame rate presets (F1 > Performance): 30 = the game's 30 fps mode, 60 = as the game draws,
+ * the others with in-between pictures; 0-terminated, PC_FPS_UNLIMITED last */
+extern const int settings_pc_fps_presets[];
+int settings_pc_fps_valid(int v);
 
 enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };
 
