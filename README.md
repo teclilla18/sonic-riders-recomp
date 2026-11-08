@@ -53,8 +53,8 @@ Playable from boot to races, story mode and 4-player Free Race, with sound, on b
   **Screen recording is not supported on Android:** recording the screen during a race makes the phone's
   graphics driver reset the game again and again until it closes. Record with a capture card or play
   without recording.
-- **iPhone / iPad (new):** 60 fps races on an iPhone 17 Pro; the iPad 7th generation (2019) plays with small
-  dips on busy tracks. iPad Pro 11" (M1) and iPad (A16): menus at 60 fps, races not yet measured.
+- **iPhone / iPad (new):** 60 fps races on an iPhone 17 Pro, iPad Pro 11" (M1) and iPad (A16) (a short stutter
+  the first time a new effect appears); the iPad 7th generation (2019) plays with small dips on busy tracks.
 - **Switch (overclocked):** 1–2 players mostly 60 fps; 3 players mostly 60 with dips in the busiest
   moments; 4 players about 30 fps.
 - Known issues are tracked in [Issues](../../issues); what changed in each version is in the

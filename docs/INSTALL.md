@@ -180,9 +180,9 @@ The game's log is `sonicriders.log` in the install folder (attach it to bug repo
 ## Install on iPhone / iPad
 
 The iPhone/iPad app is built on **a Mac** from your disc image (an app with the game in it can't be
-shared, so there is no ready-made download). Tested: races at 60 fps on an iPhone 17 Pro; the iPad 7th
-generation (2019) plays with small dips on busy tracks; iPad Pro 11-inch (M1) and iPad (A16) start and
-run the menus at 60 fps (races not yet measured).
+shared, so there is no ready-made download). Tested: races at 60 fps on an iPhone 17 Pro, an iPad Pro 11-inch
+(M1) and an iPad (A16), with a short stutter the first time a new effect appears; the iPad 7th
+generation (2019) plays with small dips on busy tracks.
 
 **You need:** an **Apple silicon Mac** (M1 or newer) with **Xcode** (App Store, free, about 10 GB; open
 it once and add iOS when it asks), **Homebrew** ([brew.sh](https://brew.sh); the setup installs `ninja`
