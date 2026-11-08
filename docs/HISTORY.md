@@ -750,3 +750,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Sonic's quills, nothing else changed, 60 fps. Not tested: close-ups (character select, cutscenes), weak GPUs.
 - Live resolution change (the F1 menu path, `rescale_copies`) tested with the new `SR_SCALE_AT` [confirmed]: 2x ->
   4x + 4x MSAA at frame 2000; title frames then equal a run started at 4x/4x, race frame differs by 0.01/255 mean.
+- All PC picture options together (4x, 4x MSAA, bloom 50, Vivid, per-pixel lighting) on the det route through the
+  1P and 2P demo races [confirmed, this PC]: no errors, lowest fps samples 58.0 / 58.9 (loading), HUD clean in
+  both. Not yet seen or accepted by the user; nothing released.
