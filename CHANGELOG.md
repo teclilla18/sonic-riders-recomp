@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **PC: frame rate presets** in F1 > Performance and the launcher: 30, 45, 60, 120, 144, 180, 240 or Unlimited.
+  The game still runs at its own speed; above 60 the PC draws extra pictures in between for smoother motion.
+  High rates may need a lower resolution or less anti-aliasing.
 - **PC: bloom only in races.** Menus and character select stay as drawn (characters there looked almost
   white with bloom on).
 - **Android: no more "game crashed" report after closing the app.** Closing the game (swiping it away) could

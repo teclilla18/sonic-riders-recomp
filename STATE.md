@@ -93,11 +93,13 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **PC frame rate presets (user priority, 2026-11-08)**: 30, 45, 60, 120, 144 (user wrote 145), 180, 240,
-   unlimited. WIP on branch `fps-interp` (20ed97c): render_gl.c draws in-between pictures (matrices + projection
-   of paired draws blended between the last two game pictures), setting `pc_fps` / `SR_FPS`. Builds; 30 s at
-   SR_FPS=120 through the intro only. Next: race screenshots at 120 (P1 route, tools/net_route_2p.py p1),
-   camera cuts, F1 > Performance presets (30 = FR_30, 60 = pc_fps 0), launcher, then merge.
+0. **PC frame rate presets: implemented and merged to `main`** (4c5a2d4, 2026-11-08): F1 > Performance and the
+   launcher offer 30 (FR_30), 45, 60 (pc_fps 0), 120, 144, 180, 240, unlimited. Tested on PC (RTX 3060, 4x + 8x
+   MSAA): P1 race at 120 by frames (steady motion, HUD clean, race-start camera fine), >99% draws paired; 45 holds
+   45.0/s; unlimited ~100-140/s at 4x+8x MSAA, 250-350 at 2x+4x, 400-1200 at 1x (GPU-bound: each in-between
+   redraws the frame). Launcher -> game round trip at 144 [confirmed]. **Not accepted: user to play it.**
+   Not checked: a real 120/144 Hz monitor with vsync, results screen / cutscene camera cuts, 2P split screen.
+   iOS goes into the next release (Mac: 679d495, make_release.py --flavor ios; iPad races pending).
    Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
    answered). Android exit crashes fixed on `main` (c4cd92a). 32-bit Android: waits for the redditor's phone.
    Also: iOS release prep is the Mac's (end of notes/ios.md). OLED SD: `delete-me/` removed 2026-11-08.

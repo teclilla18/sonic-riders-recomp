@@ -817,3 +817,16 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   timer; FPS counter from the render thread (g_render_counts_fps). Tested: builds, 30 s intro at 120 [uncertain:
   no race yet].
 - Custom music (Discussion #17, reddit): answered for the user; planned for the release after next.
+
+## 2026-11-08, night (PC "Mike"): frame rate presets merged
+
+- P1 race at SR_FPS=120 (fps-interp): 2 pictures per VI field, race clock 8.3 s per 1000 pictures; consecutive
+  race frames change by a steady amount (no repeats or jumps); race start camera and HUD fine; >99% of draws
+  paired [confirmed, frames]. Start-dash double images are the game's own blur (same at 60) [confirmed].
+  Low FPS counter in dense screenshot runs = PNG saving, not the renderer.
+- Presets in F1 > Performance (PC only) and the launcher (`pc_fps` saved by both; 30 = FR_30, 60 = pc_fps 0).
+  Launcher SR_LAUNCHER_TEST "pc_fps=144" reached the game's renderer [confirmed]. Logs: measured rate in the
+  `[gl] in-between` line, `PC pictures` in `[settings]`.
+- Rates: 45 holds 45.0; unlimited at 4x+8x MSAA ~100-140/s, 2x+4x 250-350, 1x 400-1200 (RTX 3060) [confirmed]:
+  GPU-bound, the menu note says to lower resolution. Merged to main 4c5a2d4 with the Mac's iOS prep; a PC
+  check run after the merge was slowed by another GPU user [uncertain]. Not accepted by the user yet.
