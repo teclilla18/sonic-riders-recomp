@@ -678,3 +678,20 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   expected (wide mode too), 60 fps, same scene at step 5300, edges smoother at 4x+MSAA. Not tested [uncertain]:
   changing it live in the F1 menu (rescale path), 5x-6x, a weak GPU. Presenting a 4x+ EFB in a small window uses
   a plain linear blit (2:1 at most is clean; more could shimmer): a proper downscale filter may follow.
+
+## 2026-11-07, night (Mac): iOS first boot on the iPhone
+
+- Setup on the Mac from the user's disc image (copy in baserom/, Redump GXEE8P rev 0 verified; the first image in
+  Downloads was Sonic Free Riders for Xbox 360). Recompiled 5208 functions; `configure.py --target ios` + ninja.
+- Signing: no certificate until the user picked the Personal Team once in the generated Xcode project [confirmed].
+- Link failed on EAGL/GL symbols from SDL2's UIKit code: link OpenGLES [confirmed].
+- First launch: SIGTRAP in UIKit before main (found in the device's systemCrashLogs .ips): iOS 27 requires the
+  UIScene life cycle. Fix: scene manifest in Info.plist + `ios_scene.m` puts SDL's window on the scene [confirmed:
+  boots, intro movie, title screen after a scripted START, 60 fps, A19 Pro GPU via MoltenVK].
+- Screenshots looked grey and skewed: BMP rows were not padded to 4 bytes (width 874); fixed in render_vk.c for
+  every target [confirmed on iOS; Android/Switch widths were already multiples of 4].
+- User: touch controls looked jagged. The swapchain was in points (874x402) stretched 3x; `SDL_WINDOW_ALLOW_HIGHDPI`
+  on iOS gives 2622x1206 [confirmed by capture; the user has not looked at the new build yet]. 
+- App icon from the user's fan-art PNG through `--icon` (local only, not committed).
+- Unproven [uncertain]: touch and pad play, a race, background/resume, iPad, perf in a race, 7-day reinstall.
+

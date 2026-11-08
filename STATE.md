@@ -1,4 +1,4 @@
-# State (2026-11-07, night)
+# State (2026-11-07, late night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -8,14 +8,18 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 use specialized shaders (tracked `config/GXEE8P/shader_keys.txt`; OLED handheld 1785/614/2133: 59.9 fps). Only the
 latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run v0.5.3.
 
-**Next session: iOS, on the Mac** (user's Mac: M1 Pro, macOS Golden Gate 27.2, latest Xcode; iPhone 17 Pro on
-iOS 27.0; free Apple account). No iOS notes in docs yet: start with a research note (docs/notes/ios.md).
+**iOS: first boot done 2026-11-07** (Mac session; notes/ios.md). iPhone 17 Pro, iOS 27.0, free Apple account:
+intro movie + title screen at 60 fps, 2622x1206 (high-DPI), log/screenshots pulled [confirmed, scripted START].
+Fixes: UIScene for iOS 27 (`platform/ios/ios_scene.m`), OpenGLES link, high-DPI window, BMP row padding. Next on
+iOS: the user plays with touch (sharpness after the high-DPI fix), a pad, a 1-lap race, background/resume, iPad.
+Fan-art app icon via local `--icon` only (never committed).
 
-**Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Banner (user's fan art) committed;
-PLAY/Stop + settings round trip with the F1 menu [confirmed, PC, scripted]; button remapping (saves\controls.ini,
-Controls page) [file path confirmed; real presses in a race untested]; drawn icon; make_release.py puts the exe in
-the PC zip; cold Windows Sandbox install through the launcher PASS. Not done: accepted by the user (play with it),
-Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
+**Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
+1x-6x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
+
+**Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Button remapping **accepted**
+(2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Banner origin to check
+(fan art needs the artist's permission; HISTORY 2026-11-07 late). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
 remapping, screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop fix. OLED on v0.5.3 (dev
 build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
@@ -32,17 +36,9 @@ Consoles: OLED (switch-remote, 10.0.0.44) + two more Switch SD cards have v0.5.3
 - Linux build compiles and runs in WSL (llvmpipe) [not on a Deck]. Race tests: use 1 lap (stage select options).
 - Switch "Save screenshot" captured the menu (FPS counter on): fixed on `main` 2026-11-07, tested on the OLED.
 
-## Steam Deck / Linux (gbatemp #19/#20; in v0.5.1 as a test zip)
+Steam Deck / Linux (#19/#20): gamescope fullscreen defaults, Chaos Emerald option, bug-report zip; untested on a Deck.
 
-- Done on `main`, untested on a Deck: under gamescope / SteamDeck=1 the window opens at the screen size and a
-  first run defaults to fullscreen + Fit window; Chaos Emerald option off by default with clear text (Shop, 0
-  rings); "Save a bug report" zip (F1 > About; tested on Windows; Linux build not compiled this session).
-
-## Plans (docs/notes/plans-2026-11.md)
-
-Look-back camera (no public code found; plans A render-only / B camera writer), nitrous-style hold-B boost
-option, a windowed launcher (SwitchWakerHD's Avalonia installer studied; MPL-2.0), building on Linux/Deck and
-Android, custom icons per device (PC/Android/Switch HOME yes; .nro and Linux not yet). Tag Force Recomp ideas (plugin mods, HD textures).
+Plans: docs/notes/plans-2026-11.md (look-back camera, hold-B boost option, icons per device, HD textures).
 
 ## Windows host build (the fast test loop)
 
@@ -81,7 +77,7 @@ Last hardware test: 2026-11-07 afternoon (OLED handheld 1785/614/2133, switch-re
 ## Wish list / paused
 
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
-PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is next (user; Mac now on Golden Gate 27.2 + latest Xcode).
+PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
 
@@ -96,8 +92,8 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md); iOS is nex
 
 ## Open items, in priority order
 
-1. **iOS** (next session, on the Mac), then **online play** (above). Launcher: the user tries it (remapping with
-   real keys/pad); release when they accept it (cold Sandbox PC + Android before any release).
+1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
+   Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
    user before posting on #14 (draft: ask for a v0.5.3 log; their v0.4.2 log had 0 fast shaders).
 2. **Right-stick camera / look back** (user request 2026-11-06): research how Tournament Edition (or a mod) does

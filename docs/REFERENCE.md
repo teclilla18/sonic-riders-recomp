@@ -17,7 +17,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/plans-2026-11.md](notes/plans-2026-11.md) | Plan | look-back camera, nitrous-style boost toggle, windowed launcher, building on Linux/Deck/Android, custom icons per device |
 | [notes/boost-effect.md](notes/boost-effect.md) | Plan | NFS-style boost camera (FOV kick, pull-back, edge radial blur) at boost levels 2/3; research on speed cues; steps |
 | [notes/ps4-ps5-research.md](notes/ps4-ps5-research.md) | Investigation | PS4/PS5 homebrew scene (2026-11-03): jailbreak firmware, PS5 RADV Vulkan driver, recomp ports, suggested order |
-| [notes/ios.md](notes/ios.md) | Draft | iOS port plan (2026-11-07): SDL2 host layer + Vulkan renderer on MoltenVK, `<threads.h>` shim, free-account signing (7 days), Documents folder for disc/saves/log, touch + pads, steps |
+| [notes/ios.md](notes/ios.md) | Current | iOS port (first boot 2026-11-07; build/test commands at the end): SDL2 host layer + Vulkan renderer on MoltenVK, `<threads.h>` shim, free-account signing (7 days), Documents folder for disc/saves/log, touch + pads, steps |
 | [notes/vita-research.md](notes/vita-research.md) | Investigation | PS Vita scene (2026-11-03): HENlo/Enso, VitaSDK, vitaGL/GXM, Vita recomp ports, CPU estimate, remote control (vitacompanion), probe build |
 | [archive/recon-2026-10.md](archive/recon-2026-10.md) | Historical | first recon, the superseded matching-decomp plan, original debugging and Eden notes, recon-era open questions |
 | [archive/history-2026-10-16_to_25.md](archive/history-2026-10-16_to_25.md) | Historical | HISTORY entries 2026-10-16 to 2026-10-25 |

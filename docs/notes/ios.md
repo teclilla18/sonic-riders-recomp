@@ -1,7 +1,8 @@
 # iOS port: research and plan (2026-11-07)
 
-Status: **research only, nothing implemented.** Draft until the first build boots; then this becomes the
-Reference note for building and testing on iOS (like notes/android.md).
+Status (2026-11-07): **first boot done**: iPhone 17 Pro, iOS 27.0, free account: intro movie and title screen at
+60 fps, sound mixing, log and screenshots pulled [confirmed, scripted START]. Not yet: touch/pad play, a race,
+background/resume, iPad, the 7-day reinstall. Build/test commands and first-boot findings: end of this note.
 
 Target hardware for testing: an Apple-silicon Mac with current Xcode, an iPhone on iOS 27, a **free Apple account**
 (Personal Team). Facts below marked [checked] were checked on that Mac on 2026-11-07; the rest is from Apple /
@@ -119,3 +120,28 @@ thread affinity on iOS; the game, render and audio threads get `QOS_CLASS_USER_I
    for iOS from source.
 4. First boot: install, copy the image into Documents, launch with `--console`; goal = title screen, log readable.
 5. Then: pad + touch on the phone, a 1-lap race, frame rate, background/resume, 7-day reinstall check.
+
+## Build and test on the Mac (2026-11-07)
+
+- Setup by hand (no Mac setup script yet): copy the disc image to `baserom/` (a copy, never a link),
+  `python3 -I tools/extract_iso.py baserom/<image>.iso baserom`, `build/ext/dtk/dtk dol split config/GXEE8P/config.yml
+  build/GXEE8P`; `configure.py --target ios` recompiles into build/gen when it is empty.
+- Signing: a free account has no certificate until a team is picked once: open `build/ios/xcode/SonicRiders.xcodeproj`,
+  Signing & Capabilities, Team = Personal Team; then configure finds the team itself. First launch: unlock the phone,
+  Settings > General > VPN & Device Management > Trust.
+- `python3 configure.py --target ios [--icon <square.png>]`, `ninja`, `tools/ios_run.py install`, `push-iso` (once),
+  `run SR_INPUT=1500:START,1510:-START SR_SCREENSHOT=2200` (title screen), `pull sonicriders.log shot_2200.bmp`.
+- A crash before the log opens: `xcrun devicectl device info files --device <id> --domain-type systemCrashLogs`,
+  then `device copy from ... --domain-type systemCrashLogs --source SonicRiders-<date>.ips`.
+
+First-boot findings [confirmed on the iPhone]:
+- iOS 27 kills an app without the UIScene life cycle at launch (SIGTRAP in
+  `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). SDL2 has no scene code: Info.plist declares one
+  window scene and `platform/ios/ios_scene.m` (`ios_attach_window`) moves SDL's UIWindow onto it.
+- SDL2's UIKit video code needs the OpenGLES framework at link time (EAGL), even with Vulkan.
+- Without `SDL_WINDOW_ALLOW_HIGHDPI` the swapchain is in points (874x402) and iOS stretches it 3x: jagged touch
+  controls. With it: 2622x1206, still 60 fps on the title screen.
+- MoltenVK 1.4.2 reports "Apple A19 Pro GPU, Vulkan 1.3"; all 1167 states used specialized shaders in the intro.
+- Screenshot BMPs needed 4-byte row padding (874 * 3 is not a multiple of 4); fixed in render_vk.c for all targets.
+- Icon: `--icon <png>` (flattened onto blue, 1024x1024 asset catalog). Fan art stays local, never committed.
+
