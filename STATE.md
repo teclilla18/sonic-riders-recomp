@@ -4,9 +4,10 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.5.3 released 2026-11-07** (tag ef97b2d; Track Select fix in wide modes). v0.5.2 (8db1dc6) made release builds
-use specialized shaders (tracked `config/GXEE8P/shader_keys.txt`; OLED handheld 1785/614/2133: 59.9 fps). Only the
-latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run v0.5.3.
+**v0.6.0 released 2026-11-08** (tag at dbeda54; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS):
+Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
+bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
+Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
 
 **iOS (Mac session; notes/ios.md): plays on the iPhone 17 Pro** (iOS 27.0, free Apple account). Title screen and
 demo races at 60 fps, 2622x1206, touch + Xbox One pad, phone menu, leaving/returning [confirmed, user].

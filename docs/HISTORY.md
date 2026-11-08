@@ -762,3 +762,11 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - User asked for iOS in the next release. Not possible as a download (an .ipa holds recompiled code); it needs a
   Mac setup script + `--flavor ios` zip + a cold Mac test first: to-do written at the end of docs/notes/ios.md
   for the Mac session (it was offline). Release on hold until then.
+
+## 2026-11-08 (PC "Mike"): v0.6.0 released (iOS later)
+
+- User: release now, iOS later; kept the fan-art launcher banner (asked: first release with the launcher).
+  CHANGELOG v0.6.0 (iOS line: in progress, not in the release). Zips from dbeda548 (4); cold Windows Sandbox:
+  PC PASS (2 + 1 min), Android PASS (2 + 2 min) [confirmed]. Published v0.6.0 (tag at dbeda548, Latest), v0.5.3
+  release delisted (tag kept). Notes: build/release/notes-v0.6.0.md (from v0.5.3's, PC steps via the launcher).
+- Not done: consoles/phone still run v0.5.3 dev builds; the user hasn't re-checked bloom/colour/menu fixes.
