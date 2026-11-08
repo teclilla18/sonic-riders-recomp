@@ -699,3 +699,10 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   bug-report button on iOS yet. User: touch works, Fullscreen gone [confirmed, user]. Commit a5fc9c5.
 - Unproven [uncertain]: a full race on touch, background/resume, iPad, perf in a race, 7-day reinstall.
 
+
+## 2026-11-07, night (PC "Mike"): iOS merge checked on PC and Android
+
+- main 55896dc (iOS merge): PC build clean; det route to the title: frame identical to f42f30b except the FPS
+  counter [confirmed]. main 9d7953e (SR_PHONE rename, touch on iOS): Android APK on the S23 with SR_SHOTS + adb
+  taps: touch START, touch menu button open/close, phone menu without Fullscreen/resolution, a tapped option is
+  saved [confirmed]. Stale remote branch `ios` deleted (user's request; its content is on main).
