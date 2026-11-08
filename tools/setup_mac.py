@@ -230,7 +230,7 @@ def main():
         log("  2. On the device: Settings > General > VPN & Device Management > your Apple ID > Trust.")
         log("     (iOS 16 or newer also needs Settings > Privacy & Security > Developer Mode: on.)")
         log("  3. Copy your disc image to the app: in Finder click the device, Files tab, drag the .iso onto")
-        log("     Sonic Riders (a few minutes). The game asks for it on the first start if it is missing.")
+        log("     Sonic Riders, and wait until Finder has finished before opening the game.")
         log("  A free Apple ID's apps stop opening after 7 days: install the same .ipa again with Sideloadly.")
     log("Keep this folder: a new version is built from it again. Never share the .ipa or your disc image.")
 

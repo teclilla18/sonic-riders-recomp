@@ -64,8 +64,11 @@ class Tools:
             sys.exit("glslc not found: brew install shaderc")
         if not _run(["xcrun", "--sdk", SDK, "--show-sdk-path"]):
             sys.exit("the iOS SDK was not found: install Xcode and run xcode-select -s /Applications/Xcode.app")
-        # optional app icon: a square PNG (--icon; kept out of git unless it is your own art)
-        self.icon = os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else ""
+        # the app icon: your own square PNG (--icon; kept out of git unless it is your own art), else the game's
+        # memory card save icon from your disc (baserom/_Main.rel, like the PC and Android icons)
+        rel = os.path.join(root, "baserom", "_Main.rel")
+        self.icon = (os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else
+                     rel if not args.icon and os.path.isfile(rel) else "")
         self.ipa_dir = os.path.abspath(os.path.expanduser(args.ipa_dir)) if args.ipa_dir not in ("", "none") else ""
         self.team = "" if args.team == "none" else (args.team or find_team())
         print("ios: %s" % ("signed for Apple team %s" % self.team if self.team else
@@ -209,8 +212,15 @@ def write_xcode_project(t, out):
     if t.icon:
         # iOS app icons are opaque: one 1024 x 1024 picture, transparent parts filled (Xcode makes the sizes)
         tmp = os.path.join(xdir, "icon_1024_alpha.png")
-        subprocess.check_call(["sips", "-s", "format", "png", "-z", "1024", "1024", t.icon, "--out", tmp],
-                              stdout=subprocess.DEVNULL)
+        if t.icon.endswith(".rel"):  # the 32 x 32 save icon, enlarged 32x with sharp pixels
+            import make_icon
+            with open(t.icon, "rb") as f:
+                px = make_icon.decode_icon(f.read())
+            with open(tmp, "wb") as f:
+                f.write(make_icon.png(make_icon.scale(px, 32)))
+        else:
+            subprocess.check_call(["sips", "-s", "format", "png", "-z", "1024", "1024", t.icon, "--out", tmp],
+                                  stdout=subprocess.DEVNULL)
         flatten_png(tmp, os.path.join(icon_set, "icon_1024.png"), ICON_BACKGROUND)
         images = [{"filename": "icon_1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}]
     import json

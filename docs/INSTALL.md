@@ -203,12 +203,18 @@ iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
 4. **Straight from the Mac:** the setup installs the app and copies your disc image to the device (a few
    minutes). **With Sideloadly:** install `~/Desktop/Sonic Riders iOS/SonicRiders.ipa` with your Apple ID,
    then copy your disc image into the app: Finder → your device → *Files* tab → drag the `.iso` onto
-   **Sonic Riders**. (The game tells you if the image is missing.)
+   **Sonic Riders**, and wait until Finder has finished copying before opening the game (it tells you if
+   the image is missing or incomplete).
 5. **First start:** if iOS says *Untrusted Developer*, open *Settings* → *General* → *VPN & Device
    Management*, tap your Apple ID and tap *Trust*.
 
 **Every 7 days** (free Apple ID): the app stops opening until it is installed again. Install the same
 `.ipa` with Sideloadly, or run the installer again; your saves and the disc image stay on the device.
+(Sideloadly gives the app its own ID the first time, a separate app with an empty folder: copy the disc
+image into that one once. Later reinstalls keep it.)
+
+**A free Apple ID allows 3 sideloaded apps per device.** If the install fails with "maximum number of
+installed apps", remove another sideloaded app first.
 
 **Playing:** touch controls on screen (the round button at the top left opens the settings menu, START
 pauses), or a game controller (Xbox, PlayStation, MFi). Locking the device or opening Control Center
