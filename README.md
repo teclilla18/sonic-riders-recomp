@@ -1,7 +1,7 @@
 # Sonic Riders native port
 
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
-**Windows PC**, an **Android phone**, or **Linux / Steam Deck** (new, untested on a Deck). The game is rebuilt on your own PC from **your own disc image**; this project contains
+**Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
 > [!IMPORTANT]
@@ -18,11 +18,12 @@ no game files.
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
 | **Linux** or a **Steam Deck** (new, test version) | `SonicRiders-Linux-Setup-<version>.zip` from the [Linux test pre-release](../../releases/tag/v0.5.0-linux-test) | [Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck) |
+| an **iPhone** or **iPad** (new; built on a Mac) | `SonicRiders-iOS-Setup-<version>.zip` | [Install on iPhone / iPad](docs/INSTALL.md#install-on-iphone--ipad) |
 
 **In short:** extract the zip, double-click the `Install Sonic Riders` file, pick your disc image, and
 wait 10–30 minutes the first time (Android: 20–40, then it installs over a USB cable). Every version is
 built on a Windows 10/11 PC, except Linux / Steam Deck, which builds on the Linux machine itself
-(no compiler or root rights needed).
+(no compiler or root rights needed), and iPhone / iPad, which builds on a Mac with Xcode.
 
 **You need:** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full 1.4 GB `.iso`) and a
 64-bit Windows 10 (1803+) or 11 PC with internet the first time. Switch: custom firmware with the
@@ -52,6 +53,8 @@ Playable from boot to races, story mode and 4-player Free Race, with sound, on b
   **Screen recording is not supported on Android:** recording the screen during a race makes the phone's
   graphics driver reset the game again and again until it closes. Record with a capture card or play
   without recording.
+- **iPhone / iPad (new):** 60 fps races on an iPhone 17 Pro; the iPad 7th generation (2019) plays with small
+  dips on busy tracks. iPad Pro 11" (M1) and iPad (A16): menus at 60 fps, races not yet measured.
 - **Switch (overclocked):** 1–2 players mostly 60 fps; 3 players mostly 60 with dips in the busiest
   moments; 4 players about 30 fps.
 - Known issues are tracked in [Issues](../../issues); what changed in each version is in the

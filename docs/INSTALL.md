@@ -7,6 +7,7 @@
 - [Install on PC](#install-on-pc)
 - [Install on Android](#install-on-android)
 - [Install on Linux / Steam Deck](#install-on-linux--steam-deck)
+- [Install on iPhone / iPad](#install-on-iphone--ipad)
 - [Updating to a new version](#updating-to-a-new-version)
 - [If something goes wrong](#if-something-goes-wrong)
 - [What the setup does](#what-the-setup-does)
@@ -175,6 +176,44 @@ on a very warm phone) is survived after the next update: the game pauses for abo
 
 The game's log is `sonicriders.log` in the install folder (attach it to bug reports); the setup's log is
 `setup.log`. The downloaded tools are kept in `~/.local/share/SonicRidersSetup/tools` for updates.
+
+## Install on iPhone / iPad
+
+The iPhone/iPad app is built on **a Mac** from your disc image (an app with the game in it can't be
+shared, so there is no ready-made download). Tested: races at 60 fps on an iPhone 17 Pro; the iPad 7th
+generation (2019) plays with small dips on busy tracks; iPad Pro 11-inch (M1) and iPad (A16) start and
+run the menus at 60 fps (races not yet measured).
+
+**You need:** an **Apple silicon Mac** (M1 or newer) with **Xcode** (App Store, free, about 10 GB; open
+it once and add iOS when it asks), **Homebrew** ([brew.sh](https://brew.sh); the setup installs `ninja`
+and `shaderc` with it), about 6 GB free, internet the first time, a cable for the device, and an
+iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
+
+1. **Download** `SonicRiders-iOS-Setup-<version>.zip` and **extract** it to a folder **you'll keep**,
+   with **no spaces** in its path, for example `~/SonicRiders` (drag the extracted folder into your home
+   folder in Finder and rename it).
+2. **Choose how to install:**
+   - **Straight from the Mac (recommended):** add your Apple ID in Xcode → *Settings* → *Accounts* →
+     **+**. Connect the iPhone/iPad with the cable, unlock it and tap *Trust*. Turn on *Settings* →
+     *Privacy & Security* → **Developer Mode** on the device (it restarts).
+   - **With Sideloadly or AltStore:** skip this step; the setup makes an `.ipa` for them.
+3. **Double-click `Install Sonic Riders (iOS).command`.** If macOS says it can't be opened, open
+   Terminal, type `sh ` (with a space), drag the `.command` file into the window and press Return.
+   Pick your disc image and wait 15–30 minutes the first time.
+4. **Straight from the Mac:** the setup installs the app and copies your disc image to the device (a few
+   minutes). **With Sideloadly:** install `~/Desktop/Sonic Riders iOS/SonicRiders.ipa` with your Apple ID,
+   then copy your disc image into the app: Finder → your device → *Files* tab → drag the `.iso` onto
+   **Sonic Riders**. (The game tells you if the image is missing.)
+5. **First start:** if iOS says *Untrusted Developer*, open *Settings* → *General* → *VPN & Device
+   Management*, tap your Apple ID and tap *Trust*.
+
+**Every 7 days** (free Apple ID): the app stops opening until it is installed again. Install the same
+`.ipa` with Sideloadly, or run the installer again; your saves and the disc image stay on the device.
+
+**Playing:** touch controls on screen (the round button at the top left opens the settings menu, START
+pauses), or a game controller (Xbox, PlayStation, MFi). Locking the device or opening Control Center
+pauses the game. The game's log is `sonicriders.log` in the app's folder (Files app → *On My iPhone* →
+*Sonic Riders*); the setup's log is `setup.log` in the install folder.
 
 ## Updating to a new version
 
