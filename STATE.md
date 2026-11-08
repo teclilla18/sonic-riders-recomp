@@ -93,10 +93,14 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **Android crashes at app exit: fixed on `main`, unreleased** (HISTORY 2026-11-08 later): null window in
-   `swap_recreate` (reproduced, 5 clean closes after the fix) and the menu mutex destroyed at exit (not reproduced).
-   32-bit Android: waiting for the redditor's phone model (user); no build yet.
-   Also: iOS release prep is the Mac's (end of notes/ios.md). OLED SD: `delete-me/` removed 2026-11-08 (saves kept).
+0. **PC frame rate presets (user priority, 2026-11-08)**: 30, 45, 60, 120, 144 (user wrote 145), 180, 240,
+   unlimited. WIP on branch `fps-interp` (20ed97c): render_gl.c draws in-between pictures (matrices + projection
+   of paired draws blended between the last two game pictures), setting `pc_fps` / `SR_FPS`. Builds; 30 s at
+   SR_FPS=120 through the intro only. Next: race screenshots at 120 (P1 route, tools/net_route_2p.py p1),
+   camera cuts, F1 > Performance presets (30 = FR_30, 60 = pc_fps 0), launcher, then merge.
+   Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
+   answered). Android exit crashes fixed on `main` (c4cd92a). 32-bit Android: waits for the redditor's phone.
+   Also: iOS release prep is the Mac's (end of notes/ios.md). OLED SD: `delete-me/` removed 2026-11-08.
 1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the

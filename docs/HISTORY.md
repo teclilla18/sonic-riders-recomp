@@ -803,3 +803,17 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - 32-bit Android (redditor request): looked at, not built (user waits for the phone model). Needed: an
   armeabi-v7a ABI in android_build.py/configure.py, a 32-bit SDL, a 512 MB guest window reservation that may not
   fit, crash-handler registers; no 32-bit test device (the S23 cannot run 32-bit apps).
+
+## 2026-11-08, evening (PC "Mike"): bloom only in races; frame rate work started
+
+- Bloom made character select almost white (user). Each frame now carries `in_race` (top mode = race); the
+  GL post pass uses bloom 0 otherwise, grading stays. P1 route with SR_BLOOM=100: Player Entry normal [confirmed,
+  frames]. Pushed 016497b. User likes the race bloom and stronger presets.
+- Frame rate presets (user: 30, 45, 60, 120, 145, 180, 240, unlimited; 145 taken as 144). The game's physics are
+  60 steps/s (its 30 fps mode = 2 steps per drawn picture), so above 60 needs in-between pictures. WIP branch
+  `fps-interp`: pool of 4 frames, A and B held; draws paired by (prim, count, textures, position-matrix mask);
+  paired matrices (12 words + normal 9) and projection lerped; rotation jump > 0.35 keeps B; vertices uploaded
+  once per game picture; retire() when a frame is given back; vsync only when display Hz = target, otherwise a
+  timer; FPS counter from the render thread (g_render_counts_fps). Tested: builds, 30 s intro at 120 [uncertain:
+  no race yet].
+- Custom music (Discussion #17, reddit): answered for the user; planned for the release after next.
