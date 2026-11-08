@@ -723,3 +723,15 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - User tried the PC build: above 4x the frame rate fell apart (their saved MSAA was 8x). Slider capped at 4x (4x =
   2112 lines, about a 4K screen's height; more was supersampling through a plain linear blit); a saved 5-6 loads
   as 4 [confirmed: SR_SCALE=6 run logs 4x].
+
+## 2026-11-07, night (PC "Mike"): bloom and colour grading on PC
+
+- render_gl.c `post_process`: after the last 3D (XF 0x26 = 0, perspective) draw before each XFB copy, the EFB is
+  copied, bright parts (max channel above 0.5, soft knee) taken from a mip level, blurred (9-tap Gaussian, two
+  rounds) at 1/4 and 1/8 of native size, screen-blended back, then graded (exposure, contrast, saturation,
+  warmth); EFB alpha kept. HUD/menus drawn after it are untouched; frames without 3D (title) unchanged.
+  Settings `bloom`, `grade_*`; F1 > Display Bloom + Colour presets (PC only); `SR_BLOOM` / `SR_GRADE` for tests.
+- Tested [confirmed]: det route 1P race (5300) and 2P race (10500): bloom glow on bright track/windows, Vivid
+  stronger colours, HUD sharp; title frame identical except FPS counter; 60 fps. First strength (threshold 0.6,
+  mix 0.8) too faint, raised to 0.5 / 1.6. Not tested: the menu sliders live, MSAA + bloom together, a weak GPU,
+  story cutscenes. Not accepted by the user yet.

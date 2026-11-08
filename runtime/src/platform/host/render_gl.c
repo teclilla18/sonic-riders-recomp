@@ -57,7 +57,9 @@ static int wx(int x) { return (int)((float)x * g_wide_k + 0.5f) * EFB_SCALE; }  
     X(PFNGLBLENDFUNCSEPARATEPROC, glBlendFuncSeparate) X(PFNGLBLENDEQUATIONPROC, glBlendEquation)     X(PFNGLTEXBUFFERPROC, glTexBuffer) \
     X(PFNGLGENRENDERBUFFERSPROC, glGenRenderbuffers) X(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer) \
     X(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample) \
-    X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer)
+    X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer) \
+    X(PFNGLUNIFORM1FPROC, glUniform1f) X(PFNGLUNIFORM2FPROC, glUniform2f) X(PFNGLUNIFORM4FPROC, glUniform4f) \
+    X(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap)
 #define DECL(t, n) static t p_##n;
 GLFUNCS(DECL)
 #undef DECL
@@ -276,6 +278,10 @@ static void gl_setup(void) {
     const char* e;
     if ((e = getenv("SR_SCALE")) && *e) g_settings.pc_scale = atoi(e);  /* tests: internal resolution */
     if ((e = getenv("SR_MSAA")) && *e) g_settings.msaa = atoi(e);      /* tests: anti-aliasing samples */
+    if ((e = getenv("SR_BLOOM")) && *e) g_settings.bloom = atoi(e);    /* tests: bloom 0-100 */
+    if ((e = getenv("SR_GRADE")) && *e)                                 /* tests: brightness,contrast,saturation,warmth */
+        sscanf(e, "%d,%d,%d,%d", &g_settings.grade_bright, &g_settings.grade_contrast, &g_settings.grade_sat,
+               &g_settings.grade_warm);
     efb_config();
     efb_resize(1.0f);
     p_glGenFramebuffers(1, &g_copy_fbo);
@@ -550,6 +556,163 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     }
 }
 
+/* ---- bloom and colour grading (PC only; settings bloom / grade_*) ----
+ * Run on the EFB right after the last 3D (perspective) draw before each picture (XFB copy), so the HUD and
+ * menus drawn after it stay as the game drew them. Bloom: the bright parts of a small copy of the picture
+ * (a mip level: small highlights do not flicker), blurred at 1/4 and 1/8 of the native size (the same look at
+ * every internal resolution), mixed back as a screen blend. Grading: exposure, contrast, saturation, warmth.
+ * The EFB alpha is kept (the game blends with it later). */
+static const char k_post_vert[] =
+    "out vec2 v_uv;\n"
+    "void main() {\n"
+    "  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+    "  v_uv = p;\n"
+    "  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);\n"
+    "}\n";
+static const char k_post_bright[] =
+    "in vec2 v_uv; out vec4 o; uniform sampler2D u_tex; uniform float u_lod;\n"
+    "void main() {\n"
+    "  vec3 c = textureLod(u_tex, v_uv, u_lod).rgb;\n"
+    "  float k = clamp((max(c.r, max(c.g, c.b)) - 0.5) / 0.5, 0.0, 1.0);\n"
+    "  o = vec4(c * k * k, 1.0);\n"
+    "}\n";
+static const char k_post_blur[] =  /* 9-tap Gaussian in 5 linear fetches */
+    "in vec2 v_uv; out vec4 o; uniform sampler2D u_tex; uniform vec2 u_dir;\n"
+    "void main() {\n"
+    "  vec3 c = texture(u_tex, v_uv).rgb * 0.2270270;\n"
+    "  c += (texture(u_tex, v_uv + u_dir * 1.3846154).rgb + texture(u_tex, v_uv - u_dir * 1.3846154).rgb) * 0.3162162;\n"
+    "  c += (texture(u_tex, v_uv + u_dir * 3.2307692).rgb + texture(u_tex, v_uv - u_dir * 3.2307692).rgb) * 0.0702703;\n"
+    "  o = vec4(c, 1.0);\n"
+    "}\n";
+static const char k_post_comp[] =
+    "in vec2 v_uv; out vec4 o;\n"
+    "uniform sampler2D u_scene, u_b0, u_b1; uniform float u_bloom; uniform vec4 u_grade;\n"
+    "void main() {\n"
+    "  vec4 s = textureLod(u_scene, v_uv, 0.0);\n"
+    "  vec3 b = clamp(u_bloom * (texture(u_b0, v_uv).rgb + texture(u_b1, v_uv).rgb), 0.0, 1.0);\n"
+    "  vec3 c = 1.0 - (1.0 - s.rgb) * (1.0 - b);\n"
+    "  c *= u_grade.x;\n"
+    "  c = (c - 0.5) * u_grade.y + 0.5;\n"
+    "  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));\n"
+    "  c = mix(vec3(l), c, u_grade.z);\n"
+    "  c *= vec3(1.0 + u_grade.w, 1.0, 1.0 - u_grade.w);\n"
+    "  o = vec4(clamp(c, 0.0, 1.0), s.a);\n"
+    "}\n";
+enum { PP_BRIGHT, PP_BLUR, PP_COMP, PP_N };
+static GLuint g_pp_prog[PP_N], g_pp_vao, g_scene_tex, g_scene_fbo, g_bl_tex[4], g_bl_fbo[4];
+static int g_scene_w, g_scene_h, g_bl_w[2], g_bl_h[2];
+
+static int post_wanted(void) {
+    return g_settings.bloom > 0 || g_settings.grade_bright != 0 || g_settings.grade_contrast != 100 ||
+           g_settings.grade_sat != 100 || g_settings.grade_warm != 0;
+}
+
+static void pp_target(GLuint tex, GLuint fbo, int w, int h, int mips) {
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    if (mips) p_glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mips ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    p_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+/* one full-target pass of program prog reading tex (unit 0) */
+static void pp_pass(int prog, GLuint tex, GLuint fbo, int w, int h, float dx, float dy) {
+    p_glUseProgram(g_pp_prog[prog]);
+    if (prog == PP_BLUR) p_glUniform2f(p_glGetUniformLocation(g_pp_prog[prog], "u_dir"), dx, dy);
+    p_glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, w, h);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+static void post_process(void) {
+    int w = efb_w(g_efb_k), h = EFB_H;
+    if (!g_pp_vao) {
+        static const char* const fs[PP_N] = {k_post_bright, k_post_blur, k_post_comp};
+        for (int i = 0; i < PP_N; i++) {
+            g_pp_prog[i] = p_glCreateProgram();
+            p_glAttachShader(g_pp_prog[i], compile(GL_VERTEX_SHADER, k_post_vert));
+            p_glAttachShader(g_pp_prog[i], compile(GL_FRAGMENT_SHADER, fs[i]));
+            p_glLinkProgram(g_pp_prog[i]);
+            GLint ok;
+            p_glGetProgramiv(g_pp_prog[i], GL_LINK_STATUS, &ok);
+            if (!ok) rt_fatal("post-process shader link error");
+            p_glUseProgram(g_pp_prog[i]);
+            p_glUniform1i(p_glGetUniformLocation(g_pp_prog[i], "u_tex"), 0);
+        }
+        p_glUseProgram(g_pp_prog[PP_COMP]);
+        p_glUniform1i(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_scene"), 0);
+        p_glUniform1i(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_b0"), 1);
+        p_glUniform1i(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_b1"), 2);
+        p_glGenVertexArrays(1, &g_pp_vao);
+        glGenTextures(1, &g_scene_tex);
+        p_glGenFramebuffers(1, &g_scene_fbo);
+        glGenTextures(4, g_bl_tex);
+        p_glGenFramebuffers(4, g_bl_fbo);
+    }
+    if (w != g_scene_w || h != g_scene_h) {
+        g_scene_w = w, g_scene_h = h;
+        pp_target(g_scene_tex, g_scene_fbo, w, h, 1);
+        for (int l = 0; l < 2; l++) {  /* 1/4 and 1/8 of the native 640 x k by 528 */
+            g_bl_w[l] = w / g_sc / (4 << l), g_bl_h[l] = h / g_sc / (4 << l);
+            pp_target(g_bl_tex[2 * l], g_bl_fbo[2 * l], g_bl_w[l], g_bl_h[l], 0);
+            pp_target(g_bl_tex[2 * l + 1], g_bl_fbo[2 * l + 1], g_bl_w[l], g_bl_h[l], 0);
+        }
+    }
+    efb_resolve();
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+    glColorMask(1, 1, 1, 1);
+    p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fbo);  /* the picture so far */
+    p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_scene_fbo);
+    p_glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    p_glBindVertexArray(g_pp_vao);
+    float bloom = (float)g_settings.bloom / 100.0f;
+    if (bloom > 0.0f) {
+        glBindTexture(GL_TEXTURE_2D, g_scene_tex);
+        p_glGenerateMipmap(GL_TEXTURE_2D);
+        p_glUseProgram(g_pp_prog[PP_BRIGHT]);
+        p_glUniform1f(p_glGetUniformLocation(g_pp_prog[PP_BRIGHT], "u_lod"), log2f((float)w / (float)g_bl_w[0]) - 1.0f);
+        pp_pass(PP_BRIGHT, g_scene_tex, g_bl_fbo[0], g_bl_w[0], g_bl_h[0], 0, 0);
+        for (int l = 0; l < 2; l++) {
+            GLuint* t = &g_bl_tex[2 * l];
+            GLuint* fb = &g_bl_fbo[2 * l];
+            if (l) pp_pass(PP_BLUR, g_bl_tex[0], fb[0], g_bl_w[1], g_bl_h[1], 0, 0);  /* the 1/8 level from the 1/4 */
+            for (int k = 0; k < 2; k++) {  /* two rounds: wider glow */
+                pp_pass(PP_BLUR, t[0], fb[1], g_bl_w[l], g_bl_h[l], 1.0f / (float)g_bl_w[l], 0);
+                pp_pass(PP_BLUR, t[1], fb[0], g_bl_w[l], g_bl_h[l], 0, 1.0f / (float)g_bl_h[l]);
+            }
+        }
+    }
+    p_glUseProgram(g_pp_prog[PP_COMP]);
+    p_glUniform1f(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_bloom"), bloom * 1.6f);
+    p_glUniform4f(p_glGetUniformLocation(g_pp_prog[PP_COMP], "u_grade"), exp2f((float)g_settings.grade_bright / 100.0f),
+                  (float)g_settings.grade_contrast / 100.0f, (float)g_settings.grade_sat / 100.0f,
+                  (float)g_settings.grade_warm / 50.0f * 0.08f);
+    p_glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, g_bl_tex[0]);
+    p_glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, g_bl_tex[2]);
+    p_glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_scene_tex);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
+    glViewport(0, 0, w, h);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    /* back to the game's state (the caller applies the draw state) */
+    p_glUseProgram(g_prog);
+    p_glBindVertexArray(g_vao);
+}
+
 static void execute(GxFrame* f) {
     g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
     efb_config();
@@ -606,7 +769,32 @@ static void execute(GxFrame* f) {
     int scanning = scan_k >= 0 && scan_k < 32;
     uint32_t draw_no = 0, skip_lo = scanning ? (uint32_t)(scan_k * g_scan_step) : 0, skip_hi = skip_lo + (uint32_t)g_scan_step;
     if (g_same_k >= 0) { scanning = 1; skip_lo = (uint32_t)(g_same_first + g_same_k * g_same_step); skip_hi = skip_lo + (uint32_t)g_same_step; }
+    /* bloom / grading (post_process): after the last 3D draw before each picture (XFB copy) */
+    static uint32_t* post_at;
+    static uint32_t post_cap;
+    uint32_t npost = 0, ipost = 0;
+    if (post_wanted()) {
+        int64_t last3d = -1;
+        uint32_t ureg = ~0u;
+        for (uint32_t i = 0; i < f->ncmds; i++) {
+            const GxCmd* c = &f->cmds[i];
+            if (c->type == GXC_STATE) ureg = c->a;
+            else if (c->type == GXC_DRAW && ureg < f->nunis && f->unis[ureg].xfr[0x26] == 0) last3d = i;
+            else if (c->type == GXC_COPY && c->copy[4]) {
+                if (last3d >= 0) {
+                    if (npost == post_cap) post_at = realloc(post_at, (post_cap = post_cap ? post_cap * 2 : 8) * sizeof *post_at);
+                    post_at[npost++] = (uint32_t)last3d;
+                }
+                last3d = -1;
+            }
+        }
+    }
     for (uint32_t i = 0; i < f->ncmds; i++) {
+        if (ipost < npost && i > post_at[ipost]) {
+            ipost++;
+            post_process();
+            if (cur) apply_state(cur);
+        }
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE:

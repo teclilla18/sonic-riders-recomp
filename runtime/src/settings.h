@@ -22,6 +22,12 @@ typedef struct Settings {
     int fov;            /* field of view in percent of the game's (FOV_MIN..FOV_MAX, 100 = original) */
     int pc_scale;       /* PC: internal resolution, 1-4 x 640x528 (2 = the old fixed 2x) */
     int msaa;           /* PC: anti-aliasing samples per pixel, 1 (off), 2, 4 or 8 */
+    /* PC: bloom and colour grading of the 3D picture (render_gl.c post_process; the HUD is drawn after it) */
+    int bloom;          /* glow strength in percent, 0 (off)..100 */
+    int grade_bright;   /* brightness -50..50 (0 = as is) */
+    int grade_contrast; /* contrast in percent, 50..150 (100 = as is) */
+    int grade_sat;      /* saturation in percent, 0..200 (100 = as is) */
+    int grade_warm;     /* warmth -50 (cooler, bluer)..50 (warmer, redder) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **PC: bloom and colour grading** in F1 > Display: a Bloom slider (soft glow around bright parts) and Colour
+  presets (Original, Vivid, Warm, Cool) with brightness, contrast, saturation and warmth sliders. Only the 3D
+  picture changes; the HUD and menus stay as drawn. Off by default.
 - **iOS (early, build it yourself on a Mac):** the game boots to the title screen on an iPhone 17 Pro (iOS 27)
   at 60 fps, signed with a free Apple account; touch controls and controllers work. Each build also leaves
   `SonicRiders.ipa` in a "Sonic Riders iOS" folder on the Desktop, ready to reinstall with Sideloadly or AltStore

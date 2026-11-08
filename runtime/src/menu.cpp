@@ -370,6 +370,41 @@ void tab_display() {
             settings_apply();
         }
     }
+    /* bloom and colour grading (render_gl.c post_process): the 3D picture only, the HUD stays as drawn */
+    auto slider = [](const char* id, int* v, int lo, int hi, const char* fmt, const char* tip) {
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
+        ImGui::SliderInt(id, v, lo, hi, fmt);
+        help(tip);
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
+    };
+    heading("Bloom");
+    slider("##bloom", &g_settings.bloom, 0, 100, g_settings.bloom ? "%d%%" : "Off",
+           "A soft glow around bright parts of the picture (sky, lights, boost). The HUD does not glow.");
+    heading("Colour");
+    {
+        struct Preset { const char* name; int bright, contrast, sat, warm; const char* tip; };
+        static const Preset presets[] = {
+            {"Original", 0, 100, 100, 0, "The game's own colours."},
+            {"Vivid", 0, 110, 130, 0, "Stronger colours and a little more contrast."},
+            {"Warm", 4, 105, 110, 25, "Sunnier, a little red-orange."},
+            {"Cool", 0, 105, 105, -25, "Crisper, a little blue."},
+        };
+        for (int i = 0; i < 4; i++) {
+            const Preset& p = presets[i];
+            int on = g_settings.grade_bright == p.bright && g_settings.grade_contrast == p.contrast &&
+                     g_settings.grade_sat == p.sat && g_settings.grade_warm == p.warm;
+            if (i) ImGui::SameLine();
+            if (radio(p.name, on, p.tip)) {
+                g_settings.grade_bright = p.bright, g_settings.grade_contrast = p.contrast;
+                g_settings.grade_sat = p.sat, g_settings.grade_warm = p.warm;
+                settings_apply();
+            }
+        }
+    }
+    slider("##gbright", &g_settings.grade_bright, -50, 50, "Brightness %+d", "Lighter or darker 3D picture.");
+    slider("##gcontrast", &g_settings.grade_contrast, 50, 150, "Contrast %d%%", "Difference between dark and light.");
+    slider("##gsat", &g_settings.grade_sat, 0, 200, "Saturation %d%%", "Colour strength; 0% is black and white.");
+    slider("##gwarm", &g_settings.grade_warm, -50, 50, "Warmth %+d", "Bluer (left) or redder (right).");
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
         settings_apply();
