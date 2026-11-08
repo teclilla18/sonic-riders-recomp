@@ -770,3 +770,15 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   PC PASS (2 + 1 min), Android PASS (2 + 2 min) [confirmed]. Published v0.6.0 (tag at dbeda548, Latest), v0.5.3
   release delisted (tag kept). Notes: build/release/notes-v0.6.0.md (from v0.5.3's, PC steps via the launcher).
 - Not done: consoles/phone still run v0.5.3 dev builds; the user hasn't re-checked bloom/colour/menu fixes.
+- Devices updated to main 77e7dc9 (= v0.6.0 + docs): OLED `/switch/sonicriders/sonicriders.nro` (previous kept as
+  `sonicriders.prev.nro`; not boot-tested on the console), S23 APK installed over the app (data kept; boots:
+  `[vk] ready`, touch layout). Switch folder cleaned at the user's request: old test .nro builds, RAM dumps,
+  test env files and the dettest folder moved to `/switch/sonicriders/delete-me/` (FTP delete not available to
+  the session; the user deletes it); small test data (recordings, logs, perftest json, shots, shader_keys) copied
+  to build/old/switch_backup_20261108/ first. Kept: nro, prev nro, ISO, saves/, settings.ini, SonicRiders.nsp, log.
+- **Open: Android abort at app exit** [confirmed once, S23]: the 9d7953e test build hit SIGABRT in
+  `std::mutex::lock` (libmain+18069F0, helper thread) at 2026-11-07 20:10:45 while exiting (exit status 0), so
+  the next start showed a "game crashed" report. Likely a thread locking a mutex already destroyed at exit
+  (static destructor order). Not symbolized (that build was replaced). Report saved:
+  build/android/run/v060/crash-report-9d7953e.txt. Next: reproduce (start, then leave/close the app), symbolize
+  with the NDK llvm-symbolizer on the same build, stop helper threads before exit.
