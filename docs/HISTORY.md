@@ -830,3 +830,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Rates: 45 holds 45.0; unlimited at 4x+8x MSAA ~100-140/s, 2x+4x 250-350, 1x 400-1200 (RTX 3060) [confirmed]:
   GPU-bound, the menu note says to lower resolution. Merged to main 7487ffb with the Mac's iOS prep; a PC
   check run after the merge was slowed by another GPU user [uncertain]. Not accepted by the user yet.
+
+- Hookshot (OoT Switch 2 -> PC, GPL-3.0) studied for ideas (user tip): notes/plans-2026-11.md "Ideas from
+  Hookshot". Ideas only, no code (we are MPL-2.0).
