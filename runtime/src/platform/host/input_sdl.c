@@ -267,7 +267,7 @@ void input_pump(void) {
     }
     update_gamepads();
     GcPad pads[PORTS];
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(SR_IOS)
     { void touch_apply(GcPad* p); touch_apply(&p); }  /* the touch controls (platform/android/touch_android.c) */
 #endif
     pads[0] = p;

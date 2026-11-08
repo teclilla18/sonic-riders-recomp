@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
     settings_load();
-#if !defined(__SWITCH__) && !defined(__ANDROID__)
+#if !defined(__SWITCH__) && !defined(__ANDROID__) && !defined(SR_IOS)
     if (getenv("SR_BUGREPORT")) {  /* test: the menu's "Save a bug report" at start-up */
         int platform_bug_report(char* name, size_t n);
         char name[64];

@@ -29,7 +29,11 @@ int mods_count(void);
 const char* mods_title(int i);
 int mods_enabled(int i);
 void mods_set_enabled(int i, int on);
-#if !defined(__SWITCH__) && !defined(__ANDROID__)
+/* phones (Android, iOS): always full screen, touch controls, no PC picture options */
+#if defined(__ANDROID__) || defined(SR_IOS)
+#define SR_PHONE 1
+#endif
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
 #define HAVE_BUG_REPORT 1
 int platform_bug_report(char* name, size_t n);  /* platform_host.c */
 void platform_open_game_folder(void);
@@ -343,7 +347,7 @@ void tab_display() {
         }
     }
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
-#elif !defined(__ANDROID__)  /* phones are always full screen */
+#elif !defined(SR_PHONE)  /* phones are always full screen */
     heading("Resolution");
     {
         char fmt[48];
@@ -414,7 +418,7 @@ void tab_controls() {
     heading("Buttons");
     note("A B X Y = A B X Y,  + = START,  ZL / ZR = L / R,  R = Z,  sticks = control stick and C-stick, "
          "D-pad = D-pad. A single Joy-Con held sideways works as a small controller.");
-#elif defined(__ANDROID__)
+#elif defined(SR_PHONE)
     heading("Touch screen");
     note("Left half: the control stick (it appears where your thumb lands). Right side: JUMP (A, hold to charge), "
          "BOOST (B), DRIFT (R, hold), TORNADO (L + R). Top right: START (pause). Top left: this menu. "
@@ -509,7 +513,7 @@ void tab_about() {
 void quit_row() {
     const float w_close = ImGui::CalcTextSize("Close").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::PushStyleColor(ImGuiCol_Text, kNote);
-#ifdef __ANDROID__
+#ifdef SR_PHONE
     ImGui::TextUnformatted("Tap to choose.   Controller: LB / RB tabs, A choose, B back");
 #else
     ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
