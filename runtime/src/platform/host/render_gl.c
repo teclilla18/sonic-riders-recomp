@@ -716,6 +716,20 @@ static void post_process(void) {
 
 static void execute(GxFrame* f) {
     g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
+    {   /* SR_SCALE_AT=<frame>:<scale>[:<msaa>]: change them at that presented frame, as the F1 menu does (tests) */
+        static int at = -1, sc, ms;
+        if (at == -1) {
+            const char* e = getenv("SR_SCALE_AT");
+            at = -2, ms = 0;
+            if (e && sscanf(e, "%d:%d:%d", &at, &sc, &ms) < 2) at = -2;
+        }
+        if (at >= 0 && g_presented >= (unsigned)at) {
+            g_settings.pc_scale = sc;
+            if (ms) g_settings.msaa = ms;
+            rt_log("[gl] SR_SCALE_AT: %dx, MSAA %d at frame %u", sc, g_settings.msaa, g_presented);
+            at = -2;
+        }
+    }
     efb_config();
     if (g_wide_k != g_efb_k) efb_resize(g_wide_k);
     p_glBindFramebuffer(GL_FRAMEBUFFER, DRAW_FBO);
