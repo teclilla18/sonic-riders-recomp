@@ -123,7 +123,17 @@ int main(int argc, char** argv) {
                 "On the device: Files app > On My iPhone (iPad) > Sonic Riders.", NULL);
             exit(0);
         }
+        /* opened while Finder was still copying it: the game hung at its first big read (2026-11-08) */
+        long long size = fseeko(f, 0, SEEK_END) == 0 ? (long long)ftello(f) : -1;
         fclose(f);
+        if (size >= 0 && size < 1459978240LL) {
+            rt_log("[ios] the disc image is only %lld bytes (a full one: 1459978240)", size);
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "The disc image is incomplete",
+                "Your disc image is smaller than a full Sonic Riders (USA) disc (1.4 GB).\n\n"
+                "If it is still being copied, wait until Finder has finished, then open the game again. Otherwise "
+                "copy a clean, full .iso again (not RVZ, CISO or a trimmed image).", NULL);
+            exit(0);
+        }
     }
 #endif
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
