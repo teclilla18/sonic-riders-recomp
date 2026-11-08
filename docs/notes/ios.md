@@ -143,5 +143,6 @@ First-boot findings [confirmed on the iPhone]:
   controls. With it: 2622x1206, still 60 fps on the title screen.
 - MoltenVK 1.4.2 reports "Apple A19 Pro GPU, Vulkan 1.3"; all 1167 states used specialized shaders in the intro.
 - Screenshot BMPs needed 4-byte row padding (874 * 3 is not a multiple of 4); fixed in render_vk.c for all targets.
+- Touch input and the phone menu share Android's code: `SR_IOS` next to `__ANDROID__` (input_sdl.c, menu.cpp `SR_PHONE`).
 - Icon: `--icon <png>` (flattened onto blue, 1024x1024 asset catalog). Fan art stays local, never committed.
 

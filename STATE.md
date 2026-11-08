@@ -10,8 +10,9 @@ latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run
 
 **iOS: first boot done 2026-11-07** (Mac session; notes/ios.md). iPhone 17 Pro, iOS 27.0, free Apple account:
 intro movie + title screen at 60 fps, 2622x1206 (high-DPI), log/screenshots pulled [confirmed, scripted START].
-Fixes: UIScene for iOS 27 (`platform/ios/ios_scene.m`), OpenGLES link, high-DPI window, BMP row padding. Next on
-iOS: the user plays with touch (sharpness after the high-DPI fix), a pad, a 1-lap race, background/resume, iPad.
+Fixes: UIScene for iOS 27 (`platform/ios/ios_scene.m`), OpenGLES link, high-DPI window, BMP row padding, touch
+input (was Android-only), phone menu (no Fullscreen). User: touch works, sharp buttons, Xbox One pad works
+[confirmed, user]. Next on iOS: a 1-lap race on touch, background/resume, iPad.
 Fan-art app icon via local `--icon` only (never committed).
 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
