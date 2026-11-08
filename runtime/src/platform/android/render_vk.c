@@ -1938,6 +1938,26 @@ void render_submit(GxFrame* f) {
 
 int render_poll_quit(void) { return g_quit; }
 
+#ifdef SR_IOS
+/* iOS refuses GPU work from an app in the background: MoltenVK then reports a lost device, and rebuilding it
+ * in the background crashed (vkCreateDevice -> ~MVKDevice). Android's SDL blocks the event pump while the app is
+ * paused; on iOS we do it here: finish the GPU work, then wait (main thread, UIKit keeps running) until the app
+ * is active again. The game thread stops by itself when no frame slot comes free. */
+static void ios_wait_in_background(int w, int h) {
+    if (g_dev) vkDeviceWaitIdle(g_dev);
+    rt_log("[ios] paused (in the background)");
+    SDL_Event e;
+    for (;;) {
+        if (!SDL_WaitEventTimeout(&e, 250)) continue;
+        touch_event(&e, w, h);  /* fingers lifted meanwhile */
+        if (e.type == SDL_QUIT || e.type == SDL_APP_TERMINATING) { g_quit = 1; return; }
+        if (e.type == SDL_APP_DIDENTERFOREGROUND) break;
+    }
+    rt_log("[ios] active again");
+    g_swap_bad = 1;
+}
+#endif
+
 static void pump(void) {
     SDL_Event e;
     int w = (int)g_ext.width, h = (int)g_ext.height;
@@ -1948,6 +1968,9 @@ static void pump(void) {
         case SDL_APP_WILLENTERBACKGROUND:
             rt_log("[android] going to the background");
             if (g_dev) pcache_save(1);
+#ifdef SR_IOS
+            ios_wait_in_background(w, h);
+#endif
             break;
         case SDL_APP_DIDENTERFOREGROUND:
             rt_log("[android] back in the foreground");

@@ -699,7 +699,14 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   bug-report button on iOS yet. User: touch works, Fullscreen gone [confirmed, user]. Commit a5fc9c5.
   Android check of the same change: PC session's entry below [confirmed].
 - Every iOS build now leaves `SonicRiders.ipa` in `~/Desktop/Sonic Riders iOS/` for Sideloadly (7e2ae1d).
-- Unproven [uncertain]: a full race on touch, background/resume, iPad, perf in a race, 7-day reinstall.
+- User: leaving the app reset it. Device crash logs: SIGSEGV in vkCreateDevice -> ~MVKDevice from
+  device_recover: the game kept submitting GPU work in the background, iOS refused it (device lost) and the
+  rebuild crashed. Android's SDL blocks the pump while paused; iOS's does not. Fix (render_vk.c,
+  `ios_wait_in_background`): on SDL_APP_WILLENTERBACKGROUND (will resign active) wait for the GPU, then wait for
+  SDL_APP_DIDENTERFOREGROUND. Tested [confirmed, scripted]: game running, devicectl opened Settings for 15 s and
+  the game again: "[ios] paused" / "active again", no device loss, demo race at 60 fps (5000+ draws/frame).
+  Not yet tried by the user with the home gesture.
+- Unproven [uncertain]: a full race on touch, iPad, 7-day reinstall.
 
 
 ## 2026-11-07, night (PC "Mike"): iOS merge checked on PC and Android
