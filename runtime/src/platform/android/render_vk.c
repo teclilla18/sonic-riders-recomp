@@ -1944,17 +1944,21 @@ int render_poll_quit(void) { return g_quit; }
  * paused; on iOS we do it here: finish the GPU work, then wait (main thread, UIKit keeps running) until the app
  * is active again. The game thread stops by itself when no frame slot comes free. */
 static void ios_wait_in_background(int w, int h) {
+    rt_host_pause(1);  /* the game itself stops too (it ran on unseen, with sound, under Control Center) */
+    platform_audio_pause(1);
     if (g_dev) vkDeviceWaitIdle(g_dev);
     rt_log("[ios] paused (in the background)");
     SDL_Event e;
     for (;;) {
         if (!SDL_WaitEventTimeout(&e, 250)) continue;
         touch_event(&e, w, h);  /* fingers lifted meanwhile */
-        if (e.type == SDL_QUIT || e.type == SDL_APP_TERMINATING) { g_quit = 1; return; }
+        if (e.type == SDL_QUIT || e.type == SDL_APP_TERMINATING) { g_quit = 1; break; }
         if (e.type == SDL_APP_DIDENTERFOREGROUND) break;
     }
     rt_log("[ios] active again");
     g_swap_bad = 1;
+    platform_audio_pause(0);
+    rt_host_pause(0);
 }
 #endif
 

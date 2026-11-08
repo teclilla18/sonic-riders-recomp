@@ -19,6 +19,8 @@ double platform_gpu_frame_ms(void);  /* GPU time of recent frames (Switch: times
 void platform_local_time(int* year, int* month, int* day, int* hour, int* minute, int* second);  /* local wall clock */
 uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times a frame) */
 void platform_sleep_ns(uint64_t ns);  /* a precise sleep (sub-millisecond) */
+void rt_host_pause(int on);  /* frame_pacing.c: hold the game thread at its next frame end (iOS background) */
+void platform_audio_pause(int on);  /* audio_sdl.c: stop the output and drop what is queued */
 #ifdef __ANDROID__
 void platform_game_step_work(uint64_t work_ns);  /* the game thread's work for one step (ADPF hint) */
 #endif

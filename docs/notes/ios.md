@@ -148,7 +148,9 @@ First-boot findings [confirmed on the iPhone]:
 - MoltenVK 1.4.2 reports "Apple A19 Pro GPU, Vulkan 1.3"; all 1167 states used specialized shaders in the intro.
 - Screenshot BMPs needed 4-byte row padding (874 * 3 is not a multiple of 4); fixed in render_vk.c for all targets.
 - Background: iOS refuses GPU work from a background app (MoltenVK: device lost; rebuilding then crashed). The
-  render loop waits in `ios_wait_in_background` from "will resign active" until active again. Test without
+  render loop waits in `ios_wait_in_background` from "will resign active" until active again, and holds the game
+  thread (`rt_host_pause`, at frame end) and the audio output (`platform_audio_pause`): Control Center only makes
+  the app inactive, so without that the race and music ran on unseen. Test without
   touching the phone: `xcrun devicectl device process launch --device <id> com.apple.Preferences`, then launch the
   game's bundle ID again (no --terminate-existing).
 - Touch input and the phone menu share Android's code: `SR_IOS` next to `__ANDROID__` (input_sdl.c, menu.cpp `SR_PHONE`).

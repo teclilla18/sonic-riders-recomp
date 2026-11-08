@@ -30,3 +30,9 @@ void platform_audio_push(const int16_t* lr, unsigned frames) {
     if (SDL_GetQueuedAudioSize(g_dev) > 32000 * 4 * 120 / 1000) SDL_ClearQueuedAudio(g_dev);
     SDL_QueueAudio(g_dev, lr, frames * 4);
 }
+
+void platform_audio_pause(int on) {
+    if (!g_dev) return;
+    if (on) SDL_ClearQueuedAudio(g_dev);
+    SDL_PauseAudioDevice(g_dev, on);
+}

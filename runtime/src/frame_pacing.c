@@ -373,8 +373,14 @@ static void poke_at(void) {
     }
 }
 
+/* the host pauses the game (iOS: Control Center, a call, the app leaving the screen): the game thread waits at
+ * its next frame end, so the race, music and timers stop together. Set from the render loop. */
+static volatile int g_host_pause;
+void rt_host_pause(int on) { g_host_pause = on; }
+
 static void frame_end_body(Cpu* c);
 void hle_frame_end(Cpu* c) {
+    while (g_host_pause) platform_sleep_ns(10000000);
     void perftest_frame_begin(void); void perftest_frame_done(void);
     perftest_frame_begin();  /* SR_PERFTEST (perftest.c): the game's work per step */
 #ifdef __ANDROID__

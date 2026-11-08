@@ -705,7 +705,12 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   `ios_wait_in_background`): on SDL_APP_WILLENTERBACKGROUND (will resign active) wait for the GPU, then wait for
   SDL_APP_DIDENTERFOREGROUND. Tested [confirmed, scripted]: game running, devicectl opened Settings for 15 s and
   the game again: "[ios] paused" / "active again", no device loss, demo race at 60 fps (5000+ draws/frame).
-  Not yet tried by the user with the home gesture.
+  User: resume works [confirmed, user]; but under Control Center the sound went on. Log: during the wait the
+  game core kept running (AX frames +1432 over a pause vs ~400 per normal interval; only drawing stopped), as
+  Control Center makes the app inactive, not suspended. Fix: `rt_host_pause()` (frame_pacing.c) holds the game
+  thread at its next frame end, `platform_audio_pause()` (audio_sdl.c) stops and empties the output; both from
+  `ios_wait_in_background`. Tested [confirmed, scripted Settings switch]: AX +404 across the pause, 60 fps after.
+  Control Center itself: not yet re-tried by the user.
 - Unproven [uncertain]: a full race on touch, iPad, 7-day reinstall.
 
 

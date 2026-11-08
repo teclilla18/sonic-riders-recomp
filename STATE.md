@@ -12,7 +12,8 @@ latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run
 intro movie + title screen at 60 fps, 2622x1206 (high-DPI), log/screenshots pulled [confirmed, scripted START].
 Fixes: UIScene for iOS 27 (`platform/ios/ios_scene.m`), OpenGLES link, high-DPI window, BMP row padding, touch
 input (was Android-only), phone menu (no Fullscreen). User: touch works, sharp buttons, Xbox One pad works
-[confirmed, user]. Background/resume crash fixed (wait in the background) [confirmed, scripted app switch].
+[confirmed, user]. Background/resume: no crash [confirmed, user]; the game and its sound now pause while inactive (Control
+Center) [confirmed, scripted; user re-test pending].
 Next on iOS: a 1-lap race on touch, iPad.
 Fan-art app icon via local `--icon` only (never committed).
 
