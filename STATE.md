@@ -93,7 +93,7 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **PC frame rate presets: implemented and merged to `main`** (4c5a2d4, 2026-11-08): F1 > Performance and the
+0. **PC frame rate presets: implemented and merged to `main`** (7487ffb, 2026-11-08): F1 > Performance and the
    launcher offer 30 (FR_30), 45, 60 (pc_fps 0), 120, 144, 180, 240, unlimited. Tested on PC (RTX 3060, 4x + 8x
    MSAA): P1 race at 120 by frames (steady motion, HUD clean, race-start camera fine), >99% draws paired; 45 holds
    45.0/s; unlimited ~100-140/s at 4x+8x MSAA, 250-350 at 2x+4x, 400-1200 at 1x (GPU-bound: each in-between
