@@ -427,8 +427,45 @@ void tab_display() {
 #endif
 }
 
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
+/* PC: frame rate presets. 30 = the game's 30 fps mode, 60 = the game's own pacing, the others draw in-between
+ * pictures (render_gl.c; the game itself always runs 60 steps a second) */
+static void pc_frame_rate() {
+    int cur = g_settings.framerate == FR_30 ? 30 : g_settings.pc_fps == 0 ? 60 : g_settings.pc_fps;
+    for (int i = 0; settings_pc_fps_presets[i]; i++) {
+        int v = settings_pc_fps_presets[i];
+        char label[32];
+        if (v == PC_FPS_UNLIMITED) snprintf(label, sizeof label, "Unlimited");
+        else snprintf(label, sizeof label, "%d fps", v);
+        const char* tip = v == 30   ? "Sonic Riders' own 30 fps mode, at full speed."
+                          : v == 60 ? "The game's own frame rate, as on the GameCube."
+                          : v == PC_FPS_UNLIMITED
+                              ? "As many pictures as the PC can draw, without vsync (the picture may tear)."
+                              : "The game still runs at 60 steps a second; the PC draws extra pictures in between "
+                                "for smoother motion. Vsync is used when the display runs at this rate.";
+        if (i % 4) ImGui::SameLine(0, 18);
+        if (radio(label, cur == v, tip)) {
+            if (v == 30) {
+                g_settings.framerate = FR_30;
+                g_settings.pc_fps = 0;
+            } else {
+                if (g_settings.framerate == FR_30) g_settings.framerate = FR_AUTO;
+                g_settings.pc_fps = v == 60 ? 0 : v;
+            }
+            settings_apply();
+        }
+    }
+    note("Above 60 fps the PC draws extra pictures between the game's own; a display that refreshes at least that "
+         "fast shows them. The game's speed and timing do not change. If the counter stays below the choice, lower the "
+         "resolution or anti-aliasing (Display).");
+}
+#endif
+
 void tab_performance() {
     heading("Frame rate");
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
+    pc_frame_rate();
+#else
     static const char* const tips[FR_MODES] = {
         "60 fps while the console keeps up. In scenes too busy for that it switches to a steady 30 fps at full "
         "speed, and back to 60 once the scene allows it.",
@@ -443,6 +480,7 @@ void tab_performance() {
         }
     }
     note("All three keep the game at its real speed. If Auto looks uneven, 60 fps or 30 fps is steadier.");
+#endif
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();

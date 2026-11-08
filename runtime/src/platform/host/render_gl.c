@@ -1383,14 +1383,15 @@ static void ip_round(int target) {
     g_ip_next = (period && g_ip_next + period > now ? g_ip_next : now) + period;
     g_ip_presents++;
     if (now - g_ip_fps_t0 >= 500000000ull) {
-        if (g_ip_fps_t0) overlay_set_fps((float)(g_ip_presents * 1e9 / (double)(now - g_ip_fps_t0)));
+        float rate = g_ip_fps_t0 ? (float)(g_ip_presents * 1e9 / (double)(now - g_ip_fps_t0)) : 0.0f;
+        if (g_ip_fps_t0) overlay_set_fps(rate);
         g_ip_presents = 0;
         g_ip_fps_t0 = now;
         static uint64_t last_log;
         if (now - last_log > 10000000000ull) {
             last_log = now;
-            rt_log("[gl] in-between pictures: target %d, %u of %u draws paired, %u matrix words, %u projections", target,
-                   g_ip_matched, g_ip_draws, g_ip_npairs / 2, g_ip_nupairs / 2);
+            rt_log("[gl] in-between pictures: target %d, %.1f/s, %u of %u draws paired, %u matrix words, %u projections",
+                   target, rate, g_ip_matched, g_ip_draws, g_ip_npairs / 2, g_ip_nupairs / 2);
         }
     }
 }

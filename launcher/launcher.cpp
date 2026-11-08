@@ -111,6 +111,7 @@ struct Settings {
     int show_fps = 0;
     int fullscreen = 0;
     int framerate = 1;    /* 0 60 fps, 1 auto, 2 30 fps */
+    int pc_fps = 0;       /* pictures per second with in-between pictures: 0 = the game's own, -1 = unlimited */
     int hud_stretch = 0;
     int fov = 100;        /* 80..130 percent */
     int chaos_emerald_shop = 0;
@@ -123,6 +124,7 @@ int* setting_ptr(const std::string& k) {
     if (k == "show_fps") return &g_set.show_fps;
     if (k == "fullscreen") return &g_set.fullscreen;
     if (k == "framerate") return &g_set.framerate;
+    if (k == "pc_fps") return &g_set.pc_fps;
     if (k == "hud_stretch") return &g_set.hud_stretch;
     if (k == "fov") return &g_set.fov;
     if (k == "chaos_emerald_shop") return &g_set.chaos_emerald_shop;
@@ -143,9 +145,9 @@ void settings_load() {
 void settings_save() {
     CreateDirectoryW(path(L"saves").c_str(), nullptr);
     char b[512];
-    snprintf(b, sizeof b, "screen=%d\nshow_fps=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhud_stretch=%d\nfov=%d\n",
-             g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.hud_stretch,
-             g_set.fov);
+    snprintf(b, sizeof b, "screen=%d\nshow_fps=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\npc_fps=%d\nhud_stretch=%d\nfov=%d\n",
+             g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.pc_fps,
+             g_set.hud_stretch, g_set.fov);
     std::string s = b;
     for (auto& kv : g_set.other) s += kv.first + "=" + kv.second + "\n";
     write_text(path(L"saves\\settings.ini"), s);
@@ -581,7 +583,30 @@ int g_page = P_PLAY;
 const char* kScreens[] = {"4:3 (original)", "16:9 widescreen", "Fit window (wide)"};
 int screen_to_idx(int s) { return s == 3 ? 2 : s == 1 ? 1 : 0; }
 int idx_to_screen(int i) { return i == 2 ? 3 : i; }
-const char* kFramerates[] = {"60 FPS", "Auto (60, or 30 when slow)", "30 FPS"};
+/* frame rate presets (runtime/src/settings.c settings_pc_fps_presets): 30 = the game's 30 fps mode, 60 = its own
+ * pacing, the others in-between pictures (pc_fps) */
+const char* kFramerates[] = {"30 FPS", "45 FPS", "60 FPS", "120 FPS", "144 FPS", "180 FPS", "240 FPS", "Unlimited"};
+const int kFpsValues[] = {30, 45, 60, 120, 144, 180, 240, -1};
+const int kNumFps = 8;
+int fps_to_idx() {
+    int v = g_set.framerate == 2 ? 30 : g_set.pc_fps == 0 ? 60 : g_set.pc_fps;
+    for (int i = 0; i < kNumFps; i++)
+        if (kFpsValues[i] == v) return i;
+    return 2;
+}
+void fps_selector(const char* id, float w) {
+    int i = fps_to_idx();
+    if (!selector(id, &i, kFramerates, kNumFps, w)) return;
+    int v = kFpsValues[i];
+    if (v == 30) {
+        g_set.framerate = 2;
+        g_set.pc_fps = 0;
+    } else {
+        if (g_set.framerate == 2) g_set.framerate = 1;
+        g_set.pc_fps = v == 60 ? 0 : v;
+    }
+    g_set_dirty = true;
+}
 const char* kWindow[] = {"Window", "Fullscreen borderless"};
 const char* kOnOff[] = {"Off", "On"};
 
@@ -611,7 +636,7 @@ void quick_settings(float w) {
     label("Window mode");
     if (selector("window", &g_set.fullscreen, kWindow, 2, w)) g_set_dirty = true;
     label("Frame rate");
-    if (selector("fr", &g_set.framerate, kFramerates, 3, w)) g_set_dirty = true;
+    fps_selector("fr", w);
     label("Frame counter");
     if (selector("fps", &g_set.show_fps, kOnOff, 2, w)) g_set_dirty = true;
 }
@@ -659,7 +684,7 @@ void page_play(float w) {
         check_line(true, g_ready.saves ? "Saves found (saves\\card_a.raw)" : "No saves yet (made when you first save)");
         check_line(!g_gpu_name.empty(), "Graphics card: " + (g_gpu_name.empty() ? std::string("unknown") : g_gpu_name));
         std::string sum = std::string(kScreens[screen_to_idx(g_set.screen)]) + "  \xC2\xB7  " + kWindow[g_set.fullscreen ? 1 : 0] +
-                          "  \xC2\xB7  " + (g_set.framerate == 2 ? "30 FPS" : g_set.framerate == 0 ? "60 FPS" : "Auto");
+                          "  \xC2\xB7  " + kFramerates[fps_to_idx()];
         check_line(true, sum);
     }
     ImGui::PopTextWrapPos();
@@ -689,8 +714,10 @@ void page_graphics(float w) {
     ImGui::Spacing();
     section("WINDOW AND FRAME RATE");
     if (selector("window2", &g_set.fullscreen, kWindow, 2, cw)) g_set_dirty = true;
-    if (selector("fr2", &g_set.framerate, kFramerates, 3, cw)) g_set_dirty = true;
-    note("Auto keeps 60 and drops to 30 at full game speed when a frame is too slow (weaker PCs). "
+    fps_selector("fr2", cw);
+    note("The game always runs at its own speed. Above 60 FPS the PC draws extra pictures between the game's own "
+         "for smoother motion (the monitor has to refresh that fast to show them; high rates may need a lower "
+         "resolution in the game's F1 menu). Unlimited turns vsync off. "
          "F11 or Alt+Enter switches fullscreen in the game.");
     bool fps = g_set.show_fps != 0;
     if (ImGui::Checkbox("Frame counter in the corner", &fps)) { g_set.show_fps = fps; g_set_dirty = true; }
@@ -1133,8 +1160,9 @@ void test_note(const char* fmt, ...) {
 }
 std::string settings_text() {
     char b[256];
-    snprintf(b, sizeof b, "screen=%d show_fps=%d chaos_emerald_shop=%d fullscreen=%d framerate=%d hud_stretch=%d fov=%d",
-             g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.hud_stretch,
+    snprintf(b, sizeof b, "screen=%d show_fps=%d chaos_emerald_shop=%d fullscreen=%d framerate=%d pc_fps=%d hud_stretch=%d fov=%d",
+             g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.pc_fps,
+             g_set.hud_stretch,
              g_set.fov);
     return b;
 }
