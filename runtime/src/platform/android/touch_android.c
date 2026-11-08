@@ -69,6 +69,9 @@ static void layout(int w, int h) {
 #endif
     float mx = 0.09f * U, by = H - g_lift;  /* by: the bottom edge the lower controls are placed from */
     float jx = W - mx - 0.15f * U, jy = by - 0.21f * U;
+#ifdef SR_IOS
+    jx -= 0.07f * U;  /* the right-hand buttons a little in from the edge (~4 mm; user, 2026-11-08) */
+#endif
     g_c[C_JUMP] = (Control){jx, jy, 0.12f * U, 1, B_A, {0.35f, 0.75f, 1.0f}};
     g_c[C_BOOST] = (Control){jx - 0.28f * U, by - 0.13f * U, 0.09f * U, 2, B_B, {1.0f, 0.70f, 0.25f}};
     g_c[C_DRIFT] = (Control){jx + 0.01f * U, jy - 0.28f * U, 0.09f * U, 3, B_R, {0.55f, 1.0f, 0.55f}};
