@@ -759,3 +759,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   bloom mix 0.72 (100% = the old 45%); presets about twice as strong (Vivid 118/160, Warm 8/110/120/45, Cool
   112/110/-45) and warmth twice as strong per step. Menu test [confirmed]: SR_INPUT M.DOWN through the Display
   tab: focus on lighting "Original" alone, no error. Not yet re-checked by the user.
+- User asked for iOS in the next release. Not possible as a download (an .ipa holds recompiled code); it needs a
+  Mac setup script + `--flavor ios` zip + a cold Mac test first: to-do written at the end of docs/notes/ios.md
+  for the Mac session (it was offline). Release on hold until then.

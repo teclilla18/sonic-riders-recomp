@@ -156,3 +156,11 @@ First-boot findings [confirmed on the iPhone]:
 - Touch input and the phone menu share Android's code: `SR_IOS` next to `__ANDROID__` (input_sdl.c, menu.cpp `SR_PHONE`).
 - Icon: `--icon <png>` (flattened onto blue, 1024x1024 asset catalog). Fan art stays local, never committed.
 
+
+## To do before iOS can be in a release (user request, 2026-11-07 late)
+
+The user wants iOS in the next release. No .ipa can be published, so a release needs: (1) a player-facing Mac
+setup script like `tools/setup_linux.py` (pinned tools from `setup/toolchain.json`, the player's disc image,
+build, local .ipa, Sideloadly/AltStore steps); (2) a `make_release.py --flavor ios` zip with an iOS
+README-FIRST; (3) a cold test on the Mac from that zip (fresh macOS user account if possible); (4) an iOS
+section in INSTALL.md / README. Then the PC session runs the cold Sandbox tests (PC + Android) and publishes.
