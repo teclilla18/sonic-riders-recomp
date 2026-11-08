@@ -43,7 +43,7 @@ ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-to
 ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
 ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAVA_HOME)")
 ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
-ap.add_argument("--team", default="", help="ios: Apple Team ID (default: from the Mac's Apple Development certificate)")
+ap.add_argument("--team", default="", help="ios: Apple Team ID (default: the Mac's Apple Development certificate, else the Apple ID in Xcode > Settings > Accounts); none = an unsigned .ipa for Sideloadly / AltStore")
 ap.add_argument("--ipa-dir", default="~/Desktop/Sonic Riders iOS",
                 help="ios: after each build copy SonicRiders.ipa here for Sideloadly/AltStore (default: a folder on the "
                 "Desktop; the copy before it is kept as SonicRiders-prev.ipa; 'none' = only build/ios/SonicRiders.ipa). "

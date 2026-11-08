@@ -40,7 +40,11 @@ def find_team():
         m = re.search(r"organizationalUnitName\s*=\s*([A-Z0-9]{10})", p.stdout)
         if m:
             return m.group(1)
-    return ""
+    # no certificate yet (a free account gets one on the first signed build): the team of an Apple ID added
+    # under Xcode > Settings > Accounts; xcodebuild -allowProvisioningUpdates then makes the certificate
+    m = re.search(r"teamID\s*=\s*\"?([A-Z0-9]{10})", _run(["defaults", "read", "com.apple.dt.Xcode",
+                                                            "IDEProvisioningTeamByIdentifier"]))
+    return m.group(1) if m else ""
 
 
 class Tools:
@@ -63,7 +67,9 @@ class Tools:
         # optional app icon: a square PNG (--icon; kept out of git unless it is your own art)
         self.icon = os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else ""
         self.ipa_dir = os.path.abspath(os.path.expanduser(args.ipa_dir)) if args.ipa_dir not in ("", "none") else ""
-        self.team = args.team or find_team()
+        self.team = "" if args.team == "none" else (args.team or find_team())
+        print("ios: %s" % ("signed for Apple team %s" % self.team if self.team else
+                           "no Apple team: an unsigned .ipa (Sideloadly / AltStore sign it with your Apple ID)"))
         # the bundle ID must be unique across Apple: a per-team suffix keeps it out of the repository
         self.bundle_id = args.bundle_id or ("net.srnative.sonicriders.t" + hashlib.sha1(self.team.encode()).hexdigest()[:8]
                                             if self.team else "net.srnative.sonicriders")
@@ -100,10 +106,12 @@ def add_build(n, t, objs, out, py):
 
     proj = write_xcode_project(t, out)
     app = out + "/xcode/build/Release-iphoneos/SonicRiders.app"
-    team = "DEVELOPMENT_TEAM=%s" % t.team if t.team else ""
-    n.rule("xcode_app", "xcodebuild -quiet -project %s -configuration Release -sdk %s -allowProvisioningUpdates "
-           "-allowProvisioningDeviceRegistration %s SYMROOT=%s/%s/xcode/build build"
-           % (proj, SDK, team, t.root, out), description="XCODE $out (link, bundle, sign)", pool="console")
+    # no Apple team on this Mac: an unsigned app; Sideloadly / AltStore sign the .ipa with the player's Apple ID
+    sign = ("-allowProvisioningUpdates -allowProvisioningDeviceRegistration DEVELOPMENT_TEAM=%s" % t.team if t.team
+            else "CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=")
+    n.rule("xcode_app", "xcodebuild -quiet -project %s -configuration Release -sdk %s %s SYMROOT=%s/%s/xcode/build build"
+           % (proj, SDK, sign, t.root, out), description="XCODE $out (link, bundle%s)" % (", sign" if t.team else ", unsigned"),
+           pool="console")
     n.build(app + "/SonicRiders", "xcode_app", [lib, t.sdl_lib()],
             implicit=[proj + "/project.pbxproj", out + "/xcode/Info.plist"] + ([t.rel(t.icon)] if t.icon else []))
     # the .ipa (Payload/SonicRiders.app zipped) for sideloading tools that re-sign it (Sideloadly, AltStore)

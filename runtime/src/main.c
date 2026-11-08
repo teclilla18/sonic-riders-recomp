@@ -1,4 +1,7 @@
 /* Entry point: sonicriders [path to the GXEE8P disc image] (default: platform_disc_path) */
+#ifdef SR_IOS
+#include <SDL.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,6 +111,21 @@ int main(int argc, char** argv) {
     }
 #endif
     { void netplay_init(void); netplay_init(); }  /* SR_RECORD / SR_REPLAY / SR_NET (they turn SR_DETCLOCK on) */
+#ifdef SR_IOS
+    if (argc <= 1) {  /* no image yet (a Sideloadly install starts empty): say where it goes, not just close */
+        FILE* f = fopen(disc, "rb");
+        if (!f) {
+            rt_log("[ios] no disc image in Documents or Documents/baserom");
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Sonic Riders needs your disc image",
+                "Copy your own Sonic Riders (USA) disc image (.iso, 1.4 GB) into this app's folder, then open the game again.\n\n"
+                "From a Mac: connect the device, open it in Finder, Files tab, and drag the .iso onto Sonic Riders.\n"
+                "From a PC: the same in iTunes or the Apple Devices app (File Sharing).\n"
+                "On the device: Files app > On My iPhone (iPad) > Sonic Riders.", NULL);
+            exit(0);
+        }
+        fclose(f);
+    }
+#endif
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
     load_game();
     cpu_init(&g_main_cpu);

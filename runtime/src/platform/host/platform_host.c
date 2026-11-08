@@ -320,15 +320,26 @@ const char* platform_disc_path(void) {
         FindClose(h);
     }
 #else
-    DIR* d = opendir("baserom");
-    if (d) {
+    /* iOS: also the top of Documents, where Finder's Files tab (Sideloadly installs) drops the image; it
+     * cannot make the baserom folder there */
+#ifdef SR_IOS
+    static const char* dirs[] = {"baserom", "."};
+#else
+    static const char* dirs[] = {"baserom"};
+#endif
+    for (size_t i = 0; i < sizeof dirs / sizeof dirs[0]; i++) {
+        DIR* d = opendir(dirs[i]);
+        if (!d) continue;
         struct dirent* e;
+        int found = 0;
         while ((e = readdir(d)))
             if (strlen(e->d_name) > 4 && !strcmp(e->d_name + strlen(e->d_name) - 4, ".iso")) {
-                snprintf(path, sizeof path, "baserom/%s", e->d_name);
+                snprintf(path, sizeof path, "%s/%s", dirs[i], e->d_name);
+                found = 1;
                 break;
             }
         closedir(d);
+        if (found) break;
     }
 #endif
     return path;

@@ -10,6 +10,8 @@ Flavors (one download per platform, for players):
   android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).bat" + README-FIRST.txt
   linux   SonicRiders-Linux-Setup-<version>.zip: "Install Sonic Riders (Linux).sh" (SonicRidersSetup.sh) +
           README-FIRST.txt, for Linux PCs and the Steam Deck (tools/setup_linux.py)
+  ios     SonicRiders-iOS-Setup-<version>.zip: "Install Sonic Riders (iOS).command" + README-FIRST.txt, for
+          iPhone / iPad, built on the player's Mac (tools/setup_mac.py; no .ipa can be published)
   source  sonic-riders-recomp-<version>-<commit>.zip: the tree as is (SonicRidersSetup.bat asks)
 
 The zip holds every file tracked in git at REF (default HEAD) under one top folder, plus a VERSION
@@ -34,7 +36,8 @@ def git(*args):
     return subprocess.run(("git",) + args, capture_output=True, check=True).stdout
 
 
-PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android"), "linux": ("Linux", "linux")}
+PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android"), "linux": ("Linux", "linux"),
+        "ios": ("iOS", "ios")}
 
 
 def launcher(flavor):
@@ -52,9 +55,26 @@ def launcher(flavor):
     return ("\r\n".join(lines) + "\r\n").encode()
 
 
+IOS_COMMAND = """#!/bin/sh
+# Sonic Riders native port: builds the iPhone / iPad app on this Mac from your disc image (README-FIRST.txt)
+cd "$(dirname "$0")" || exit 1
+if [ ! -d /Applications/Xcode.app ]; then
+  echo "Xcode is needed: install it from the App Store (free), open it once, then run this again."
+  printf "Press Return to close. "; read -r _; exit 1
+fi
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /usr/bin/python3 tools/setup_mac.py "$@"
+rc=$?
+echo
+[ -n "$SR_NOPAUSE" ] || { printf "Press Return to close. "; read -r _; }
+exit $rc
+"""
+
+
 def readme_first(flavor, version):
     if flavor == "linux":
         return readme_linux(version)
+    if flavor == "ios":
+        return readme_ios(version)
     common = [
         "Sonic Riders native port %s - unofficial fan project, not affiliated with SEGA or Nintendo." % version,
         "",
@@ -174,6 +194,53 @@ def readme_linux(version):
     return ("\n".join(lines) + "\n").encode()
 
 
+def readme_ios(version):
+    lines = [
+        "Sonic Riders native port %s - unofficial fan project, not affiliated with SEGA or Nintendo." % version,
+        "",
+        "This download contains NO game files. You need your own Sonic Riders (USA) disc image:",
+        "GXEE8P, revision 0, a clean full .iso (1,459,978,240 bytes). The setup checks it.",
+        "",
+        "PLAY ON IPHONE OR IPAD (iOS / iPadOS 16 or newer; no emulator: the game runs natively)",
+        "",
+        "The app is built on your Mac from your disc image (nobody may share a ready-made app, it would",
+        "contain the game). Tested: iPhone 17 Pro, iPad Pro 11-inch (M1), iPad (A16) at 60 fps; iPad 7th",
+        "generation (2019) plays with small dips on busy tracks.",
+        "",
+        "Needs: an Apple silicon Mac (M1 or newer) with Xcode (App Store, free, about 10 GB; open it once",
+        "and add iOS), Homebrew (brew.sh; the setup installs two small tools with it), about 6 GB free and",
+        "internet the first time. A free Apple ID is enough.",
+        "",
+        "1. Extract this whole zip to a folder you'll keep, with no spaces in its path (for example",
+        "   ~/SonicRiders: in Finder, drag the extracted folder into your home folder and rename it).",
+        "2. Optional, to install straight from the Mac: Xcode > Settings > Accounts > + > Apple ID; turn on",
+        "   Developer Mode on the device (Settings > Privacy & Security > Developer Mode) and connect it",
+        "   with a cable, unlocked (tap Trust). Without this the setup makes an .ipa for Sideloadly.",
+        '3. Double-click "Install Sonic Riders (iOS).command". If macOS says it cannot be opened, open',
+        "   Terminal, type sh followed by a space, drag the .command file into the window and press Return.",
+        "   Pick your disc image. The first run takes 15-30 minutes.",
+        "4a. With your Apple ID in Xcode: the setup installs the app and copies your disc image to the device.",
+        "    First start: Settings > General > VPN & Device Management > your Apple ID > Trust.",
+        "4b. Without: the app is in ~/Desktop/Sonic Riders iOS/SonicRiders.ipa. Install it with Sideloadly",
+        "    (sideloadly.io) or AltStore and your Apple ID, then copy your disc image into the app: Finder >",
+        "    your device > Files tab > drag the .iso onto Sonic Riders. Trust the developer as in 4a.",
+        "",
+        "A free Apple ID's apps stop opening after 7 days: install the same .ipa again with Sideloadly, or",
+        "run the installer again. Your saves and the disc image stay on the device.",
+        "",
+        "Controls: touch (on-screen stick and buttons), or a game controller (Xbox, PlayStation, MFi).",
+        "The round button at the top left opens the settings menu.",
+        "",
+        "Updating: download the new version, extract it to a new folder and run the installer again.",
+        "Problems or bugs: https://github.com/teclilla18/sonic-riders-recomp/issues (attach setup.log, or",
+        "sonicriders.log from the app's folder (Files app > On My iPhone > Sonic Riders); never attach",
+        "game files).",
+        "",
+        "Never share your disc image, the .ipa or the files the setup builds from it.",
+    ]
+    return ("\n".join(lines) + "\n").encode()
+
+
 LAUNCHER_SRC = ["launcher", "tools/build_launcher.py", "tools/launcher_icon.py", "tools/make_icon.py"]
 
 
@@ -194,7 +261,7 @@ def main():
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
     ap.add_argument("--ref", default="HEAD", help="commit to package (default: HEAD)")
     ap.add_argument("--out", default=os.path.join("build", "release"), help="output folder")
-    ap.add_argument("--flavor", choices=["switch", "pc", "android", "linux", "source"], default="source")
+    ap.add_argument("--flavor", choices=["switch", "pc", "android", "linux", "ios", "source"], default="source")
     args = ap.parse_args()
 
     root = git("rev-parse", "--show-toplevel").decode().strip()
@@ -227,7 +294,10 @@ def main():
         plat = PLAT[args.flavor][0]
         top = "SonicRiders-%s-%s" % (plat, args.version)
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
-        if args.flavor == "linux":
+        if args.flavor == "ios":
+            files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
+            files.append(("Install Sonic Riders (iOS).command", IOS_COMMAND.encode()))
+        elif args.flavor == "linux":
             setup_sh = [d for n, d in files if n == "SonicRidersSetup.sh"][0]
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (Linux).sh", setup_sh))
@@ -248,7 +318,7 @@ def main():
             info = zipfile.ZipInfo("%s/%s" % (top, n), date_time=(2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             # shell scripts executable (unzip and file managers keep the mode)
-            info.external_attr = (0o755 if n.endswith(".sh") else 0o644) << 16
+            info.external_attr = (0o755 if n.endswith((".sh", ".command")) else 0o644) << 16
             info.create_system = 3  # Unix, so the mode above is used
             z.writestr(info, data)
     os.replace(tmp, path)
