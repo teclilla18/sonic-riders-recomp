@@ -64,6 +64,9 @@ fst_listing.txt
 *.aab
 *.apks
 *.idsig
+# iOS app packages (recompiled game code; built locally for sideloading, never distributed)
+*.ipa
+*.xcarchive/
 *.so
 *.dex
 *.spv

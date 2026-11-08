@@ -26,7 +26,7 @@ DIRS = ("baserom/", "orig/", "game/", "build/", "asm/", "gen/", "extracted/", "s
 EXTS = (".iso", ".gcm", ".rvz", ".ciso", ".gcz", ".wbfs", ".tgc", ".dol", ".rel", ".str", ".plf", ".elf",
         ".map", ".adx", ".sfd", ".afs", ".bnr", ".thp", ".s", ".o", ".obj", ".a", ".lib", ".exe", ".dll",
         ".nro", ".nso", ".nsp", ".nca", ".xci", ".npdm", ".nacp", ".dksh", ".bin", ".keys", ".raw", ".gci",
-        ".sav", ".log", ".bmp", ".tga", ".wav", ".dtm", ".dat",
+        ".sav", ".log", ".bmp", ".tga", ".wav", ".dtm", ".dat", ".ipa",  # .ipa: the iOS app (recompiled code)
         # Android build products: they hold recompiled game code (or signing keys) and are built locally
         ".apk", ".aab", ".apks", ".idsig", ".so", ".dex", ".spv", ".keystore", ".jks")
 # SHA-1 of the user's disc image and the files on it (Redump GXEE8P rev 0); never committable

@@ -3,7 +3,9 @@
 ## Unreleased
 
 - **iOS (early, build it yourself on a Mac):** the game boots to the title screen on an iPhone 17 Pro (iOS 27)
-  at 60 fps, signed with a free Apple account. Not yet played with touch or a pad; no release download.
+  at 60 fps, signed with a free Apple account; touch controls and controllers work. Each build also leaves
+  `SonicRiders.ipa` in a "Sonic Riders iOS" folder on the Desktop, ready to reinstall with Sideloadly or AltStore
+  (your own copy: never share it). No release download.
 - **PC: internal resolution 1x-6x and anti-aliasing (2x / 4x / 8x MSAA)** in F1 > Display. The default stays
   2x without anti-aliasing (the picture as before); 3x suits 1440p screens, 4x suits 4K.
 - **"Save screenshot" on Switch and Android no longer captures the settings menu** (it did when the FPS counter

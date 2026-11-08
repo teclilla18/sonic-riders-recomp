@@ -62,6 +62,7 @@ class Tools:
             sys.exit("the iOS SDK was not found: install Xcode and run xcode-select -s /Applications/Xcode.app")
         # optional app icon: a square PNG (--icon; kept out of git unless it is your own art)
         self.icon = os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else ""
+        self.ipa_dir = os.path.abspath(os.path.expanduser(args.ipa_dir)) if args.ipa_dir not in ("", "none") else ""
         self.team = args.team or find_team()
         # the bundle ID must be unique across Apple: a per-team suffix keeps it out of the repository
         self.bundle_id = args.bundle_id or ("net.srnative.sonicriders.t" + hashlib.sha1(self.team.encode()).hexdigest()[:8]
@@ -105,7 +106,33 @@ def add_build(n, t, objs, out, py):
            % (proj, SDK, team, t.root, out), description="XCODE $out (link, bundle, sign)", pool="console")
     n.build(app + "/SonicRiders", "xcode_app", [lib, t.sdl_lib()],
             implicit=[proj + "/project.pbxproj", out + "/xcode/Info.plist"] + ([t.rel(t.icon)] if t.icon else []))
+    # the .ipa (Payload/SonicRiders.app zipped) for sideloading tools that re-sign it (Sideloadly, AltStore)
+    ipa = out + "/SonicRiders.ipa"
+    n.rule("ipa", "%s tools/ios_build.py ipa %s $out%s" % (py, app, (' "%s"' % t.ipa_dir) if t.ipa_dir else ""),
+           description="IPA $out")
+    n.build(ipa, "ipa", app + "/SonicRiders", implicit=["tools/ios_build.py"])
+    n.default(ipa)
     return app + "/SonicRiders"
+
+
+def make_ipa(app, ipa, copy_dir=""):
+    """zip the signed .app as Payload/SonicRiders.app; optionally copy it to copy_dir (previous one kept as -prev)"""
+    tmp = ipa + ".tmp"
+    shutil.rmtree(tmp, ignore_errors=True)
+    os.makedirs(os.path.join(tmp, "Payload"))
+    subprocess.check_call(["ditto", app, os.path.join(tmp, "Payload", os.path.basename(app))])
+    if os.path.exists(ipa + ".part"):
+        os.remove(ipa + ".part")
+    subprocess.check_call(["ditto", "-c", "-k", "--norsrc", "--keepParent", "Payload", os.path.abspath(ipa + ".part")], cwd=tmp)
+    shutil.rmtree(tmp)
+    os.replace(ipa + ".part", ipa)
+    if copy_dir:
+        os.makedirs(copy_dir, exist_ok=True)
+        dst = os.path.join(copy_dir, "SonicRiders.ipa")
+        if os.path.exists(dst):
+            os.replace(dst, os.path.join(copy_dir, "SonicRiders-prev.ipa"))
+        shutil.copy2(ipa, dst)
+        print("ipa: %s" % dst)
 
 
 INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
@@ -311,3 +338,10 @@ PBXPROJ = """// !$*UTF8*$!
 	rootObject = A10000000000000000000031;
 }
 """
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 4 and sys.argv[1] == "ipa":  # from build.ninja: ios_build.py ipa <app> <out.ipa> [copy dir]
+        make_ipa(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "")
+    else:
+        sys.exit("usage: ios_build.py ipa <SonicRiders.app> <out.ipa> [copy dir]")

@@ -131,6 +131,10 @@ thread affinity on iOS; the game, render and audio threads get `QOS_CLASS_USER_I
   Settings > General > VPN & Device Management > Trust.
 - `python3 configure.py --target ios [--icon <square.png>]`, `ninja`, `tools/ios_run.py install`, `push-iso` (once),
   `run SR_INPUT=1500:START,1510:-START SR_SCREENSHOT=2200` (title screen), `pull sonicriders.log shot_2200.bmp`.
+- Every `ninja` also makes `build/ios/SonicRiders.ipa` and copies it to `~/Desktop/Sonic Riders iOS/SonicRiders.ipa`
+  (previous build: `SonicRiders-prev.ipa`; `--ipa-dir <dir>` or `none`). Reinstall with Sideloadly/AltStore when the
+  7-day signature runs out. Sideloadly re-signs it; if it changes the bundle ID, the app gets a new Documents folder
+  (copy the disc image again). Never share the .ipa (recompiled game code); `.ipa` is in .gitignore and the guard.
 - A crash before the log opens: `xcrun devicectl device info files --device <id> --domain-type systemCrashLogs`,
   then `device copy from ... --domain-type systemCrashLogs --source SonicRiders-<date>.ips`.
 

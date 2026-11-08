@@ -44,6 +44,10 @@ ap.add_argument("--ndk", default="", help="android: NDK folder (default: the new
 ap.add_argument("--jdk", default="", help="android: JDK 17+ folder (default $JAVA_HOME)")
 ap.add_argument("--sdl-src", default="", help="android: SDL2 2.32.10 source folder")
 ap.add_argument("--team", default="", help="ios: Apple Team ID (default: from the Mac's Apple Development certificate)")
+ap.add_argument("--ipa-dir", default="~/Desktop/Sonic Riders iOS",
+                help="ios: after each build copy SonicRiders.ipa here for Sideloadly/AltStore (default: a folder on the "
+                "Desktop; the copy before it is kept as SonicRiders-prev.ipa; 'none' = only build/ios/SonicRiders.ipa). "
+                "It holds recompiled game code: never share it")
 ap.add_argument("--bundle-id", default="", help="ios: app bundle ID (default: net.srnative.sonicriders.t<hash of the team>)")
 ap.add_argument("--moltenvk", default="", help="ios: MoltenVK folder holding include/ and static/ (default build/ext/MoltenVK/MoltenVK)")
 ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
