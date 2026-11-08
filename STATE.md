@@ -101,7 +101,8 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
    to eye candy as you can get without an HD remake").
    **Next session (user's order): Hookshot ideas 2-4 + FSR sharpening** (notes/plans-2026-11.md "Ideas from
    Hookshot"): controller in background, laptops on the dedicated GPU (NvOptimusEnablement /
-   AmdPowerXpressRequestHighPerformance), keep 5 logs, then RCAS sharpening (+ EASU upscale) from AMD's MIT
+   AmdPowerXpressRequestHighPerformance), keep 5 logs (Mac: names stay sonicriders.log +
+   sonicriders.prev.log, older ones .prev2-.prev4; iOS stderr = the log, flush at most 1/s in log.c), then RCAS sharpening (+ EASU upscale) from AMD's MIT
    ffx_fsr1.h in the GL post pass, PC only, F1 > Display slider + launcher.
    Not checked: a real 120/144 Hz monitor with vsync, results screen / cutscene camera cuts, 2P split screen.
    iOS goes into the next release (Mac: 679d495, make_release.py --flavor ios; iPad races pending).
