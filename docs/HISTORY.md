@@ -835,3 +835,29 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Hookshot". Ideas only, no code (we are MPL-2.0).
 - User played the frame rate presets: accepted ("about as close to eye candy as you can get without an HD
   remake"). Next: Hookshot ideas 2-4 + FSR sharpening.
+
+## 2026-11-08, evening (Mac "Mac"): iOS verified on four devices, release prep
+
+- "An error has occurred" (the GameCube disc-error screen) after 3 min with the iPhone locked: the time base kept
+  running while the app was suspended (182 s jump), so the SDK's drive timeout alarm fired on waking (patch log
+  80012398). Fix: `rt_clock_hold` (cpu.c), called by `rt_host_pause`: rt_ticks stands still while paused and
+  carries on from the same value. User re-test: 3 min locked mid-race, no error [confirmed]. fd3afff.
+- Touch (iOS only, touch_android.c `#ifdef SR_IOS`): unit in points (iPhone 340, iPad 390) instead of the screen
+  height (the iPad had twice the phone size), bottom controls lifted, right cluster 0.07 unit in, START 0.5 unit
+  from the right edge (Control Center swipe) [accepted: "controls felt good", 1-lap iPhone race].
+- Races on touch, from device logs [confirmed]: iPhone 17 Pro 59.9 fps (GPU 2.5-3 ms); iPad Pro 11 M1 59.5
+  (2 ms); iPad A16 59.3 (3.5 ms; hitches only first-use pipelines); iPad 7th gen (A10) ~57 avg, dips to 40, GPU
+  ~10 ms avg / 33 max, 91 hitches with "GX draws" 40+ ms (not pipelines, not heat) [likely GPU-bound].
+- Release prep: tools/setup_mac.py + make_release --flavor ios + INSTALL/README; ios_build.py finds the team
+  from Xcode's account list, no team = unsigned .ipa (Sideloadly). Cold test from the zip (fresh folder +
+  tools, --unsigned) PASS in ~2 min [confirmed]. Sideloadly install on the A16 iPad: black screen = (1) the
+  Desktop .ipa predated the disc message, Sideloadly's new bundle ID gave an empty Documents; (2) the next one
+  hung at the loading icon after the .iso was dragged in, booted fine when restarted [likely: opened mid-copy].
+  Fixes: .iso also found at the top of Documents; size check (incomplete image message); the message box needs a
+  window attached to the scene (ios_attach_window) or it waits unseen on black [confirmed on the iPad Pro, user].
+  Default app icon = the save icon from _Main.rel, 32x nearest [confirmed, user].
+- Facts: a free Apple ID allows 3 sideloaded apps per device (install error MIInstallerErrorDomain 13); devicectl
+  `device capture screenshot` gives black frames on the iPad Pro; rt_log flushes at most once a second
+  (SR_LOGSYNC=1 for every line).
+- Not tested: a Mac without Homebrew/Xcode; the signed install route from the zip.
+

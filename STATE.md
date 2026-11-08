@@ -9,11 +9,15 @@ Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
 
-**iOS (Mac session; notes/ios.md): plays on the iPhone 17 Pro** (iOS 27.0, free Apple account). Title screen and
-demo races at 60 fps, 2622x1206, touch + Xbox One pad, phone menu, leaving/returning [confirmed, user].
-Control Center now pauses game + sound [confirmed, scripted; user re-test pending]. Each build leaves
-`~/Desktop/Sonic Riders iOS/SonicRiders.ipa` for Sideloadly. Fan-art icon via local `--icon` only.
-Next on iOS: user re-tests Control Center; a 1-lap race on touch (perf, feel); iPad; 7-day reinstall via the .ipa.
+**iOS (Mac session; notes/ios.md): verified for v0.7.0** (main 9932634). Races on touch [confirmed, logs]:
+iPhone 17 Pro 59.9 fps, iPad Pro 11 M1 59.5, iPad A16 59.3 (first-use shader stutters only), iPad 7th gen ~57
+with dips to 40 (A10 GPU ~10 ms/frame). Lock screen 3 min mid-race: no error (game clock held while paused,
+`rt_clock_hold`) [confirmed, user]; Control Center pauses game + sound [confirmed, user]; touch controls in
+points (iPhone 340 pt, iPad 390 pt), START clear of the Control Center corner [accepted: "controls felt good"].
+Release pieces done: `tools/setup_mac.py` ("Install Sonic Riders (iOS).command"), `make_release.py --flavor ios`,
+INSTALL/README section, unsigned .ipa without an Apple ID in Xcode (Sideloadly), save-icon app icon, missing /
+incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sideloadly install, message and icon
+[confirmed, user]. Not tested: a Mac without Homebrew/Xcode; the signed "install from the Mac" route from the zip.
 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
 1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
@@ -105,11 +109,11 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
    sonicriders.prev.log, older ones .prev2-.prev4; iOS stderr = the log, flush at most 1/s in log.c), then RCAS sharpening (+ EASU upscale) from AMD's MIT
    ffx_fsr1.h in the GL post pass, PC only, F1 > Display slider + launcher.
    Not checked: a real 120/144 Hz monitor with vsync, results screen / cutscene camera cuts, 2P split screen.
-   iOS goes into the next release (Mac: 679d495, make_release.py --flavor ios; iPad races pending).
+   iOS goes into v0.7.0: verified (above); Mike builds the zip with make_release.py --flavor ios.
    Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
    answered). Android exit crashes fixed on `main` (c4cd92a). 32-bit Android: waits for the redditor's phone.
-   Also: iOS release prep is the Mac's (end of notes/ios.md). OLED SD: `delete-me/` removed 2026-11-08.
-1. **iOS** play tests (above), then **online play** (above). Release the launcher + PC picture options (cold
+   OLED SD: `delete-me/` removed 2026-11-08.
+1. **Online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
    user before posting on #14 (draft: ask for a v0.5.3 log; their v0.4.2 log had 0 fast shaders).

@@ -38,6 +38,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Android renderer (Vulkan) | android/render_vk.c (1720) | `vk_setup`, `execute`, `spec_bits` (specialized shaders), `pipe_get`, `pcache_save`, `draw_overlay_and_touch`, `picture_rect`, `shot_request`, `pump`, `render_thread` |
 | Android touch controls | android/touch_android.c (270) | `layout` (positions), `stick_home`, `stick_value` (dead zones), `game_in_race`, `touch_event`, `touch_apply`, `touch_shapes` |
 | iOS glue | ios/ios_scene.m (35); tools/ios_build.py, tools/ios_run.py | `ios_attach_window` (UIScene, iOS 27); Xcode project, Info.plist, `flatten_png` (icon); devices/install/run/pull |
+| iOS player setup / release | tools/setup_mac.py; tools/make_release.py (`--flavor ios`, `IOS_COMMAND`, `readme_ios`) | 7-step Mac setup; `ios_build.find_team` (cert, else Xcode account), unsigned .ipa; main.c `ios_message` (disc missing / incomplete) |
 | Touch control drawing (shader) | `runtime/shaders/vk_touch.frag` | `icon()` (per-button strokes) |
 | Android Java activity | `android/java/net/srnative/sonicriders/SonicRidersActivity.java` | `onCreate` (crash report before SDL starts) |
 | Android crash report (next launch) | `android/java/.../CrashReport.java` | `collect` (exit record + crash.txt + log → Download/SonicRiders), `show`, `share` |

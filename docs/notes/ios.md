@@ -157,10 +157,31 @@ First-boot findings [confirmed on the iPhone]:
 - Icon: `--icon <png>` (flattened onto blue, 1024x1024 asset catalog). Fan art stays local, never committed.
 
 
-## To do before iOS can be in a release (user request, 2026-11-07 late)
+## Release (v0.7.0 onward)
 
-The user wants iOS in the next release. No .ipa can be published, so a release needs: (1) a player-facing Mac
-setup script like `tools/setup_linux.py` (pinned tools from `setup/toolchain.json`, the player's disc image,
-build, local .ipa, Sideloadly/AltStore steps); (2) a `make_release.py --flavor ios` zip with an iOS
-README-FIRST; (3) a cold test on the Mac from that zip (fresh macOS user account if possible); (4) an iOS
-section in INSTALL.md / README. Then the PC session runs the cold Sandbox tests (PC + Android) and publishes.
+- Players: `SonicRiders-iOS-Setup-<ver>.zip` (`tools/make_release.py --flavor ios`): "Install Sonic Riders
+  (iOS).command" runs `tools/setup_mac.py` (7 steps: disc check, Xcode + Metal Toolchain + Homebrew ninja/shaderc
+  + Apple ID, pinned downloads from setup/toolchain.json "mac", extract, dtk, configure + ninja, install).
+  Apple silicon only; the folder path must have no spaces. Docs: INSTALL.md "Install on iPhone / iPad".
+- Signing: `ios_build.find_team()` = the Apple Development certificate, else `defaults read com.apple.dt.Xcode
+  IDEProvisioningTeamByIdentifier` (an Apple ID added in Xcode, no manual project step). No team or `--team none`:
+  an unsigned app/.ipa (CODE_SIGNING_ALLOWED=NO) that Sideloadly / AltStore sign. Bundle ID: per-team suffix;
+  unsigned = `net.srnative.sonicriders`; Sideloadly appends the team ID (a new app, empty Documents, the first time).
+- Disc: `platform_disc_path` also looks for `*.iso` at the top of Documents (Finder's Files tab puts it there).
+  main.c (SR_IOS): no image -> a message; smaller than 1,459,978,240 bytes -> "incomplete" (opened mid-copy hung
+  at the loading icon). Messages before the game's window need a window attached to the scene
+  (`ios_attach_window`, ios_scene.m), else UIKit's alert waits unseen on black.
+- App icon: `--icon <png>`, else the save icon from baserom/_Main.rel (make_icon.decode_icon, 32x nearest).
+- A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
+- Cold test: extract the zip with `ditto -x -k` into a fresh folder, run the .command with `SR_NOPAUSE=1 --yes
+  --unsigned --iso <img> --tools <fresh dir> --ipa-dir <scratch>` (never the Desktop folder). PASS 2026-11-08.
+  Not covered: a Mac without Homebrew or Xcode; the signed install route from the zip.
+
+## Pause, clock and touch (2026-11-08)
+
+- `rt_host_pause` (frame_pacing.c) also calls `rt_clock_hold` (cpu.c): the time base stands still while the app
+  is paused; a running clock made a 3-minute lock fire the SDK's drive timeout alarm ("An error has occurred").
+- Touch layout (touch_android.c, SR_IOS): unit = min(screen height, 340 pt iPhone / 390 pt iPad), bottom controls
+  lifted 0.04 H + 0.2 (H - unit), right cluster 0.07 unit in, START 0.5 unit from the right (Control Center).
+- devicectl `device capture screenshot` returned black frames on the iPad Pro (iPadOS 26.6); use the game's own
+  captures (SR_SCREENSHOT) and the user's eyes for system alerts.

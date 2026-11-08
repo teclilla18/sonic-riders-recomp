@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **iPhone and iPad (new):** `SonicRiders-iOS-Setup-<version>.zip` builds the app on your Mac (Apple silicon,
+  Xcode) from your own disc image and installs it on a connected iPhone/iPad, or makes an `.ipa` for Sideloadly /
+  AltStore. Races at 60 fps on iPhone 17 Pro, iPad Pro 11" (M1) and iPad (A16); iPad 7th gen with small dips.
+  Touch controls sized for fingers on phones and tablets, game controllers, the game pauses when you lock the
+  device or open Control Center, and the app tells you when the disc image is missing or still copying.
 - **PC: frame rate presets** in F1 > Performance and the launcher: 30, 45, 60, 120, 144, 180, 240 or Unlimited.
   The game still runs at its own speed; above 60 the PC draws extra pictures in between for smoother motion.
   High rates may need a lower resolution or less anti-aliasing.
