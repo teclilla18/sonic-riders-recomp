@@ -8,17 +8,14 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 use specialized shaders (tracked `config/GXEE8P/shader_keys.txt`; OLED handheld 1785/614/2133: 59.9 fps). Only the
 latest release is listed on GitHub (older delisted, tags kept). OLED and S23 run v0.5.3.
 
-**iOS: first boot done 2026-11-07** (Mac session; notes/ios.md). iPhone 17 Pro, iOS 27.0, free Apple account:
-intro movie + title screen at 60 fps, 2622x1206 (high-DPI), log/screenshots pulled [confirmed, scripted START].
-Fixes: UIScene for iOS 27 (`platform/ios/ios_scene.m`), OpenGLES link, high-DPI window, BMP row padding, touch
-input (was Android-only), phone menu (no Fullscreen). User: touch works, sharp buttons, Xbox One pad works
-[confirmed, user]. Background/resume: no crash [confirmed, user]; the game and its sound now pause while inactive (Control
-Center) [confirmed, scripted; user re-test pending].
-Next on iOS: a 1-lap race on touch, iPad.
-Fan-art app icon via local `--icon` only (never committed).
+**iOS (Mac session; notes/ios.md): plays on the iPhone 17 Pro** (iOS 27.0, free Apple account). Title screen and
+demo races at 60 fps, 2622x1206, touch + Xbox One pad, phone menu, leaving/returning [confirmed, user].
+Control Center now pauses game + sound [confirmed, scripted; user re-test pending]. Each build leaves
+`~/Desktop/Sonic Riders iOS/SonicRiders.ipa` for Sideloadly. Fan-art icon via local `--icon` only.
+Next on iOS: user re-tests Control Center; a 1-lap race on touch (perf, feel); iPad; 7-day reinstall via the .ipa.
 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
-1x-6x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
+1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
 
 **Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Button remapping **accepted**
 (2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Banner origin to check
