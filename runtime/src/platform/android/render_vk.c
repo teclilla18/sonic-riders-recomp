@@ -1411,14 +1411,14 @@ static int shot_thread(void* arg) {
     snprintf(path, sizeof path, "shot_%u.bmp", sh->frame);
     FILE* f = fopen(path, "wb");
     if (f) {
-        uint32_t row = sh->w * 3, size = 54 + row * sh->h;
+        uint32_t row = (sh->w * 3 + 3) & ~3u, size = 54 + row * sh->h;  /* BMP rows are padded to 4 bytes */
         uint8_t hd[54] = {'B', 'M'};
         memcpy(hd + 2, &size, 4);
         hd[10] = 54; hd[14] = 40;
         int32_t w = (int32_t)sh->w, hh = (int32_t)sh->h;
         memcpy(hd + 18, &w, 4); memcpy(hd + 22, &hh, 4);
         hd[26] = 1; hd[28] = 24;
-        uint8_t* img = malloc((size_t)size);
+        uint8_t* img = calloc(1, (size_t)size);
         memcpy(img, hd, 54);
         for (int y = (int)sh->h - 1, oy = 0; y >= 0; y--, oy++) {
             const uint8_t* s = sh->px + (size_t)y * sh->w * 4;
@@ -1968,6 +1968,10 @@ static void pump(void) {
     input_pump();
 }
 
+#ifdef SR_IOS
+void ios_attach_window(SDL_Window* win);
+#endif
+
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
@@ -1977,8 +1981,17 @@ static int render_thread(void* arg) {
     SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");  /* edge swipes need a second swipe to leave the game */
 #endif
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) rt_fatal("SDL video: %s", SDL_GetError());
+#ifdef SR_IOS
+    /* full pixel size (e.g. 2622 x 1206 on an iPhone 17 Pro); without the flag the screen image is in points
+     * (874 x 402) and iOS stretches it 3x: jagged touch controls and a soft picture */
+    g_win = SDL_CreateWindow("Sonic Riders", 0, 0, 0, 0, SDL_WINDOW_VULKAN | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI);
+#else
     g_win = SDL_CreateWindow("Sonic Riders", 0, 0, 0, 0, SDL_WINDOW_VULKAN | SDL_WINDOW_FULLSCREEN);
+#endif
     if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
+#ifdef SR_IOS
+    ios_attach_window(g_win);  /* platform/ios/ios_scene.m: iOS 27 needs the window on a scene */
+#endif
     SDL_DisableScreenSaver();  /* the screen stays on while the game runs */
     vk_setup();
     for (;;) {

@@ -48,7 +48,7 @@ ap.add_argument("--bundle-id", default="", help="ios: app bundle ID (default: ne
 ap.add_argument("--moltenvk", default="", help="ios: MoltenVK folder holding include/ and static/ (default build/ext/MoltenVK/MoltenVK)")
 ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
-ap.add_argument("--icon", default="", help="your own program icon (.ico; android also .png) instead of the game's save icon "
+ap.add_argument("--icon", default="", help="your own program icon (.ico; android and ios also .png) instead of the game's save icon "
                 "(PC: build/icon.ico from the setup; android: from baserom/_Main.rel). Keep it out of git unless it is your own art")
 ap.add_argument("--android-app", choices=["game", "probe"], default="game", help="android: the game, or the milestone 1 probe APK")
 args = ap.parse_args()
@@ -93,6 +93,9 @@ for plat in plats:
     rt_cpp += sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, plat, "*.cpp")))
 if args.target in ("android", "ios"):
     rt_c = [p for p in rt_c if not p.endswith("/render_gl.c")]
+# iOS: Objective-C glue (UIKit scene), compiled with ARC
+rt_m = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/platform/ios/*.m"))) \
+    if args.target == "ios" else []
 
 def build_version():
     """the VERSION file that tools/make_release.py puts in the release zip, else the git commit"""
@@ -374,6 +377,10 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     for src in rt_c:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
         n.build(o, "cc", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
+        objs.append(o)
+    for src in rt_m:
+        o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
+        n.build(o, "cc", src, variables={"extra": "-O2 -Wall -fobjc-arc"})
         objs.append(o)
     for src in rt_cpp:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))

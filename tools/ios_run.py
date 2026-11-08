@@ -40,7 +40,9 @@ def devices():
         hw = dev.get("hardwareProperties", {})
         found.append({"id": dev.get("identifier", ""), "name": props.get("name", "?"),
                       "os": props.get("osVersionNumber", "?"), "model": hw.get("marketingName", "?"),
-                      "state": dev.get("connectionProperties", {}).get("tunnelState", "?")})
+                      # the tunnel reads "disconnected" while idle; devicectl opens it on demand
+                      "state": "%s, tunnel %s" % (dev.get("connectionProperties", {}).get("pairingState", "?"),
+                                                  dev.get("connectionProperties", {}).get("tunnelState", "?"))})
     return found
 
 
@@ -88,8 +90,10 @@ def main():
     elif cmd == "run":
         env = dict(kv.split("=", 1) for kv in rest if "=" in kv)
         extra = ["--environment-variables", json.dumps(env)] if env else []
-        devicectl("device", "process", "launch", "--device", dev, "--console", "--terminate-existing",
-                  *extra, bundle_id(), check=False)
+        rc = devicectl("device", "process", "launch", "--device", dev, "--console", "--terminate-existing",
+                       *extra, bundle_id(), check=False)
+        if rc:  # e.g. the phone is locked or the developer is not trusted yet
+            sys.exit(rc)
     elif cmd == "pull":
         names = rest or ["sonicriders.log", "sonicriders.prev.log", "crash.txt"]
         out = os.path.join(ROOT, "build/ios/pulled")

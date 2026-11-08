@@ -11,13 +11,16 @@ import os
 import re
 import shutil
 import subprocess
+import struct
 import sys
+import zlib
 
 MIN_IOS = "16.0"
 SDK = "iphoneos"
 FRAMEWORKS = ["UIKit", "Foundation", "QuartzCore", "Metal", "IOSurface", "CoreGraphics", "CoreFoundation",
               "AVFoundation", "AudioToolbox", "CoreAudio", "CoreMotion", "CoreHaptics", "GameController",
-              "CoreBluetooth", "IOKit"]
+              "CoreBluetooth", "IOKit",
+              "OpenGLES"]  # SDL2's UIKit video code refers to EAGL even when we render with Vulkan
 
 
 def _run(cmd):
@@ -57,6 +60,8 @@ class Tools:
             sys.exit("glslc not found: brew install shaderc")
         if not _run(["xcrun", "--sdk", SDK, "--show-sdk-path"]):
             sys.exit("the iOS SDK was not found: install Xcode and run xcode-select -s /Applications/Xcode.app")
+        # optional app icon: a square PNG (--icon; kept out of git unless it is your own art)
+        self.icon = os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else ""
         self.team = args.team or find_team()
         # the bundle ID must be unique across Apple: a per-team suffix keeps it out of the repository
         self.bundle_id = args.bundle_id or ("net.srnative.sonicriders.t" + hashlib.sha1(self.team.encode()).hexdigest()[:8]
@@ -99,7 +104,7 @@ def add_build(n, t, objs, out, py):
            "-allowProvisioningDeviceRegistration %s SYMROOT=%s/%s/xcode/build build"
            % (proj, SDK, team, t.root, out), description="XCODE $out (link, bundle, sign)", pool="console")
     n.build(app + "/SonicRiders", "xcode_app", [lib, t.sdl_lib()],
-            implicit=[proj + "/project.pbxproj", out + "/xcode/Info.plist"])
+            implicit=[proj + "/project.pbxproj", out + "/xcode/Info.plist"] + ([t.rel(t.icon)] if t.icon else []))
     return app + "/SonicRiders"
 
 
@@ -131,6 +136,13 @@ INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
   <key>GCSupportedGameControllers</key>
   <array><dict><key>ProfileName</key><string>ExtendedGamepad</string></dict></array>
   <key>UIBackgroundModes</key><array/>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key><false/>
+    <key>UISceneConfigurations</key>
+    <dict><key>UIWindowSceneSessionRoleApplication</key>
+      <array><dict><key>UISceneConfigurationName</key><string>Default</string></dict></array></dict>
+  </dict>
 </dict>
 </plist>
 """
@@ -154,6 +166,21 @@ def write_xcode_project(t, out):
 
     def q(s):
         return '"%s"' % s.replace('"', '\\"')
+    icon_set = os.path.join(xdir, "Assets.xcassets", "AppIcon.appiconset")
+    os.makedirs(icon_set, exist_ok=True)
+    with open(os.path.join(xdir, "Assets.xcassets", "Contents.json"), "w", encoding="utf-8") as f:
+        f.write('{"info": {"author": "xcode", "version": 1}}\n')
+    images = []
+    if t.icon:
+        # iOS app icons are opaque: one 1024 x 1024 picture, transparent parts filled (Xcode makes the sizes)
+        tmp = os.path.join(xdir, "icon_1024_alpha.png")
+        subprocess.check_call(["sips", "-s", "format", "png", "-z", "1024", "1024", t.icon, "--out", tmp],
+                              stdout=subprocess.DEVNULL)
+        flatten_png(tmp, os.path.join(icon_set, "icon_1024.png"), ICON_BACKGROUND)
+        images = [{"filename": "icon_1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}]
+    import json
+    with open(os.path.join(icon_set, "Contents.json"), "w", encoding="utf-8") as f:
+        json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, f)
     ld = "(\n" + "".join("\t\t\t\t\t%s,\n" % q(x) for x in ldflags) + "\t\t\t\t)"
     target_settings = {
         "PRODUCT_NAME": "SonicRiders", "PRODUCT_BUNDLE_IDENTIFIER": t.bundle_id, "INFOPLIST_FILE": "Info.plist",
@@ -164,11 +191,59 @@ def write_xcode_project(t, out):
     }
     if t.team:
         target_settings["DEVELOPMENT_TEAM"] = t.team
+    if t.icon:
+        target_settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIcon"
     ts = "".join("\t\t\t\t%s = %s;\n" % (k, v) for k, v in target_settings.items())
     pbx = PBXPROJ.replace("@TARGET_SETTINGS@", ts)
     with open(os.path.join(pdir, "project.pbxproj"), "w", encoding="utf-8") as f:
         f.write(pbx)
     return t.rel(pdir)
+
+
+ICON_BACKGROUND = (0x0B, 0x3D, 0x91)  # deep blue behind a round icon's transparent corners
+
+
+def flatten_png(src, dst, bg):
+    """an 8-bit RGB/RGBA PNG (non-interlaced) -> an opaque RGB PNG over the colour bg (no PIL needed)"""
+    data = open(src, "rb").read()
+    pos, idat, hdr = 8, b"", None
+    while pos < len(data):
+        n, typ = struct.unpack(">I4s", data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + n]
+        if typ == b"IHDR":
+            hdr = struct.unpack(">IIBBBBB", body)
+        elif typ == b"IDAT":
+            idat += body
+        pos += 12 + n
+    w, h, depth, ctype, _, _, interlace = hdr
+    if depth != 8 or ctype not in (2, 6) or interlace:
+        sys.exit("icon: need an 8-bit RGB or RGBA PNG (got depth %d, colour type %d)" % (depth, ctype))
+    bpp = 4 if ctype == 6 else 3
+    raw, stride = zlib.decompress(idat), w * bpp
+    prev, out = bytearray(stride), bytearray()
+    for y in range(h):
+        ft, line = raw[y * (stride + 1)], bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for i in range(stride):  # undo the PNG row filter
+            a = line[i - bpp] if i >= bpp else 0
+            b, c = prev[i], prev[i - bpp] if i >= bpp else 0
+            if ft == 1: line[i] = (line[i] + a) & 255
+            elif ft == 2: line[i] = (line[i] + b) & 255
+            elif ft == 3: line[i] = (line[i] + (a + b) // 2) & 255
+            elif ft == 4:
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        prev = line
+        out.append(0)
+        for x in range(w):
+            px = line[x * bpp:x * bpp + bpp]
+            al = px[3] if bpp == 4 else 255
+            out += bytes((px[k] * al + bg[k] * (255 - al)) // 255 for k in range(3))
+
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    with open(dst, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(bytes(out), 9)) + chunk(b"IEND", b""))
 
 
 # object IDs: fixed 24-digit hex strings (any unique values work)
@@ -182,14 +257,17 @@ PBXPROJ = """// !$*UTF8*$!
 		A10000000000000000000001 /* stub.c in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002; };
 		A10000000000000000000002 /* stub.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = stub.c; sourceTree = "<group>"; };
 		A10000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006; };
+		A10000000000000000000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A10000000000000000000004 /* SonicRiders.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SonicRiders.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000010 = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000011); sourceTree = "<group>"; };
+		A10000000000000000000010 = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000006, A10000000000000000000011); sourceTree = "<group>"; };
 		A10000000000000000000011 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000004); name = Products; sourceTree = "<group>"; };
 		A10000000000000000000020 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000021 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000005); runOnlyForDeploymentPostprocessing = 0; };
 		A10000000000000000000030 /* SonicRiders */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000041;
-			buildPhases = (A10000000000000000000020);
+			buildPhases = (A10000000000000000000020, A10000000000000000000021);
 			buildRules = (
 			);
 			dependencies = (
