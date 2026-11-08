@@ -833,3 +833,5 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 - Hookshot (OoT Switch 2 -> PC, GPL-3.0) studied for ideas (user tip): notes/plans-2026-11.md "Ideas from
   Hookshot". Ideas only, no code (we are MPL-2.0).
+- User played the frame rate presets: accepted ("about as close to eye candy as you can get without an HD
+  remake"). Next: Hookshot ideas 2-4 + FSR sharpening.

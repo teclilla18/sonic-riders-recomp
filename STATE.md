@@ -97,7 +97,12 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
    launcher offer 30 (FR_30), 45, 60 (pc_fps 0), 120, 144, 180, 240, unlimited. Tested on PC (RTX 3060, 4x + 8x
    MSAA): P1 race at 120 by frames (steady motion, HUD clean, race-start camera fine), >99% draws paired; 45 holds
    45.0/s; unlimited ~100-140/s at 4x+8x MSAA, 250-350 at 2x+4x, 400-1200 at 1x (GPU-bound: each in-between
-   redraws the frame). Launcher -> game round trip at 144 [confirmed]. **Not accepted: user to play it.**
+   redraws the frame). Launcher -> game round trip at 144 [confirmed]. **Accepted** (user played it, 2026-11-08: "about as close
+   to eye candy as you can get without an HD remake").
+   **Next session (user's order): Hookshot ideas 2-4 + FSR sharpening** (notes/plans-2026-11.md "Ideas from
+   Hookshot"): controller in background, laptops on the dedicated GPU (NvOptimusEnablement /
+   AmdPowerXpressRequestHighPerformance), keep 5 logs, then RCAS sharpening (+ EASU upscale) from AMD's MIT
+   ffx_fsr1.h in the GL post pass, PC only, F1 > Display slider + launcher.
    Not checked: a real 120/144 Hz monitor with vsync, results screen / cutscene camera cuts, 2P split screen.
    iOS goes into the next release (Mac: 679d495, make_release.py --flavor ios; iPad races pending).
    Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
