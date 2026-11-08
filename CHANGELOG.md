@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **PC: bloom only in races.** Menus and character select stay as drawn (characters there looked almost
+  white with bloom on).
 - **Android: no more "game crashed" report after closing the app.** Closing the game (swiping it away) could
   crash it on the way out, so the next start showed a crash report.
 

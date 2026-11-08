@@ -87,6 +87,7 @@ typedef struct GxFrame {
     GxXTab* xtabs; uint32_t nxtabs, cap_xtabs;
     int* retired; uint32_t nretired, cap_retired;  /* texture ids to free after this frame */
     float wide_k;                                  /* EFB width factor of this frame (settings_wide_k) */
+    int in_race;                                   /* the game is in a race (PC bloom: races only) */
 } GxFrame;
 
 /* backend (render_gl.c / render_deko.c) */

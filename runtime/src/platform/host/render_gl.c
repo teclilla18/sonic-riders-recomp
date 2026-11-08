@@ -35,6 +35,7 @@ static unsigned g_ms_fbo, g_ms_rb[2];
 /* the wide screen modes (gx_render.h GX_XR_WIDE_K): the EFB is 640 x k wide (in GX units), k from the
  * frame; X of viewports, scissors and copies is scaled by it */
 static float g_wide_k = 1.0f;     /* this frame's */
+static int g_in_race;             /* this frame's: bloom only in races (menus with lit models went white) */
 static float g_efb_k = 0.0f;      /* the EFB textures' */
 static int efb_w(float k) { return (int)(EFB_WIDTH * k + 0.5f) * EFB_SCALE; }
 static int wx(int x) { return (int)((float)x * g_wide_k + 0.5f) * EFB_SCALE; }  /* GX X -> EFB pixels */
@@ -678,7 +679,7 @@ static void post_process(void) {
     p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_scene_fbo);
     p_glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     p_glBindVertexArray(g_pp_vao);
-    float bloom = (float)g_settings.bloom / 100.0f;
+    float bloom = g_in_race ? (float)g_settings.bloom / 100.0f : 0.0f;  /* character select went almost white */
     if (bloom > 0.0f) {
         glBindTexture(GL_TEXTURE_2D, g_scene_tex);
         p_glGenerateMipmap(GL_TEXTURE_2D);
@@ -716,6 +717,7 @@ static void post_process(void) {
 
 static void execute(GxFrame* f) {
     g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
+    g_in_race = f->in_race;
     {   /* SR_SCALE_AT=<frame>:<scale>[:<msaa>]: change them at that presented frame, as the F1 menu does (tests) */
         static int at = -1, sc, ms;
         if (at == -1) {
