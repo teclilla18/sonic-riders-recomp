@@ -25,6 +25,14 @@ const char* settings_resolution_name(int res) {
     return res >= 0 && res < RES_MODES ? names[res] : "?";
 }
 
+const int settings_pc_fps_presets[] = {30, 45, 60, 120, 144, 180, 240, PC_FPS_UNLIMITED, 0};
+int settings_pc_fps_valid(int v) {
+    if (v == 0) return 1;
+    for (int i = 0; settings_pc_fps_presets[i]; i++)
+        if (settings_pc_fps_presets[i] == v) return v != 30 && v != 60;  /* those two are pc_fps 0 */
+    return 0;
+}
+
 const char* settings_framerate_name(int mode) {
     static const char* const names[FR_MODES] = {"60 fps (30 when busy)", "Auto (keep speed)", "30 fps (full speed)"};
     return mode >= 0 && mode < FR_MODES ? names[mode] : "?";
@@ -111,6 +119,7 @@ void settings_load(void) {
             else if (!strcmp(line, "grade_sat") && v >= 0 && v <= 200) g_settings.grade_sat = v;
             else if (!strcmp(line, "grade_warm") && v >= -50 && v <= 50) g_settings.grade_warm = v;
             else if (!strcmp(line, "char_light")) g_settings.char_light = v != 0;
+            else if (!strcmp(line, "pc_fps") && settings_pc_fps_valid(v)) g_settings.pc_fps = v;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -121,6 +130,8 @@ void settings_load(void) {
     }
     const char* fr = getenv("SR_FRAMERATE");  /* testing: 0 = 60 fps, 1 = Auto, 2 = 30 fps (not saved unless changed in the menu) */
     if (fr && atoi(fr) >= 0 && atoi(fr) < FR_MODES) g_settings.framerate = atoi(fr);
+    const char* pf = getenv("SR_FPS");  /* testing: the PC picture rate (pc_fps; 0 = the game's, -1 = unlimited) */
+    if (pf && settings_pc_fps_valid(atoi(pf))) g_settings.pc_fps = atoi(pf);
     /* testing, not saved unless changed in the menu: SR_SCREEN=0-3 (SCREEN_*), SR_FOV=80-130, SR_HUDSTRETCH=0/1 */
     const char* sc = getenv("SR_SCREEN");
     if (sc && atoi(sc) >= 0 && atoi(sc) < SCREEN_MODES) g_settings.screen = atoi(sc);
@@ -158,11 +169,11 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
-            g_settings.char_light);
+            g_settings.char_light, g_settings.pc_fps);
     fclose(f);
 }

@@ -99,8 +99,8 @@ static int g_gltex_cap;
 
 static mtx_t g_lock;
 static cnd_t g_cv;
-static GxFrame g_frames[2];
-static GxFrame* g_free[2];
+static GxFrame g_frames[4];
+static GxFrame* g_free[4];
 static int g_nfree;
 static GxFrame* g_pending;
 static volatile int g_quit;
@@ -715,6 +715,162 @@ static void post_process(void) {
     p_glBindVertexArray(g_vao);
 }
 
+/* ---- in-between pictures (setting pc_fps; PC only) ----
+ * The game draws 60 pictures a second (its physics run at a fixed 60 steps). For other picture rates the
+ * render thread keeps the last two game pictures A and B and draws B again with its matrices blended
+ * from A's: at time t after B arrived, the picture shows A + (B - A) * t / (1/60 s), so it is one game
+ * picture behind. Draws are paired by a key (primitive, index count, textures, the position matrices
+ * its vertices use); the k-th draw with a key in B pairs with the k-th in A. Only the matrices a paired
+ * draw uses are blended (position rows 0x000-0x0FF and their normal matrices), and the projection;
+ * texture matrices (scrolling textures would sweep back) and lights stay B's. A matrix that turned
+ * more than a little between A and B (a camera cut, a respawn) stays B's. */
+typedef struct IpDraw { uint64_t key, pmask; uint32_t uni, xt, order; } IpDraw;
+typedef struct IpInfo { IpDraw* d; uint32_t n, cap; } IpInfo;
+static IpInfo g_ip_info[4];             /* per g_frames entry */
+static uint32_t* g_ip_pairs;            /* (B pool word, A pool word) */
+static uint32_t g_ip_npairs, g_ip_cap_pairs;
+static uint32_t* g_ip_upairs;           /* (B state, A state) for the projection */
+static uint32_t g_ip_nupairs, g_ip_cap_upairs;
+static uint8_t* g_ip_mark;              /* B pool words / states already paired */
+static size_t g_ip_cap_mark;
+static uint32_t* g_ip_chunks;           /* B's XF memory chunk pool, blended */
+static size_t g_ip_cap_chunks;
+static const GxFrame* g_ip_a;           /* while drawing an in-between picture: A, and the blend factor */
+static float g_ip_t;
+static int g_ip_on;
+static uint32_t g_ip_matched, g_ip_draws;  /* last pairing: draws paired / B's draws (log) */
+
+static uint64_t ip_hash(uint64_t h, uint64_t v) { return (h ^ v) * 0x100000001B3ull; }
+
+static void ip_frame_info(const GxFrame* f, IpInfo* in) {
+    in->n = 0;
+    uint32_t uni = 0, xt = 0;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        const GxCmd* c = &f->cmds[i];
+        if (c->type == GXC_STATE) { uni = c->a, xt = c->b; continue; }
+        if (c->type != GXC_DRAW) continue;
+        uint64_t pm = 0;
+        for (uint32_t k = c->a; k < c->a + c->b && k < f->nidx; k++) {
+            uint32_t vi = f->idx[k];
+            if (vi >= f->nverts) continue;
+            int m = (int)f->verts[vi].pos[3];
+            if (m >= 0 && m < 64) pm |= 1ull << m;
+        }
+        uint64_t h = 0xCBF29CE484222325ull;
+        h = ip_hash(h, c->prim);
+        h = ip_hash(h, c->b);
+        for (int t = 0; t < 8; t++) h = ip_hash(h, (uint32_t)c->tex[t]);
+        h = ip_hash(h, pm);
+        if (in->n == in->cap) in->d = realloc(in->d, (in->cap = in->cap ? in->cap * 2 : 1024) * sizeof *in->d);
+        in->d[in->n] = (IpDraw){h, pm, uni, xt, in->n};
+        in->n++;
+    }
+}
+
+static int ip_cmp(const void* a, const void* b) {
+    const IpDraw *x = a, *y = b;
+    if (x->key != y->key) return x->key < y->key ? -1 : 1;
+    return x->order < y->order ? -1 : x->order > y->order;
+}
+
+static float ip_f(uint32_t w) { float f; memcpy(&f, &w, 4); return f; }
+
+/* one matrix (n words from XF memory word w0) of a paired draw: its pool words, unless it jumped */
+static void ip_pair_words(const GxFrame* a, const GxFrame* b, uint32_t xa, uint32_t xb, uint32_t w0, int n, int rot_check) {
+    uint32_t sa[12], sb[12];
+    if (xa >= a->nxtabs || xb >= b->nxtabs) return;
+    for (int k = 0; k < n; k++) {
+        uint32_t w = w0 + (uint32_t)k, ch = w / GX_XFM_CHUNK, o = w % GX_XFM_CHUNK;
+        if (ch >= GX_XFM_CHUNKS) return;
+        uint32_t pa = a->xtabs[xa].xtab[ch], pb = b->xtabs[xb].xtab[ch];
+        if (pa >= a->nxchunks || pb >= b->nxchunks) return;
+        sa[k] = pa * GX_XFM_CHUNK + o, sb[k] = pb * GX_XFM_CHUNK + o;
+        float fa = ip_f(a->xchunks[sa[k]]), fb = ip_f(b->xchunks[sb[k]]);
+        if (!isfinite(fa) || !isfinite(fb)) return;
+        /* the 3x3 part of a position matrix (not the translation column 3/7/11) */
+        if (rot_check && (k & 3) != 3 && fabsf(fa - fb) > 0.35f * fmaxf(1.0f, fmaxf(fabsf(fa), fabsf(fb)))) return;
+    }
+    for (int k = 0; k < n; k++) {
+        if (g_ip_mark[sb[k]]) continue;
+        g_ip_mark[sb[k]] = 1;
+        if (g_ip_npairs + 2 > g_ip_cap_pairs)
+            g_ip_pairs = realloc(g_ip_pairs, (size_t)(g_ip_cap_pairs = g_ip_cap_pairs ? g_ip_cap_pairs * 2 : 65536) * 4);
+        g_ip_pairs[g_ip_npairs++] = sb[k];
+        g_ip_pairs[g_ip_npairs++] = sa[k];
+    }
+}
+
+/* pair B's draws with A's (once per new game picture) */
+static void ip_match(const GxFrame* a, const IpInfo* ia, const GxFrame* b, const IpInfo* ib) {
+    g_ip_npairs = g_ip_nupairs = 0;
+    g_ip_matched = 0, g_ip_draws = ib->n;
+    size_t need = (size_t)b->nxchunks * GX_XFM_CHUNK + b->nunis + 1;
+    if (need > g_ip_cap_mark) g_ip_mark = realloc(g_ip_mark, g_ip_cap_mark = need * 2);
+    memset(g_ip_mark, 0, need);
+    uint8_t* umark = g_ip_mark + (size_t)b->nxchunks * GX_XFM_CHUNK;
+    /* sorted copies (key, then order) */
+    static IpDraw *sa, *sb;
+    static uint32_t cap_a, cap_b;
+    if (ia->n > cap_a) sa = realloc(sa, (cap_a = ia->n) * sizeof *sa);
+    if (ib->n > cap_b) sb = realloc(sb, (cap_b = ib->n) * sizeof *sb);
+    if (ia->n) memcpy(sa, ia->d, ia->n * sizeof *sa);
+    if (ib->n) memcpy(sb, ib->d, ib->n * sizeof *sb);
+    qsort(sa, ia->n, sizeof *sa, ip_cmp);
+    qsort(sb, ib->n, sizeof *sb, ip_cmp);
+    uint32_t i = 0, j = 0;
+    while (i < ia->n && j < ib->n) {
+        if (sa[i].key < sb[j].key) { i++; continue; }
+        if (sa[i].key > sb[j].key) { j++; continue; }
+        const IpDraw *da = &sa[i++], *db = &sb[j++];
+        g_ip_matched++;
+        for (uint64_t pm = db->pmask; pm; pm &= pm - 1) {
+            int m = __builtin_ctzll(pm);
+            ip_pair_words(a, b, da->xt, db->xt, (uint32_t)m * 4, 12, 1);
+            ip_pair_words(a, b, da->xt, db->xt, 0x400u + (uint32_t)(m & 31) * 3, 9, 0);
+        }
+        if (db->uni < b->nunis && da->uni < a->nunis && !umark[db->uni]) {
+            umark[db->uni] = 1;
+            const uint32_t *ra = a->unis[da->uni].xfr, *rb = b->unis[db->uni].xfr;
+            if (ra[0x26] == rb[0x26]) {
+                if (g_ip_nupairs + 2 > g_ip_cap_upairs)
+                    g_ip_upairs = realloc(g_ip_upairs, (size_t)(g_ip_cap_upairs = g_ip_cap_upairs ? g_ip_cap_upairs * 2 : 4096) * 4);
+                g_ip_upairs[g_ip_nupairs++] = db->uni;
+                g_ip_upairs[g_ip_nupairs++] = da->uni;
+            }
+        }
+    }
+}
+
+static uint32_t ip_lerp(uint32_t a, uint32_t b, float t) {
+    float fa = ip_f(a), fb = ip_f(b), r = fa + (fb - fa) * t;
+    uint32_t w;
+    memcpy(&w, &r, 4);
+    return w;
+}
+
+/* B's chunk pool with the paired words blended (execute uploads this instead) */
+static const uint32_t* ip_chunks(const GxFrame* b) {
+    size_t n = (size_t)b->nxchunks * GX_XFM_CHUNK;
+    if (n > g_ip_cap_chunks) g_ip_chunks = realloc(g_ip_chunks, (g_ip_cap_chunks = n) * 4);
+    if (n) memcpy(g_ip_chunks, b->xchunks, n * 4);
+    for (uint32_t k = 0; k < g_ip_npairs; k += 2)
+        g_ip_chunks[g_ip_pairs[k]] = ip_lerp(g_ip_a->xchunks[g_ip_pairs[k + 1]], b->xchunks[g_ip_pairs[k]], g_ip_t);
+    return g_ip_chunks;
+}
+
+/* the paired states' projection (XF 0x1020-0x1025), blended in the staged copy */
+static void ip_states(uint8_t* staging, size_t stride) {
+    for (uint32_t k = 0; k < g_ip_nupairs; k += 2) {
+        GxUniforms* u = (GxUniforms*)(staging + stride * g_ip_upairs[k]);
+        const uint32_t* ra = g_ip_a->unis[g_ip_upairs[k + 1]].xfr;
+        for (int r = 0x20; r < 0x26; r++) {
+            if (!isfinite(ip_f(ra[r])) || !isfinite(ip_f(u->xfr[r]))) continue;
+            u->xfr[r] = ip_lerp(ra[r], u->xfr[r], g_ip_t);
+        }
+    }
+}
+
+static GxFrame* g_up_frame;  /* whose vertices and indices the buffers hold (in-between pictures reuse them) */
 static void execute(GxFrame* f) {
     g_wide_k = f->wide_k >= 1.0f ? f->wide_k : 1.0f;
     g_in_race = f->in_race;
@@ -754,9 +910,12 @@ static void execute(GxFrame* f) {
     }
     p_glBindVertexArray(g_vao);
     p_glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
-    p_glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)f->nverts * sizeof(GxVertex), f->verts, GL_STREAM_DRAW);
     p_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibo);  /* part of the VAO's state */
-    p_glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)f->nidx * 4, f->idx, GL_STREAM_DRAW);
+    if (f != g_up_frame) {
+        p_glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)f->nverts * sizeof(GxVertex), f->verts, GL_STREAM_DRAW);
+        p_glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)f->nidx * 4, f->idx, GL_STREAM_DRAW);
+        g_up_frame = f;
+    }
     size_t stride = (sizeof(GxUniforms) + (size_t)g_ubo_align - 1) / (size_t)g_ubo_align * (size_t)g_ubo_align;
     /* the states, packed at the UBO offset alignment, in one upload */
     size_t ubo_bytes = stride * (f->nunis ? f->nunis : 1);
@@ -765,6 +924,7 @@ static void execute(GxFrame* f) {
         g_ubo_staging_cap = ubo_bytes;
     }
     for (uint32_t i = 0; i < f->nunis; i++) memcpy(g_ubo_staging + stride * i, &f->unis[i], sizeof(GxUniforms));
+    if (g_ip_on) ip_states(g_ubo_staging, stride);
     p_glBindBuffer(GL_UNIFORM_BUFFER, g_ubo);
     p_glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)ubo_bytes, g_ubo_staging, GL_STREAM_DRAW);
     /* the chunk tables, likewise */
@@ -781,7 +941,7 @@ static void execute(GxFrame* f) {
     uint32_t cur_regs = ~0u;
     /* the XF memory chunk pool */
     p_glBindBuffer(0x8C2A /* GL_TEXTURE_BUFFER */, g_xfm_buf);
-    p_glBufferData(0x8C2A, (GLsizeiptr)(f->nxchunks ? f->nxchunks : 1) * GX_XFM_CHUNK * 4, f->xchunks, GL_STREAM_DRAW);
+    p_glBufferData(0x8C2A, (GLsizeiptr)(f->nxchunks ? f->nxchunks : 1) * GX_XFM_CHUNK * 4, g_ip_on ? ip_chunks(f) : f->xchunks, GL_STREAM_DRAW);
     p_glActiveTexture(GL_TEXTURE0 + XFM_UNIT);
     glBindTexture(0x8C2A, g_xfm_tex);
     p_glTexBuffer(0x8C2A, 0x8236 /* GL_R32UI */, g_xfm_buf);
@@ -1027,11 +1187,16 @@ static void execute(GxFrame* f) {
         default: break;
         }
     }
+}
+
+/* the textures the game dropped after this frame (once the frame is not drawn again) */
+static void retire(GxFrame* f) {
     for (uint32_t i = 0; i < f->nretired; i++) {
         int id = f->retired[i];
         if (id < g_gltex_cap && g_gltex[id]) { glDeleteTextures(1, &g_gltex[id]); g_gltex[id] = 0; }
         gx_texture_free(id);
     }
+    f->nretired = 0;
 }
 
 /* ---- frame queue ---- */
@@ -1108,6 +1273,128 @@ static void sync_fullscreen(void) {
     rt_log("[gl] %s", applied ? "fullscreen" : "windowed");
 }
 
+/* ---- the picture rate (setting pc_fps): see "in-between pictures" above ---- */
+#define IP_GAME_NS 16683333ull  /* one game picture at 59.94 Hz */
+static GxFrame *g_ip_fa, *g_ip_fb;  /* the pictures held: A (older) and B */
+static uint64_t g_ip_tb, g_ip_next;  /* when B counts as arrived; when the next picture is due */
+static int g_ip_b_shown;             /* B itself was drawn (nothing newer to show until the next) */
+static int g_vsync_ok, g_vsync_cur = -1;  /* vsync allowed (not a test run); as set now */
+static unsigned g_ip_presents;
+static uint64_t g_ip_fps_t0;
+
+/* pictures per second wanted from in-between pictures: 0 = off (the game's own pacing) */
+static int ip_target(void) {
+    if (g_headless || g_settings.framerate == FR_30) return 0;
+    return g_settings.pc_fps;
+}
+
+static void set_vsync(int on) {
+    if (on == g_vsync_cur) return;
+    g_vsync_cur = on;
+    SDL_GL_SetSwapInterval(on);
+    rt_log("[gl] vsync %s", on ? "on" : "off");
+}
+
+static void give_back(GxFrame* f) {
+    retire(f);
+    mtx_lock(&g_lock);
+    g_free[g_nfree++] = f;
+    cnd_broadcast(&g_cv);
+    mtx_unlock(&g_lock);
+}
+
+/* leaving the in-between mode: the held pictures go back */
+static void ip_release(void) {
+    if (g_ip_fa) give_back(g_ip_fa);
+    if (g_ip_fb) give_back(g_ip_fb);
+    g_ip_fa = g_ip_fb = NULL;
+}
+
+static void ip_pump(void) {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) handle_event(&e);
+    sync_fullscreen();
+    input_pump();
+}
+
+/* one round of the render thread in the in-between mode */
+static void ip_round(int target) {
+    /* vsync only when the display runs at the wanted rate (it then paces the pictures) */
+    SDL_DisplayMode dm;
+    int hz = SDL_GetWindowDisplayMode(g_win, &dm) == 0 ? dm.refresh_rate : 0;
+    int vs = g_vsync_ok && target > 0 && hz > 0 && abs(hz - target) <= 1;
+    set_vsync(vs);
+    uint64_t period = target > 0 && !vs ? 1000000000ull / (uint64_t)target : 0;
+    mtx_lock(&g_lock);
+    if (!g_pending) {
+        uint64_t now = platform_now_ns();
+        uint64_t wake = now + 4000000;
+        if (g_ip_fb && !g_ip_b_shown && g_ip_next < wake) wake = g_ip_next;
+        if (wake > now + 1500000) {  /* sleep (millisecond timer); the last stretch is spun below */
+            struct timespec ts;
+            timespec_get(&ts, TIME_UTC);
+            uint64_t ns = (uint64_t)ts.tv_nsec + (wake - now - 1000000);
+            ts.tv_sec += (time_t)(ns / 1000000000ull);
+            ts.tv_nsec = (long)(ns % 1000000000ull);
+            cnd_timedwait(&g_cv, &g_lock, &ts);
+        }
+    }
+    GxFrame* nf = g_pending;
+    if (nf) {
+        g_pending = NULL;  /* the game goes on with the next one; this one stays here */
+        cnd_broadcast(&g_cv);
+    }
+    mtx_unlock(&g_lock);
+    ip_pump();
+    uint64_t now = platform_now_ns();
+    if (nf) {
+        if (g_ip_fa) give_back(g_ip_fa);
+        g_ip_fa = g_ip_fb;
+        g_ip_fb = nf;
+        g_up_frame = NULL;  /* new vertices */
+        /* steady arrivals keep a steady time base (jitter would shake the blend) */
+        uint64_t expect = g_ip_tb + IP_GAME_NS;
+        g_ip_tb = g_ip_fa && now + 4000000 > expect && now < expect + 4000000 ? expect : now;
+        ip_frame_info(nf, &g_ip_info[nf - g_frames]);
+        if (g_ip_fa) ip_match(g_ip_fa, &g_ip_info[g_ip_fa - g_frames], nf, &g_ip_info[nf - g_frames]);
+        g_ip_b_shown = 0;
+        if (!g_ip_fa) {  /* the first: as it is */
+            execute(nf);
+            g_ip_b_shown = 1;
+            return;
+        }
+    }
+    if (!g_ip_fb || g_ip_b_shown) return;
+    if (period && now < g_ip_next) {
+        while (platform_now_ns() < g_ip_next) SDL_Delay(0);
+        now = platform_now_ns();
+    }
+    double t = now > g_ip_tb ? (double)(now - g_ip_tb) / (double)IP_GAME_NS : 0.0;
+    if (t >= 1.0) {
+        execute(g_ip_fb);
+        g_ip_b_shown = 1;
+    } else {
+        g_ip_a = g_ip_fa;
+        g_ip_t = (float)t;
+        g_ip_on = 1;
+        execute(g_ip_fb);
+        g_ip_on = 0;
+    }
+    g_ip_next = (period && g_ip_next + period > now ? g_ip_next : now) + period;
+    g_ip_presents++;
+    if (now - g_ip_fps_t0 >= 500000000ull) {
+        if (g_ip_fps_t0) overlay_set_fps((float)(g_ip_presents * 1e9 / (double)(now - g_ip_fps_t0)));
+        g_ip_presents = 0;
+        g_ip_fps_t0 = now;
+        static uint64_t last_log;
+        if (now - last_log > 10000000000ull) {
+            last_log = now;
+            rt_log("[gl] in-between pictures: target %d, %u of %u draws paired, %u matrix words, %u projections", target,
+                   g_ip_matched, g_ip_draws, g_ip_npairs / 2, g_ip_nupairs / 2);
+        }
+    }
+}
+
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
@@ -1133,11 +1420,21 @@ static int render_thread(void* arg) {
         /* vsync, so frames line up with the display (no tearing); test runs (minimized) and
          * SR_NOVSYNC=1 present at once */
         int vsync = !minimized && !getenv("SR_NOVSYNC");
-        SDL_GL_SetSwapInterval(vsync);
-        rt_log("[gl] vsync %s", vsync ? "on" : "off");
+        g_vsync_ok = vsync;
+        set_vsync(vsync);
         gl_setup();
     }
     for (;;) {
+        int ip = ip_target();
+        g_render_counts_fps = ip != 0;
+        if (ip) {
+            ip_round(ip);
+            goto round_done;
+        }
+        if (g_ip_fa || g_ip_fb) {  /* the in-between mode was turned off */
+            ip_release();
+            if (!g_headless) set_vsync(g_vsync_ok);
+        }
         mtx_lock(&g_lock);
         while (!g_pending) {
             mtx_unlock(&g_lock);
@@ -1174,7 +1471,9 @@ static int render_thread(void* arg) {
                 for (g_same_k = 0; g_same_first + g_same_k * g_same_step < (int)nd && g_same_k < 400; g_same_k++) execute(f);
                 g_same_k = -1;
             }
+            g_up_frame = NULL;  /* a recycled frame: new vertices */
             execute(f);
+            retire(f);
             g_debug_frame = 0;
         }
         mtx_lock(&g_lock);
@@ -1182,6 +1481,7 @@ static int render_thread(void* arg) {
         g_free[g_nfree++] = f;
         cnd_broadcast(&g_cv);
         mtx_unlock(&g_lock);
+    round_done:
         if (overlay_take_quit_request()) g_quit = 1;  /* the menu's "Quit Game" */
         if (g_quit) {
             rt_log("[gl] window closed");
@@ -1194,9 +1494,7 @@ static int render_thread(void* arg) {
 void render_start(void) {
     mtx_init(&g_lock, mtx_plain);
     cnd_init(&g_cv);
-    g_free[0] = &g_frames[0];
-    g_free[1] = &g_frames[1];
-    g_nfree = 2;
+    for (g_nfree = 0; g_nfree < 4; g_nfree++) g_free[g_nfree] = &g_frames[g_nfree];
     const char* h = getenv("SR_HEADLESS");
     g_headless = h && *h == '1';
     const char* s = getenv("SR_SCREENSHOT");
