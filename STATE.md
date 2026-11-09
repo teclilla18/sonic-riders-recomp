@@ -28,7 +28,7 @@ incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sidel
 remapping, screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop fix. OLED on v0.5.3 (dev
 build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
-Consoles: OLED (switch-remote, 10.0.0.44) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
+Consoles: OLED (switch-remote) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
 
 ## v0.5.x contents (released)
