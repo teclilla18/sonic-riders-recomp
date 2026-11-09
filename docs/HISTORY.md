@@ -919,3 +919,16 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Now `tools/write_version.py` also runs before every ninja build (restat: an unchanged id rebuilds nothing;
   checked: second ninja run does only VERSION) [confirmed]. Release zips were already right (VERSION file); no new
   release, per the user.
+
+## 2026-11-09: update notice on PC (launcher + game), issue #18
+
+Issue #18 (game stuck on Player Entry in Grand Prix) came from v0.6.0 although the form said 0.7.0; the reporter
+was asked to update. User's request: prompt anyone on an older version. Implemented `runtime/src/update_core.h`
+(header shared by the game and the launcher: WinHTTP GET of api.github.com releases/latest, `tag_name`, compare
+vX.Y.Z), `update_check.c` (helper thread at start-up; banner for 20 s; F1 > About line, download button, setting
+`update_check`), launcher sidebar button + About line. Windows only; Switch, Android, Linux and iOS do not check.
+- Tested [confirmed, frames]: game labelled v0.6.0 -> log "[update] v0.7.0 is available", banner on screen,
+  F1 > About shows it; launcher as v0.6.0 shows "Update available: v0.7.0" + "Download update", as v0.7.0 nothing.
+- User's decision: ship it in the v0.7.0 PC zip (assets replaced, release description notes it). Players already
+  on v0.7.0 get it with the next download; it only prompts from the next release on.
+

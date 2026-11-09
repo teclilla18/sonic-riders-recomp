@@ -33,6 +33,7 @@ typedef struct Settings {
                            (60, or 30 in its 30 fps mode), PC_FPS_UNLIMITED, or one of settings_pc_fps_presets */
     int pad_background; /* PC: controllers keep working while the window is not focused (SDL hint) */
     int sharpness;      /* PC: FSR 1 RCAS sharpening of the final picture in percent, 0 (off)..100 */
+    int update_check;   /* PC: ask GitHub at start-up whether a newer release exists (update_check.c) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

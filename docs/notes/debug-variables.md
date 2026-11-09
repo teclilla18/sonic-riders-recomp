@@ -22,6 +22,8 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_CHARLIGHT=1` (PC): per-pixel lighting for this run (setting `char_light`).
 - `SR_SCALE_AT=<frame>:<scale>[:<msaa>]` (PC): change resolution / MSAA at that presented frame, as the F1 menu does.
 - `SR_HEADLESS=1` (PC): no window. `SR_NOVSYNC=1` (PC): present without vsync.
+- `SR_NOUPDATECHECK=1` (PC): no update check at start-up (also off with `update_check=0` in settings.ini and in
+  `SR_INPUT` / `SR_PERFTEST` runs); `SR_UPDATECHECK=1`: check even in those runs (update_check.c, update_core.h).
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.
 - `SR_SCREENSHOT=<frame>[,...]` / `list` (PC): `build/shot_<frame>.png`, up to 512 frames. `SR_SHOTSTEP`: capture by frame end (from 1).
 - `SR_SCREEN=0..3` (4:3, 16:9, 2 = 16:9 (old stretched mode, removed), fit window); `SR_ANCHORLOG=<frame>`: that frame's 2D draws and their wide-screen anchors (notes/ultrawide-fov.md), `SR_FOV=80..130`, `SR_HUDSTRETCH=0/1`: screen settings for one run, not saved (notes/ultrawide-fov.md). `SR_WINDOW=WxH` (PC): the window's first size (wide captures, e.g. 3440x1440).

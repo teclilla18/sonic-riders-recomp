@@ -8,7 +8,7 @@
 #include "settings.h"
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1};
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -123,6 +123,7 @@ void settings_load(void) {
             else if (!strcmp(line, "pc_fps") && settings_pc_fps_valid(v)) g_settings.pc_fps = v;
             else if (!strcmp(line, "pad_background")) g_settings.pad_background = v != 0;
             else if (!strcmp(line, "sharpness") && v >= 0 && v <= 100) g_settings.sharpness = v;
+            else if (!strcmp(line, "update_check")) g_settings.update_check = v != 0;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -179,6 +180,6 @@ void settings_apply(void) {
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
-            g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness);
+            g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check);
     fclose(f);
 }

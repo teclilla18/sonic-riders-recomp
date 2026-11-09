@@ -30,6 +30,7 @@
 #include <thread>
 #include <vector>
 
+#include "../runtime/src/update_core.h"  /* newest release on GitHub (WinHTTP) */
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
@@ -1013,10 +1014,40 @@ void page_controls(float w) {
 }
 
 std::string g_version;
+/* the update check: the newer release's tag once known ("" = none, or not checked) */
+std::mutex g_update_mx;
+std::string g_update_tag;
+std::atomic<bool> g_update_done{true};  /* no check running (SR_LAUNCHER_SHOT waits for it) */
+std::string update_tag() {
+    std::lock_guard<std::mutex> lk(g_update_mx);
+    return g_update_tag;
+}
+void start_update_check() {
+    /* off with update_check=0 in saves\settings.ini (the game's F1 > About), and for builds without a release tag */
+    std::string ini = read_text(path(L"saves\\settings.ini"));
+    int v[3];
+    if (ini.find("update_check=0") != std::string::npos || !update_parse_version(g_version.c_str(), v)) return;
+    g_update_done = false;
+    std::thread([]() {
+        char tag[32];
+        if (update_fetch_latest(tag, sizeof tag) == 0 && update_is_newer(tag, g_version.c_str())) {
+            std::lock_guard<std::mutex> lk(g_update_mx);
+            g_update_tag = tag;
+        }
+        g_update_done = true;
+    }).detach();
+}
+void open_update_page() { ShellExecuteA(nullptr, "open", UPDATE_PAGE, nullptr, nullptr, SW_SHOWNORMAL); }
 void page_about(float w) {
     (void)w;
     section("SONIC RIDERS NATIVE PORT");
     ImGui::Text("Version: %s", g_version.empty() ? "development build" : g_version.c_str());
+    std::string upd = update_tag();
+    if (!upd.empty()) {
+        ImGui::TextColored(kGoldV, "Update available: %s", upd.c_str());
+        ImGui::SameLine();
+        if (ImGui::Button("Download")) open_update_page();
+    }
     ImGui::TextWrapped("A fan-made native port, built on your PC from your own disc. Not affiliated with SEGA or Nintendo. "
                        "This launcher contains no game code or data.");
     ImGui::Spacing();
@@ -1091,6 +1122,18 @@ void draw_ui(float W, float H) {
         dl->AddText(ImVec2(28 * s, y + (40 * s - ImGui::GetFontSize()) / 2), sel ? IM_COL32(242, 190, 60, 255) : IM_COL32(215, 220, 232, 255), kPages[i]);
         ImGui::PopID();
         y += 40 * s;
+    }
+    std::string upd = update_tag();
+    if (!upd.empty()) {  /* a newer release: a gold button to its download page, above Quit */
+        ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 64 * s));
+        ImGui::PushTextWrapPos(side - 18 * s);
+        ImGui::TextColored(kGoldV, "Update available: %s", upd.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 38 * s));
+        ImGui::PushStyleColor(ImGuiCol_Button, kGoldV);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.08f, 0.08f, 0.12f, 1));
+        if (ImGui::Button("Download update", ImVec2(side - 36 * s, 0))) open_update_page();
+        ImGui::PopStyleColor(2);
     }
     dl->AddLine(ImVec2(0, H - bar), ImVec2(side, H - bar), kLine);
     ImGui::SetCursorPos(ImVec2(26 * s, H - bar + (bar - ImGui::GetFrameHeight()) / 2));
@@ -1374,6 +1417,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     std::string v = read_text(path(L"VERSION"));
     g_version = v.substr(0, v.find_first_of("\r\n"));
+    start_update_check();
 
     WNDCLASSEXW wc = {sizeof wc, CS_CLASSDC, wndproc, 0, 0, inst, LoadIconW(inst, L"APPICON"), LoadCursorW(nullptr, IDC_ARROW),
                       nullptr, nullptr, L"SonicRidersLauncher", nullptr};
@@ -1445,7 +1489,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         ++frames;
         if (g_test && test_step(frames)) break;
         if (g_install_test && install_test_step(frames)) break;
-        if (g_shot_file && frames == 20) {  /* fonts and textures settled */
+        if (g_shot_file && frames >= 20 && (g_update_done || frames >= 600)) {  /* fonts, textures, update check settled */
             save_backbuffer(widen(g_shot_file));
             break;
         }

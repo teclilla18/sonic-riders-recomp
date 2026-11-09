@@ -38,6 +38,11 @@ void mods_set_enabled(int i, int on);
 int platform_bug_report(char* name, size_t n);  /* platform_host.c */
 void platform_open_game_folder(void);
 #endif
+#ifdef _WIN32
+const char* update_available(void);  /* update_check.c: the newer release's tag, or NULL */
+int SDL_OpenURL(const char* url);
+#define UPDATE_PAGE "https://github.com/teclilla18/sonic-riders-recomp/releases/latest"
+#endif
 }
 
 namespace {
@@ -581,6 +586,22 @@ void tab_mods() {
 void tab_about() {
     heading("Sonic Riders native port");
     ImGui::Text("Version: %s", g_build_version);
+#ifdef _WIN32
+    if (const char* latest = update_available()) {
+        char line[96];
+        snprintf(line, sizeof line, "Update available: %s", latest);
+        warn(line);
+        if (ImGui::Button("Open the download page")) SDL_OpenURL(UPDATE_PAGE);
+        help("Opens the project's newest release on GitHub in your browser.");
+    }
+    bool check = g_settings.update_check != 0;
+    if (ImGui::Checkbox("Check for updates at start-up", &check)) {
+        g_settings.update_check = check;
+        settings_apply();
+    }
+    help("Asks GitHub once at start-up whether a newer version of the port exists and says so at the top of the "
+         "screen. Only the newest version number is downloaded.");
+#endif
     note("A fan-made native port built from your own disc. Not affiliated with SEGA or Nintendo.");
     heading("Bug reports");
     if (ImGui::Button("Save screenshot")) {

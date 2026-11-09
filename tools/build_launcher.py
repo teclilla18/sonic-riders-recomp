@@ -46,7 +46,7 @@ def main():
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [
            "-o", out, "-ld3d11", "-ldxgi", "-ld3dcompiler", "-ldwmapi", "-lole32", "-lwindowscodecs",
-           "-lcomdlg32", "-lshell32", "-lgdi32", "-luuid"]
+           "-lcomdlg32", "-lshell32", "-lgdi32", "-luuid", "-lwinhttp"]
     print("build_launcher: compiling (about a minute)...")
     r = subprocess.run(cmd)
     if r.returncode:

@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-## v0.7.0 (2026-11-08)
+## v0.7.0 (2026-11-08; PC zip updated 2026-11-09)
 
+- **PC: update notice** (added to the v0.7.0 PC zip on 2026-11-09): the launcher and the game check GitHub at
+  start-up and say when a newer version is out (a gold "Download update" button in the launcher, a message at the
+  top of the game screen, and F1 > About with a button to the download page). Only the newest version number is
+  downloaded. Off with F1 > About > "Check for updates at start-up".
 - **iPhone and iPad (new):** `SonicRiders-iOS-Setup-<version>.zip` builds the app on your Mac (Apple silicon,
   Xcode) from your own disc image and installs it on a connected iPhone/iPad, or makes an `.ipa` for Sideloadly /
   AltStore. Races at 60 fps on iPhone 17 Pro, iPad Pro 11" (M1) and iPad (A16); iPad 7th gen with small dips.

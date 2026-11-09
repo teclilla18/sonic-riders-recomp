@@ -124,7 +124,8 @@ int main(int argc, char** argv) {
         platform_bug_report(name, sizeof name);
     }
 #endif
-    { void netplay_init(void); netplay_init(); }  /* SR_RECORD / SR_REPLAY / SR_NET (they turn SR_DETCLOCK on) */
+    { void netplay_init(void); netplay_init(); }
+    { void update_check_start(void); update_check_start(); }  /* newer release on GitHub? (banner) */  /* SR_RECORD / SR_REPLAY / SR_NET (they turn SR_DETCLOCK on) */
 #ifdef SR_IOS
     if (argc <= 1) {  /* no image yet (a Sideloadly install starts empty): say where it goes, not just close */
         FILE* f = fopen(disc, "rb");
