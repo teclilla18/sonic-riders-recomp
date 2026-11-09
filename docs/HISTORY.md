@@ -999,3 +999,11 @@ never had a cold Sandbox run, so the user chose to run it first: PC PASS (2 + 1 
 a normal path and a path with spaces [confirmed, cold]. Note: while the Sandbox maps build/release, new zips cannot be
 renamed into it (WinError 32); use `--out` to another folder until it closes. v0.7.1 release delisted (tag kept). iOS zip
 from the Mac session. Not tested: updating from v0.7.1 to v0.7.2 through the launcher's Update page [uncertain].
+
+## 2026-11-09, v0.7.2 iOS zip (Mac session)
+
+- SonicRiders-iOS-Setup-v0.7.2.zip made with `make_release.py --flavor ios --ref 8045090` (with `--ref v0.7.2` the
+  VERSION file names the annotated tag object 5e2b7ed0, not the commit the other zips name; same tree). Cold test:
+  quarantined zip, Archive Utility extract, launcher + .command 0755, codesign valid, spctl "rejected" (the Open
+  Anyway route); launcher-driven build from that folder, 7/7 steps -> .ipa [confirmed]. Not covered: fresh tool
+  downloads (the launcher uses the cached tools folder), install on a device from this zip. Uploaded to the release.
