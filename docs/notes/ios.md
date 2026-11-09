@@ -175,7 +175,11 @@ First-boot findings [confirmed on the iPhone]:
   -> "still copying" message. Finder's Files tab writes the file growing from 0 [confirmed: devicectl copy on the
   iPad Pro, Finder copy on the A16 iPad, user]. After deleting + reinstalling the app, Finder's Files tab shows
   the old folder ("The required file cannot be found") until Finder is refreshed (click away and back).
-- App icon: `--icon <png>`, else the save icon from baserom/_Main.rel (make_icon.decode_icon, 32x nearest).
+- App icon: `--icon <picture>` (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF: `ios_build.ICON_EXTS`), else the save icon from
+  baserom/_Main.rel (make_icon.decode_icon, 32x nearest). `ios_build.square_png`: centre square with sips (two
+  calls: in one, sips scales before it crops), 1024 px; `flatten_png` fills transparency with ICON_BACKGROUND
+  (8/16-bit, grey/RGB/palette). `ios_build.py icon <in> <out.png>` = the same conversion (the launcher's preview).
+  setup_mac.py copies the picture to build/ios/custom_icon.<ext> (never git; a path without spaces for ninja).
 - A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
 - Renewal: renew the same way as installed. Sideloadly on a Mac-installed app appends the team ID (a second,
   empty app) unless Advanced Options > "Use automatic bundle ID" is unticked (keeps the .ipa's ID): tested on the iPad Pro 2026-11-08,
@@ -194,3 +198,34 @@ First-boot findings [confirmed on the iPhone]:
   lifted 0.04 H + 0.2 (H - unit), right cluster 0.07 unit in, START 0.5 unit from the right (Control Center).
 - devicectl `device capture screenshot` returned black frames on the iPad Pro (iPadOS 26.6); use the game's own
   captures (SR_SCREENSHOT) and the user's eyes for system alerts.
+
+## Mac launcher (2026-11-09)
+
+- `launcher/mac/SonicRidersLauncher.swift` (SwiftUI, one file) -> `Sonic Riders Launcher.app` by
+  `tools/build_mac_launcher.py` (xcrun swiftc, arm64, macOS 13+; icon = tools/launcher_icon.py drawing via
+  iconutil; banner.jpg in Resources). Signed ad hoc **after** assembling (`codesign --force --deep -s -`): a bundle
+  whose files don't match its signature is "damaged" to Gatekeeper with no Open Anyway. make_release.py --flavor ios
+  builds it (on a Mac only; refuses if its sources differ from REF) and ships it with "START HERE (Mac).html"
+  (launcher/mac/START_HERE.html) next to the .command (kept as the Terminal route).
+- Pages: Get ready (folder without spaces, else "Move it to ~/SonicRiders" + relaunch; Apple silicon; Xcode -> App
+  Store; first launch; iOS platform `xcodebuild -downloadPlatform iOS`; Metal Toolchain; Homebrew via a Terminal
+  .command running brew.sh's installer; ninja + shaderc `brew install`; Apple ID optional), Build (disc, icon
+  picker with the real converted preview, signed / unsigned; runs `setup_mac.py --yes --install no --iso --icon
+  --ipa-dir [--unsigned]`, progress from `== N/7` and ninja `[a/b]` lines), Install (Sideloadly in 7 steps, or
+  from the Mac via ios_run.py install / push-iso), Renew (install date in UserDefaults
+  `net.srnative.sonicriders.launcher`, expiry, .ics Calendar reminder 6 days on), About.
+- Root: the nearest folder above the app with tools/setup_mac.py; a quarantined app runs translocated, so
+  `SecTranslocateCreateOriginalPathForURL` (dlsym) gives the real path. At start it removes the quarantine flag
+  from the whole folder (nothing else asks Gatekeeper).
+- Test variables: `SR_LAUNCHER_ROOT`, `SR_LAUNCHER_PAGE=0-4`, `SR_LAUNCHER_SHOT=<png>` (off-screen picture, quits),
+  `SR_LAUNCHER_BUILD=1` (builds at once; with SHOT the picture is taken when the build ends), `SR_LAUNCHER_ISO`,
+  `SR_LAUNCHER_IPA_DIR` (never the Desktop folder in tests).
+- Gatekeeper on macOS 27.2 (strings read from CoreServicesUIAgent Quarantine*.loctable and SecurityPrivacyExtension
+  Localizable.loctable, not from screenshots: this session had no screen-recording permission): first open ->
+  "“X” Not Opened" / "Apple could not verify “X” is free of malware..." with Done / Move to Trash; then System
+  Settings > Privacy & Security > Security: "“X” was blocked to protect your Mac." + Open Anyway. A downloaded
+  *script* (.command) gets "File Not Opened" ("Scammers often encourage ... running scripts"), which is why the
+  .app is the main route. The exact final confirmation dialog was not seen [uncertain].
+- Zip modes: v0.7.1's zip already stored 0755 for the .command (Unix origin); a cold Archive Utility extract with
+  and without a quarantine flag kept 0755, so the missing execute bit the user met was not reproduced. Entries now
+  also carry S_IFREG (as Info-ZIP writes) [likely harmless either way].

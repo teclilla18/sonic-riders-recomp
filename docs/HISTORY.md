@@ -966,3 +966,21 @@ an unpacked PC zip and Switch zip (real 3 MB download, exe swapped to .old, save
 the notes. Found on the way: the exe crashed at exit (an update reader thread left joinable) and the marker folder
 was missing; both fixed before the release. No Sandbox run (user: replace v0.7.1 directly).
 
+## 2026-11-09, Mac launcher for the iOS builder (Mac session, request relayed from the PC session)
+
+- Asked: make the iOS .command a launcher like PC/Android/Switch, custom icon from any picture, fix the missing
+  execute bit, make the Gatekeeper first start easy.
+- Execute bit: v0.7.1's iOS zip already stores the .command as 0755 with Unix origin; cold Archive Utility
+  extracts with and without a quarantine flag kept 0755. Not reproduced [uncertain what the user hit]. macOS 27.2
+  shows downloaded *scripts* a separate "File Not Opened ... Scammers often encourage ... running scripts" dialog
+  (Quarantine.loctable), a likely cause of the trouble [likely]. Zip entries now also carry S_IFREG.
+- Built: launcher/mac/SonicRidersLauncher.swift -> Sonic Riders Launcher.app (tools/build_mac_launcher.py, ad-hoc
+  signed after assembly), shipped by make_release.py --flavor ios with START HERE (Mac).html; setup_mac.py --icon
+  any picture (sips centre square, flatten_png now 8/16-bit, grey/palette). Launcher removes quarantine from the
+  whole folder at start; finds its folder through App Translocation.
+- Tested: icon conversion PNG/JPG/HEIC/GIF/BMP/TIFF, 16-bit RGBA, transparent GIF [confirmed; WEBP read not tested,
+  no writer to make one]. Quarantined binary run from a shell is killed (exit 137) until approved [confirmed].
+  Cold zip -> launcher build -> .ipa with the HEIC icon (1024 px AppIcon in Assets.car) [confirmed]. Pages checked
+  by off-screen pictures (SR_LAUNCHER_SHOT).
+- Unproven: the four Gatekeeper clicks done by a person (drawn dialogs use macOS's own strings; the last
+  confirmation dialog's wording not seen), Install/Renew pages with a real device, a Mac without Xcode/Homebrew.

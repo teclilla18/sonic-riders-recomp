@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **iPhone and iPad: Mac launcher.** The iOS zip now has *Sonic Riders Launcher*, an app like the PC launcher:
+  it checks and installs what the build needs (Xcode, Metal Toolchain, Homebrew tools) with one button each,
+  builds the app with a progress bar, walks you through Sideloadly, Developer Mode and trusting your Apple ID, and
+  shows when the 7 days run out (with a Calendar reminder). *START HERE (Mac).html* shows the one-time macOS
+  "Open Anyway" steps. **Your own app icon:** pick any picture (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF).
+
 ## v0.7.1 (2026-11-09; zips updated the same day)
 
 - **Update from the launcher.** When a new version is out, the launcher and the Switch / Android installers show

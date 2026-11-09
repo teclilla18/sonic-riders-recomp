@@ -1,4 +1,4 @@
-# State (2026-11-08)
+# State (2026-11-09)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -18,6 +18,14 @@ Release pieces done: `tools/setup_mac.py` ("Install Sonic Riders (iOS).command")
 INSTALL/README section, unsigned .ipa without an Apple ID in Xcode (Sideloadly), save-icon app icon, missing /
 incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sideloadly install, message and icon
 [confirmed, user]. Not tested: a Mac without Homebrew/Xcode; the signed "install from the Mac" route from the zip.
+**Mac launcher for the iOS zip: implemented + tested on `main`, not released, not yet accepted** (notes/ios.md "Mac
+launcher"): Sonic Riders Launcher.app (Get ready / Build / Install / Renew / About), custom app icon from any picture,
+START HERE (Mac).html. Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
+ad-hoc signature (Gatekeeper "rejected" = Open Anyway, not "damaged"); full build driven by the launcher from that
+folder with a HEIC icon -> .ipa with the cropped icon [confirmed]. Not tested: the four Gatekeeper clicks by a person
+(no screen-recording permission here; dialog words read from macOS 27.2's own strings), the Sideloadly / from-Mac
+install pages on a device, a Mac without Xcode/Homebrew. Missing execute bit on the .command: not reproduced
+(v0.7.1's zip stores 0755). Building the .ipa on a PC: dropped (user).
 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
 1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
@@ -30,16 +38,6 @@ build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
 Consoles: OLED (switch-remote) + two more Switch SD cards have v0.5.3 builds. Clocks: handheld
 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
-
-## v0.5.x contents (released)
-
-- v0.5.2: specialized shaders in release builds (above).
-- Ultrawide (notes/ultrawide-fov.md) tested on PC 21:9 Fit window by frames: race HUD at the edges, results,
-  pause/quit, Options, Extra, Audio Room, Records, Theater, story intro movie + subtitles (4:3 with bars), 2P.
-  Not checked: later in-engine story cutscenes, 3-4P, Tag/Survival/story races. Not accepted by the user yet.
-- HOME icon: setup asks y/n, keys at %USERPROFILE%\.switch\prod.keys or a file picker, optional picture [accepted].
-- Linux build compiles and runs in WSL (llvmpipe) [not on a Deck]. Race tests: use 1 lap (stage select options).
-- Switch "Save screenshot" captured the menu (FPS counter on): fixed on `main` 2026-11-07, tested on the OLED.
 
 Steam Deck / Linux (#19/#20): gamescope fullscreen defaults, Chaos Emerald option, bug-report zip; untested on a Deck.
 

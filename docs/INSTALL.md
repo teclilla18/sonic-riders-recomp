@@ -194,26 +194,33 @@ it once and add iOS when it asks), **Homebrew** ([brew.sh](https://brew.sh); the
 and `shaderc` with it), about 6 GB free, internet the first time, a cable for the device, and an
 iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
 
-1. **Download** `SonicRiders-iOS-Setup-<version>.zip` and **extract** it to a folder **you'll keep**,
-   with **no spaces** in its path, for example `~/SonicRiders` (drag the extracted folder into your home
-   folder in Finder and rename it).
-2. **Choose how to install:**
-   - **Straight from the Mac (recommended):** add your Apple ID in Xcode → *Settings* → *Accounts* →
-     **+**. Connect the iPhone/iPad with the cable, unlock it and tap *Trust*. Turn on *Settings* →
-     *Privacy & Security* → **Developer Mode** on the device (it restarts).
-   - **With Sideloadly or AltStore:** skip this step; the setup makes an `.ipa` for them.
-3. **Double-click `Install Sonic Riders (iOS).command`.** If macOS says it can't be opened, open
-   Terminal, type `sh ` (with a space), drag the `.command` file into the window and press Return.
-   Pick your disc image and wait 15–30 minutes the first time.
-4. **Straight from the Mac:** the setup installs the app and copies your disc image to the device (a few
-   minutes). **With Sideloadly:** install `~/Desktop/Sonic Riders iOS/SonicRiders.ipa` with your Apple ID,
-   then copy your disc image into the app: Finder → your device → *Files* tab → drag the `.iso` onto
-   **Sonic Riders**, and wait until Finder has finished copying before opening the game (it tells you if
-   the image is missing or still copying). If Finder says "The required file cannot be found" (after the app
-   was deleted and installed again), click another place in Finder's sidebar and then the device again, or
-   reconnect the cable, and drag the `.iso` again.
-5. **First start:** if iOS says *Untrusted Developer*, open *Settings* → *General* → *VPN & Device
-   Management*, tap your Apple ID and tap *Trust*.
+1. **Download** `SonicRiders-iOS-Setup-<version>.zip`, **double-click** it and keep the folder it makes
+   (for example in your home folder). Open **`START HERE (Mac).html`** in it: it shows the first start with
+   pictures.
+2. **Open the launcher the first time** (once; it's free and not signed by Apple, so macOS asks you to allow it):
+   1. Double-click **Sonic Riders Launcher**.
+   2. A warning appears ("“Sonic Riders Launcher” Not Opened"): click **Done**. **Don't** click *Move to Trash*.
+   3. Open *System Settings* → *Privacy & Security* and scroll down to *Security*: next to "“Sonic Riders
+      Launcher” was blocked to protect your Mac" click **Open Anyway** and confirm with your password or Touch ID.
+      (The button only appears after step 1.)
+   4. Double-click the launcher again and choose **Open**.
+3. **In the launcher:**
+   - **Get ready** checks Xcode, its iOS platform and Metal Toolchain, Homebrew and its two build tools; each
+     missing piece has a button that installs or opens it. Click *Check again* after each.
+   - **Build:** *Select disc...* (your image), optionally *Choose picture...* for the app icon (PNG, JPG, HEIC,
+     WEBP, GIF, BMP or TIFF; the centre square is used and transparent parts turn blue), then **BUILD THE APP**
+     (15–30 minutes the first time). The `.ipa` goes to `~/Desktop/Sonic Riders iOS/`.
+   - **Install** walks you through Sideloadly step by step: get Sideloadly, connect and *Trust*, install the
+     `.ipa` with your Apple ID, **Developer Mode** (*Settings* → *Privacy & Security* → *Developer Mode*, restart),
+     trust your Apple ID (*Settings* → *General* → *VPN & Device Management*), and copy your disc image with
+     Finder → your device → *Files* tab (wait until the copy has finished before opening the game; if Finder
+     says "The required file cannot be found", click another place in the sidebar and the device again).
+     With your Apple ID added in Xcode you can pick *Signed* on the Build page and install **from this Mac**
+     over the cable instead.
+   - **Renew** shows when the 7 days run out, the steps, and adds a Calendar reminder.
+4. **Without the launcher** (Terminal): double-click `Install Sonic Riders (iOS).command` (it needs the same
+   *Privacy & Security* step) or type `sh ` in Terminal, drag the `.command` file in and press Return. The
+   folder path must have no spaces for this route. It asks for your disc image and, optionally, an icon picture.
 
 ### Renewing every 7 days
 
@@ -226,8 +233,8 @@ own app ID filled in.
 **Renew the same way you installed**, or the device gets a second, empty Sonic Riders (no disc image, no saves):
 
 - **You installed it from the Mac** (the installer copied it to the device). Either:
-  - connect the device, unlock it, and run `Install Sonic Riders (iOS).command` again; answer **y** to
-    installing and **n** to copying the disc image; or
+  - connect the device and in the launcher's *Install* page click *Find devices* and **Install only (renewing)**
+    (or run `Install Sonic Riders (iOS).command` again: **y** to installing, **n** to copying the disc image); or
   - with Sideloadly: drag in the `.ipa`, open **Advanced Options**, **untick "Use automatic bundle ID"**, then
     *Start*. The app keeps its ID (written in the `How to renew` file, for example
     `net.srnative.sonicriders.t1a2b3c4d`). With the box ticked, Sideloadly adds your team ID to the app's ID and
