@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.0 (2026-11-08)
+
 - **iPhone and iPad (new):** `SonicRiders-iOS-Setup-<version>.zip` builds the app on your Mac (Apple silicon,
   Xcode) from your own disc image and installs it on a connected iPhone/iPad, or makes an `.ipa` for Sideloadly /
   AltStore. Races at 60 fps on iPhone 17 Pro, iPad Pro 11" (M1) and iPad (A16); iPad 7th gen with small dips.

@@ -901,3 +901,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   .ipa had not been rebuilt after the visible-message fix (rebuild the Desktop .ipa after every runtime change).
   Finder after an app reinstall: "The required file cannot be found" until refreshed [confirmed, user].
 
+
+## 2026-11-08, night (PC "Mike"): v0.7.0 released
+
+- Zips from c9a2f98 (PC, Android, Switch, Linux); cold Windows Sandbox PC PASS (2 + 1 min), Android PASS (2 + 2 min)
+  [confirmed]. Tag v0.7.0 at c9a2f98, published as Latest; v0.6.0 release delisted (tag kept). iOS zip: Mac makes,
+  cold-tests and uploads it to the release. GBAtemp post draft written for the user (not in the repo).

@@ -4,7 +4,7 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.6.0 released 2026-11-08** (tag at dbeda54; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS):
+**v0.7.0 released 2026-11-08** (tag at c9a2f98; PC, Switch, Android, Linux zips; iOS zip from the Mac; cold Sandbox PC + Android PASS; v0.6.0 delisted, tag kept). Before it, v0.6.0:
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
