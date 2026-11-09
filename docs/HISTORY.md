@@ -860,4 +860,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   `device capture screenshot` gives black frames on the iPad Pro; rt_log flushes at most once a second
   (SR_LOGSYNC=1 for every line).
 - Not tested: a Mac without Homebrew/Xcode; the signed install route from the zip.
+- Renewal with Sideloadly on a Mac-installed app (iPad Pro): with Advanced Options bundle ID = the app's own ID it
+  replaced the app in place, disc image and saves kept [confirmed]. Without it Sideloadly adds the team ID
+  (a second empty app, seen on the A16 iPad). Docs + setup: "renew the same way you installed", the app ID in
+  "How to renew (every 7 days).txt" next to the .ipa.
 

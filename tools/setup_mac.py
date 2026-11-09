@@ -106,6 +106,45 @@ def devices():
         return []
 
 
+def write_renew_notes(ipa_dir, ipa, bundle, signed):
+    """'How to renew (every 7 days).txt' next to the .ipa: both ways, with this build's app ID"""
+    lines = [
+        "Sonic Riders on iPhone / iPad: renewing every 7 days",
+        "",
+        "With a free Apple ID, iOS stops opening the app 7 days after it was installed. Renewing puts the same",
+        "app back for 7 more days; your saves and the disc image stay on the device. Renew it THE SAME WAY you",
+        "installed it, or the device gets a second, empty Sonic Riders (no disc image, no saves).",
+        "",
+        "The app file (the build before it: SonicRiders-prev.ipa, in the same folder):",
+        "    " + ipa,
+        "",
+    ]
+    if signed:
+        lines += [
+            "YOU INSTALLED IT FROM THE MAC (the installer copied it to the device)",
+            "  Either: connect the device, unlock it, and run \"Install Sonic Riders (iOS).command\" again; answer y",
+            "          to installing and n to copying the disc image.",
+            "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above, open Advanced",
+            "          Options and set the bundle ID to exactly this app ID (or Sideloadly makes a second app):",
+            "              " + bundle,
+            "          then Start.",
+            "",
+        ]
+    lines += [
+        "YOU INSTALLED IT WITH SIDELOADLY (or AltStore)",
+        "  Connect the device, open Sideloadly, drag in the .ipa above with the same Apple ID and the same",
+        "  settings as the first time, and Start. (The first Sideloadly install made the app's ID; later ones",
+        "  keep it.)",
+        "",
+        "Never share the .ipa: it contains the game.",
+    ]
+    os.makedirs(ipa_dir, exist_ok=True)
+    path = os.path.join(ipa_dir, "How to renew (every 7 days).txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(description="Sonic Riders setup for iPhone / iPad (on a Mac)")
     ap.add_argument("--iso", default="", help="your Sonic Riders (USA) disc image (GXEE8P revision 0, 1.4 GB .iso)")
@@ -198,32 +237,35 @@ def main():
 
     # 7 -------------------------------------------------------------
     step(7, "Installing")
+    app = os.path.join(ROOT, "build", "ios", "xcode", "build", "Release-iphoneos", "SonicRiders.app")
+    bundle = out(["plutil", "-extract", "CFBundleIdentifier", "raw", os.path.join(app, "Info.plist")])
     installed = False
+    d = None
     devs = devices() if team else []
     if team and not devs:
         log("No iPhone/iPad found on the cable (connect it, unlock it, tap Trust; Developer Mode must be on).", "yellow")
     if devs:
         if a.device:
-            devs = [d for d in devs if a.device in (d["id"], d["name"])]
+            devs = [x for x in devs if a.device in (x["id"], x["name"])]
         if len(devs) > 1:
-            log("Connected: " + ", ".join(d["name"] for d in devs))
+            log("Connected: " + ", ".join(x["name"] for x in devs))
             want = ask("Which one? (name)", devs[0]["name"], a.yes)
-            devs = [d for d in devs if d["name"] == want] or devs[:1]
+            devs = [x for x in devs if x["name"] == want] or devs[:1]
         d = devs[0] if devs else None
-        if d and (a.install or ("yes" if ask("Install on %s and copy your disc image to it (1.4 GB)? (y/n)" % d["name"],
-                                                  "y", a.yes).lower().startswith("y") else "no")) == "yes":
+        if d and (a.install or ("yes" if ask("Install on %s? (y/n)" % d["name"], "y", a.yes).lower().startswith("y")
+                                else "no")) == "yes":
             run("install the app on %s" % d["name"], [sys.executable, "tools/ios_run.py", "--device", d["id"], "install"])
-            run("copy the disc image to %s (a few minutes)" % d["name"],
-                [sys.executable, "tools/ios_run.py", "--device", d["id"], "push-iso", iso])
             installed = True
+            if ask("Copy your disc image to %s (1.4 GB, a few minutes; not needed again when you only renew)? (y/n)"
+                   % d["name"], "y", a.yes).lower().startswith("y"):
+                run("copy the disc image to %s" % d["name"],
+                    [sys.executable, "tools/ios_run.py", "--device", d["id"], "push-iso", iso])
+    renew = write_renew_notes(ipa_dir, ipa, bundle, signed=bool(team))
     log()
     if installed:
         log("Done. Sonic Riders is on your %s." % ("iPad" if "iPad" in d["model"] else "iPhone"), "green")
         log("First start: if iOS says 'Untrusted Developer', open Settings > General > VPN & Device Management,")
         log("tap your Apple ID under Developer App and tap Trust.")
-        log("A free Apple ID's apps stop opening after 7 days. To renew, install the .ipa again with Sideloadly:")
-        log("  %s" % ipa, "cyan")
-        log("(or run this setup again with the device connected). Your saves and the disc image stay.")
     else:
         log("Done. The app: %s" % ipa, "green")
         log("Install it with Sideloadly (sideloadly.io) or AltStore with your Apple ID:")
@@ -232,9 +274,9 @@ def main():
         log("     (iOS 16 or newer also needs Settings > Privacy & Security > Developer Mode: on.)")
         log("  3. Copy your disc image to the app: in Finder click the device, Files tab, drag the .iso onto")
         log("     Sonic Riders, and wait until Finder has finished before opening the game.")
-        log("  A free Apple ID's apps stop opening after 7 days: install this same .ipa again with Sideloadly")
-        log("  to renew (your saves and the disc image stay):")
-        log("  %s" % ipa, "cyan")
+    log()
+    log("Every 7 days (free Apple ID) the app must be renewed. How, for the way you installed it:", "yellow")
+    log("  %s" % renew, "cyan")
     log("Keep this folder: a new version is built from it again. Never share the .ipa or your disc image.")
 
 

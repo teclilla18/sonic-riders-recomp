@@ -208,12 +208,26 @@ iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
 5. **First start:** if iOS says *Untrusted Developer*, open *Settings* → *General* → *VPN & Device
    Management*, tap your Apple ID and tap *Trust*.
 
-**Every 7 days** (free Apple ID): the app stops opening until it is installed again. Install the same
-`.ipa` with Sideloadly; it is always on your Mac at **`~/Desktop/Sonic Riders iOS/SonicRiders.ipa`** (Finder:
-Desktop → *Sonic Riders iOS*; the build before it is `SonicRiders-prev.ipa` next to it). Or run the installer
-again with the device connected. Your saves and the disc image stay on the device.
-(Sideloadly gives the app its own ID the first time, a separate app with an empty folder: copy the disc
-image into that one once. Later reinstalls keep it.)
+### Renewing every 7 days
+
+With a free Apple ID, iOS stops opening the app 7 days after it was installed. Renewing puts it back for 7 more
+days; your saves and the disc image stay on the device. The app file is always on your Mac at
+**`~/Desktop/Sonic Riders iOS/SonicRiders.ipa`** (Finder: Desktop → *Sonic Riders iOS*; the build before it is
+`SonicRiders-prev.ipa`), and **`How to renew (every 7 days).txt`** in the same folder has these steps with your
+own app ID filled in.
+
+**Renew the same way you installed**, or the device gets a second, empty Sonic Riders (no disc image, no saves):
+
+- **You installed it from the Mac** (the installer copied it to the device). Either:
+  - connect the device, unlock it, and run `Install Sonic Riders (iOS).command` again; answer **y** to
+    installing and **n** to copying the disc image; or
+  - with Sideloadly: drag in the `.ipa`, open **Advanced Options** and set the **bundle ID** to your app's ID
+    (written in the `How to renew` file and at the end of the installer's output, for example
+    `net.srnative.sonicriders.t1a2b3c4d`), then *Start*. Without that, Sideloadly adds your team ID to the
+    app's ID and installs a second app.
+- **You installed it with Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly
+  with the same Apple ID and the same settings as the first time, and *Start*. The first Sideloadly install
+  set the app's ID; later ones keep it.
 
 **A free Apple ID allows 3 sideloaded apps per device.** If the install fails with "maximum number of
 installed apps", remove another sideloaded app first.
