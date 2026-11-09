@@ -226,7 +226,11 @@ First-boot findings [confirmed on the iPhone]:
   top is Move to Trash, Done is the grey one below; the icon is the lock dial, not the app's (user's screenshot); then System
   Settings > Privacy & Security > Security: "“X” was blocked to protect your Mac." + Open Anyway. A downloaded
   *script* (.command) gets "File Not Opened" ("Scammers often encourage ... running scripts"), which is why the
-  .app is the main route. The exact final confirmation dialog was not seen [uncertain].
+  .app is the main route. Full sequence confirmed from the user's screenshots (2026-11-09):
+  Settings row adds a grey caption "Apple could not verify ..."; Open Anyway -> alert "Open “X”?" ("Apple is not
+  able to verify ...") with Move to Trash (blue, top) / Open Anyway / Done -> Touch ID or "Use Password..." ("You
+  are attempting to open an app that may cause harm ...") -> the launcher starts and macOS asks for Downloads and
+  Desktop folder access (TCC; Allow).
 - Zip modes: v0.7.1's zip already stored 0755 for the .command (Unix origin); a cold Archive Utility extract with
   and without a quarantine flag kept 0755, so the missing execute bit the user met was not reproduced. Entries now
   also carry S_IFREG (as Info-ZIP writes) [likely harmless either way].

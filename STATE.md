@@ -23,8 +23,9 @@ launcher"): Sonic Riders Launcher.app (Get ready / Build / Install / Renew / Abo
 START HERE (Mac).html. All launchers (PC, Switch/Android installer, Mac) use the user's Super Sonic icon art
 (launcher/icon_256.png + icon_32.png; the Mac .icns is generated into build/). Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
 ad-hoc signature (Gatekeeper "rejected" = Open Anyway, not "damaged"); full build driven by the launcher from that
-folder with a HEIC icon -> .ipa with the cropped icon [confirmed]. Not tested: the four Gatekeeper clicks by a person
-(no screen-recording permission here; dialog words read from macOS 27.2's own strings), the Sideloadly / from-Mac
+folder with a HEIC icon -> .ipa with the cropped icon [confirmed]. First start done by the user on macOS 27.2 (their
+screenshots: Done, Open Anyway in Settings, Open Anyway in the second alert, Touch ID, Allow Downloads/Desktop);
+START HERE redrawn from them [confirmed, user]. Not tested: the Sideloadly / from-Mac
 install pages on a device, a Mac without Xcode/Homebrew. Missing execute bit on the .command: not reproduced
 (v0.7.1's zip stores 0755). Building the .ipa on a PC: dropped (user).
 

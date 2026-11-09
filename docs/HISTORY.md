@@ -985,3 +985,8 @@ was missing; both fixed before the release. No Sandbox run (user: replace v0.7.1
   by off-screen pictures (SR_LAUNCHER_SHOT).
 - Unproven: the four Gatekeeper clicks done by a person (drawn dialogs use macOS's own strings; the last
   confirmation dialog's wording not seen), Install/Renew pages with a real device, a Mac without Xcode/Homebrew.
+- Later: the user ran the zip's first start on macOS 27.2 and sent screenshots. Real order differs from the
+  first drawings: in the "Not Opened" alert the blue default button on top is Move to Trash (Done below, grey);
+  after Open Anyway in Settings a second alert "Open “X.app”?" has Move to Trash / Open Anyway / Done, then Touch
+  ID or Use Password, then the launcher asks for Downloads and Desktop access. START HERE, INSTALL and README-FIRST
+  redrawn / reworded from the screenshots [confirmed, user].

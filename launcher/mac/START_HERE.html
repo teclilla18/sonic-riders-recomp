@@ -61,14 +61,24 @@ b.k { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 4px; f
        border-radius: 4px; white-space: nowrap; }
 .tag.ok { background: var(--green); color: #102010; }
 .tag.bad { background: var(--red); color: #2a0d0a; }
-.settings { width: 100%; max-width: 560px; background: var(--dlg); color: var(--dlgtext); border-radius: 12px; overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 13px; }
-.settings .bar { background: #dcdce0; padding: 8px 14px; font-weight: 700; }
-.settings .body { padding: 14px 18px; }
-.settings .sec { font-weight: 700; margin: 4px 0 8px; color: #555; }
-.settings .row { background: #fff; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.settings .row .grow { flex: 1; }
-.settings .pill { background: #d9d9de; padding: 4px 12px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.settings { width: 100%; max-width: 560px; background: #1e1e20; color: #f2f2f4; border-radius: 14px; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 14px; border: 1px solid rgba(255,255,255,.1); }
+.settings .body { padding: 14px 16px; }
+.settings .sec { font-weight: 700; font-size: 15px; margin: 2px 0 10px 4px; }
+.settings .row { background: #2b2b2e; border-radius: 10px; padding: 11px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.settings .row .grow { flex: 1; min-width: 180px; }
+.settings .pill { background: #47474b; padding: 5px 12px; border-radius: 7px; white-space: nowrap; }
+.settings .plain { white-space: nowrap; }
+.settings .cap { flex-basis: 100%; color: #9a9aa0; font-size: 12.5px; border-top: 1px solid rgba(255,255,255,.1); padding-top: 9px; }
+/* Touch ID / password alert and the folder-access question */
+.gk .fp { width: 62px; height: 62px; border-radius: 50%; background: #f4f4f6; margin-bottom: 14px; position: relative;
+          background-image: repeating-radial-gradient(circle at 50% 60%, #e8445a 0 2px, transparent 2px 6px); }
+.gk .hand { position: absolute; right: -8px; bottom: -6px; width: 26px; height: 26px; border-radius: 7px; background: #2f7bf5;
+            color: #fff; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+.gk .folder { width: 70px; height: 54px; border-radius: 6px 6px 8px 8px; background: #6ab8ef; margin: 8px 0 16px; position: relative; }
+.gk .folder::before { content: ""; position: absolute; top: -8px; left: 0; width: 30px; height: 12px; border-radius: 5px 5px 0 0; background: #5aa8e2; }
+.gk .two { display: flex; gap: 10px; }
+.gk .two .bt { flex: 1; }
 .scroll { text-align: center; color: #777; font-size: 12px; margin: 6px 0 10px; }
 @media (max-width: 620px) {
   .tag { position: static; display: inline-block; margin-top: 6px; transform: none; }
@@ -79,7 +89,7 @@ b.k { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 4px; f
 <body>
 <main>
 <h1>Sonic Riders on iPhone and iPad</h1>
-<p class="sub">Start here. The first start of the launcher needs four clicks in macOS, once. After that the
+<p class="sub">Start here. The first start of the launcher needs a few clicks in macOS, once. After that the
 launcher guides you through everything else (Xcode, building, Sideloadly, Developer Mode, renewing).</p>
 
 <h2>Before you start</h2>
@@ -116,32 +126,54 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
 
 <div class="step"><div class="num">3</div><div>
   <h3>System Settings &gt; Privacy &amp; Security &gt; <b class="k">Open Anyway</b></h3>
-  <p>Open <b class="k">System Settings</b> (Apple menu  &gt; System Settings), click <b class="k">Privacy &amp; Security</b>
-  in the sidebar and scroll down to <b>Security</b>. Next to the launcher's name there is now an
-  <b class="k">Open Anyway</b> button (it only appears after step 1). Click it and confirm with your Mac password or Touch ID.</p>
+  <p>Open <b class="k">System Settings</b> (Apple menu &gt; System Settings), click <b class="k">Privacy &amp; Security</b>
+  in the sidebar and scroll down to <b>Security</b>. Next to "Sonic Riders Launcher.app was blocked to protect your
+  Mac" there is now an <b class="k">Open Anyway</b> button (it only appears after step 1). Click it.</p>
   <div class="shot"><div class="settings">
-    <div class="bar">Privacy &amp; Security</div>
     <div class="body">
-      <div class="scroll">↓ scroll down ↓</div>
       <div class="sec">Security</div>
-      <div class="row"><span class="grow">Allow applications from</span><span class="pill">App Store &amp; Known Developers</span></div>
+      <div class="row"><span class="grow">Allow applications from</span><span class="plain">App Store &amp; Known Developers ⌃⌄</span></div>
       <div class="row"><span class="grow">“Sonic Riders Launcher.app” was blocked to protect your Mac.</span>
-        <span class="pill mark">Open Anyway</span></div>
+        <span class="pill mark">Open Anyway</span>
+        <span class="cap">Apple could not verify “Sonic Riders Launcher.app” is free of malware that may harm your Mac or compromise your privacy.</span></div>
     </div>
   </div></div>
 </div></div>
 
 <div class="step"><div class="num">4</div><div>
-  <h3>Double-click the launcher again and choose <b class="k">Open</b></h3>
-  <p>macOS asks one last time. Click <b class="k">Open</b> (it may say <b class="k">Open Anyway</b>) and confirm with your
-  password or Touch ID if asked. From now on the launcher opens normally.</p>
+  <h3>macOS asks once more: click <b class="k">Open Anyway</b> (the middle button)</h3>
+  <p>A question "Open “Sonic Riders Launcher.app”?" appears (if it doesn't, double-click the launcher again).
+  Click <b class="k">Open Anyway</b>, the <b>middle</b> button. <span class="warn">Again not the blue "Move to Trash" on top.</span>
+  Then confirm with <b>Touch ID</b>, or click <b class="k">Use Password…</b> and type your Mac password.</p>
   <div class="shot"><div class="gk">
     <span class="help">?</span>
     <div class="lock"><span class="warnsign"></span></div>
-    <div class="hd">macOS asks about “Sonic Riders Launcher.app” once more</div>
-    <div class="tx">(the exact wording depends on your macOS version)</div>
-    <span class="bt blue mark">Open / Open Anyway<span class="tag ok">CLICK THIS</span></span>
+    <div class="hd">Open “Sonic Riders Launcher.app”?</div>
+    <div class="tx">Apple is not able to verify that it is free from malware that could harm your Mac or compromise your
+      privacy. Don’t open this unless you are certain it is from a trustworthy source.</div>
+    <span class="bt blue no">Move to Trash<span class="tag bad">NOT THIS</span></span>
+    <span class="bt mark">Open Anyway<span class="tag ok">CLICK THIS</span></span>
+    <span class="bt">Done</span>
+  </div></div>
+  <div class="shot"><div class="gk">
+    <div class="fp"><span class="hand">✋</span></div>
+    <div class="hd">You are attempting to open an app that may cause harm to your Mac or compromise your privacy</div>
+    <div class="tx">Touch ID or enter an administrator’s name and password to continue with Privacy &amp; Security.</div>
+    <span class="bt mark">Use Password…<span class="tag ok">OR TOUCH ID</span></span>
     <span class="bt">Cancel</span>
+  </div></div>
+</div></div>
+
+<div class="step"><div class="num">5</div><div>
+  <h3>The launcher opens: click <b class="k">Allow</b> for your folders</h3>
+  <p>macOS asks whether the launcher may use files in your <b>Downloads</b> folder (where its folder and usually your
+  disc image are) and your <b>Desktop</b> folder (where it puts the finished app). Click <b class="k">Allow</b> both
+  times. That's it: from now on the launcher opens with a normal double-click.</p>
+  <div class="shot"><div class="gk">
+    <span class="help">?</span>
+    <div class="folder"><span class="hand">✋</span></div>
+    <div class="hd">“Sonic Riders Launcher.app” would like to access files in your Downloads folder.</div>
+    <div class="two"><span class="bt">Don’t Allow</span><span class="bt mark">Allow</span></div>
   </div></div>
 </div></div>
 
