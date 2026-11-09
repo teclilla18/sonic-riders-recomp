@@ -1019,3 +1019,8 @@ time. Tested by script with the real zips [confirmed]: old script + v0.7.2 zip o
 bug; new script + same zip -> v0.7.2, 184/184 files equal; old script + v0.7.3 zip on a v0.7.2 folder -> v0.7.3,
 184/184 equal (so released launchers update correctly). Cold Sandbox PC + Android PASS. The user's folder was finished
 to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 to v0.7.3 [likely fine: same script].
+- Same day, found by the Mac session: the commit time in the zips is UTC, but zip times carry no time zone and are
+  read as local time, so west of UTC the files were dated hours in the future and ninja redid 87/87 steps after a
+  build until the clock passed it. make_release now stamps commit time minus one day. The four v0.7.3 zips were
+  rebuilt from 6db6158 and replaced on the release (contents identical except the launcher exe's 2-byte PE
+  timestamp) [confirmed]. iOS zip: the Mac session uploads it after the user approves.
