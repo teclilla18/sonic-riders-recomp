@@ -97,6 +97,9 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
+- **PC freeze with NVIDIA ShadowPlay recording** (2026-11-08, user): froze loading a race after character select.
+  Retest with logging + recording: no freeze, not reproduced [uncertain]. If it recurs: keep the hung process,
+  inspect its threads. Workaround given: OBS Game Capture. (HISTORY 2026-11-08 late night)
 0. **v0.7.0 released 2026-11-08** (all five zips incl. iOS from the Mac; v0.6.0 delisted). Contents: iOS, PC frame
    rate presets, FSR 1 sharpening/upscaling, controllers in background, Optimus/AMD exports, five logs (all
    **accepted** by the user). GBAtemp post: user posts it (draft given in chat, not in the repo).
