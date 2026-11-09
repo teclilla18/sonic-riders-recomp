@@ -101,34 +101,11 @@ if args.target in ("android", "ios"):
 rt_m = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/platform/ios/*.m"))) \
     if args.target == "ios" else []
 
-def build_version():
-    """the VERSION file that tools/make_release.py puts in the release zip, else the git commit"""
-    import subprocess
-    try:
-        with open(os.path.join(ROOT, "VERSION"), encoding="utf-8") as f:
-            v = f.read().strip()
-            if v:
-                return v
-    except OSError:
-        pass
-    try:
-        return subprocess.run(["git", "describe", "--always", "--dirty", "--abbrev=8"], cwd=ROOT,
-                              capture_output=True, text=True, check=True).stdout.strip() or "unknown"
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
+from write_version import build_version, write as write_version  # noqa: E402
 
-# the build id for the log's first line; rewritten only when it changes (no needless rebuild)
+# the build id for the log's first line; build.ninja refreshes it before every build (tools/write_version.py)
 version_c = OUT + "/gen/version.c"
-os.makedirs(os.path.join(ROOT, OUT, "gen"), exist_ok=True)
-text = 'const char g_build_version[] = "%s";\n' % build_version().replace("\\", "").replace('"', "")
-try:
-    with open(os.path.join(ROOT, version_c), encoding="utf-8") as f:
-        old = f.read()
-except OSError:
-    old = None
-if old != text:
-    with open(os.path.join(ROOT, version_c), "w", encoding="utf-8") as f:
-        f.write(text)
+write_version(version_c)
 rt_c.append(version_c)
 
 # Dear ImGui (MIT, the settings menu): not in the repository (too big for the game-data guard); the
@@ -317,6 +294,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     n.rule("recomp", "%s tools/recomp/gcrecomp.py config/GXEE8P baserom %s" % (py, GEN),
            description="RECOMP", restat=True, pool="console",
            generator=True)  # no ninja log yet (first build) must not mean "recompile again": mtimes decide
+
+    # always runs (the phony input has no inputs); restat: an unchanged id rebuilds nothing
+    n.rule("version", "%s tools/write_version.py $out" % py, description="VERSION", restat=True)
+    n.build("version_always", "phony")
+    n.build(version_c, "version", implicit=["version_always"])
 
     recomp_inputs = ["tools/recomp/gcrecomp.py", "tools/recomp/ppc2c.py", "tools/recomp/crlive.py",
                      "tools/recomp/leaflocal.py", "tools/recomp/singleflow.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",

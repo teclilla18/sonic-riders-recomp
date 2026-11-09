@@ -907,3 +907,15 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Zips from c9a2f98 (PC, Android, Switch, Linux); cold Windows Sandbox PC PASS (2 + 1 min), Android PASS (2 + 2 min)
   [confirmed]. Tag v0.7.0 at c9a2f98, published as Latest; v0.6.0 release delisted (tag kept). iOS zip: Mac makes,
   cold-tests and uploads it to the release. GBAtemp post draft written for the user (not in the repo).
+
+## 2026-11-08, late night (PC "Mike"): freeze while recording with ShadowPlay; stale build label
+
+- User: game froze after character select, while loading a race, with NVIDIA ShadowPlay recording (Alt+F9). The
+  normal PC run writes no log. Retest with `SR_LOGSYNC=1 SR_DVDLOG=1`, ShadowPlay recording, a full race: no freeze,
+  only a few 50-70 ms hitches (waiting for the render thread). Not reproduced, not fixed [uncertain]. The renderer
+  uses one GL context on one thread, so the known multi-context overlay conflict does not apply. Suggested OBS Game
+  Capture for clips; if it freezes again, catch the hung process with logging on.
+- The log's `[build]` line said v0.6.0-4 on a v0.7.0 checkout: gen/version.c was written only by configure.py.
+  Now `tools/write_version.py` also runs before every ninja build (restat: an unchanged id rebuilds nothing;
+  checked: second ninja run does only VERSION) [confirmed]. Release zips were already right (VERSION file); no new
+  release, per the user.
