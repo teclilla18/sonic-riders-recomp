@@ -171,6 +171,10 @@ First-boot findings [confirmed on the iPhone]:
   main.c (SR_IOS): no image -> a message; smaller than 1,459,978,240 bytes -> "incomplete" (opened mid-copy hung
   at the loading icon). Messages before the game's window need a window attached to the scene
   (`ios_attach_window`, ios_scene.m), else UIKit's alert waits unseen on black.
+- Still copying (ef6c112): a disc image changed in the last 2 min is stat'ed twice 1.5 s apart; size/date moved
+  -> "still copying" message. Finder's Files tab writes the file growing from 0 [confirmed: devicectl copy on the
+  iPad Pro, Finder copy on the A16 iPad, user]. After deleting + reinstalling the app, Finder's Files tab shows
+  the old folder ("The required file cannot be found") until Finder is refreshed (click away and back).
 - App icon: `--icon <png>`, else the save icon from baserom/_Main.rel (make_icon.decode_icon, 32x nearest).
 - A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
 - Renewal: renew the same way as installed. Sideloadly on a Mac-installed app appends the team ID (a second,

@@ -896,3 +896,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - User played FSR sharpening + the background pad option: **accepted** ("I absolutely love it"). Exe relinked with
   the save fix after the game closed (clean build, 0 warnings). A scripted F1 toggle to prove the save did not
   change any option (menu focus), so save + restart stays unproven by run [likely].
+- "Still copying" message (ef6c112): tested by a devicectl copy on the iPad Pro (0 -> 4.7 MB in 1.5 s) and by the
+  user with a Finder copy on the A16 iPad [confirmed]. The user's first attempt showed nothing because the Desktop
+  .ipa had not been rebuilt after the visible-message fix (rebuild the Desktop .ipa after every runtime change).
+  Finder after an app reinstall: "The required file cannot be found" until refreshed [confirmed, user].
+
