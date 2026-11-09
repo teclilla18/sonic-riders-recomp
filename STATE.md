@@ -4,7 +4,7 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.7.1 released 2026-11-09** (zips replaced the same day with in-launcher updates: Update page with release notes, download + unpack + restart, tested from unpacked PC and Switch zips; Switch/Android consoles do not check yet; installer SD-card path fix, bigger launcher text; v0.7.0 delisted, tag kept). Before it, **v0.7.0 released 2026-11-08** (zips replaced 2026-11-09: Switch/Android installer window (launcher in installer mode, full Switch build through it PASS; SD copy, HOME icon, Android path untested), Super Sonic launcher icon, and the update notice: launcher + game ask GitHub for a newer release, Windows only, tested with a v0.6.0 label; #18 reporter on v0.6.0 told to update; tag at c9a2f98; PC, Switch, Android, Linux zips; iOS zip from the Mac; cold Sandbox PC + Android PASS; v0.6.0 delisted, tag kept). Before it, v0.6.0:
+**v0.7.2 released 2026-11-09** (tag on 8045090: Mac launcher for the iOS zip; PC/Switch/Android/Linux same code as the replaced v0.7.1 zips: in-launcher updates, installer SD-card fix, bigger launcher text). Cold Sandbox PC PASS + Android PASS (2026-11-09, both paths). iOS zip: built and uploaded by the Mac session (check the release assets). v0.7.1 delisted, tag kept.
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
@@ -18,7 +18,7 @@ Release pieces done: `tools/setup_mac.py` ("Install Sonic Riders (iOS).command")
 INSTALL/README section, unsigned .ipa without an Apple ID in Xcode (Sideloadly), save-icon app icon, missing /
 incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sideloadly install, message and icon
 [confirmed, user]. Not tested: a Mac without Homebrew/Xcode; the signed "install from the Mac" route from the zip.
-**Mac launcher for the iOS zip: implemented + tested on `main`, not released, not yet accepted** (notes/ios.md "Mac
+**Mac launcher for the iOS zip: released in v0.7.2; first start accepted by the user (macOS 27.2)** (notes/ios.md "Mac
 launcher"): Sonic Riders Launcher.app (Get ready / Build / Install / Renew / About), custom app icon from any picture,
 START HERE (Mac).html. All launchers (PC, Switch/Android installer, Mac) use the user's Super Sonic icon art
 (launcher/icon_256.png + icon_32.png; the Mac .icns is generated into build/). Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
@@ -32,7 +32,7 @@ install pages on a device, a Mac without Xcode/Homebrew. Missing execute bit on 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
 1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
 
-**Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Button remapping **accepted**
+**Windows launcher: released since v0.7.0** (notes/launcher.md). Button remapping **accepted**
 (2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Launcher ICON is settled: the
 user's own ChatGPT Super Sonic art, public (notes/launcher.md). Only the BANNER (launcher/banner.jpg, public fan art) still has an
 open origin check with its artist (HISTORY 2026-11-07 late; do not ask the user, they will bring it up). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +

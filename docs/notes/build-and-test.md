@@ -105,6 +105,8 @@ and Android before every release, from the zips users download (not from the rep
    The sandbox closes itself (`--keep-open` to look inside). Watch `progress.txt` with Monitor.
 - `--launch` starts it minimized without focus (the user can keep using the PC); the VM's priority cannot be
   lowered without admin. On this PC a cold PC run takes ~1.5 min per install, Android ~3 min (fast network).
+- While a sandbox runs, `build/release` is mapped into it: make_release cannot rename a new zip there (WinError 32);
+  use `--out build/release2` and move the zips after the sandbox closes.
 - `--cache <downloads folder>` seeds the tools' downloads read-only: fix-and-rerun loops only; the release check
   runs cold.
 - Found on its first day (all on `main`, 2026-11-04): dtk.exe needs VCRUNTIME140.dll (copied from the embeddable

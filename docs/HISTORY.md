@@ -990,3 +990,12 @@ was missing; both fixed before the release. No Sandbox run (user: replace v0.7.1
   after Open Anyway in Settings a second alert "Open “X.app”?" has Move to Trash / Open Anyway / Done, then Touch
   ID or Use Password, then the launcher asks for Downloads and Desktop access. START HERE, INSTALL and README-FIRST
   redrawn / reworded from the screenshots [confirmed, user].
+
+## 2026-11-09: v0.7.2 released (Mac launcher)
+
+User: "Works! go ahead and new release v0.7.2" after the first start of the Mac launcher from the test zip. Tag v0.7.2 on
+8045090; PC, Switch, Android, Linux zips from that commit. The in-launcher update code (in the replaced v0.7.1 zips) had
+never had a cold Sandbox run, so the user chose to run it first: PC PASS (2 + 1 min), Android PASS (2 + 2 min), both with
+a normal path and a path with spaces [confirmed, cold]. Note: while the Sandbox maps build/release, new zips cannot be
+renamed into it (WinError 32); use `--out` to another folder until it closes. v0.7.1 release delisted (tag kept). iOS zip
+from the Mac session. Not tested: updating from v0.7.1 to v0.7.2 through the launcher's Update page [uncertain].
