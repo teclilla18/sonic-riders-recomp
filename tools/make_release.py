@@ -28,6 +28,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 import stat
 import zipfile
 
@@ -375,13 +376,17 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, zipname)
     tmp = path + ".part"
+    ct = int(git("log", "-1", "--format=%ct", args.ref).decode().strip())
+    stamp = time.gmtime(ct)[:6]
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for entry in files:
             n, data = entry[0], entry[1]
             # shell scripts and the launcher app's program executable (unzip, Archive Utility and file managers keep
             # the mode); S_IFREG marks a regular file, as Info-ZIP and macOS's own zip write it
             mode = entry[2] if len(entry) > 2 else 0o755 if n.endswith((".sh", ".command")) else 0o644
-            info = zipfile.ZipInfo("%s/%s" % (top, n), date_time=(2026, 1, 1, 0, 0, 0))
+            # the commit's time, not a fixed date: the launcher's updater (robocopy) skips files whose size and
+            # time match, so with one date for every release a same-size change (VERSION!) was never copied
+            info = zipfile.ZipInfo("%s/%s" % (top, n), date_time=stamp)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (stat.S_IFREG | mode) << 16
             info.create_system = 3  # Unix, so the mode above is used
