@@ -1007,3 +1007,15 @@ from the Mac session. Not tested: updating from v0.7.1 to v0.7.2 through the lau
   quarantined zip, Archive Utility extract, launcher + .command 0755, codesign valid, spctl "rejected" (the Open
   Anyway route); launcher-driven build from that folder, 7/7 steps -> .ipa [confirmed]. Not covered: fresh tool
   downloads (the launcher uses the cached tools folder), install on a device from this zip. Uploaded to the release.
+
+## 2026-11-09: v0.7.3, launcher update never replaced VERSION
+
+User report: on a v0.7.1 Switch installer folder, DOWNLOAD AND INSTALL downloaded and asked to restart, and after the
+restart the update was offered again. Found in the folder: CHANGELOG was v0.7.2 but VERSION still "v0.7.1 (9a97e9a0)".
+Cause [confirmed]: apply.ps1's robocopy skips files whose size and time match; make_release stamped every entry
+2026-01-01 and VERSION is 18 bytes in both versions. Any same-size changed file was skipped the same way. Fix: robocopy
+`/IS /IT /IM` (/IS /IT alone still skipped it: newer Windows classes it "modified"), and zip entries carry the commit
+time. Tested by script with the real zips [confirmed]: old script + v0.7.2 zip on a v0.7.1-state folder reproduces the
+bug; new script + same zip -> v0.7.2, 184/184 files equal; old script + v0.7.3 zip on a v0.7.2 folder -> v0.7.3,
+184/184 equal (so released launchers update correctly). Cold Sandbox PC + Android PASS. The user's folder was finished
+to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 to v0.7.3 [likely fine: same script].

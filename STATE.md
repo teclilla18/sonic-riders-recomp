@@ -4,7 +4,7 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.7.2 released 2026-11-09** (tag on 8045090: Mac launcher for the iOS zip; PC/Switch/Android/Linux same code as the replaced v0.7.1 zips: in-launcher updates, installer SD-card fix, bigger launcher text). Cold Sandbox PC PASS + Android PASS (2026-11-09, both paths). iOS zip: built on the Mac from 8045090 and uploaded; cold test PASS (quarantined Archive Utility extract, 0755 + valid signature, launcher build -> .ipa; tools folder cached). v0.7.1 delisted, tag kept.
+**v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. iOS zip: asked of the Mac session. v0.7.2 (Mac launcher) delisted, tag kept. Not yet seen: a user clicking Update in a real v0.7.2 launcher to v0.7.3 (the copy step was tested by script).
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.

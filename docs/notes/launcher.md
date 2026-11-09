@@ -61,7 +61,9 @@ launcher_test.txt and exits 0 on success; `SR_INSTALLER=... SR_LAUNCHER_SHOT=<pn
 `SonicRiders-<PC|Switch|Android>-Setup-<tag>.zip`). The sidebar's gold "See what's new" opens the Update page
 (P_UPDATE, listed only when there is one): notes, DOWNLOAD AND INSTALL (WinHTTP to build\update\update.zip with a
 progress bar), then `build\update\apply.ps1` (written by the launcher): Expand-Archive, the running exe renamed to
-`.old` (deleted at the next start), robocopy of the zip's top folder over the root, then RESTART. A PC update leaves
+`.old` (deleted at the next start), robocopy `/E /IS /IT /IM` of the zip's top folder over the root (without these
+robocopy skips same-size, same-time files; /IM because newer Windows files them as "modified"; release zips carry the commit
+time for the same reason, so older launchers copy everything too: bug fixed in v0.7.3), then RESTART. A PC update leaves
 `build\launcher\rebuild_after_update`: the Play page offers "Rebuild now". The game's F1 > About shows the notes.
 Tests: `SR_LAUNCHER_FAKE_VERSION=v0.7.0` (pretend to be older), `SR_LAUNCHER_UPDATE_TEST=1` (press the button,
 write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpacked v0.7.1 PC zip and Switch zip
