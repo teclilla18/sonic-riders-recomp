@@ -931,4 +931,5 @@ vX.Y.Z), `update_check.c` (helper thread at start-up; banner for 20 s; F1 > Abou
   F1 > About shows it; launcher as v0.6.0 shows "Update available: v0.7.0" + "Download update", as v0.7.0 nothing.
 - User's decision: ship it in the v0.7.0 PC zip (assets replaced, release description notes it). Players already
   on v0.7.0 get it with the next download; it only prompts from the next release on.
-
+- Same day: new launcher icon `launcher/icon_256.png` + `icon_32.png` (pinned in OWN_ART) (Super Sonic art made by the user with ChatGPT; user's choice for
+  the public build); PC zip rebuilt and re-uploaded to v0.7.0. Icon in the .exe checked [confirmed].

@@ -33,7 +33,8 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
   box, press a key (F1/F11 not allowed) or an XInput button (Xbox-style pads via xinput1_4.dll), or pick from the
   list; clashes in red. Tested: the launcher's file read with all 32 entries [confirmed]; real key presses in a
   race not tested by us.
-- Icon: tools/launcher_icon.py draws it (gold ring + speed lines on blue; our own drawing, no file in git);
+- Icon (2026-11-09, user's choice): `launcher/icon_256.png` + `icon_32.png` (a tighter face crop), Super Sonic art the user made
+  with ChatGPT, pinned in the guard's OWN_ART; build_launcher.py packs them into an .ico. Without that file build_launcher.py falls back to tools/launcher_icon.py's gold ring.
   build_launcher.py compiles it in as resource APPICON.
 - Next:
   later Switch/Android pages. Done 2026-11-07: the exe in the PC zip (make_release.py builds it from the committed

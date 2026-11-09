@@ -16,6 +16,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(os.environ.get("LOCALAPPDATA", ""), "SonicRidersSetup", "tools")
 
 
+def write_png_ico(path, pngs):
+    """an .ico whose entries are PNG files (Windows Vista and later); sizes read from each PNG's header"""
+    import struct
+    datas = [open(p, "rb").read() for p in pngs]
+    out = struct.pack("<HHH", 0, 1, len(datas))
+    off = 6 + 16 * len(datas)
+    for d in datas:
+        w, h = struct.unpack(">II", d[16:24])
+        out += struct.pack("<BBBBHHII", w & 0xFF, h & 0xFF, 0, 0, 1, 32, len(d), off)
+        off += len(d)
+    with open(path, "wb") as f:
+        f.write(out + b"".join(datas))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--llvm-mingw", default=os.path.join(TOOLS, "llvm-mingw"))
@@ -33,9 +47,16 @@ def main():
     out_dir = os.path.join(ROOT, "build", "launcher")
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, "SonicRidersLauncher.exe")
-    # the program icon (tools/launcher_icon.py draws it) as resource APPICON
+    # the program icon as resource APPICON: launcher/icon_256.png + icon_32.png (Super Sonic art the user made with
+    # ChatGPT, 2026-11-09; the small one a tighter face crop) as PNG entries of an .ico, else the gold ring
+    # tools/launcher_icon.py draws
     ico = os.path.join(out_dir, "launcher.ico")
-    subprocess.run([sys.executable, os.path.join(ROOT, "tools", "launcher_icon.py"), ico], check=True)
+    pngs = [os.path.join(ROOT, "launcher", "icon_%d.png" % n) for n in (256, 32)]
+    if all(os.path.isfile(p) for p in pngs):
+        write_png_ico(ico, pngs)
+    else:
+        ico = os.path.join(out_dir, "launcher.ico")
+        subprocess.run([sys.executable, os.path.join(ROOT, "tools", "launcher_icon.py"), ico], check=True)
     rc, res = os.path.join(out_dir, "launcher.rc"), os.path.join(out_dir, "launcher_res.o")
     with open(rc, "w") as f:
         f.write('APPICON ICON "%s"\n' % ico.replace("\\", "/"))
