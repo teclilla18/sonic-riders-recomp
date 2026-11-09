@@ -31,6 +31,8 @@ typedef struct Settings {
     int char_light;     /* PC: 1 = lighting of lit 3D draws per pixel (gx.frag PERPIXEL_LIGHT), 0 = per vertex */
     int pc_fps;         /* PC: pictures per second, with in-between pictures (render_gl.c): 0 = the game's own
                            (60, or 30 in its 30 fps mode), PC_FPS_UNLIMITED, or one of settings_pc_fps_presets */
+    int pad_background; /* PC: controllers keep working while the window is not focused (SDL hint) */
+    int sharpness;      /* PC: FSR 1 RCAS sharpening of the final picture in percent, 0 (off)..100 */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

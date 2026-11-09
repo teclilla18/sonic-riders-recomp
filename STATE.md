@@ -97,22 +97,20 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **PC frame rate presets: implemented and merged to `main`** (7487ffb, 2026-11-08): F1 > Performance and the
-   launcher offer 30 (FR_30), 45, 60 (pc_fps 0), 120, 144, 180, 240, unlimited. Tested on PC (RTX 3060, 4x + 8x
-   MSAA): P1 race at 120 by frames (steady motion, HUD clean, race-start camera fine), >99% draws paired; 45 holds
-   45.0/s; unlimited ~100-140/s at 4x+8x MSAA, 250-350 at 2x+4x, 400-1200 at 1x (GPU-bound: each in-between
-   redraws the frame). Launcher -> game round trip at 144 [confirmed]. **Accepted** (user played it, 2026-11-08: "about as close
-   to eye candy as you can get without an HD remake").
-   **Next session (user's order): Hookshot ideas 2-4 + FSR sharpening** (notes/plans-2026-11.md "Ideas from
-   Hookshot"): controller in background, laptops on the dedicated GPU (NvOptimusEnablement /
-   AmdPowerXpressRequestHighPerformance), keep 5 logs (Mac: names stay sonicriders.log +
-   sonicriders.prev.log, older ones .prev2-.prev4; iOS stderr = the log, flush at most 1/s in log.c), then RCAS sharpening (+ EASU upscale) from AMD's MIT
-   ffx_fsr1.h in the GL post pass, PC only, F1 > Display slider + launcher.
-   Not checked: a real 120/144 Hz monitor with vsync, results screen / cutscene camera cuts, 2P split screen.
-   iOS goes into v0.7.0: verified (above); Mike builds the zip with make_release.py --flavor ios.
+0. **Hookshot ideas on `main`, implemented + tested on PC, waiting for the user to play them** (2026-11-08 late
+   night; HISTORY): FSR 1 sharpening (F1 > Display + launcher Graphics, Sharpness 0-100%, Off default; EASU
+   upscale when the window is bigger than the picture; `SR_SHARPNESS`), controllers in background (F1 > Controls
+   + launcher, on by default), Optimus/AMD dedicated-GPU exports, last five logs on PC/Linux (.prev.log name kept).
+   Frames at 1x/2x and 0/50/100% fine; 120 preset holds with 100% sharpness [confirmed]. Untested: real pad with
+   another window focused; Optimus on the gaming laptop; bug-report zip with five logs.
+   Frame rate presets (7487ffb): **accepted** 2026-11-08. Not checked: a real 120/144 Hz monitor with vsync,
+   results screen / cutscene camera cuts, 2P split screen.
+   **Next release v0.7.0** = frame rate presets + these + iOS (Mac: verified, docs final at 27420ae; after the tag,
+   send the Mac the tag and it makes + cold-tests SonicRiders-iOS-Setup zip). Before it: user plays FSR/pad, cold
+   Sandbox PC + Android (ask first).
    Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
    answered). Android exit crashes fixed on `main` (c4cd92a). 32-bit Android: waits for the redditor's phone.
-   OLED SD: `delete-me/` removed 2026-11-08.
+   Other Hookshot ideas left: notes/plans-2026-11.md.
 1. **Online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the

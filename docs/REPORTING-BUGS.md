@@ -10,7 +10,7 @@ faster it gets fixed:
 2. **Your platform:** Switch (clocks: overclocked or stock, console model) or PC (graphics card).
 3. **The logs:** `sonicriders.log` (this run) and `sonicriders.prev.log` (the run before).
    - **PC (Windows), Linux and Steam Deck: the easy way.** Open the settings menu (F1, or hold the controller's
-     Back/View button), tab **About**, press **Save a bug report**. It puts both logs, `setup.log`, your
+     Back/View button), tab **About**, press **Save a bug report**. It puts the logs (the last five runs), `setup.log`, your
      settings and system information into one `bug-report-<date>.zip` in the game's folder and opens that
      folder: attach the zip. (Steam Deck in Game Mode: the zip is in the game's folder, reachable from Desktop
      Mode.) The logs hold folder names from your PC; look through it first if that matters to you.
@@ -18,7 +18,8 @@ faster it gets fixed:
    - PC by hand: in the install folder. Android: the app shows a crash report after a crash.
 
    If the game crashed or froze, copy them soon: each start moves the last log to
-   `sonicriders.prev.log` and deletes the older one. They contain no game data.
+   `sonicriders.prev.log`. The Switch keeps only that one; PC and Linux keep four (`.prev2.log` to
+   `.prev4.log` are older runs). They contain no game data.
 4. **A screenshot** for anything visual (wrong colours, missing or see-through objects, garbled text).
 
 It helps to say what it *should* look like: a photo or video of the same spot on a GameCube, or a

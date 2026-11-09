@@ -19,6 +19,7 @@
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
+#include "fsr1_gl.h"  /* AMD FSR 1 shaders (MIT) */
 
 void input_init(void);
 void input_pump(void);
@@ -59,7 +60,7 @@ static int wx(int x) { return (int)((float)x * g_wide_k + 0.5f) * EFB_SCALE; }  
     X(PFNGLGENRENDERBUFFERSPROC, glGenRenderbuffers) X(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer) \
     X(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample) \
     X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer) \
-    X(PFNGLUNIFORM1FPROC, glUniform1f) X(PFNGLUNIFORM2FPROC, glUniform2f) X(PFNGLUNIFORM4FPROC, glUniform4f) \
+    X(PFNGLUNIFORM1FPROC, glUniform1f) X(PFNGLUNIFORM2FPROC, glUniform2f) X(PFNGLUNIFORM2IPROC, glUniform2i) X(PFNGLUNIFORM4FPROC, glUniform4f) \
     X(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap)
 #define DECL(t, n) static t p_##n;
 GLFUNCS(DECL)
@@ -444,6 +445,8 @@ static void draw_overlay(int ww, int wh) {
     p_glUseProgram(g_prog);  /* the GX state is set again by the next state command (apply_state) */
 }
 
+static int fsr_present(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh);
+
 /* EFB copy target formats (BP 0x52 bits 4-6, bit 3 the high bit) without alpha: RGB565 */
 static int copy_format_opaque(uint32_t exec) { return (((exec >> 4) & 7) | ((exec >> 3) & 1) << 3) == 4; }
 
@@ -477,8 +480,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
             else dh = (int)((float)ww / aspect + 0.5f);
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
-            p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
-                                GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            if (!fsr_present(wx(x), sy * EFB_SCALE, wx(x + w) - wx(x), sh * EFB_SCALE, dx, dy, dw, dh))
+                p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
+                                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
             /* the menu's "Save screenshot": the game's picture without the menu on top (read before the
              * overlay is drawn; the user's first shots showed the settings window over the game) */
             uint8_t* menu_px = NULL;
@@ -634,6 +638,16 @@ static void pp_pass(int prog, GLuint tex, GLuint fbo, int w, int h, float dx, fl
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+/* one full-target pass of an already set up program reading tex (unit 0) */
+static void pp_pass_prog(GLuint prog, GLuint tex, GLuint fbo, int w, int h) {
+    p_glUseProgram(prog);
+    p_glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    p_glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, w, h);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
 static void post_process(void) {
     int w = efb_w(g_efb_k), h = EFB_H;
     if (!g_pp_vao) {
@@ -713,6 +727,82 @@ static void post_process(void) {
     /* back to the game's state (the caller applies the draw state) */
     p_glUseProgram(g_prog);
     p_glBindVertexArray(g_vao);
+}
+
+/* ---- FSR 1 on the presented picture (PC only; setting sharpness, fsr1_gl.h) ----
+ * With sharpness above 0 the picture goes to the window in up to three steps instead of one linear blit: the
+ * shown part of the EFB is copied upright into a texture; EASU scales it to the window's picture size when that
+ * is bigger (a smaller window: a linear blit); RCAS sharpens it into the window. The HUD is part of the EFB, so
+ * it is scaled and sharpened too. Returns 0 when off (the caller blits as before). */
+static GLuint g_fsr_prog[2], g_fsr_vao, g_fsr_tex[2], g_fsr_fbo[2];
+static int g_fsr_w[2], g_fsr_h[2];
+static GLint g_fsr_loc[2][3];
+
+static void fsr_target(int t, int w, int h) {
+    if (w == g_fsr_w[t] && h == g_fsr_h[t]) return;
+    g_fsr_w[t] = w, g_fsr_h[t] = h;
+    pp_target(g_fsr_tex[t], g_fsr_fbo[t], w, h, 0);
+}
+
+static int fsr_present(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
+    if (g_settings.sharpness <= 0 || sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return 0;
+    if (!g_fsr_vao) {
+        static const char* const fs[2] = {k_fsr_easu, k_fsr_rcas};
+        for (int i = 0; i < 2; i++) {
+            g_fsr_prog[i] = p_glCreateProgram();
+            p_glAttachShader(g_fsr_prog[i], compile(GL_VERTEX_SHADER, k_post_vert));
+            p_glAttachShader(g_fsr_prog[i], compile(GL_FRAGMENT_SHADER, fs[i]));
+            p_glLinkProgram(g_fsr_prog[i]);
+            GLint ok;
+            p_glGetProgramiv(g_fsr_prog[i], GL_LINK_STATUS, &ok);
+            if (!ok) rt_fatal("FSR shader link error");
+            p_glUseProgram(g_fsr_prog[i]);
+            p_glUniform1i(p_glGetUniformLocation(g_fsr_prog[i], "u_tex"), 0);
+            g_fsr_loc[i][0] = p_glGetUniformLocation(g_fsr_prog[i], i ? "u_off" : "u_con");
+            g_fsr_loc[i][1] = p_glGetUniformLocation(g_fsr_prog[i], "u_max");
+            g_fsr_loc[i][2] = p_glGetUniformLocation(g_fsr_prog[i], "u_sharp");
+        }
+        p_glGenVertexArrays(1, &g_fsr_vao);
+        glGenTextures(2, g_fsr_tex);
+        p_glGenFramebuffers(2, g_fsr_fbo);
+        rt_log("[gl] FSR 1 (EASU + RCAS) on the presented picture");
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glColorMask(1, 1, 1, 1);
+    /* 1: the shown part of the EFB (the bound read framebuffer, top row first), upright */
+    fsr_target(0, sw, sh);
+    p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_fsr_fbo[0]);
+    p_glBlitFramebuffer(sx, sy, sx + sw, sy + sh, 0, sh, sw, 0, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    /* 2: at the window's picture size */
+    fsr_target(1, dw, dh);
+    p_glBindVertexArray(g_fsr_vao);
+    p_glActiveTexture(GL_TEXTURE0);
+    if (dw > sw || dh > sh) {
+        float kx = (float)sw / (float)dw, ky = (float)sh / (float)dh;
+        p_glUseProgram(g_fsr_prog[0]);
+        p_glUniform4f(g_fsr_loc[0][0], kx, ky, 0.5f * kx - 0.5f, 0.5f * ky - 0.5f);
+        p_glUniform2i(g_fsr_loc[0][1], sw - 1, sh - 1);
+        pp_pass_prog(g_fsr_prog[0], g_fsr_tex[0], g_fsr_fbo[1], dw, dh);
+    } else {
+        p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fsr_fbo[0]);
+        p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_fsr_fbo[1]);
+        p_glBlitFramebuffer(0, 0, sw, sh, 0, 0, dw, dh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    }
+    /* 3: sharpened into the window's picture (100% = AMD's strongest; each 50% less halves it) */
+    p_glUseProgram(g_fsr_prog[1]);
+    p_glUniform2i(g_fsr_loc[1][0], dx, dy);
+    p_glUniform2i(g_fsr_loc[1][1], dw - 1, dh - 1);
+    p_glUniform1f(g_fsr_loc[1][2], exp2f(-(float)(100 - g_settings.sharpness) / 50.0f));
+    glBindTexture(GL_TEXTURE_2D, g_fsr_tex[1]);
+    p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_pres_fbo);
+    glViewport(dx, dy, dw, dh);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    p_glUseProgram(g_prog);
+    p_glBindVertexArray(g_vao);
+    return 1;
 }
 
 /* ---- in-between pictures (setting pc_fps; PC only) ----
@@ -1261,7 +1351,12 @@ static void handle_event(const SDL_Event* e) {
 /* the window follows g_settings.fullscreen (changed by a key or the menu); in fullscreen the cursor
  * shows only while the settings menu is open (it works with the mouse) */
 static void sync_fullscreen(void) {
-    static int applied = -1, cursor = -1;
+    static int applied = -1, cursor = -1, pad_bg = -1;
+    /* controllers while another window has focus (setting pad_background; SDL re-reads the hint) */
+    if (g_settings.pad_background != pad_bg) {
+        pad_bg = g_settings.pad_background;
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, pad_bg ? "1" : "0");
+    }
     int want = !g_settings.fullscreen || overlay_menu_open();
     if (want != cursor) {
         cursor = want;
@@ -1400,6 +1495,7 @@ static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
     if (!g_headless) {
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, g_settings.pad_background ? "1" : "0");
         if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0)
             rt_fatal("SDL_InitSubSystem: %s", SDL_GetError());
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

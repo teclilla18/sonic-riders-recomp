@@ -865,3 +865,27 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   (a second empty app, seen on the A16 iPad). Docs + setup: "renew the same way you installed", the app ID in
   "How to renew (every 7 days).txt" next to the .ipa.
 
+
+## 2026-11-08, late night (PC "Mike"): Hookshot ideas 1-4 (background pad, dedicated GPU, 5 logs, FSR 1)
+
+- Controller in background: setting `pad_background` (default on), SDL hint `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS`
+  set before SDL init and re-set when changed (render_gl.c `sync_fullscreen`); F1 > Controls + launcher Controls.
+  Compiles; launcher -> game round trip (pad_background=0 reached the game's `[settings]` line) [confirmed]; not
+  tried with a real pad and another window focused [uncertain].
+- Dedicated GPU: `NvOptimusEnablement` / `AmdPowerXpressRequestHighPerformance` exported from sonicriders.exe
+  (platform_host.c; llvm-objdump lists both). `[gl]` still names the RTX 3060 [confirmed]; the desktop has one GPU,
+  so the Optimus switch itself is untested (needs the gaming laptop) [uncertain].
+- Five logs on PC (platform_host.c, no-console start) and Linux (`Sonic Riders.sh` from setup_linux.py):
+  sonicriders.log, .prev.log (names kept for iOS / tools/ios_run.py, Mac checked), .prev2-.prev4. Four starts via
+  Start-Process rotated correctly [confirmed]. Bug-report zip lists all five (not run) [likely]. iOS/Android
+  branch, iOS stderr and log.c flush untouched.
+- FSR 1: AMD's ffx_fsr1.h (MIT, notice kept) ported to GLSL 3.30 (runtime/src/platform/host/fsr1_gl.h: texelFetch
+  instead of textureGather). `fsr_present` replaces the linear present blit when `sharpness` > 0: EFB part copied
+  upright, EASU to the window's picture size if bigger (else linear), RCAS into the window (100% = AMD's max,
+  -1 stop per 50%). Slider in F1 > Display and the launcher Graphics page; `SR_SHARPNESS`. HUD is sharpened too
+  (part of the EFB). Det-route P1 race at 1x/2x and 0/50/100%: right orientation and colours, crisper edges at 1x
+  (EASU), no halos; 100% brings out texture grain [confirmed, frames]. 120 preset holds 119.9-120.1/s at 3x+2x
+  MSAA with 100% sharpness; in-between pictures sharpened fine [confirmed]; unlimited rates too noisy to show the
+  cost. Launcher round trip sharpness=40 [confirmed]. Not played by the user yet.
+- Bug found while testing: a scripted edit to the launcher's settings_save missed silently, so the launcher
+  dropped the new keys; fixed and retested.

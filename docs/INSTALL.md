@@ -295,7 +295,7 @@ sdmc:/switch/sonicriders/
     <your disc image>.iso       read at runtime (music, models, stages...)
     saves/card_a.raw            memory card (created on first save)
     settings.ini                settings menu choices
-    sonicriders.log             log of the last run (sonicriders.prev.log: the one before)
+    sonicriders.log             log of the last run (sonicriders.prev.log: the one before; .prev2-.prev4: older)
 ```
 
 On Linux the install folder ends up with `Sonic Riders.sh` (the launcher), `build/host-linux/sonicriders`,

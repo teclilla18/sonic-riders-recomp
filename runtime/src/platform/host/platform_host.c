@@ -24,6 +24,13 @@
 #endif
 
 #ifdef _WIN32
+/* laptops with two graphics chips (NVIDIA Optimus, AMD switchable graphics): the drivers look for these in the
+ * exe and then run the game on the dedicated chip instead of the integrated one */
+__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+#endif
+
+#ifdef _WIN32
 void cpu_dump_trace(void);
 void mmio_dump(void);
 void sched_dump(void);
@@ -272,11 +279,16 @@ void platform_init(void) {
 #endif
 #ifdef _WIN32
     /* started as a normal windowed program (no console, stderr not redirected): the log goes to
-     * sonicriders.log next to the game, the previous one kept as sonicriders.prev.log (as on the Switch) */
+     * sonicriders.log next to the game; the four runs before it are kept as sonicriders.prev.log (the last one,
+     * as on the Switch and iOS), .prev2.log, .prev3.log and .prev4.log (the oldest) */
     HANDLE eh = GetStdHandle(STD_ERROR_HANDLE);
     if (eh == NULL || eh == INVALID_HANDLE_VALUE || GetFileType(eh) == FILE_TYPE_UNKNOWN) {
-        remove("sonicriders.prev.log");
-        rename("sonicriders.log", "sonicriders.prev.log");
+        static const char* const keep[] = {"sonicriders.log", "sonicriders.prev.log", "sonicriders.prev2.log",
+                                           "sonicriders.prev3.log", "sonicriders.prev4.log"};
+        for (int i = 4; i > 0; i--) {
+            remove(keep[i]);
+            rename(keep[i - 1], keep[i]);
+        }
         freopen("sonicriders.log", "w", stderr);
     }
 #endif
@@ -548,7 +560,7 @@ void rt_thread_raise_priority(void) {
 void platform_set_handheld_gpu(int on) { (void)on; }
 
 /* ---- "Save a bug report" (settings menu, About): one zip in the game folder with what a report needs:
- * sonicriders.log (this run, flushed first), sonicriders.prev.log, setup.log, saves/settings.ini, crash.txt
+ * sonicriders.log (this run, flushed first), sonicriders.prev.log (.prev2-.prev4 on PC), setup.log, saves/settings.ini, crash.txt
  * and info.txt (version, system). Stored (uncompressed) zip: no library needed. Not on Android (its own
  * crash reports, CrashReport.java). Returns 0 and the file's name, or -1. */
 #ifndef __ANDROID__
@@ -615,9 +627,10 @@ int platform_bug_report(char* name, size_t n) {
     strftime(name, n, "bug-report-%Y%m%d-%H%M%S.zip", localtime(&t));
     FILE* z = fopen(name, "wb");
     if (!z) return -1;
-    static const char* files[] = {"info.txt", "sonicriders.log", "sonicriders.prev.log", "setup.log",
+    static const char* files[] = {"info.txt", "sonicriders.log", "sonicriders.prev.log", "sonicriders.prev2.log",
+                                  "sonicriders.prev3.log", "sonicriders.prev4.log", "setup.log",
                                   "saves/settings.ini", "crash.txt"};
-    struct { const char* name; uint32_t crc, size, off; } ent[8];
+    struct { const char* name; uint32_t crc, size, off; } ent[sizeof files / sizeof files[0]];
     int ne = 0;
     char info[4096];
     system_info(info, sizeof info);

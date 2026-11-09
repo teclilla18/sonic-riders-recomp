@@ -272,8 +272,11 @@ def write_launcher(exe):
                 '# Starts the Sonic Riders PC port from this folder (its disc image link, saves/ and settings live here).\n'
                 'cd "$(dirname "$0")" || exit 1\n'
                 '# from a terminal the log shows there; otherwise (menu, Steam) it goes to sonicriders.log here,\n'
-                '# the previous one kept as sonicriders.prev.log\n'
+                '# the four runs before it kept as sonicriders.prev.log (the last) .. sonicriders.prev4.log\n'
                 '[ -t 2 ] && exec ./{exe} "$@"\n'
+                '[ -f sonicriders.prev3.log ] && mv -f sonicriders.prev3.log sonicriders.prev4.log\n'
+                '[ -f sonicriders.prev2.log ] && mv -f sonicriders.prev2.log sonicriders.prev3.log\n'
+                '[ -f sonicriders.prev.log ] && mv -f sonicriders.prev.log sonicriders.prev2.log\n'
                 '[ -f sonicriders.log ] && mv -f sonicriders.log sonicriders.prev.log\n'
                 'exec ./{exe} "$@" 2>sonicriders.log\n'.format(exe=os.path.relpath(exe, ROOT)))
     os.chmod(path, 0o755)

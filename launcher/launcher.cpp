@@ -115,6 +115,8 @@ struct Settings {
     int hud_stretch = 0;
     int fov = 100;        /* 80..130 percent */
     int chaos_emerald_shop = 0;
+    int pad_background = 1;  /* controllers work while the game window is not focused */
+    int sharpness = 0;       /* FSR sharpening of the final picture, 0 (off)..100 percent */
     std::vector<std::pair<std::string, std::string>> other;
 } g_set;
 bool g_set_dirty;
@@ -128,6 +130,8 @@ int* setting_ptr(const std::string& k) {
     if (k == "hud_stretch") return &g_set.hud_stretch;
     if (k == "fov") return &g_set.fov;
     if (k == "chaos_emerald_shop") return &g_set.chaos_emerald_shop;
+    if (k == "pad_background") return &g_set.pad_background;
+    if (k == "sharpness") return &g_set.sharpness;
     return nullptr;
 }
 void settings_load() {
@@ -141,13 +145,15 @@ void settings_load() {
     }
     if (g_set.screen == 2) g_set.screen = 1;
     g_set.fov = std::clamp(g_set.fov, 80, 130);
+    g_set.sharpness = std::clamp(g_set.sharpness, 0, 100);
 }
 void settings_save() {
     CreateDirectoryW(path(L"saves").c_str(), nullptr);
     char b[512];
-    snprintf(b, sizeof b, "screen=%d\nshow_fps=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\npc_fps=%d\nhud_stretch=%d\nfov=%d\n",
+    snprintf(b, sizeof b, "screen=%d\nshow_fps=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\npc_fps=%d\nhud_stretch=%d\nfov=%d\n"
+             "pad_background=%d\nsharpness=%d\n",
              g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.pc_fps,
-             g_set.hud_stretch, g_set.fov);
+             g_set.hud_stretch, g_set.fov, g_set.pad_background, g_set.sharpness);
     std::string s = b;
     for (auto& kv : g_set.other) s += kv.first + "=" + kv.second + "\n";
     write_text(path(L"saves\\settings.ini"), s);
@@ -712,6 +718,12 @@ void page_graphics(float w) {
     if (ImGui::SliderInt("##fov", &g_set.fov, 80, 130, "%d%%")) g_set_dirty = true;
     if (ImGui::Button("Reset to 100%")) { g_set.fov = 100; g_set_dirty = true; }
     ImGui::Spacing();
+    section("SHARPNESS (AMD FSR 1)");
+    ImGui::SetNextItemWidth(cw);
+    if (ImGui::SliderInt("##sharp", &g_set.sharpness, 0, 100, g_set.sharpness ? "%d%%" : "Off")) g_set_dirty = true;
+    note("Sharpens the final picture. When the window is bigger than the game's resolution (F1 menu > Display), "
+         "FSR also does the upscaling. Off = the picture as before.");
+    ImGui::Spacing();
     section("WINDOW AND FRAME RATE");
     if (selector("window2", &g_set.fullscreen, kWindow, 2, cw)) g_set_dirty = true;
     fps_selector("fr2", cw);
@@ -989,6 +1001,11 @@ void page_controls(float w) {
         g_ctl_dirty = true;
     }
     ImGui::Spacing();
+    section("BACKGROUND");
+    bool bg = g_set.pad_background != 0;
+    if (ImGui::Checkbox("Controllers work in the background", &bg)) { g_set.pad_background = bg; g_set_dirty = true; }
+    note("Controllers keep playing while another window has focus (a second screen, a chat window).");
+    ImGui::Spacing();
     section("ALWAYS");
     note("F1 held (or the controller's Back held) = the in-game settings menu; in it arrows / WASD move, Enter / J choose, "
          "Escape / K go back, Q / E switch tabs. F11 = fullscreen. Controller sticks stay the sticks. Controllers 2 to 4 "
@@ -1160,10 +1177,9 @@ void test_note(const char* fmt, ...) {
 }
 std::string settings_text() {
     char b[256];
-    snprintf(b, sizeof b, "screen=%d show_fps=%d chaos_emerald_shop=%d fullscreen=%d framerate=%d pc_fps=%d hud_stretch=%d fov=%d",
+    snprintf(b, sizeof b, "screen=%d show_fps=%d chaos_emerald_shop=%d fullscreen=%d framerate=%d pc_fps=%d hud_stretch=%d fov=%d pad_background=%d sharpness=%d",
              g_set.screen, g_set.show_fps, g_set.chaos_emerald_shop, g_set.fullscreen, g_set.framerate, g_set.pc_fps,
-             g_set.hud_stretch,
-             g_set.fov);
+             g_set.hud_stretch, g_set.fov, g_set.pad_background, g_set.sharpness);
     return b;
 }
 /* called once a frame; true when the test is over */

@@ -7,6 +7,14 @@
   AltStore. Races at 60 fps on iPhone 17 Pro, iPad Pro 11" (M1) and iPad (A16); iPad 7th gen with small dips.
   Touch controls sized for fingers on phones and tablets, game controllers, the game pauses when you lock the
   device or open Control Center, and the app tells you when the disc image is missing or still copying.
+- **PC: FSR sharpening** (AMD FidelityFX Super Resolution 1) in F1 > Display and the launcher's Graphics page: a
+  Sharpness slider, 0-100% (Off by default). When the window is bigger than the game's resolution, FSR also
+  does the upscaling instead of a plain stretch, so 1x-2x resolution looks sharper on big screens.
+- **PC: controllers work in the background** (F1 > Controls, launcher Controls page; on by default): a
+  controller keeps playing while another window has focus.
+- **PC: laptops with two graphics chips** (NVIDIA Optimus, AMD switchable) now run the game on the dedicated one.
+- **PC and Linux: the last five logs are kept** (`sonicriders.log`, `.prev.log`, `.prev2.log` to `.prev4.log`),
+  all in the bug-report zip.
 - **PC: frame rate presets** in F1 > Performance and the launcher: 30, 45, 60, 120, 144, 180, 240 or Unlimited.
   The game still runs at its own speed; above 60 the PC draws extra pictures in between for smoother motion.
   High rates may need a lower resolution or less anti-aliasing.

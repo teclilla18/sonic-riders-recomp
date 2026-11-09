@@ -8,7 +8,7 @@
 #include "settings.h"
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0};
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -65,11 +65,12 @@ float settings_wide_k(void) { return g_wide_k; }
 /* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
 static void settings_log(const char* when) {
     rt_log("[settings] %sscreen: %s (%.3f), HUD %s, field of view %d%%, fps counter %s, resolution %s, frame rate %s, PC pictures %d/s, "
-           "handheld graphics %s, Chaos Emerald gear %s",
+           "sharpness %d%%, pad in background %s, handheld graphics %s, Chaos Emerald gear %s",
            when, settings_screen_name(g_settings.screen), settings_display_aspect(),
            g_settings.screen == SCREEN_FIT ? "at the edges" : g_settings.hud_stretch ? "stretched" : "4:3", g_settings.fov, g_settings.show_fps ? "on" : "off",
            settings_resolution_name(g_settings.resolution),
-           settings_framerate_name(g_settings.framerate), g_settings.pc_fps, g_settings.handheld_gpu ? "384 MHz" : "system default",
+           settings_framerate_name(g_settings.framerate), g_settings.pc_fps,
+           g_settings.sharpness, g_settings.pad_background ? "on" : "off", g_settings.handheld_gpu ? "384 MHz" : "system default",
            g_settings.chaos_emerald ? "unlocked" : "as in the save");
 }
 
@@ -120,6 +121,8 @@ void settings_load(void) {
             else if (!strcmp(line, "grade_warm") && v >= -50 && v <= 50) g_settings.grade_warm = v;
             else if (!strcmp(line, "char_light")) g_settings.char_light = v != 0;
             else if (!strcmp(line, "pc_fps") && settings_pc_fps_valid(v)) g_settings.pc_fps = v;
+            else if (!strcmp(line, "pad_background")) g_settings.pad_background = v != 0;
+            else if (!strcmp(line, "sharpness") && v >= 0 && v <= 100) g_settings.sharpness = v;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -132,6 +135,8 @@ void settings_load(void) {
     if (fr && atoi(fr) >= 0 && atoi(fr) < FR_MODES) g_settings.framerate = atoi(fr);
     const char* pf = getenv("SR_FPS");  /* testing: the PC picture rate (pc_fps; 0 = the game's, -1 = unlimited) */
     if (pf && settings_pc_fps_valid(atoi(pf))) g_settings.pc_fps = atoi(pf);
+    const char* sh = getenv("SR_SHARPNESS");  /* testing: FSR sharpening 0-100 (not saved unless changed in the menu) */
+    if (sh && atoi(sh) >= 0 && atoi(sh) <= 100) g_settings.sharpness = atoi(sh);
     /* testing, not saved unless changed in the menu: SR_SCREEN=0-3 (SCREEN_*), SR_FOV=80-130, SR_HUDSTRETCH=0/1 */
     const char* sc = getenv("SR_SCREEN");
     if (sc && atoi(sc) >= 0 && atoi(sc) < SCREEN_MODES) g_settings.screen = atoi(sc);
@@ -174,6 +179,6 @@ void settings_apply(void) {
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
-            g_settings.char_light, g_settings.pc_fps);
+            g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness);
     fclose(f);
 }

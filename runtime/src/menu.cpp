@@ -379,6 +379,10 @@ void tab_display() {
         help(tip);
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
     };
+    heading("Sharpness (AMD FSR 1)");
+    slider("##sharp", &g_settings.sharpness, 0, 100, g_settings.sharpness ? "%d%%" : "Off",
+           "Sharpens the final picture (FSR 1 RCAS). When the window is bigger than the resolution above, FSR also "
+           "does the upscaling (EASU) instead of a plain stretch. Off = the picture as before.");
     heading("Bloom");
     slider("##bloom", &g_settings.bloom, 0, 100, g_settings.bloom ? "%d%%" : "Off",
            "A soft glow around bright parts of the picture (sky, lights, boost). The HUD does not glow.");
@@ -539,6 +543,11 @@ void tab_controls() {
          "this menu.");
     note("Change the buttons in the launcher (SonicRidersLauncher.exe, Controls page); they apply from the "
          "next start.");
+    heading("Background");
+    if (check("Controllers work in the background", &g_settings.pad_background,
+              "Controllers keep playing while another window has focus (a second screen, a chat window). "
+              "Turn off to ignore them then."))
+        settings_apply();
 #endif
 }
 

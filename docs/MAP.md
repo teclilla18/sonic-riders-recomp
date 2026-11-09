@@ -33,7 +33,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Topic | File | Look for |
 |---|---|---|
 | PC + Android input (SDL pads, keyboard, triggers) | host/input_sdl.c (260) | `stick8`, `trigger`, `read_gamepad`, `input_pump` |
-| PC renderer (GL) | host/render_gl.c (1250) | `efb_config`/`rescale_copies` (resolution, MSAA), `post_process` (bloom, grading), `execute`; frame rate presets: `ip_round`, `ip_match` (in-between pictures), menu.cpp `pc_frame_rate`, launcher `fps_selector` |
+| PC renderer (GL) | host/render_gl.c (1250) | `efb_config`/`rescale_copies` (resolution, MSAA), `post_process` (bloom, grading), `fsr_present` (FSR 1 EASU + RCAS at present; shaders in host/fsr1_gl.h, AMD MIT), `sync_fullscreen` (also the background-controller hint), `execute`; frame rate presets: `ip_round`, `ip_match` (in-between pictures), menu.cpp `pc_frame_rate`, launcher `fps_selector` |
 | PC/Android platform glue | host/platform_host.c | |
 | Android renderer (Vulkan) | android/render_vk.c (1720) | `vk_setup`, `execute`, `spec_bits` (specialized shaders), `pipe_get`, `pcache_save`, `draw_overlay_and_touch`, `picture_rect`, `shot_request`, `pump`, `render_thread` |
 | Android touch controls | android/touch_android.c (270) | `layout` (positions), `stick_home`, `stick_value` (dead zones), `game_in_race`, `touch_event`, `touch_apply`, `touch_shapes` |

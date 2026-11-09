@@ -15,6 +15,8 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
   -1 = unlimited; 30/60 are `framerate`/0). Log: `[gl] in-between pictures: target, measured /s, draws paired`.
 - `SR_SCALE=<1-4>` / `SR_MSAA=<1|2|4|8>` (PC): internal resolution and anti-aliasing for this run (settings
   `pc_scale` / `msaa`, F1 > Display); the log's `[gl] EFB` line shows what is in use.
+- `SR_SHARPNESS=<0-100>` (PC): FSR 1 sharpening for this run (setting `sharpness`; above 0 also EASU upscaling
+  when the window is bigger than the picture). Log line `[gl] FSR 1 (EASU + RCAS) on the presented picture`.
 - `SR_BLOOM=<0-100>` / `SR_GRADE=<brightness>,<contrast>,<saturation>,<warmth>` (PC): bloom and colour grading for
   this run (settings `bloom`, `grade_*`; neutral = `0,100,100,0`).
 - `SR_CHARLIGHT=1` (PC): per-pixel lighting for this run (setting `char_light`).
