@@ -1034,3 +1034,5 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   commit time minus 1 day (PC session). iOS zip rebuilt with the fix (entries dated 2026-11-08 23:06:50) and
   uploaded with the user's OK; the release asset is byte-identical to the local zip [confirmed]. The Mac side has
   no size+time-skipping copy step (no self-update; ditto into a fresh folder; shutil copies always write).
+- Accepted: the user clicked DOWNLOAD AND INSTALL in their v0.7.2 Switch installer folder and got v0.7.3 ("worked
+  beautifully") [confirmed, user].
