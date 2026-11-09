@@ -889,3 +889,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   cost. Launcher round trip sharpness=40 [confirmed]. Not played by the user yet.
 - Bug found while testing: a scripted edit to the launcher's settings_save missed silently, so the launcher
   dropped the new keys; fixed and retested.
+- Follow-up: the game's own settings_save also missed the two new keys (a scripted edit that did not match;
+  the -Wformat-extra-args warning was hidden by a too-narrow grep of the build output). F1 changes to sharpness /
+  background pad applied in the running game but were not saved. Fixed; settings.c compiles clean [confirmed];
+  the exe not relinked yet (a game was running). Lesson: assert every scripted replace; grep builds for "warning".
