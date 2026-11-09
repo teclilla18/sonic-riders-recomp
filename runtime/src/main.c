@@ -3,6 +3,7 @@
 #include <SDL.h>
 #endif
 #include <stdio.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -129,6 +130,7 @@ int main(int argc, char** argv) {
         FILE* f = fopen(disc, "rb");
         if (!f) {
             rt_log("[ios] no disc image in Documents or Documents/baserom");
+            fflush(stderr);
             ios_message( "Sonic Riders needs your disc image",
                 "Copy your own Sonic Riders (USA) disc image (.iso, 1.4 GB) into this app's folder, then open the game again.\n\n"
                 "From a Mac: connect the device, open it in Finder, Files tab, and drag the .iso onto Sonic Riders.\n"
@@ -139,8 +141,26 @@ int main(int argc, char** argv) {
         /* opened while Finder was still copying it: the game hung at its first big read (2026-11-08) */
         long long size = fseeko(f, 0, SEEK_END) == 0 ? (long long)ftello(f) : -1;
         fclose(f);
+        /* still being written (Finder may make the file full size first): size or time changes within 1.5 s */
+        struct stat s1, s2;
+        /* only when it changed in the last 2 minutes: a finished copy keeps the image's own (older) date */
+        if (stat(disc, &s1) == 0 && time(NULL) - s1.st_mtimespec.tv_sec < 120) {
+            struct timespec ts = {1, 500000000};
+            thrd_sleep(&ts, NULL);
+            if (stat(disc, &s2) == 0 && (s2.st_size != s1.st_size || s2.st_mtimespec.tv_sec != s1.st_mtimespec.tv_sec ||
+                                         s2.st_mtimespec.tv_nsec != s1.st_mtimespec.tv_nsec)) {
+                rt_log("[ios] the disc image is still being written (%lld -> %lld bytes)", (long long)s1.st_size,
+                       (long long)s2.st_size);
+                fflush(stderr);
+                ios_message("The disc image is still copying",
+                    "Your disc image is still being copied to this device.\n\n"
+                    "Wait until Finder has finished (its progress circle is gone), then open the game again.");
+                exit(0);
+            }
+        }
         if (size >= 0 && size < 1459978240LL) {
             rt_log("[ios] the disc image is only %lld bytes (a full one: 1459978240)", size);
+            fflush(stderr);
             ios_message( "The disc image is incomplete",
                 "Your disc image is smaller than a full Sonic Riders (USA) disc (1.4 GB).\n\n"
                 "If it is still being copied, wait until Finder has finished, then open the game again. Otherwise "
