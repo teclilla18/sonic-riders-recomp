@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.7.3 (2026-11-09)
+
+- **Update from the launcher works now.** After DOWNLOAD AND INSTALL and a restart, the launcher still showed the old
+  version and offered the update again: the copy step skipped files that had the same size as before (the version
+  file among them). Every file is copied now, and the release zips carry their own date, so launchers from v0.7.1 and
+  v0.7.2 also update correctly to this version.
+
 ## v0.7.2 (2026-11-09)
 
 - **iPhone and iPad: Mac launcher.** The iOS zip now has *Sonic Riders Launcher*, an app like the PC launcher:
