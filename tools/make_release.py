@@ -377,7 +377,9 @@ def main():
     path = os.path.join(args.out, zipname)
     tmp = path + ".part"
     ct = int(git("log", "-1", "--format=%ct", args.ref).decode().strip())
-    stamp = time.gmtime(ct)[:6]
+    # minus one day: zip times have no time zone and unzip tools read them as local time, so the bare UTC time would
+    # lie hours in the future west of UTC (ninja then rebuilds until the clock passes it)
+    stamp = time.gmtime(ct - 86400)[:6]
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for entry in files:
             n, data = entry[0], entry[1]
