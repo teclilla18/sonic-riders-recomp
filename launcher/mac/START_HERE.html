@@ -33,9 +33,7 @@ b.k { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 4px; f
 .shot { margin: 14px 0 4px; display: flex; justify-content: center; }
 .dlg { width: 280px; background: var(--dlg); color: var(--dlgtext); border-radius: 14px; padding: 20px 18px 16px; text-align: center;
        box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 13px; }
-.dlg .ic { width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 12px; background: linear-gradient(135deg,#1d4fae,#0b2a66);
-           display: flex; align-items: center; justify-content: center; }
-.dlg .ic::after { content: ""; width: 26px; height: 26px; border: 5px solid #f2be3c; border-radius: 50%; }
+.dlg .ic { display: block; width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 12px; object-fit: cover; }
 .dlg .hd { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
 .dlg .bt { display: block; width: 100%; margin-top: 8px; padding: 6px; border-radius: 7px; background: #d9d9de; font-weight: 600; position: relative; }
 .dlg .bt.blue { background: var(--blue); color: #fff; }
@@ -80,7 +78,7 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
 
 <div class="step"><div class="num">1</div><div>
   <h3>Double-click "Sonic Riders Launcher"</h3>
-  <p>It's in the folder you unzipped (the icon with the gold ring).</p>
+  <p>It's in the folder you unzipped (the Super Sonic icon).</p>
 </div></div>
 
 <div class="step"><div class="num">2</div><div>
@@ -88,7 +86,7 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
   <p>macOS says it could not verify the app. Click <b class="k">Done</b>.
   <span class="warn">Do not click "Move to Trash"</span> (that deletes the launcher; if it happened, unzip again).</p>
   <div class="shot"><div class="dlg">
-    <div class="ic"></div>
+    <img class="ic" src="launcher/icon_256.png" onerror="this.onerror=null; this.src='../icon_256.png'" alt="">
     <div class="hd">“Sonic Riders Launcher” Not Opened</div>
     <div>Apple could not verify “Sonic Riders Launcher” is free of malware that may harm your Mac or compromise your privacy.</div>
     <span class="bt blue mark">Done<span class="tag ok">CLICK THIS</span></span>
@@ -118,7 +116,7 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
   <p>macOS asks one last time. Click <b class="k">Open</b> (it may say <b class="k">Open Anyway</b>) and confirm with your
   password or Touch ID if asked. From now on the launcher opens normally.</p>
   <div class="shot"><div class="dlg">
-    <div class="ic"></div>
+    <img class="ic" src="launcher/icon_256.png" onerror="this.onerror=null; this.src='../icon_256.png'" alt="">
     <div class="hd">macOS asks about “Sonic Riders Launcher” once more</div>
     <div>(the exact wording depends on your macOS version)</div>
     <span class="bt blue mark">Open / Open Anyway<span class="tag ok">CLICK THIS</span></span>
