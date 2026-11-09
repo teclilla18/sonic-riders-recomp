@@ -1024,3 +1024,13 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   build until the clock passed it. make_release now stamps commit time minus one day. The four v0.7.3 zips were
   rebuilt from 6db6158 and replaced on the release (contents identical except the launcher exe's 2-byte PE
   timestamp) [confirmed]. iOS zip: the Mac session uploads it after the user approves.
+
+## 2026-11-09, v0.7.3 iOS zip (Mac session)
+
+- Built from 6db6158 and cold-tested (quarantined Archive Utility extract: 0755 kept, codesign valid, spctl
+  "rejected" = Open Anyway; launcher-driven build 7/7 -> .ipa) [confirmed]. Found: the first commit-time stamps
+  were UTC written as zip DOS time (no timezone), so files extracted west of UTC were dated in the future; on this
+  Mac (EST) `ninja -n` right after a full build still wanted 87/87 steps [confirmed]. make_release now stamps
+  commit time minus 1 day (PC session). iOS zip rebuilt with the fix (entries dated 2026-11-08 23:06:50) and
+  uploaded with the user's OK; the release asset is byte-identical to the local zip [confirmed]. The Mac side has
+  no size+time-skipping copy step (no self-update; ditto into a fresh folder; shutil copies always write).
