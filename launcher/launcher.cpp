@@ -1345,7 +1345,7 @@ const char* kApplyScript =
     "if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force }\r\n"
     "Move-Item -LiteralPath $Exe -Destination $old\r\n"
     "Write-Output 'Copying the new files...'\r\n"
-    "& robocopy $top.FullName $Root /E /IS /IT /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null\r\n"
+    "& robocopy $top.FullName $Root /E /IS /IT /IM /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null\r\n"
     "if ($LASTEXITCODE -ge 8) { Move-Item -LiteralPath $old -Destination $Exe -Force; throw \"Copying failed (robocopy $LASTEXITCODE).\" }\r\n"
     "if (-not (Test-Path -LiteralPath $Exe)) { Move-Item -LiteralPath $old -Destination $Exe -Force }\r\n"
     "Remove-Item -LiteralPath $tmp -Recurse -Force\r\n"
