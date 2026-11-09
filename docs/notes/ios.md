@@ -174,7 +174,7 @@ First-boot findings [confirmed on the iPhone]:
 - App icon: `--icon <png>`, else the save icon from baserom/_Main.rel (make_icon.decode_icon, 32x nearest).
 - A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
 - Renewal: renew the same way as installed. Sideloadly on a Mac-installed app appends the team ID (a second,
-  empty app) unless Advanced Options sets the bundle ID to the app's own ID: tested on the iPad Pro 2026-11-08,
+  empty app) unless Advanced Options > "Use automatic bundle ID" is unticked (keeps the .ipa's ID): tested on the iPad Pro 2026-11-08,
   one app kept, disc + saves kept [confirmed]; Sideloadly stored info_props CFBundleIdentifier =
   net.srnative.sonicriders.t<hash>. setup_mac.py writes "How to renew (every 7 days).txt" next to the .ipa with
   that ID; a re-run asks separately about copying the disc image.

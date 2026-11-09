@@ -221,12 +221,13 @@ own app ID filled in.
 - **You installed it from the Mac** (the installer copied it to the device). Either:
   - connect the device, unlock it, and run `Install Sonic Riders (iOS).command` again; answer **y** to
     installing and **n** to copying the disc image; or
-  - with Sideloadly: drag in the `.ipa`, open **Advanced Options** and set the **bundle ID** to your app's ID
-    (written in the `How to renew` file and at the end of the installer's output, for example
-    `net.srnative.sonicriders.t1a2b3c4d`), then *Start*. Without that, Sideloadly adds your team ID to the
-    app's ID and installs a second app.
+  - with Sideloadly: drag in the `.ipa`, open **Advanced Options**, **untick "Use automatic bundle ID"**, then
+    *Start*. The app keeps its ID (written in the `How to renew` file, for example
+    `net.srnative.sonicriders.t1a2b3c4d`). With the box ticked, Sideloadly adds your team ID to the app's ID and
+    installs a second app.
 - **You installed it with Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly
-  with the same Apple ID and the same settings as the first time, and *Start*. The first Sideloadly install
+  with the same Apple ID and the same settings as the first time ("Use automatic bundle ID" left ticked, the
+  default), and *Start*. The first Sideloadly install
   set the app's ID; later ones keep it.
 
 **A free Apple ID allows 3 sideloaded apps per device.** If the install fails with "maximum number of

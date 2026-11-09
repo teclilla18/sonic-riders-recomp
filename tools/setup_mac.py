@@ -125,16 +125,15 @@ def write_renew_notes(ipa_dir, ipa, bundle, signed):
             "  Either: connect the device, unlock it, and run \"Install Sonic Riders (iOS).command\" again; answer y",
             "          to installing and n to copying the disc image.",
             "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above, open Advanced",
-            "          Options and set the bundle ID to exactly this app ID (or Sideloadly makes a second app):",
-            "              " + bundle,
-            "          then Start.",
+            "          Options and UNTICK \"Use automatic bundle ID\" (ticked, Sideloadly makes a second app), then",
+            "          Start. The app keeps its ID: " + bundle,
             "",
         ]
     lines += [
         "YOU INSTALLED IT WITH SIDELOADLY (or AltStore)",
         "  Connect the device, open Sideloadly, drag in the .ipa above with the same Apple ID and the same",
-        "  settings as the first time, and Start. (The first Sideloadly install made the app's ID; later ones",
-        "  keep it.)",
+        "  settings as the first time (\"Use automatic bundle ID\" left ticked, as it is by default), and Start.",
+        "  (The first Sideloadly install made the app's ID; later ones keep it.)",
         "",
         "Never share the .ipa: it contains the game.",
     ]
