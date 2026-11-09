@@ -210,6 +210,8 @@ def main():
         names = [n for n in z.namelist() if not n.endswith("/")]
     top = names[0].split("/")[0]
     bat = "Install Sonic Riders (%s).bat" % plat
+    if "%s/%s" % (top, bat) not in names:  # Switch / Android zips: the GUI installer .exe + this console fallback
+        bat = "Install Sonic Riders (%s) - command line.bat" % plat
     if "%s/%s" % (top, bat) not in names:
         sys.exit("%s has no %s" % (zp, bat))
 

@@ -39,3 +39,16 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
 - Next:
   later Switch/Android pages. Done 2026-11-07: the exe in the PC zip (make_release.py builds it from the committed
   source), cold Sandbox install through the launcher PASS (`sandbox_test.py --launcher`, SR_LAUNCHER_INSTALL).
+
+## Installer mode (Switch, Android; 2026-11-09)
+
+The same exe, shipped in the Switch / Android zips as `Install Sonic Riders (<Plat>).exe` (make_release.py), turns
+into an installer when its file name contains "switch" or "android" (`SR_INSTALLER=switch|android` for tests).
+Pages: Install + About. It asks what setup.ps1 asks and runs it unattended: `-Yes -Iso <disc> -Target switch
+[-Sd <card> -CopyIso yes|no | -NoSd] -HomeIcon yes -Keys <prod.keys> | -HomeIcon no [-Icon <picture>]`, or
+`-Target android -AcceptAndroidSdkLicense [-Install no] [-Icon ...]`. SD cards: drives with `atmosphere` (or a
+removable drive with `switch`); prod.keys pre-filled from `%USERPROFILE%\.switch\prod.keys`. The console setup stays
+as `Install Sonic Riders (<Plat>) - command line.bat` (sandbox_test.py falls back to it).
+Test: `SR_INSTALLER=switch SR_LAUNCHER_INSTALL=<iso> [SR_INSTALLER_SD=<card>]` builds with the defaults, writes
+launcher_test.txt and exits 0 on success; `SR_INSTALLER=... SR_LAUNCHER_SHOT=<png>` for a picture.
+

@@ -7,6 +7,7 @@
  *     with its steps as a progress bar,
  *   - edits saves\settings.ini (the in-game F1 menu's settings) and mods\mods.ini (order and on/off),
  *   - starts and stops build\host-mingw\sonicriders.exe.
+ * As "Install Sonic Riders (Switch|Android).exe" it is the installer for those builds (installer mode below).
  * Banner: launcher\banner.jpg, public fan art chosen by the project owner (not from the game).
  * Win32 + Direct3D 11 + Dear ImGui, linked statically (tools/build_launcher.py). */
 #define WIN32_LEAN_AND_MEAN
@@ -17,6 +18,7 @@
 #include <dwmapi.h>
 #include <dxgi.h>
 #include <shellapi.h>
+#include <shobjidl.h>
 #include <wincodec.h>
 
 #include <algorithm>
@@ -648,29 +650,273 @@ void quick_settings(float w) {
     if (selector("fps", &g_set.show_fps, kOnOff, 2, w)) g_set_dirty = true;
 }
 
+/* ---------------------------------------------------------------- installer mode (Switch, Android)
+ *
+ * The same program, named "Install Sonic Riders (Switch).exe" or "Install Sonic Riders (Android).exe" in those
+ * release zips (or SR_INSTALLER=switch|android), is a window in front of setup\setup.ps1 for that target: it asks
+ * the questions the console setup asks (disc image, SD card, own icon, HOME-screen icon, Android licence and
+ * install), then runs the setup unattended (-Yes plus the answers) with its steps as a progress bar. */
+enum Mode { M_LAUNCHER, M_SWITCH, M_ANDROID };
+int g_mode = M_LAUNCHER;
+bool installer() { return g_mode != M_LAUNCHER; }
+
+struct InstallerChoices {
+    std::vector<std::wstring> sd_found;  /* drives with a "switch" or "atmosphere" folder */
+    std::wstring sd;                     /* chosen SD card top folder ("" = keep the .nro in build\switch\) */
+    bool copy_iso = true;                /* Switch: also put the disc image on the SD card */
+    bool own_icon = false;
+    std::wstring icon;
+    bool home_icon = false;              /* Switch: HOME-screen forwarder (needs prod.keys) */
+    std::wstring keys;
+    bool phone_install = true;           /* Android: install on the connected phone */
+    bool license = false;                /* Android SDK License accepted */
+} g_ic;
+
+void find_sd_cards() {
+    g_ic.sd_found.clear();
+    DWORD drives = GetLogicalDrives();
+    for (int i = 2; i < 26; i++) {  /* C: and up */
+        if (!(drives & (1u << i))) continue;
+        std::wstring root = std::wstring(1, (wchar_t)(L'A' + i)) + L":\\";
+        UINT type = GetDriveTypeW(root.c_str());
+        if (type != DRIVE_REMOVABLE && type != DRIVE_FIXED) continue;
+        if (exists(root + L"atmosphere") || (type == DRIVE_REMOVABLE && exists(root + L"switch")))
+            g_ic.sd_found.push_back(root);
+    }
+    if (g_ic.sd.empty() && !g_ic.sd_found.empty()) g_ic.sd = g_ic.sd_found[0];
+    /* where Lockpick_RCM users keep the keys (the setup looks there too) */
+    wchar_t prof[MAX_PATH];
+    if (g_ic.keys.empty() && GetEnvironmentVariableW(L"USERPROFILE", prof, MAX_PATH) &&
+        exists(std::wstring(prof) + L"\\.switch\\prod.keys"))
+        g_ic.keys = std::wstring(prof) + L"\\.switch\\prod.keys";
+}
+
+std::wstring pick_folder(HWND owner, const wchar_t* title) {
+    std::wstring out;
+    IFileOpenDialog* d = nullptr;
+    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&d)))) {
+        DWORD o = 0;
+        d->GetOptions(&o);
+        d->SetOptions(o | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+        d->SetTitle(title);
+        IShellItem* it = nullptr;
+        if (SUCCEEDED(d->Show(owner)) && SUCCEEDED(d->GetResult(&it))) {
+            PWSTR p = nullptr;
+            if (SUCCEEDED(it->GetDisplayName(SIGDN_FILESYSPATH, &p))) {
+                out = p;
+                CoTaskMemFree(p);
+            }
+            it->Release();
+        }
+        d->Release();
+    }
+    return out;
+}
+
+std::wstring pick_file(HWND owner, const wchar_t* filter, const wchar_t* title) {
+    wchar_t file[MAX_PATH] = L"";
+    OPENFILENAMEW ofn = {sizeof ofn};
+    ofn.hwndOwner = owner;
+    ofn.lpstrFilter = filter;
+    ofn.lpstrFile = file;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = title;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+    return GetOpenFileNameW(&ofn) ? std::wstring(file) : L"";
+}
+
+/* what keeps INSTALL from starting, or "" */
+std::string installer_blocker() {
+    if (!g_ready.setup) return "setup\\setup.ps1 is missing: unpack the whole zip again.";
+    if (g_disc_choice.empty()) return "Select your disc image.";
+    if (g_ic.own_icon && g_ic.icon.empty()) return "Pick your icon picture (or untick \"Use my own icon\").";
+    if (g_mode == M_SWITCH && g_ic.home_icon && g_ic.keys.empty()) return "Pick your prod.keys (or untick the HOME-screen icon).";
+    if (g_mode == M_ANDROID && !g_ic.license) return "Accept the Android SDK License to continue.";
+    return "";
+}
+
+void start_installer() {
+    {
+        std::lock_guard<std::mutex> lk(g_log_mx);
+        g_log.clear();
+        g_step_text = "Starting the setup...";
+    }
+    g_step = 0;
+    std::wstring cmd = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" + path(L"setup\\setup.ps1") +
+                       L"\" -Yes -Iso \"" + g_disc_choice + L"\"";
+    if (g_mode == M_SWITCH) {
+        cmd += L" -Target switch";
+        if (g_ic.sd.empty()) cmd += L" -NoSd";
+        else cmd += L" -Sd \"" + g_ic.sd + L"\" -CopyIso " + (g_ic.copy_iso ? L"yes" : L"no");
+        if (g_ic.home_icon) cmd += L" -HomeIcon yes -Keys \"" + g_ic.keys + L"\"";
+        else cmd += L" -HomeIcon no";
+    } else {
+        cmd += L" -Target android -AcceptAndroidSdkLicense";
+        if (!g_ic.phone_install) cmd += L" -Install no";
+    }
+    if (g_ic.own_icon && !g_ic.icon.empty()) cmd += L" -Icon \"" + g_ic.icon + L"\"";
+    if (start_child(g_setup, cmd, {{L"SR_NOPAUSE", L"1"}}, true, true, setup_sink)) {
+        g_install = INST_RUNNING;
+        g_status = "Building...";
+    } else {
+        g_install = INST_FAILED;
+        g_status = "Could not start the setup (PowerShell).";
+    }
+}
+
+/* the setup's steps and output (shared by the launcher's first install and the installer) */
+void install_progress(float col, const char* title_running) {
+    section(g_install == INST_FAILED ? "INSTALL FAILED" : g_install == INST_DONE ? "DONE" : title_running);
+    std::string st;
+    {
+        std::lock_guard<std::mutex> lk(g_log_mx);
+        st = g_step_text;
+    }
+    float frac = g_install == INST_DONE ? 1.0f : g_step / 7.0f;
+    ImGui::ProgressBar(frac, ImVec2(col, 0), "");
+    ImGui::TextWrapped("%s", st.c_str());
+    ImGui::BeginChild("log", ImVec2(col, 0), ImGuiChildFlags_None);
+    ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
+    {
+        std::lock_guard<std::mutex> lk(g_log_mx);
+        for (const std::string& l : g_log) ImGui::TextUnformatted(l.c_str());
+    }
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
+    ImGui::PopFont();
+    ImGui::EndChild();
+}
+
+void installer_next_steps() {
+    section("NEXT");
+    if (g_mode == M_SWITCH) {
+        if (g_ic.sd.empty())
+            ImGui::TextWrapped("Copy build\\switch\\sonicriders.nro and your disc image to /switch/sonicriders/ on the "
+                               "SD card.");
+        ImGui::TextWrapped("1. Eject the SD card and put it in the Switch.");
+        ImGui::TextWrapped("2. Hold R while starting any game to open the Homebrew Menu, then start Sonic Riders.");
+        if (g_ic.home_icon)
+            ImGui::TextWrapped("3. HOME-screen icon: install NSP\\SonicRiders-HOME-icon.nsp with DBI or Goldleaf.");
+        note("In game: hold Minus for the settings menu.");
+    } else {
+        ImGui::TextWrapped(g_ic.phone_install ? "Start Sonic Riders from the phone's app list (if the log above says "
+                                                "it was installed)."
+                                              : "Install the APK from build\\android\\ with adb, or run this again with "
+                                                "the phone connected.");
+        note("Touch controls on screen or any controller. The top-left button opens the settings menu.");
+    }
+}
+
+void page_installer(float w) {
+    float col = (w - 40) * 0.5f;
+    bool idle = g_install == INST_IDLE;
+    ImGui::BeginGroup();
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
+    if (!idle) {
+        install_progress(col, "BUILDING");
+    } else {
+        section("1. YOUR DISC IMAGE");
+        ImGui::TextWrapped("Sonic Riders (USA), GXEE8P (.iso). The game is built on this PC from it: 10-40 minutes the "
+                           "first time.");
+        if (ImGui::Button("Select disc...")) {
+            std::wstring d = pick_disc(GetActiveWindow());
+            if (!d.empty()) g_disc_choice = d;
+        }
+        ImGui::SameLine();
+        ImGui::TextUnformatted(g_disc_choice.empty() ? "no disc image selected" : short_path(g_disc_choice, 34).c_str());
+        ImGui::Spacing();
+        if (g_mode == M_SWITCH) {
+            section("2. SD CARD");
+            ImGui::TextWrapped("Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
+            std::string cur = g_ic.sd.empty() ? "Don't copy (keep it in build\\switch\\)" : narrow(g_ic.sd);
+            ImGui::SetNextItemWidth(col * 0.62f);
+            if (ImGui::BeginCombo("##sd", cur.c_str())) {
+                for (const std::wstring& d : g_ic.sd_found)
+                    if (ImGui::Selectable((narrow(d) + "  (Switch SD card)").c_str(), d == g_ic.sd)) g_ic.sd = d;
+                if (ImGui::Selectable("Don't copy (keep it in build\\switch\\)", g_ic.sd.empty())) g_ic.sd.clear();
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Refresh")) find_sd_cards();
+            ImGui::SameLine();
+            if (ImGui::Button("Other...")) {
+                std::wstring f = pick_folder(GetActiveWindow(), L"Select your Switch SD card (its top folder)");
+                if (!f.empty()) {
+                    if (exists(f + L"\\atmosphere") || exists(f + L"\\switch")) g_ic.sd = f;
+                    else MessageBoxW(GetActiveWindow(), L"That folder has no 'switch' or 'atmosphere' folder. Pick the SD "
+                                     L"card's top folder.", L"Sonic Riders", MB_ICONWARNING);
+                }
+            }
+            if (g_ic.sd_found.empty() && g_ic.sd.empty())
+                ImGui::TextColored(kRed, "No Switch SD card found. Insert it and press Refresh.");
+            if (!g_ic.sd.empty()) ImGui::Checkbox("Also copy the disc image to the SD card (1.4 GB, needed once)", &g_ic.copy_iso);
+        } else {
+            section("2. YOUR PHONE");
+            ImGui::TextWrapped("64-bit Android 11 or newer with Vulkan. Turn on USB debugging (Settings > About phone > "
+                               "tap Build number 7 times; then Developer options > USB debugging), connect the phone by "
+                               "USB and tap Allow when it asks.");
+            ImGui::Checkbox("Install on the connected phone (and copy the disc image to it)", &g_ic.phone_install);
+            ImGui::Checkbox("I accept the Android SDK License", &g_ic.license);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Read it"))
+                ShellExecuteW(nullptr, L"open", L"https://developer.android.com/studio/terms", nullptr, nullptr, SW_SHOWNORMAL);
+            note("The first build downloads about 1.1 GB of Android tools (8 GB free space needed).");
+        }
+    }
+    ImGui::PopTextWrapPos();
+    ImGui::EndGroup();
+    ImGui::SameLine(0, 40);
+    ImGui::BeginGroup();
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
+    if (g_install == INST_DONE) {
+        installer_next_steps();
+    } else {
+        section("3. ICON (OPTIONAL)");
+        ImGui::BeginDisabled(!idle);
+        ImGui::Checkbox(g_mode == M_SWITCH ? "Use my own picture for the icon" : "Use my own picture for the app icon",
+                        &g_ic.own_icon);
+        if (g_ic.own_icon) {
+            if (ImGui::Button("Pick picture...")) {
+                std::wstring f = pick_file(GetActiveWindow(),
+                                           L"Pictures (*.png;*.jpg;*.jpeg;*.ico;*.bmp)\0*.png;*.jpg;*.jpeg;*.ico;*.bmp\0", L"Your icon picture (square)");
+                if (!f.empty()) g_ic.icon = f;
+            }
+            ImGui::SameLine();
+            ImGui::TextUnformatted(g_ic.icon.empty() ? "none" : short_path(g_ic.icon, 30).c_str());
+        }
+        note("Otherwise the game's memory card picture. Square pictures of 256 x 256 or more look best.");
+        if (g_mode == M_SWITCH) {
+            ImGui::Spacing();
+            ImGui::Checkbox("Make a HOME-screen icon (starts the game without holding R)", &g_ic.home_icon);
+            if (g_ic.home_icon) {
+                if (ImGui::Button("Pick prod.keys...")) {
+                    std::wstring f = pick_file(GetActiveWindow(), L"prod.keys\0*.keys\0All files (*.*)\0*.*\0",
+                                               L"Your console's prod.keys (Lockpick_RCM)");
+                    if (!f.empty()) g_ic.keys = f;
+                }
+                ImGui::SameLine();
+                ImGui::TextUnformatted(g_ic.keys.empty() ? "none" : short_path(g_ic.keys, 30).c_str());
+                note("Needs your console's prod.keys (dumped with Lockpick_RCM; read on this PC only, never copied), "
+                     "and DBI or Goldleaf plus up-to-date sigpatches to install the icon on the console.");
+            }
+        }
+        ImGui::EndDisabled();
+        if (g_install == INST_FAILED) {
+            ImGui::Spacing();
+            ImGui::TextColored(kRed, "Something went wrong: the messages on the left say what. setup.log in this folder "
+                                     "has all of them (attach it to a bug report).");
+            if (ImGui::Button("Try again")) g_install = INST_IDLE;
+        }
+    }
+    ImGui::PopTextWrapPos();
+    ImGui::EndGroup();
+}
+
 void page_play(float w) {
     float col = (w - 40) * 0.5f;
     ImGui::BeginGroup();
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
     if (g_install == INST_RUNNING || g_install == INST_FAILED) {
-        section(g_install == INST_FAILED ? "INSTALL FAILED" : "INSTALLING");
-        std::string st;
-        {
-            std::lock_guard<std::mutex> lk(g_log_mx);
-            st = g_step_text;
-        }
-        float frac = g_step / 7.0f;
-        ImGui::ProgressBar(frac, ImVec2(col, 0), "");
-        ImGui::TextWrapped("%s", st.c_str());
-        ImGui::BeginChild("log", ImVec2(col, 0), ImGuiChildFlags_None);
-        ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
-        {
-            std::lock_guard<std::mutex> lk(g_log_mx);
-            for (const std::string& l : g_log) ImGui::TextUnformatted(l.c_str());
-        }
-        if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
-        ImGui::PopFont();
-        ImGui::EndChild();
+        install_progress(col, "INSTALLING");
     } else if (!g_ready.built) {
         section("FIRST TIME");
         ImGui::TextWrapped("The game is built on this PC from your own disc image: Sonic Riders (USA), GXEE8P. "
@@ -1108,10 +1354,12 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     ImGui::SetCursorPos(ImVec2(26 * s, 84 * s));
     ImGui::PushFont(g_font_bold, kSize * g_dpi);
-    ImGui::TextColored(ImVec4(0.55f, 0.68f, 0.95f, 1), "PC recompilation");
+    ImGui::TextColored(ImVec4(0.55f, 0.68f, 0.95f, 1), "%s",
+                       g_mode == M_SWITCH ? "Switch installer" : g_mode == M_ANDROID ? "Android installer" : "PC recompilation");
     ImGui::PopFont();
     float y = 130 * s;
     for (int i = 0; i < P_COUNT; i++) {
+        if (installer() && i != P_PLAY && i != P_ABOUT) continue;
         ImGui::SetCursorPos(ImVec2(0, y));
         ImGui::PushID(i);
         bool sel = g_page == i;
@@ -1119,7 +1367,8 @@ void draw_ui(float W, float H) {
         bool hov = ImGui::IsItemHovered();
         if (sel || hov) dl->AddRectFilled(ImVec2(0, y), ImVec2(side - 1, y + 40 * s), sel ? IM_COL32(28, 33, 50, 255) : IM_COL32(22, 26, 40, 255));
         if (sel) dl->AddRectFilled(ImVec2(0, y), ImVec2(4 * s, y + 40 * s), kGold);
-        dl->AddText(ImVec2(28 * s, y + (40 * s - ImGui::GetFontSize()) / 2), sel ? IM_COL32(242, 190, 60, 255) : IM_COL32(215, 220, 232, 255), kPages[i]);
+        dl->AddText(ImVec2(28 * s, y + (40 * s - ImGui::GetFontSize()) / 2), sel ? IM_COL32(242, 190, 60, 255) : IM_COL32(215, 220, 232, 255),
+                    installer() && i == P_PLAY ? "Install" : kPages[i]);
         ImGui::PopID();
         y += 40 * s;
     }
@@ -1160,7 +1409,9 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     ImGui::SetCursorPos(ImVec2(bx + 30 * s, banner - 46 * s));
     ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
-    ImGui::TextColored(kGoldV, "Static recompilation for PC  \xC2\xB7  GXEE8P");
+    ImGui::TextColored(kGoldV, "%s", g_mode == M_SWITCH ? "Static recompilation for Nintendo Switch  \xC2\xB7  GXEE8P"
+                                     : g_mode == M_ANDROID ? "Static recompilation for Android  \xC2\xB7  GXEE8P"
+                                                           : "Static recompilation for PC  \xC2\xB7  GXEE8P");
     ImGui::PopFont();
 
     /* page */
@@ -1169,7 +1420,7 @@ void draw_ui(float W, float H) {
     ImGui::BeginChild("page", ImVec2(bw - 2 * pad, H - banner - bar - 36 * s), ImGuiChildFlags_None);
     float pw = ImGui::GetContentRegionAvail().x;
     switch (g_page) {
-    case P_PLAY: page_play(pw); break;
+    case P_PLAY: installer() ? page_installer(pw) : page_play(pw); break;
     case P_GRAPHICS: page_graphics(pw); break;
     case P_GAME: page_game(pw); break;
     case P_MODS: page_mods(pw); break;
@@ -1183,7 +1434,10 @@ void draw_ui(float W, float H) {
     float bh = 42 * s;
     ImGui::SetCursorPos(ImVec2(bx + pad, H - bar + (bar - ImGui::GetFontSize()) / 2));
     bool game_on = child_running(g_game), setup_on = child_running(g_setup);
-    if (game_on) ImGui::TextColored(kGreen, "\xE2\x97\x8F Running");
+    std::string blocker = installer() ? installer_blocker() : std::string();
+    if (installer() && g_status.empty() && g_install == INST_IDLE)
+        ImGui::TextColored(blocker.empty() ? kGreen : kDim, "%s", blocker.empty() ? "\xE2\x9C\x93 Ready to build" : blocker.c_str());
+    else if (game_on) ImGui::TextColored(kGreen, "\xE2\x97\x8F Running");
     else if (!g_status.empty()) ImGui::TextColored(g_install == INST_FAILED ? kRed : kGreen, "%s", g_status.c_str());
     else if (g_ready.built && g_ready.disc) ImGui::TextColored(kGreen, "\xE2\x9C\x93 Ready to play");
     else if (g_ready.built) ImGui::TextColored(kRed, "The disc image is missing from baserom\\");
@@ -1195,7 +1449,13 @@ void draw_ui(float W, float H) {
         stop_child(g_setup);
     }
     ImGui::SameLine(0, 10 * s);
-    if (!g_ready.built) {
+    if (installer()) {
+        if (g_install == INST_DONE) {
+            if (big_button("CLOSE", ImVec2(playw, bh), true, true)) PostQuitMessage(0);
+        } else if (big_button("BUILD AND INSTALL", ImVec2(playw, bh), true,
+                              !setup_on && g_install != INST_RUNNING && blocker.empty()))
+            start_installer();
+    } else if (!g_ready.built) {
         if (big_button("INSTALL AND PLAY", ImVec2(playw, bh), true, !setup_on && !g_disc_choice.empty() && g_ready.setup))
             start_install(g_disc_choice);
     } else if (big_button("PLAY", ImVec2(playw, bh), true, !game_on && !setup_on && g_ready.disc)) {
@@ -1275,18 +1535,26 @@ bool test_step(int frame) {
 
 /* SR_LAUNCHER_INSTALL=<disc image> (testing, e.g. tools/sandbox_test.py --launcher): picks that disc and presses
  * INSTALL AND PLAY, waits for the setup, writes launcher_test.txt in the game folder (result, last setup lines,
- * the ready check) and quits with exit code 0 when the game is installed and PLAY is ready, else 1 */
+ * the ready check) and quits with exit code 0 when the game is installed and PLAY is ready, else 1. In installer mode
+ * it presses BUILD AND INSTALL with the defaults (Switch: no SD card unless SR_INSTALLER_SD; Android: no phone install,
+ * licence accepted) and passes when the setup succeeds */
 const char* g_install_test;
 int g_install_test_exit = 1;
 bool install_test_step(int frame) {
     if (frame == 20) {
         g_disc_choice = widen(g_install_test);
-        start_install(g_disc_choice);
+        if (installer()) {
+            g_ic.sd = getenv("SR_INSTALLER_SD") ? widen(getenv("SR_INSTALLER_SD")) : L"";
+            g_ic.copy_iso = false;
+            g_ic.phone_install = false;
+            g_ic.license = true;
+            start_installer();
+        } else start_install(g_disc_choice);
         return false;
     }
     if (frame < 20 || g_install == INST_RUNNING) return false;
     refresh_ready();
-    bool ok = g_install == INST_DONE && g_ready.built && g_ready.disc;
+    bool ok = g_install == INST_DONE && (installer() || (g_ready.built && g_ready.disc));
     std::string rep = std::string(ok ? "PASS" : "FAIL") + ": install " +
                       (g_install == INST_DONE ? "done" : g_install == INST_FAILED ? "failed" : "not started") +
                       ", setup exit code " + std::to_string(g_setup.exit_code) + ", game built " + (g_ready.built ? "yes" : "no") +
@@ -1310,6 +1578,11 @@ void poll_children() {
         refresh_ready();
     }
     game_was = game_on;
+    if (g_install == INST_RUNNING && g_setup.done && installer()) {
+        g_install = g_setup.exit_code == 0 ? INST_DONE : INST_FAILED;
+        g_status = g_install == INST_DONE ? "Done." : "The build failed: see the messages (setup.log has all of them).";
+        return;
+    }
     if (g_install == INST_RUNNING && g_setup.done) {
         refresh_ready();
         if (g_setup.exit_code == 0 && g_ready.built) {
@@ -1418,6 +1691,17 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     std::string v = read_text(path(L"VERSION"));
     g_version = v.substr(0, v.find_first_of("\r\n"));
     start_update_check();
+    {  /* installer mode: by the program's name ("Install Sonic Riders (Switch).exe"), or SR_INSTALLER for tests */
+        wchar_t me[MAX_PATH];
+        GetModuleFileNameW(nullptr, me, MAX_PATH);
+        std::string name = narrow(me);
+        name = name.substr(name.find_last_of("\\/") + 1);
+        if (const char* e = getenv("SR_INSTALLER")) name = e;
+        std::transform(name.begin(), name.end(), name.begin(), [](unsigned char ch) { return (char)tolower(ch); });
+        if (name.find("switch") != std::string::npos) g_mode = M_SWITCH;
+        else if (name.find("android") != std::string::npos) g_mode = M_ANDROID;
+        if (g_mode == M_SWITCH) find_sd_cards();
+    }
 
     WNDCLASSEXW wc = {sizeof wc, CS_CLASSDC, wndproc, 0, 0, inst, LoadIconW(inst, L"APPICON"), LoadCursorW(nullptr, IDC_ARROW),
                       nullptr, nullptr, L"SonicRidersLauncher", nullptr};
@@ -1425,7 +1709,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     float dpi = GetDpiForSystem() / 96.0f;
     g_dpi = dpi;
     int ww = (int)(1120 * dpi), wh = (int)(740 * dpi);
-    HWND hwnd = CreateWindowW(wc.lpszClassName, L"Sonic Riders", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ww, wh,
+    const wchar_t* title = g_mode == M_SWITCH ? L"Sonic Riders - Switch installer"
+                           : g_mode == M_ANDROID ? L"Sonic Riders - Android installer" : L"Sonic Riders";
+    HWND hwnd = CreateWindowW(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ww, wh,
                               nullptr, nullptr, inst, nullptr);
     BOOL dark = TRUE;  /* dark title bar (Windows 10 2004+ / 11) */
     DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof dark);

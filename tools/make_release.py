@@ -4,10 +4,12 @@
   python tools/make_release.py --version v0.2.0 [--flavor switch|pc|android|source] [--ref HEAD] [--out build/release]
 
 Flavors (one download per platform, for players):
-  switch  SonicRiders-Switch-Setup-<version>.zip: "Install Sonic Riders (Switch).bat" + README-FIRST.txt
+  switch  SonicRiders-Switch-Setup-<version>.zip: "Install Sonic Riders (Switch).exe" (the launcher in installer
+          mode) + "Install Sonic Riders (Switch) - command line.bat" + README-FIRST.txt
   pc      SonicRiders-PC-Setup-<version>.zip: SonicRidersLauncher.exe (built here by tools/build_launcher.py
           from the committed launcher source) + "Install Sonic Riders (PC).bat" + README-FIRST.txt
-  android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).bat" + README-FIRST.txt
+  android SonicRiders-Android-Setup-<version>.zip: "Install Sonic Riders (Android).exe" (installer mode) +
+          "Install Sonic Riders (Android) - command line.bat" + README-FIRST.txt
   linux   SonicRiders-Linux-Setup-<version>.zip: "Install Sonic Riders (Linux).sh" (SonicRidersSetup.sh) +
           README-FIRST.txt, for Linux PCs and the Steam Deck (tools/setup_linux.py)
   ios     SonicRiders-iOS-Setup-<version>.zip: "Install Sonic Riders (iOS).command" + README-FIRST.txt, for
@@ -92,8 +94,10 @@ def readme_first(flavor, version):
             "1. Extract this whole zip to a folder (for example C:\\SonicRiders). Its path must use only",
             "   English letters and digits (not your Downloads folder if your Windows user name has accents).",
             "2. Put your Switch's SD card in the PC.",
-            '3. Double-click "Install Sonic Riders (Switch).bat". If Windows warns, click More info > Run anyway.',
-            "   Pick your disc image and your SD card. The first run takes 10-30 minutes.",
+            '3. Double-click "Install Sonic Riders (Switch).exe". If Windows warns, click More info > Run anyway.',
+            "   In its window pick your disc image and your SD card (and, if you like, your own icon or a",
+            "   HOME-screen icon), then press BUILD AND INSTALL. The first run takes 10-30 minutes.",
+            '   (The same setup in a command window: "Install Sonic Riders (Switch) - command line.bat".)',
             "4. Eject the SD card, put it in the Switch, hold R while starting any game to open the",
             "   Homebrew Menu, and start Sonic Riders.",
             "",
@@ -112,8 +116,9 @@ def readme_first(flavor, version):
             "1. Extract this whole zip to a folder you'll keep (for example C:\\SonicRiders). Its path must use",
             "   only English letters and digits. Install updates from this same PC: it keeps the signing key.",
             "2. Connect the phone with a USB cable, unlock it, and choose File transfer if it asks.",
-            '3. Double-click "Install Sonic Riders (Android).bat". If Windows warns, click More info > Run anyway.',
-            "   Accept the Android SDK License when asked, pick your disc image, and say y to install.",
+            '3. Double-click "Install Sonic Riders (Android).exe". If Windows warns, click More info > Run anyway.',
+            "   In its window pick your disc image, accept the Android SDK License and press BUILD AND INSTALL.",
+            '   (The same setup in a command window: "Install Sonic Riders (Android) - command line.bat".)',
             '   When the phone asks "Allow USB debugging?", tap Allow.',
             "   The first run downloads about 1.1 GB of Android build tools (about 8 GB free needed on the PC)",
             "   and takes 20-40 minutes.",
@@ -312,14 +317,17 @@ def main():
             setup_sh = [d for n, d in files if n == "SonicRidersSetup.sh"][0]
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (Linux).sh", setup_sh))
-        else:
+        elif args.flavor == "pc":
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (%s).bat" % plat, launcher(args.flavor)))
-        if args.flavor == "pc":
+        else:  # Switch, Android: the launcher in installer mode (chosen by its name) + the console setup as a fallback
+            files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
+            files.append(("Install Sonic Riders (%s) - command line.bat" % plat, launcher(args.flavor)))
+        if args.flavor in ("pc", "switch", "android"):
             exe = build_launcher(args.ref)
             if not exe:
                 return 1
-            files.append(("SonicRidersLauncher.exe", exe))
+            files.append(("SonicRidersLauncher.exe" if args.flavor == "pc" else "Install Sonic Riders (%s).exe" % plat, exe))
         files.append(("README-FIRST.txt", readme_first(args.flavor, args.version)))
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, zipname)

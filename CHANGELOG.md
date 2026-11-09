@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-## v0.7.0 (2026-11-08; PC zip updated 2026-11-09)
+## v0.7.0 (2026-11-08; zips updated 2026-11-09)
 
+- **Switch and Android: a setup window (added to the zips on 2026-11-09) instead of a command window.** `Install Sonic Riders (Switch).exe` and
+  `Install Sonic Riders (Android).exe` look like the PC launcher: pick your disc image, your SD card (found by
+  itself) or phone, your own icon and the Switch HOME-screen icon, then BUILD AND INSTALL with a progress bar and
+  the setup's messages. The command-window setup stays as `... - command line.bat`.
 - **PC: update notice** (added to the v0.7.0 PC zip on 2026-11-09): the launcher and the game check GitHub at
   start-up and say when a newer version is out (a gold "Download update" button in the launcher, a message at the
   top of the game screen, and F1 > About with a button to the download page). Only the newest version number is

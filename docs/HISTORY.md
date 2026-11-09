@@ -933,3 +933,15 @@ vX.Y.Z), `update_check.c` (helper thread at start-up; banner for 20 s; F1 > Abou
   on v0.7.0 get it with the next download; it only prompts from the next release on.
 - Same day: new launcher icon `launcher/icon_256.png` + `icon_32.png` (pinned in OWN_ART) (Super Sonic art made by the user with ChatGPT; user's choice for
   the public build); PC zip rebuilt and re-uploaded to v0.7.0. Icon in the .exe checked [confirmed].
+
+## 2026-11-09: Switch / Android installer window (launcher in installer mode)
+
+User's request: the Switch and Android .bat installers as a window like the PC launcher. The launcher exe, named
+`Install Sonic Riders (Switch|Android).exe`, becomes an installer (notes/launcher.md "Installer mode"): disc image,
+SD card (auto-found) or phone, own icon, Switch HOME-screen icon + prod.keys, Android SDK licence; runs setup.ps1
+with -Yes and the answers. The .bat stays as "... - command line.bat".
+- Tested [confirmed]: pictures of both modes and the PC launcher unchanged; a full Switch build through the
+  installer (SR_LAUNCHER_INSTALL, no SD card): PASS, setup exit 0, .nro built. Not tested: copying to a real SD
+  card, the HOME-screen icon, an Android build/install through it, a cold Sandbox run (user chose to replace
+  the v0.7.0 zips directly).
+

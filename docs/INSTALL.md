@@ -57,12 +57,14 @@
    other letters, don't use your Downloads or Desktop folder.
 3. **Put your Switch's SD card in the PC** (or connect the Switch over USB with a tool that shows the
    SD card as a drive).
-4. **Double-click `Install Sonic Riders (Switch).bat`.** If Windows shows "Windows protected your PC",
-   click *More info* → *Run anyway* (the script is not signed). Then answer its questions:
-   - pick your disc image in the file window; the setup checks that it is the right one;
-   - say **y** to copy to the SD card and pick the SD card's top folder (the one containing
-     `atmosphere` and `switch`);
-   - say **y** to copy your disc image to the SD card (needed once; skipped automatically later).
+4. **Double-click `Install Sonic Riders (Switch).exe`.** If Windows shows "Windows protected your PC",
+   click *More info* → *Run anyway* (the program is not signed). In its window:
+   - **Select disc...**: pick your disc image; the setup checks that it is the right one;
+   - **SD card**: your Switch's SD card is found by itself (or press *Other...* and pick its top folder, the
+     one containing `atmosphere` and `switch`); keep *Also copy the disc image* ticked the first time;
+   - optional: your own icon picture, and the HOME-screen icon (below);
+   - press **BUILD AND INSTALL**. The window shows each step and the setup's messages.
+   (`Install Sonic Riders (Switch) - command line.bat` does the same in a command window, with questions.)
 5. **Wait.** The first run downloads the build tools (about 300 MB, 1.3 GB unpacked, kept for next
    time) and converts the game: 10–30 minutes. It ends with "Done". If something fails, the message
    says why, and the whole log is in `setup.log`.
@@ -77,7 +79,8 @@ Hold **−** (Minus) in the game for the settings menu. Your saves and settings 
 ### Optional: a Sonic Riders icon on the HOME screen
 
 The setup can also make a small **HOME-screen icon** (a "forwarder" `.nsp`): it opens the game directly, with
-full memory, without holding R over a game. The setup asks for it right after "What to build":
+full memory, without holding R over a game. Tick *Make a HOME-screen icon* in the installer window (the
+command-line setup asks right after "What to build"):
 
 - **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM](https://github.com/saneki/Lockpick_RCM)
   (the setup finds them in `%USERPROFILE%\.switch\prod.keys` or asks where they are; they are read where they
@@ -123,12 +126,14 @@ The game is built on your PC and installed on the phone over USB; nothing is dow
    and digits in the path).
 3. **Connect the phone** with a USB cable and unlock it. If it asks what the USB connection is for, choose
    **File transfer**.
-4. **Double-click `Install Sonic Riders (Android).bat`.** If Windows shows "Windows protected your PC", click
-   *More info* → *Run anyway*. Then:
-   - read and accept the **Android SDK License** (the setup uses Google's build tools);
-   - pick your disc image;
-   - say **y** to install on the connected phone. When the phone shows **"Allow USB debugging?"**, tap
-     **Allow** (tick *Always allow from this computer* to skip it next time).
+4. **Double-click `Install Sonic Riders (Android).exe`.** If Windows shows "Windows protected your PC", click
+   *More info* → *Run anyway*. In its window:
+   - **Select disc...**: pick your disc image;
+   - read (*Read it*) and tick **I accept the Android SDK License** (the setup uses Google's build tools);
+   - keep *Install on the connected phone* ticked, optionally pick your own app icon, and press
+     **BUILD AND INSTALL**. When the phone shows **"Allow USB debugging?"**, tap **Allow** (tick *Always allow
+     from this computer* to skip it next time).
+   (`Install Sonic Riders (Android) - command line.bat` does the same in a command window, with questions.)
 5. **Wait.** The first run downloads the Android build tools and builds the game: 20–40 minutes. The setup
    then installs the app and copies your disc image to the phone (about a minute over USB), and checks it.
 6. **Play:** start **Sonic Riders** from the phone's app list. You can unplug the cable.
@@ -244,8 +249,8 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 
 1. Download the new zip for your platform from the [latest release](../../../releases/latest) and
    extract it to a **new** folder.
-2. Run its installer (`Install Sonic Riders (Switch).bat`, `Install Sonic Riders (PC).bat` or
-   `Install Sonic Riders (Android).bat`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc image (and, for the Switch, the same SD card;
+2. Run its installer (`Install Sonic Riders (Switch).exe`, `Install Sonic Riders (PC).bat` or
+   `Install Sonic Riders (Android).exe`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc image (and, for the Switch, the same SD card;
    for Android, the phone connected).
 3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
    minutes).
