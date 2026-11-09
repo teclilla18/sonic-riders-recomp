@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.7.1 (2026-11-09)
+
+- **Switch installer: choosing an SD card works.** A drive like `F:\` stopped the build at step 2 ("Illegal
+  characters in path"): the path reached the setup with a stray quote.
+- **Launcher and installers: bigger text** and a larger window (it still fits smaller screens).
+- Also new since v0.7.0's first upload: the Switch / Android setup window, the update notice and the launcher icon
+  (below).
+
 ## v0.7.0 (2026-11-08; zips updated 2026-11-09)
 
 - **Switch and Android: a setup window (added to the zips on 2026-11-09) instead of a command window.** `Install Sonic Riders (Switch).exe` and

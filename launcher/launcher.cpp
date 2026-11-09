@@ -440,7 +440,7 @@ ImFont* g_font_title;
 ImFont* g_font_small;
 float g_dpi = 1.0f;
 /* ImGui 1.92 fonts scale freely: these are the sizes used (before the DPI scale) */
-constexpr float kSize = 17.0f, kSizeSmall = 14.0f, kSizeTitle = 36.0f, kSizeLogo = 26.0f;
+constexpr float kSize = 20.0f, kSizeSmall = 16.5f, kSizeTitle = 40.0f, kSizeLogo = 28.0f;
 
 const ImU32 kGold = IM_COL32(242, 190, 60, 255);
 const ImVec4 kGoldV = ImVec4(0.95f, 0.75f, 0.24f, 1.0f);
@@ -735,6 +735,13 @@ std::string installer_blocker() {
     return "";
 }
 
+/* a path as one quoted command-line argument: a backslash right before the closing quote would escape it
+ * ("F:\" reached the setup as F:", 2026-11-09), so a path ending in one gets "." (the same folder) */
+std::wstring qpath(std::wstring p) {
+    if (!p.empty() && p.back() == L'\\') p += L'.';
+    return L"\"" + p + L"\"";
+}
+
 void start_installer() {
     {
         std::lock_guard<std::mutex> lk(g_log_mx);
@@ -743,18 +750,18 @@ void start_installer() {
     }
     g_step = 0;
     std::wstring cmd = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" + path(L"setup\\setup.ps1") +
-                       L"\" -Yes -Iso \"" + g_disc_choice + L"\"";
+                       L"\" -Yes -Iso " + qpath(g_disc_choice);
     if (g_mode == M_SWITCH) {
         cmd += L" -Target switch";
         if (g_ic.sd.empty()) cmd += L" -NoSd";
-        else cmd += L" -Sd \"" + g_ic.sd + L"\" -CopyIso " + (g_ic.copy_iso ? L"yes" : L"no");
-        if (g_ic.home_icon) cmd += L" -HomeIcon yes -Keys \"" + g_ic.keys + L"\"";
+        else cmd += L" -Sd " + qpath(g_ic.sd) + L" -CopyIso " + (g_ic.copy_iso ? L"yes" : L"no");
+        if (g_ic.home_icon) cmd += L" -HomeIcon yes -Keys " + qpath(g_ic.keys);
         else cmd += L" -HomeIcon no";
     } else {
         cmd += L" -Target android -AcceptAndroidSdkLicense";
         if (!g_ic.phone_install) cmd += L" -Install no";
     }
-    if (g_ic.own_icon && !g_ic.icon.empty()) cmd += L" -Icon \"" + g_ic.icon + L"\"";
+    if (g_ic.own_icon && !g_ic.icon.empty()) cmd += L" -Icon " + qpath(g_ic.icon);
     if (start_child(g_setup, cmd, {{L"SR_NOPAUSE", L"1"}}, true, true, setup_sink)) {
         g_install = INST_RUNNING;
         g_status = "Building...";
@@ -828,7 +835,10 @@ void page_installer(float w) {
             section("2. SD CARD");
             ImGui::TextWrapped("Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
             std::string cur = g_ic.sd.empty() ? "Don't copy (keep it in build\\switch\\)" : narrow(g_ic.sd);
-            ImGui::SetNextItemWidth(col * 0.62f);
+            const ImGuiStyle& st = ImGui::GetStyle();
+            float btns = ImGui::CalcTextSize("Refresh").x + ImGui::CalcTextSize("Other...").x + 4 * st.FramePadding.x +
+                         2 * st.ItemSpacing.x;
+            ImGui::SetNextItemWidth(std::max(col - btns, 80.0f));
             if (ImGui::BeginCombo("##sd", cur.c_str())) {
                 for (const std::wstring& d : g_ic.sd_found)
                     if (ImGui::Selectable((narrow(d) + "  (Switch SD card)").c_str(), d == g_ic.sd)) g_ic.sd = d;
@@ -848,13 +858,17 @@ void page_installer(float w) {
             }
             if (g_ic.sd_found.empty() && g_ic.sd.empty())
                 ImGui::TextColored(kRed, "No Switch SD card found. Insert it and press Refresh.");
-            if (!g_ic.sd.empty()) ImGui::Checkbox("Also copy the disc image to the SD card (1.4 GB, needed once)", &g_ic.copy_iso);
+            if (!g_ic.sd.empty()) {
+                ImGui::Checkbox("Copy the disc image too", &g_ic.copy_iso);
+                note("1.4 GB; needed once (skipped if it is already on the card).");
+            }
         } else {
             section("2. YOUR PHONE");
             ImGui::TextWrapped("64-bit Android 11 or newer with Vulkan. Turn on USB debugging (Settings > About phone > "
                                "tap Build number 7 times; then Developer options > USB debugging), connect the phone by "
                                "USB and tap Allow when it asks.");
-            ImGui::Checkbox("Install on the connected phone (and copy the disc image to it)", &g_ic.phone_install);
+            ImGui::Checkbox("Install on the connected phone", &g_ic.phone_install);
+            note("Also copies your disc image to the phone (about a minute over USB).");
             ImGui::Checkbox("I accept the Android SDK License", &g_ic.license);
             ImGui::SameLine();
             if (ImGui::SmallButton("Read it"))
@@ -872,8 +886,7 @@ void page_installer(float w) {
     } else {
         section("3. ICON (OPTIONAL)");
         ImGui::BeginDisabled(!idle);
-        ImGui::Checkbox(g_mode == M_SWITCH ? "Use my own picture for the icon" : "Use my own picture for the app icon",
-                        &g_ic.own_icon);
+        ImGui::Checkbox("Use my own picture", &g_ic.own_icon);
         if (g_ic.own_icon) {
             if (ImGui::Button("Pick picture...")) {
                 std::wstring f = pick_file(GetActiveWindow(),
@@ -886,7 +899,8 @@ void page_installer(float w) {
         note("Otherwise the game's memory card picture. Square pictures of 256 x 256 or more look best.");
         if (g_mode == M_SWITCH) {
             ImGui::Spacing();
-            ImGui::Checkbox("Make a HOME-screen icon (starts the game without holding R)", &g_ic.home_icon);
+            ImGui::Checkbox("Make a HOME-screen icon", &g_ic.home_icon);
+            note("Starts the game from the HOME menu, without holding R.");
             if (g_ic.home_icon) {
                 if (ImGui::Button("Pick prod.keys...")) {
                     std::wstring f = pick_file(GetActiveWindow(), L"prod.keys\0*.keys\0All files (*.*)\0*.*\0",
@@ -1708,7 +1722,12 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     RegisterClassExW(&wc);
     float dpi = GetDpiForSystem() / 96.0f;
     g_dpi = dpi;
-    int ww = (int)(1120 * dpi), wh = (int)(740 * dpi);
+    int ww = (int)(1280 * dpi), wh = (int)(820 * dpi);
+    RECT work;  /* not bigger than the screen's free area (taskbar excluded) */
+    if (SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0)) {
+        ww = std::min(ww, (int)(work.right - work.left));
+        wh = std::min(wh, (int)(work.bottom - work.top));
+    }
     const wchar_t* title = g_mode == M_SWITCH ? L"Sonic Riders - Switch installer"
                            : g_mode == M_ANDROID ? L"Sonic Riders - Android installer" : L"Sonic Riders";
     HWND hwnd = CreateWindowW(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ww, wh,

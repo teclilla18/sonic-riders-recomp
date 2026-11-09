@@ -945,3 +945,13 @@ with -Yes and the answers. The .bat stays as "... - command line.bat".
   card, the HOME-screen icon, an Android build/install through it, a cold Sandbox run (user chose to replace
   the v0.7.0 zips directly).
 
+## 2026-11-09: v0.7.1 (installer SD-card fix, bigger launcher text)
+
+User report (picture): the Switch installer failed at step 2 with "Test-Path : Illegal characters in path" after
+picking the SD card F:. Cause: the path was passed as "F:" + backslash + quote; a backslash before the closing
+quote escapes it, so setup.ps1 got `F:"`. Fix: `qpath()` quotes every path and adds "." after a trailing
+backslash. Tested [confirmed]: full Switch build through the installer to a test SD folder given with a trailing
+backslash: PASS, .nro copied and verified. Also: fonts 17/14/40/28 -> 20/16.5/40/28, window 1280 x 820 (clamped to
+the work area), shorter checkbox labels with notes, SD picker sized to its column (pictures of all modes).
+Released as v0.7.1 at the user's request (no Sandbox run; iOS zip made here from the same source).
+
