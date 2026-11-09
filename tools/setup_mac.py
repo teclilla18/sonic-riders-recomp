@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Sonic Riders setup for iPhone and iPad, on a Mac (started by "Install Sonic Riders (iOS).command").
 
-    python3 tools/setup_mac.py [--iso IMAGE] [--yes] [--tools DIR] [--install yes|no] [--device ID]
-                               [--unsigned]
+    python3 tools/setup_mac.py [--iso IMAGE] [--icon PICTURE|default] [--yes] [--tools DIR]
+                               [--install yes|no] [--device ID] [--unsigned]
 
 Builds the iOS app on this Mac from your own disc image, like the PC setups:
   1. check your disc image (Sonic Riders USA, GXEE8P revision 0, SHA-1 of the Redump dump)
@@ -51,6 +51,34 @@ def pick_iso():
     if sys.stdin.isatty():
         return input("Path of your disc image (.iso; you can drag the file into this window): ").strip().strip("'\"")
     return ""
+
+
+def pick_icon():
+    """your own app icon (any picture; centre square, transparent parts filled) or "" for the default"""
+    r = subprocess.run(["osascript", "-e", 'POSIX path of (choose file with prompt "Pick a picture for the app icon '
+                        '(PNG, JPG, HEIC, WEBP, GIF, BMP or TIFF; the centre square is used)")'],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def prepare_icon(src):
+    """copy your picture into build/ (never into git; a fixed path without spaces for ninja) and check that it
+    converts; returns the copy's path"""
+    import ios_build
+    ext = os.path.splitext(src)[1].lower()
+    if ext not in ios_build.ICON_EXTS:
+        fail("The icon must be a picture (%s): %s" % (" ".join(ios_build.ICON_EXTS), src))
+    d = os.path.join(ROOT, "build", "ios")
+    os.makedirs(d, exist_ok=True)
+    for old in os.listdir(d):
+        if old.startswith("custom_icon"):
+            os.remove(os.path.join(d, old))
+    dst = os.path.join(d, "custom_icon" + ext)
+    shutil.copyfile(src, dst)
+    if subprocess.run([sys.executable, os.path.join(ROOT, "tools", "ios_build.py"), "icon", dst,
+                       os.path.join(d, "custom_icon_preview.png")], capture_output=True).returncode:
+        fail("macOS could not read the icon picture: %s" % src, "Pick another picture, or none for the default icon.")
+    return dst
 
 
 def check_xcode():
@@ -147,6 +175,8 @@ def write_renew_notes(ipa_dir, ipa, bundle, signed):
 def main():
     ap = argparse.ArgumentParser(description="Sonic Riders setup for iPhone / iPad (on a Mac)")
     ap.add_argument("--iso", default="", help="your Sonic Riders (USA) disc image (GXEE8P revision 0, 1.4 GB .iso)")
+    ap.add_argument("--icon", default="", help="your own app icon: any picture (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF; the "
+                    "centre square is used), or 'default' for the game's save icon (default: ask)")
     ap.add_argument("--yes", action="store_true", help="no questions (needs --iso)")
     ap.add_argument("--tools", default=os.path.join(os.path.expanduser("~"), ".local", "share", "SonicRidersSetup", "tools-mac"),
                     help="where the downloaded tools go (default ~/.local/share/SonicRidersSetup/tools-mac)")
@@ -187,6 +217,12 @@ def main():
             fail("No disc image selected.", "Run it again and pick the image.")
     iso = os.path.abspath(os.path.expanduser(iso))
     iso_size = S.check_iso(iso)
+    icon = a.icon
+    if not icon and not a.yes and sys.stdin.isatty():
+        if ask("App icon: the game's save icon (d) or your own picture (p)?", "d", False).lower().startswith("p"):
+            icon = pick_icon()
+    icon = prepare_icon(os.path.abspath(os.path.expanduser(icon))) if icon and icon != "default" else ""
+    log("App icon: %s" % ("your picture" if icon else "the game's save icon"))
 
     # 2 -------------------------------------------------------------
     step(2, "Xcode, build tools and your Apple ID")
@@ -226,7 +262,7 @@ def main():
     # 6 -------------------------------------------------------------
     step(6, "Recompiling and building the app (10-20 minutes the first time)")
     conf = [sys.executable, "configure.py", "--target", "ios", "--sdl-src", sdl, "--moltenvk", mvk, "--imgui", imgui,
-            "--ipa-dir", ipa_dir, "--team", team or "none"]
+            "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else [])
     run("configure", conf)
     run("build the app", ["ninja"])
     ipa = os.path.join(ipa_dir, "SonicRiders.ipa")

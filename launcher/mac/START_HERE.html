@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start Here: Sonic Riders on iPhone and iPad</title>
+<!-- Shipped in the iOS release zip as "START HERE (Mac).html" (tools/make_release.py --flavor ios).
+     The dialogs below are drawings with the exact words macOS 27 uses (read from its own text files:
+     CoreServicesUIAgent Quarantine.loctable, SecurityPrivacyExtension Localizable.loctable), not screenshots. -->
+<style>
+:root {
+  --bg: #141824; --panel: #1c2132; --text: #e6ebf5; --dim: #949eb8; --gold: #f2be3c; --red: #f27366; --green: #73d980;
+  --dlg: #ececec; --dlgtext: #1d1d1f; --blue: #0a66d8;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --bg: #f4f5f8; --panel: #ffffff; --text: #1b1f2a; --dim: #5b6377; --gold: #b07c00; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 30px; margin: 0 0 4px; }
+.sub { color: var(--dim); margin: 0 0 28px; }
+h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 40px 0 10px; }
+.step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; background: var(--panel); border-radius: 10px; padding: 18px; margin: 14px 0; }
+.num { width: 40px; height: 40px; border-radius: 50%; background: var(--gold); color: #141824; font-weight: 800; font-size: 20px;
+       display: flex; align-items: center; justify-content: center; }
+.step h3 { margin: 6px 0 6px; font-size: 18px; }
+.step p { margin: 6px 0; }
+.dim { color: var(--dim); }
+b.k { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+.warn { color: var(--red); font-weight: 700; }
+/* drawings of the macOS windows */
+.shot { margin: 14px 0 4px; display: flex; justify-content: center; }
+.dlg { width: 280px; background: var(--dlg); color: var(--dlgtext); border-radius: 14px; padding: 20px 18px 16px; text-align: center;
+       box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 13px; }
+.dlg .ic { width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 12px; background: linear-gradient(135deg,#1d4fae,#0b2a66);
+           display: flex; align-items: center; justify-content: center; }
+.dlg .ic::after { content: ""; width: 26px; height: 26px; border: 5px solid #f2be3c; border-radius: 50%; }
+.dlg .hd { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.dlg .bt { display: block; width: 100%; margin-top: 8px; padding: 6px; border-radius: 7px; background: #d9d9de; font-weight: 600; position: relative; }
+.dlg .bt.blue { background: var(--blue); color: #fff; }
+.mark { outline: 4px solid var(--green); outline-offset: 3px; }
+.no { outline: 4px solid var(--red); outline-offset: 3px; opacity: .8; }
+.tag { position: absolute; right: -128px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 800; padding: 2px 8px;
+       border-radius: 4px; white-space: nowrap; }
+.tag.ok { background: var(--green); color: #102010; }
+.tag.bad { background: var(--red); color: #2a0d0a; }
+.settings { width: 100%; max-width: 560px; background: var(--dlg); color: var(--dlgtext); border-radius: 12px; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 13px; }
+.settings .bar { background: #dcdce0; padding: 8px 14px; font-weight: 700; }
+.settings .body { padding: 14px 18px; }
+.settings .sec { font-weight: 700; margin: 4px 0 8px; color: #555; }
+.settings .row { background: #fff; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.settings .row .grow { flex: 1; }
+.settings .pill { background: #d9d9de; padding: 4px 12px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.scroll { text-align: center; color: #777; font-size: 12px; margin: 6px 0 10px; }
+@media (max-width: 620px) {
+  .tag { position: static; display: inline-block; margin-top: 6px; transform: none; }
+  .step { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Sonic Riders on iPhone and iPad</h1>
+<p class="sub">Start here. The first start of the launcher needs four clicks in macOS, once. After that the
+launcher guides you through everything else (Xcode, building, Sideloadly, Developer Mode, renewing).</p>
+
+<h2>Before you start</h2>
+<div class="step"><div class="num">0</div><div>
+  <h3>Unzip and keep the folder</h3>
+  <p>Double-click the zip you downloaded. Keep the folder it makes (for example move it into your home folder): the
+  launcher builds the app inside it and needs it again for updates. Its path must not have spaces; if it does, the
+  launcher offers to move it for you.</p>
+  <p class="dim">The launcher is free and unofficial, so it isn't signed by Apple (that costs $99 a year). That is why macOS
+  asks you to allow it once, as shown below.</p>
+</div></div>
+
+<h2>The first start (once)</h2>
+
+<div class="step"><div class="num">1</div><div>
+  <h3>Double-click "Sonic Riders Launcher"</h3>
+  <p>It's in the folder you unzipped (the icon with the gold ring).</p>
+</div></div>
+
+<div class="step"><div class="num">2</div><div>
+  <h3>A warning appears: click <b class="k">Done</b></h3>
+  <p>macOS says it could not verify the app. Click <b class="k">Done</b>.
+  <span class="warn">Do not click "Move to Trash"</span> (that deletes the launcher; if it happened, unzip again).</p>
+  <div class="shot"><div class="dlg">
+    <div class="ic"></div>
+    <div class="hd">“Sonic Riders Launcher” Not Opened</div>
+    <div>Apple could not verify “Sonic Riders Launcher” is free of malware that may harm your Mac or compromise your privacy.</div>
+    <span class="bt blue mark">Done<span class="tag ok">CLICK THIS</span></span>
+    <span class="bt no">Move to Trash<span class="tag bad">NOT THIS</span></span>
+  </div></div>
+</div></div>
+
+<div class="step"><div class="num">3</div><div>
+  <h3>System Settings &gt; Privacy &amp; Security &gt; <b class="k">Open Anyway</b></h3>
+  <p>Open <b class="k">System Settings</b> (Apple menu  &gt; System Settings), click <b class="k">Privacy &amp; Security</b>
+  in the sidebar and scroll down to <b>Security</b>. Next to the launcher's name there is now an
+  <b class="k">Open Anyway</b> button (it only appears after step 1). Click it and confirm with your Mac password or Touch ID.</p>
+  <div class="shot"><div class="settings">
+    <div class="bar">Privacy &amp; Security</div>
+    <div class="body">
+      <div class="scroll">↓ scroll down ↓</div>
+      <div class="sec">Security</div>
+      <div class="row"><span class="grow">Allow applications from</span><span class="pill">App Store &amp; Known Developers</span></div>
+      <div class="row"><span class="grow">“Sonic Riders Launcher” was blocked to protect your Mac.</span>
+        <span class="pill mark">Open Anyway</span></div>
+    </div>
+  </div></div>
+</div></div>
+
+<div class="step"><div class="num">4</div><div>
+  <h3>Double-click the launcher again and choose <b class="k">Open</b></h3>
+  <p>macOS asks one last time. Click <b class="k">Open</b> (it may say <b class="k">Open Anyway</b>) and confirm with your
+  password or Touch ID if asked. From now on the launcher opens normally.</p>
+  <div class="shot"><div class="dlg">
+    <div class="ic"></div>
+    <div class="hd">macOS asks about “Sonic Riders Launcher” once more</div>
+    <div>(the exact wording depends on your macOS version)</div>
+    <span class="bt blue mark">Open / Open Anyway<span class="tag ok">CLICK THIS</span></span>
+    <span class="bt">Cancel</span>
+  </div></div>
+</div></div>
+
+<h2>Then, in the launcher</h2>
+<div class="step"><div class="num">✓</div><div>
+  <p><b>Get ready</b>: checks Xcode (free, App Store), its iOS platform and Metal Toolchain, and Homebrew's two build
+  tools. Each missing piece has a button that installs or opens it.</p>
+  <p><b>Build</b>: pick your own Sonic Riders (USA) disc image and, if you like, any picture as the app icon. The first
+  build takes 15-30 minutes.</p>
+  <p><b>Install</b>: step by step with Sideloadly (free): connect the device, sign in with your Apple ID, Developer
+  Mode, trust your Apple ID on the device, copy the disc image.</p>
+  <p><b>Renew</b>: with a free Apple ID the app works for 7 days; renewing takes a minute and keeps your saves.</p>
+</div></div>
+
+<p class="dim">The Terminal way still works: "Install Sonic Riders (iOS).command" in the same folder (it needs the same
+Privacy &amp; Security step). README-FIRST.txt has all the details. Never share your disc image or the .ipa: they contain the game.</p>
+</main>
+</body>
+</html>

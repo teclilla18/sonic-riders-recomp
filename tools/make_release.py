@@ -12,8 +12,10 @@ Flavors (one download per platform, for players):
           "Install Sonic Riders (Android) - command line.bat" + README-FIRST.txt
   linux   SonicRiders-Linux-Setup-<version>.zip: "Install Sonic Riders (Linux).sh" (SonicRidersSetup.sh) +
           README-FIRST.txt, for Linux PCs and the Steam Deck (tools/setup_linux.py)
-  ios     SonicRiders-iOS-Setup-<version>.zip: "Install Sonic Riders (iOS).command" + README-FIRST.txt, for
-          iPhone / iPad, built on the player's Mac (tools/setup_mac.py; no .ipa can be published)
+  ios     SonicRiders-iOS-Setup-<version>.zip: "Sonic Riders Launcher.app" (built here, on a Mac, by
+          tools/build_mac_launcher.py from the committed source) + "START HERE (Mac).html" + "Install Sonic
+          Riders (iOS).command" (Terminal fallback) + README-FIRST.txt, for iPhone / iPad, built on the player's
+          Mac (tools/setup_mac.py; no .ipa can be published)
   source  sonic-riders-recomp-<version>-<commit>.zip: the tree as is (SonicRidersSetup.bat asks)
 
 The zip holds every file tracked in git at REF (default HEAD) under one top folder, plus a VERSION
@@ -26,6 +28,7 @@ import argparse
 import os
 import subprocess
 import sys
+import stat
 import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -216,14 +219,17 @@ def readme_ios(version):
         "and add iOS), Homebrew (brew.sh; the setup installs two small tools with it), about 6 GB free and",
         "internet the first time. A free Apple ID is enough.",
         "",
-        "1. Extract this whole zip to a folder you'll keep, with no spaces in its path (for example",
-        "   ~/SonicRiders: in Finder, drag the extracted folder into your home folder and rename it).",
-        "2. Optional, to install straight from the Mac: Xcode > Settings > Accounts > + > Apple ID; turn on",
-        "   Developer Mode on the device (Settings > Privacy & Security > Developer Mode) and connect it",
-        "   with a cable, unlocked (tap Trust). Without this the setup makes an .ipa for Sideloadly.",
-        '3. Double-click "Install Sonic Riders (iOS).command". If macOS says it cannot be opened, open',
-        "   Terminal, type sh followed by a space, drag the .command file into the window and press Return.",
-        "   Pick your disc image. The first run takes 15-30 minutes.",
+        "1. Double-click the zip and keep the folder it makes (for example in your home folder).",
+        '2. Open "START HERE (Mac).html": the first start of "Sonic Riders Launcher" needs four clicks in',
+        "   macOS, once (the launcher is free and not signed by Apple):",
+        '     a. double-click "Sonic Riders Launcher"; b. a warning appears: click Done (NOT "Move to Trash");',
+        "     c. System Settings > Privacy & Security, scroll down: Open Anyway (password or Touch ID);",
+        "     d. double-click the launcher again and choose Open.",
+        "3. The launcher guides you through the rest: Get ready (Xcode, Metal Toolchain, Homebrew tools, each",
+        "   with a button), Build (your disc image, optional app icon from any picture; 15-30 minutes the",
+        "   first time), Install (Sideloadly step by step) and Renew (every 7 days).",
+        '   Without the launcher: double-click "Install Sonic Riders (iOS).command" (same Privacy & Security',
+        "   step) or in Terminal: sh, a space, drag the .command file into the window, Return.",
         "4a. With your Apple ID in Xcode: the setup installs the app and copies your disc image to the device.",
         "    First start: Settings > General > VPN & Device Management > your Apple ID > Trust.",
         "4b. Without: the app is in ~/Desktop/Sonic Riders iOS/SonicRiders.ipa. Install it with Sideloadly",
@@ -272,6 +278,34 @@ def build_launcher(ref):
         return f.read()
 
 
+MAC_LAUNCHER_SRC = ["launcher/mac", "launcher/banner.jpg", "tools/build_mac_launcher.py", "tools/launcher_icon.py",
+                    "tools/make_icon.py"]
+MAC_APP = "Sonic Riders Launcher.app"
+
+
+def build_mac_launcher(ref):
+    """the Mac launcher app, built now (on a Mac) from the working tree, which must match REF for its files;
+    returns [(path inside the zip, bytes, mode)]"""
+    if git("diff", "--name-only", ref, "--", *MAC_LAUNCHER_SRC).strip():
+        print("make_release: the Mac launcher's files differ from %s (commit them first); no zip written." % ref)
+        return None
+    out = os.path.join("build", "mac-launcher")
+    if subprocess.run([sys.executable, os.path.join("tools", "build_mac_launcher.py"), "--out", out]).returncode:
+        print("make_release: the Mac launcher did not build (needs a Mac with Xcode); no zip written.")
+        return None
+    files, app = [], os.path.join(out, MAC_APP)
+    for d, _, names in os.walk(app):
+        for n in sorted(names):
+            p = os.path.join(d, n)
+            if os.path.islink(p):
+                print("make_release: unexpected link in the launcher app: %s" % p)
+                return None
+            rel = os.path.relpath(p, out).replace(os.sep, "/")
+            with open(p, "rb") as f:
+                files.append((rel, f.read(), 0o755 if os.access(p, os.X_OK) else 0o644))
+    return files
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
@@ -311,8 +345,14 @@ def main():
         top = "SonicRiders-%s-%s" % (plat, args.version)
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
         if args.flavor == "ios":
+            app = build_mac_launcher(args.ref)
+            if app is None:
+                return 1
+            start = [d for n, d in files if n == "launcher/mac/START_HERE.html"][0]
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (iOS).command", IOS_COMMAND.encode()))
+            files.append(("START HERE (Mac).html", start))
+            files += app
         elif args.flavor == "linux":
             setup_sh = [d for n, d in files if n == "SonicRidersSetup.sh"][0]
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
@@ -333,11 +373,14 @@ def main():
     path = os.path.join(args.out, zipname)
     tmp = path + ".part"
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        for n, data in files:
+        for entry in files:
+            n, data = entry[0], entry[1]
+            # shell scripts and the launcher app's program executable (unzip, Archive Utility and file managers keep
+            # the mode); S_IFREG marks a regular file, as Info-ZIP and macOS's own zip write it
+            mode = entry[2] if len(entry) > 2 else 0o755 if n.endswith((".sh", ".command")) else 0o644
             info = zipfile.ZipInfo("%s/%s" % (top, n), date_time=(2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
-            # shell scripts executable (unzip and file managers keep the mode)
-            info.external_attr = (0o755 if n.endswith((".sh", ".command")) else 0o644) << 16
+            info.external_attr = (stat.S_IFREG | mode) << 16
             info.create_system = 3  # Unix, so the mode above is used
             z.writestr(info, data)
     os.replace(tmp, path)

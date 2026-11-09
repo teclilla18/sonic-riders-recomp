@@ -64,10 +64,10 @@ class Tools:
             sys.exit("glslc not found: brew install shaderc")
         if not _run(["xcrun", "--sdk", SDK, "--show-sdk-path"]):
             sys.exit("the iOS SDK was not found: install Xcode and run xcode-select -s /Applications/Xcode.app")
-        # the app icon: your own square PNG (--icon; kept out of git unless it is your own art), else the game's
+        # the app icon: your own picture (--icon, any common format; kept out of git), else the game's
         # memory card save icon from your disc (baserom/_Main.rel, like the PC and Android icons)
         rel = os.path.join(root, "baserom", "_Main.rel")
-        self.icon = (os.path.abspath(args.icon) if args.icon.lower().endswith(".png") else
+        self.icon = (os.path.abspath(args.icon) if args.icon.lower().endswith(ICON_EXTS) else
                      rel if not args.icon and os.path.isfile(rel) else "")
         self.ipa_dir = os.path.abspath(os.path.expanduser(args.ipa_dir)) if args.ipa_dir not in ("", "none") else ""
         self.team = "" if args.team == "none" else (args.team or find_team())
@@ -219,8 +219,7 @@ def write_xcode_project(t, out):
             with open(tmp, "wb") as f:
                 f.write(make_icon.png(make_icon.scale(px, 32)))
         else:
-            subprocess.check_call(["sips", "-s", "format", "png", "-z", "1024", "1024", t.icon, "--out", tmp],
-                                  stdout=subprocess.DEVNULL)
+            square_png(t.icon, tmp)
         flatten_png(tmp, os.path.join(icon_set, "icon_1024.png"), ICON_BACKGROUND)
         images = [{"filename": "icon_1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}]
     import json
@@ -246,12 +245,28 @@ def write_xcode_project(t, out):
 
 
 ICON_BACKGROUND = (0x0B, 0x3D, 0x91)  # deep blue behind a round icon's transparent corners
+# pictures macOS's sips reads (GIF: the first frame)
+ICON_EXTS = (".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+
+
+def square_png(src, dst, size=1024):
+    """any picture sips reads -> a size x size PNG: the centre square of it (no stretching), then scaled"""
+    info = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", src], capture_output=True, text=True)
+    dims = re.findall(r"pixel(?:Width|Height):\s*(\d+)", info.stdout)
+    if info.returncode or len(dims) != 2:
+        sys.exit("icon: macOS cannot read %s as a picture" % src)
+    side = min(int(dims[0]), int(dims[1]))
+    # two passes: in one call sips scales before it crops
+    subprocess.check_call(["sips", "-s", "format", "png", "--cropToHeightWidth", str(side), str(side), src,
+                           "--out", dst], stdout=subprocess.DEVNULL)
+    subprocess.check_call(["sips", "-z", str(size), str(size), dst], stdout=subprocess.DEVNULL)
 
 
 def flatten_png(src, dst, bg):
-    """an 8-bit RGB/RGBA PNG (non-interlaced) -> an opaque RGB PNG over the colour bg (no PIL needed)"""
+    """a non-interlaced PNG (8 or 16 bit; grey, RGB, palette, with or without alpha) -> an opaque 8-bit RGB PNG
+    over the colour bg (no PIL needed)"""
     data = open(src, "rb").read()
-    pos, idat, hdr = 8, b"", None
+    pos, idat, hdr, plte, trns = 8, b"", None, b"", b""
     while pos < len(data):
         n, typ = struct.unpack(">I4s", data[pos:pos + 8])
         body = data[pos + 8:pos + 8 + n]
@@ -259,11 +274,16 @@ def flatten_png(src, dst, bg):
             hdr = struct.unpack(">IIBBBBB", body)
         elif typ == b"IDAT":
             idat += body
+        elif typ == b"PLTE":
+            plte = body
+        elif typ == b"tRNS":
+            trns = body
         pos += 12 + n
     w, h, depth, ctype, _, _, interlace = hdr
-    if depth != 8 or ctype not in (2, 6) or interlace:
-        sys.exit("icon: need an 8-bit RGB or RGBA PNG (got depth %d, colour type %d)" % (depth, ctype))
-    bpp = 4 if ctype == 6 else 3
+    chans = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(ctype)
+    if not chans or interlace or depth not in ((8,) if ctype == 3 else (8, 16)):
+        sys.exit("icon: unsupported PNG (depth %d, colour type %d, interlace %d)" % (depth, ctype, interlace))
+    bpp = chans * depth // 8
     raw, stride = zlib.decompress(idat), w * bpp
     prev, out = bytearray(stride), bytearray()
     for y in range(h):
@@ -280,9 +300,14 @@ def flatten_png(src, dst, bg):
         prev = line
         out.append(0)
         for x in range(w):
-            px = line[x * bpp:x * bpp + bpp]
-            al = px[3] if bpp == 4 else 255
-            out += bytes((px[k] * al + bg[k] * (255 - al)) // 255 for k in range(3))
+            px = line[x * bpp:x * bpp + bpp:depth // 8]  # 16-bit: the high bytes
+            if ctype == 3:
+                i = px[0]
+                rgb, al = plte[3 * i:3 * i + 3], trns[i] if i < len(trns) else 255
+            else:
+                rgb = px[:3] if ctype in (2, 6) else px[:1] * 3
+                al = px[-1] if ctype in (4, 6) else 255
+            out += bytes((rgb[k] * al + bg[k] * (255 - al)) // 255 for k in range(3))
 
     def chunk(t, d):
         return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
@@ -358,8 +383,18 @@ PBXPROJ = """// !$*UTF8*$!
 """
 
 
+def make_icon(src, dst):
+    """your picture -> the app's 1024 x 1024 opaque icon PNG (as the build makes it; the launcher's preview)"""
+    tmp = dst + ".alpha.png"
+    square_png(src, tmp)
+    flatten_png(tmp, dst, ICON_BACKGROUND)
+    os.remove(tmp)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) >= 4 and sys.argv[1] == "ipa":  # from build.ninja: ios_build.py ipa <app> <out.ipa> [copy dir]
+    if len(sys.argv) == 4 and sys.argv[1] == "icon":  # ios_build.py icon <picture> <out.png>
+        make_icon(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) >= 4 and sys.argv[1] == "ipa":  # from build.ninja: ios_build.py ipa <app> <out.ipa> [copy dir]
         make_ipa(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "")
     else:
-        sys.exit("usage: ios_build.py ipa <SonicRiders.app> <out.ipa> [copy dir]")
+        sys.exit("usage: ios_build.py ipa <SonicRiders.app> <out.ipa> [copy dir] | icon <picture> <out.png>")
