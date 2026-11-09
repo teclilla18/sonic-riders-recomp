@@ -585,8 +585,8 @@ bool big_button(const char* t, ImVec2 size, bool primary, bool enabled) {
 
 /* ---------------------------------------------------------------- pages */
 
-enum Page { P_PLAY, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_COUNT };
-const char* kPages[P_COUNT] = {"Play", "Graphics", "Game", "Mods", "Controls", "About"};
+enum Page { P_PLAY, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_UPDATE, P_COUNT };  /* Update: only with one */
+const char* kPages[P_COUNT] = {"Play", "Graphics", "Game", "Mods", "Controls", "About", "Update"};
 int g_page = P_PLAY;
 
 const char* kScreens[] = {"4:3 (original)", "16:9 widescreen", "Fit window (wide)"};
@@ -944,6 +944,15 @@ void page_play(float w) {
         ImGui::TextUnformatted(g_disc_choice.empty() ? "no disc image selected" : short_path(g_disc_choice).c_str());
         if (!g_ready.setup) ImGui::TextColored(kRed, "setup\\setup.ps1 is missing: unpack the whole zip again.");
     } else {
+        if (exists(path(L"build\\launcher\\rebuild_after_update"))) {
+            section("UPDATED");
+            ImGui::TextColored(kGoldV, "The port was updated: build the game again from your disc image (a few minutes).");
+            if (ImGui::Button("Rebuild now") && g_ready.disc && !child_running(g_setup) && !child_running(g_game)) {
+                DeleteFileW(path(L"build\\launcher\\rebuild_after_update").c_str());
+                start_install(g_ready.disc_path);
+            }
+            ImGui::Spacing();
+        }
         section("READY CHECK");
         check_line(true, "Game built (build\\host-mingw\\sonicriders.exe)");
         check_line(g_ready.disc, g_ready.disc ? "Disc image: " + short_path(g_ready.disc_path, 40)
@@ -1274,30 +1283,195 @@ void page_controls(float w) {
 }
 
 std::string g_version;
-/* the update check: the newer release's tag once known ("" = none, or not checked) */
+/* the update check: the newer release once known (tag "" = none, or not checked), with its notes and the
+ * download address of this zip's flavour (PC, Switch or Android); the Update page downloads and unpacks it */
 std::mutex g_update_mx;
-std::string g_update_tag;
+std::string g_update_tag, g_update_notes, g_update_url;
 std::atomic<bool> g_update_done{true};  /* no check running (SR_LAUNCHER_SHOT waits for it) */
 std::string update_tag() {
     std::lock_guard<std::mutex> lk(g_update_mx);
     return g_update_tag;
 }
+const char* zip_flavour() { return g_mode == M_SWITCH ? "Switch" : g_mode == M_ANDROID ? "Android" : "PC"; }
 void start_update_check() {
-    /* off with update_check=0 in saves\settings.ini (the game's F1 > About), and for builds without a release tag */
+    /* off with update_check=0 in saves\settings.ini (the game's F1 > About), and for builds without a release tag;
+     * SR_LAUNCHER_FAKE_VERSION (testing) pretends to be that version */
+    if (const char* fv = getenv("SR_LAUNCHER_FAKE_VERSION")) g_version = fv;
     std::string ini = read_text(path(L"saves\\settings.ini"));
     int v[3];
     if (ini.find("update_check=0") != std::string::npos || !update_parse_version(g_version.c_str(), v)) return;
     g_update_done = false;
     std::thread([]() {
-        char tag[32];
-        if (update_fetch_latest(tag, sizeof tag) == 0 && update_is_newer(tag, g_version.c_str())) {
+        char fmt[64];
+        snprintf(fmt, sizeof fmt, "SonicRiders-%s-Setup-%%s.zip", zip_flavour());
+        UpdateInfo info;
+        if (update_fetch_info(&info, fmt) == 0 && update_is_newer(info.tag, g_version.c_str())) {
             std::lock_guard<std::mutex> lk(g_update_mx);
-            g_update_tag = tag;
+            g_update_tag = info.tag;
+            g_update_notes = info.notes ? info.notes : "";
+            g_update_url = info.zip_url;
         }
+        free(info.notes);
         g_update_done = true;
     }).detach();
 }
 void open_update_page() { ShellExecuteA(nullptr, "open", UPDATE_PAGE, nullptr, nullptr, SW_SHOWNORMAL); }
+
+/* download -> unpack over this folder (build\update\apply.ps1: the zip holds only the port's own files, so the
+ * disc image, saves, mods and builds stay) -> restart. The running exe is renamed to .old first (a running exe
+ * cannot be overwritten, but can be renamed); the next start deletes it. After a PC update the game must be
+ * rebuilt from the new source: build\launcher\rebuild_after_update marks that for the Play page. */
+enum { UPD_IDLE, UPD_DOWNLOADING, UPD_UNPACKING, UPD_DONE, UPD_FAILED };
+std::atomic<int> g_upd_state{UPD_IDLE};
+volatile long long g_upd_got, g_upd_total;
+volatile int g_upd_cancel;
+std::string g_upd_error;  /* set before g_upd_state becomes UPD_FAILED */
+Child g_upd_child;
+std::wstring self_exe() {
+    wchar_t me[MAX_PATH];
+    GetModuleFileNameW(nullptr, me, MAX_PATH);
+    return me;
+}
+const char* kApplyScript =
+    "param([string]$Zip, [string]$Root, [string]$Exe)\r\n"
+    "$ErrorActionPreference = 'Stop'\r\n"
+    "$tmp = Join-Path $Root 'build\\update\\unpacked'\r\n"
+    "if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }\r\n"
+    "Write-Output 'Unpacking the update...'\r\n"
+    "Expand-Archive -LiteralPath $Zip -DestinationPath $tmp -Force\r\n"
+    "$top = Get-ChildItem -LiteralPath $tmp -Directory | Select-Object -First 1\r\n"
+    "if (-not $top -or -not (Test-Path -LiteralPath (Join-Path $top.FullName 'setup\\setup.ps1'))) { throw 'The download is not a release zip.' }\r\n"
+    "$old = $Exe + '.old'\r\n"
+    "if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force }\r\n"
+    "Move-Item -LiteralPath $Exe -Destination $old\r\n"
+    "Write-Output 'Copying the new files...'\r\n"
+    "& robocopy $top.FullName $Root /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null\r\n"
+    "if ($LASTEXITCODE -ge 8) { Move-Item -LiteralPath $old -Destination $Exe -Force; throw \"Copying failed (robocopy $LASTEXITCODE).\" }\r\n"
+    "if (-not (Test-Path -LiteralPath $Exe)) { Move-Item -LiteralPath $old -Destination $Exe -Force }\r\n"
+    "Remove-Item -LiteralPath $tmp -Recurse -Force\r\n"
+    "Remove-Item -LiteralPath $Zip -Force\r\n"
+    "Write-Output 'Updated.'\r\n";
+
+void start_update_download() {
+    std::string url;
+    {
+        std::lock_guard<std::mutex> lk(g_update_mx);
+        url = g_update_url;
+    }
+    if (url.empty()) return;
+    CreateDirectoryW(path(L"build").c_str(), nullptr);
+    CreateDirectoryW(path(L"build\\update").c_str(), nullptr);
+    g_upd_got = g_upd_total = 0;
+    g_upd_cancel = 0;
+    g_upd_state = UPD_DOWNLOADING;
+    std::thread([url]() {
+        std::wstring zip = path(L"build\\update\\update.zip");
+        if (update_download(url.c_str(), zip.c_str(), &g_upd_got, &g_upd_total, &g_upd_cancel)) {
+            g_upd_error = g_upd_cancel ? "Download cancelled." : "The download failed (no internet, or GitHub did not answer).";
+            g_upd_state = UPD_FAILED;
+            return;
+        }
+        std::wstring ps1 = path(L"build\\update\\apply.ps1");
+        write_text(ps1, kApplyScript);
+        {
+            std::lock_guard<std::mutex> lk(g_log_mx);
+            g_log.clear();
+        }
+        std::wstring cmd = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" + ps1 + L"\" -Zip \"" + zip +
+                           L"\" -Root \"" + g_root + L"\" -Exe \"" + self_exe() + L"\"";
+        g_upd_state = UPD_UNPACKING;
+        if (!start_child(g_upd_child, cmd, {}, true, true, setup_sink)) {
+            g_upd_error = "Could not start PowerShell to unpack the update.";
+            g_upd_state = UPD_FAILED;
+        }
+    }).detach();
+}
+
+/* every frame: the unpacking step's end */
+void poll_update() {
+    if (g_upd_state != UPD_UNPACKING || !g_upd_child.proc || !g_upd_child.done) return;
+    if (g_upd_child.exit_code == 0) {
+        if (g_mode == M_LAUNCHER) {
+            CreateDirectoryW(path(L"build\\launcher").c_str(), nullptr);
+            write_text(path(L"build\\launcher\\rebuild_after_update"), update_tag() + "\n");
+        }
+        g_upd_state = UPD_DONE;
+    } else {
+        std::lock_guard<std::mutex> lk(g_log_mx);
+        g_upd_error = "Unpacking the update failed";
+        for (auto it = g_log.rbegin(); it != g_log.rend(); ++it)
+            if (!it->empty()) { g_upd_error += ": " + *it; break; }
+        g_upd_state = UPD_FAILED;
+    }
+}
+
+void restart_self() {
+    STARTUPINFOW si = {sizeof si};
+    PROCESS_INFORMATION pi = {};
+    std::wstring cl = L"\"" + self_exe() + L"\"";
+    if (CreateProcessW(nullptr, &cl[0], nullptr, nullptr, FALSE, 0, nullptr, g_root.c_str(), &si, &pi)) {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+    PostQuitMessage(0);
+}
+
+void page_update(float w) {
+    std::string tag, notes, url;
+    {
+        std::lock_guard<std::mutex> lk(g_update_mx);
+        tag = g_update_tag;
+        notes = g_update_notes;
+        url = g_update_url;
+    }
+    if (tag.empty()) {
+        section("UPDATES");
+        ImGui::TextWrapped("You have the newest version (%s).", g_version.c_str());
+        return;
+    }
+    char head[96];
+    snprintf(head, sizeof head, "UPDATE AVAILABLE: %s", tag.c_str());
+    section(head);
+    ImGui::Text("You have %s.", g_version.c_str());
+    ImGui::Spacing();
+    float notes_h = std::max(ImGui::GetContentRegionAvail().y - 120 * g_dpi, 100.0f);
+    ImGui::BeginChild("notes", ImVec2(w, notes_h), ImGuiChildFlags_Borders);
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextUnformatted(notes.empty() ? "(no release notes)" : notes.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::EndChild();
+    ImGui::Spacing();
+    int st = g_upd_state;
+    bool busy = child_running(g_setup) || child_running(g_game);
+    if (st == UPD_IDLE || st == UPD_FAILED) {
+        ImGui::BeginDisabled(url.empty() || busy);
+        if (big_button("DOWNLOAD AND INSTALL", ImVec2(260 * g_dpi, 40 * g_dpi), true, !url.empty() && !busy))
+            start_update_download();
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Open the release page")) open_update_page();
+        if (st == UPD_FAILED) ImGui::TextColored(kRed, "%s", g_upd_error.c_str());
+        else if (busy) note("Close the game (or wait for the build) first.");
+        else if (url.empty()) note("This release has no download for this version; use the release page.");
+        else note("Downloads the new version (a few MB) and puts it over this folder. Your disc image, saves, mods "
+                  "and settings stay.");
+    } else if (st == UPD_DOWNLOADING) {
+        long long got = g_upd_got, total = g_upd_total;
+        char lbl[64];
+        snprintf(lbl, sizeof lbl, "%.1f / %.1f MB", got / 1048576.0, total / 1048576.0);
+        ImGui::ProgressBar(total ? (float)got / (float)total : 0.0f, ImVec2(w * 0.6f, 0), lbl);
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) g_upd_cancel = 1;
+    } else if (st == UPD_UNPACKING) {
+        ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(w * 0.6f, 0), "Unpacking...");
+    } else {  /* UPD_DONE */
+        ImGui::TextColored(kGreen, "Updated to %s.", tag.c_str());
+        if (big_button("RESTART", ImVec2(200 * g_dpi, 40 * g_dpi), true, true)) restart_self();
+        note(g_mode == M_LAUNCHER ? "After the restart, press Rebuild on the Play page: the game is built again from your "
+                                    "disc image with the new version (a few minutes)."
+                                  : "After the restart, press BUILD AND INSTALL again to build the new version.");
+    }
+}
 void page_about(float w) {
     (void)w;
     section("SONIC RIDERS NATIVE PORT");
@@ -1306,7 +1480,7 @@ void page_about(float w) {
     if (!upd.empty()) {
         ImGui::TextColored(kGoldV, "Update available: %s", upd.c_str());
         ImGui::SameLine();
-        if (ImGui::Button("Download")) open_update_page();
+        if (ImGui::Button("See what's new")) g_page = P_UPDATE;
     }
     ImGui::TextWrapped("A fan-made native port, built on your PC from your own disc. Not affiliated with SEGA or Nintendo. "
                        "This launcher contains no game code or data.");
@@ -1325,6 +1499,7 @@ void page_about(float w) {
     ImGui::BeginDisabled(!g_ready.disc || child_running(g_setup) || child_running(g_game));
     if (ImGui::Button("Rebuild the game")) {
         g_page = P_PLAY;
+        DeleteFileW(path(L"build\\launcher\\rebuild_after_update").c_str());
         start_install(g_ready.disc_path);
     }
     ImGui::EndDisabled();
@@ -1373,7 +1548,8 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     float y = 130 * s;
     for (int i = 0; i < P_COUNT; i++) {
-        if (installer() && i != P_PLAY && i != P_ABOUT) continue;
+        if (installer() && i != P_PLAY && i != P_ABOUT && i != P_UPDATE) continue;
+        if (i == P_UPDATE && update_tag().empty()) continue;
         ImGui::SetCursorPos(ImVec2(0, y));
         ImGui::PushID(i);
         bool sel = g_page == i;
@@ -1395,7 +1571,7 @@ void draw_ui(float W, float H) {
         ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 38 * s));
         ImGui::PushStyleColor(ImGuiCol_Button, kGoldV);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.08f, 0.08f, 0.12f, 1));
-        if (ImGui::Button("Download update", ImVec2(side - 36 * s, 0))) open_update_page();
+        if (ImGui::Button("See what's new", ImVec2(side - 36 * s, 0))) g_page = P_UPDATE;
         ImGui::PopStyleColor(2);
     }
     dl->AddLine(ImVec2(0, H - bar), ImVec2(side, H - bar), kLine);
@@ -1440,6 +1616,7 @@ void draw_ui(float W, float H) {
     case P_MODS: page_mods(pw); break;
     case P_CONTROLS: page_controls(pw); break;
     case P_ABOUT: page_about(pw); break;
+    case P_UPDATE: page_update(pw); break;
     }
     ImGui::EndChild();
 
@@ -1704,7 +1881,6 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     std::string v = read_text(path(L"VERSION"));
     g_version = v.substr(0, v.find_first_of("\r\n"));
-    start_update_check();
     {  /* installer mode: by the program's name ("Install Sonic Riders (Switch).exe"), or SR_INSTALLER for tests */
         wchar_t me[MAX_PATH];
         GetModuleFileNameW(nullptr, me, MAX_PATH);
@@ -1716,6 +1892,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         else if (name.find("android") != std::string::npos) g_mode = M_ANDROID;
         if (g_mode == M_SWITCH) find_sd_cards();
     }
+    start_update_check();
+    DeleteFileW((self_exe() + L".old").c_str());  /* left by an update (the exe that ran it) */
 
     WNDCLASSEXW wc = {sizeof wc, CS_CLASSDC, wndproc, 0, 0, inst, LoadIconW(inst, L"APPICON"), LoadCursorW(nullptr, IDC_ARROW),
                       nullptr, nullptr, L"SonicRidersLauncher", nullptr};
@@ -1741,8 +1919,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     g_shot_file = getenv("SR_LAUNCHER_SHOT");  /* testing: save the window's picture and quit */
     g_test = getenv("SR_LAUNCHER_TEST");
     g_install_test = getenv("SR_LAUNCHER_INSTALL");
+    const char* upd_test = getenv("SR_LAUNCHER_UPDATE_TEST");
     if (const char* pg = getenv("SR_LAUNCHER_PAGE")) g_page = std::clamp(atoi(pg), 0, P_COUNT - 1);
-    if (g_shot_file || g_test || g_install_test) {  /* drawn off-screen, without taking the focus */
+    if (g_shot_file || g_test || g_install_test || upd_test) {  /* drawn off-screen, without taking the focus */
         SetWindowPos(hwnd, nullptr, -10000, -10000, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     } else {
@@ -1779,6 +1958,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
             continue;
         }
         poll_children();
+        poll_update();
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
@@ -1794,6 +1974,32 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         ++frames;
         if (g_test && test_step(frames)) break;
         if (g_install_test && install_test_step(frames)) break;
+        /* SR_LAUNCHER_UPDATE_TEST=1 (testing): once the check found an update, presses DOWNLOAD AND INSTALL, waits,
+         * writes build\update_test.txt (result, the steps' last lines) and quits (exit code 0 = updated) */
+        if (upd_test && g_update_done && frames > 20) {
+            static bool started;
+            if (!started) {
+                started = true;
+                if (update_tag().empty()) {
+                    write_text(path(L"build\\update_test.txt"), "FAIL: no update found\n");
+                    g_install_test_exit = 1;
+                    break;
+                }
+                start_update_download();
+            }
+            int st = g_upd_state;
+            if (st == UPD_DONE || st == UPD_FAILED) {
+                std::string rep = std::string(st == UPD_DONE ? "PASS" : "FAIL") + ": update to " + update_tag() + ", " +
+                                  std::to_string(g_upd_got) + " bytes" + (st == UPD_FAILED ? ", " + g_upd_error : "") + "\n";
+                {
+                    std::lock_guard<std::mutex> lk(g_log_mx);
+                    for (const std::string& l : g_log) rep += "  " + l + "\n";
+                }
+                write_text(path(L"build\\update_test.txt"), rep);
+                g_install_test_exit = st == UPD_DONE ? 0 : 1;
+                break;
+            }
+        }
         if (g_shot_file && frames >= 20 && (g_update_done || frames >= 600)) {  /* fonts, textures, update check settled */
             save_backbuffer(widen(g_shot_file));
             break;
@@ -1816,5 +2022,6 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     ImGui::DestroyContext();
     if (g_setup.reader.joinable()) g_setup.reader.detach();
     if (g_game.reader.joinable()) g_game.reader.detach();
-    return g_install_test ? g_install_test_exit : 0;
+    if (g_upd_child.reader.joinable()) g_upd_child.reader.detach();
+    return g_install_test || upd_test ? g_install_test_exit : 0;
 }

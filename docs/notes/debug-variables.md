@@ -22,6 +22,8 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_CHARLIGHT=1` (PC): per-pixel lighting for this run (setting `char_light`).
 - `SR_SCALE_AT=<frame>:<scale>[:<msaa>]` (PC): change resolution / MSAA at that presented frame, as the F1 menu does.
 - `SR_HEADLESS=1` (PC): no window. `SR_NOVSYNC=1` (PC): present without vsync.
+- Launcher: `SR_LAUNCHER_FAKE_VERSION=<v>` (pretend to be that version), `SR_LAUNCHER_UPDATE_TEST=1` (download and
+  install the newest release, build\update_test.txt), `SR_INSTALLER=switch|android` (installer mode); notes/launcher.md.
 - `SR_NOUPDATECHECK=1` (PC): no update check at start-up (also off with `update_check=0` in settings.ini and in
   `SR_INPUT` / `SR_PERFTEST` runs); `SR_UPDATECHECK=1`: check even in those runs (update_check.c, update_core.h).
 - `SR_NOAUDIO=1`: silent host output. `SR_AUDIO=0`: mixer off. `SR_WAVOUT=<file>`: record the mixed output.

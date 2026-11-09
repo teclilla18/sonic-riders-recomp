@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-## v0.7.1 (2026-11-09)
+## v0.7.1 (2026-11-09; zips updated the same day)
 
+- **Update from the launcher.** When a new version is out, the launcher and the Switch / Android installers show
+  an Update page with its release notes and a DOWNLOAD AND INSTALL button: it downloads the new version and puts
+  it over your folder (disc image, saves, mods and settings stay), then restarts. On PC, press Rebuild on the Play
+  page afterwards. The game's F1 > About shows the release notes too.
 - **Switch installer: choosing an SD card works.** A drive like `F:\` stopped the build at step 2 ("Illegal
   characters in path"): the path reached the setup with a stray quote.
 - **Launcher and installers: bigger text** and a larger window (it still fits smaller screens).

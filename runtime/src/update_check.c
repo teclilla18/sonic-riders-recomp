@@ -12,28 +12,33 @@
 extern const char g_build_version[];
 
 static char g_latest[32];          /* the newer tag, "" if none (or not known yet) */
-static volatile int g_latest_set;  /* g_latest is complete */
+static char* g_notes;              /* its release notes (plain text) */
+static volatile int g_latest_set;  /* g_latest and g_notes are complete */
 
 const char* update_available(void) { return g_latest_set ? g_latest : NULL; }
+const char* update_notes(void) { return g_latest_set ? g_notes : NULL; }
 
 #ifdef _WIN32
 static int update_thread(void* arg) {
     (void)arg;
-    char tag[32];
-    if (update_fetch_latest(tag, sizeof tag)) {
+    UpdateInfo info;
+    if (update_fetch_info(&info, NULL)) {
         rt_log("[update] could not reach GitHub (no internet?); skipped");
         return 0;
     }
+    const char* tag = info.tag;
     if (!update_is_newer(tag, g_build_version)) {
         rt_log("[update] up to date (newest release %s)", tag);
+        free(info.notes);
         return 0;
     }
     strcpy(g_latest, tag);
+    g_notes = info.notes;
     g_latest_set = 1;
     rt_log("[update] %s is available (this is %s)", tag, g_build_version);
     if (getenv("SR_NET") || getenv("SR_REPLAY") || getenv("SR_RECORD")) return 0;  /* the banner is theirs */
     char msg[192];
-    snprintf(msg, sizeof msg, "Update available: %s. Get it from the project's Releases page (F1 > About).", tag);
+    snprintf(msg, sizeof msg, "Update available: %s. See what's new in F1 > About; the launcher installs it.", tag);
     overlay_set_banner(msg);
     Sleep(20000);
     overlay_set_banner(NULL);

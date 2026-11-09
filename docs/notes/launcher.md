@@ -52,3 +52,15 @@ as `Install Sonic Riders (<Plat>) - command line.bat` (sandbox_test.py falls bac
 Test: `SR_INSTALLER=switch SR_LAUNCHER_INSTALL=<iso> [SR_INSTALLER_SD=<card>]` builds with the defaults, writes
 launcher_test.txt and exits 0 on success; `SR_INSTALLER=... SR_LAUNCHER_SHOT=<png>` for a picture.
 
+## Updates (2026-11-09)
+
+`update_core.h` fetches the newest release (tag, notes as plain text, the address of this flavour's zip:
+`SonicRiders-<PC|Switch|Android>-Setup-<tag>.zip`). The sidebar's gold "See what's new" opens the Update page
+(P_UPDATE, listed only when there is one): notes, DOWNLOAD AND INSTALL (WinHTTP to build\update\update.zip with a
+progress bar), then `build\update\apply.ps1` (written by the launcher): Expand-Archive, the running exe renamed to
+`.old` (deleted at the next start), robocopy of the zip's top folder over the root, then RESTART. A PC update leaves
+`build\launcher\rebuild_after_update`: the Play page offers "Rebuild now". The game's F1 > About shows the notes.
+Tests: `SR_LAUNCHER_FAKE_VERSION=v0.7.0` (pretend to be older), `SR_LAUNCHER_UPDATE_TEST=1` (press the button,
+write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpacked v0.7.1 PC zip and Switch zip
+(as v0.7.0): real download from GitHub, exe swapped, saves kept, marker written.
+

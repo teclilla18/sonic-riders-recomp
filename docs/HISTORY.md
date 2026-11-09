@@ -955,3 +955,14 @@ backslash: PASS, .nro copied and verified. Also: fonts 17/14/40/28 -> 20/16.5/40
 the work area), shorter checkbox labels with notes, SD picker sized to its column (pictures of all modes).
 Released as v0.7.1 at the user's request (no Sandbox run; iOS zip made here from the same source).
 
+## 2026-11-09: in-launcher updates with release notes (v0.7.1 zips replaced)
+
+User's request: launchers/builders show the changelog and download the update right there. Launcher + Switch /
+Android installers: Update page with the release notes and DOWNLOAD AND INSTALL (download, unpack over the folder,
+restart; PC: Rebuild prompt). Game: release notes in F1 > About (Windows). Not on the consoles yet: the Switch
+build has no TLS library; the Android app has no check (a later step: Java HTTPS, notice only, since a new APK
+must be built on the PC). Tested [confirmed]: Update page picture with the real v0.7.1 notes; update test PASS in
+an unpacked PC zip and Switch zip (real 3 MB download, exe swapped to .old, saves kept); F1 > About picture with
+the notes. Found on the way: the exe crashed at exit (an update reader thread left joinable) and the marker folder
+was missing; both fixed before the release. No Sandbox run (user: replace v0.7.1 directly).
+

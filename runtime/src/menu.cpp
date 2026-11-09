@@ -40,6 +40,7 @@ void platform_open_game_folder(void);
 #endif
 #ifdef _WIN32
 const char* update_available(void);  /* update_check.c: the newer release's tag, or NULL */
+const char* update_notes(void);      /* its release notes, or NULL */
 int SDL_OpenURL(const char* url);
 #define UPDATE_PAGE "https://github.com/teclilla18/sonic-riders-recomp/releases/latest"
 #endif
@@ -591,8 +592,15 @@ void tab_about() {
         char line[96];
         snprintf(line, sizeof line, "Update available: %s", latest);
         warn(line);
+        if (const char* notes = update_notes()) {  /* what's new, scrollable */
+            ImGui::BeginChild("##notes", ImVec2(0, 170), ImGuiChildFlags_Borders);
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextUnformatted(notes);
+            ImGui::PopTextWrapPos();
+            ImGui::EndChild();
+        }
         if (ImGui::Button("Open the download page")) SDL_OpenURL(UPDATE_PAGE);
-        help("Opens the project's newest release on GitHub in your browser.");
+        help("Opens the newest release on GitHub in your browser. The launcher's Update page downloads and installs it for you.");
     }
     bool check = g_settings.update_check != 0;
     if (ImGui::Checkbox("Check for updates at start-up", &check)) {
