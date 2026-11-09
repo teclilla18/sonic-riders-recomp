@@ -97,20 +97,14 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-0. **Hookshot ideas on `main`: accepted** (user played them 2026-11-08: "I absolutely love it"; HISTORY late night): FSR 1 sharpening (F1 > Display + launcher Graphics, Sharpness 0-100%, Off default; EASU
-   upscale when the window is bigger than the picture; `SR_SHARPNESS`), controllers in background (F1 > Controls
-   + launcher, on by default), Optimus/AMD dedicated-GPU exports, last five logs on PC/Linux (.prev.log name kept).
-   Frames at 1x/2x and 0/50/100% fine; 120 preset holds with 100% sharpness [confirmed]. Untested: real pad with
-   another window focused; Optimus on the gaming laptop; bug-report zip with five logs.
-   Frame rate presets (7487ffb): **accepted** 2026-11-08. Not checked: a real 120/144 Hz monitor with vsync,
-   results screen / cutscene camera cuts, 2P split screen.
-   **Next release v0.7.0** = frame rate presets + these + iOS (Mac: verified, docs final at 27420ae; after the tag,
-   send the Mac the tag and it makes + cold-tests SonicRiders-iOS-Setup zip; Mac checked 51b2185 on iOS). Before
-   it: cold Sandbox PC + Android (ask first). Game-side save of sharpness/pad keys fixed in 2207c58 (compile-checked;
-   a save + restart not run).
-   Then (release after next): custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17
-   answered). Android exit crashes fixed on `main` (c4cd92a). 32-bit Android: waits for the redditor's phone.
-   Other Hookshot ideas left: notes/plans-2026-11.md.
+0. **v0.7.0 released 2026-11-08** (all five zips incl. iOS from the Mac; v0.6.0 delisted). Contents: iOS, PC frame
+   rate presets, FSR 1 sharpening/upscaling, controllers in background, Optimus/AMD exports, five logs (all
+   **accepted** by the user). GBAtemp post: user posts it (draft given in chat, not in the repo).
+   Open checks: F1 sharpness/pad change survives a restart (fix 2207c58, compile-checked only); Optimus on the
+   gaming laptop; bug-report zip with five logs; a real pad with another window focused.
+   **Next (user's order):** custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17), then
+   online play, right-stick camera. Other Hookshot ideas left: notes/plans-2026-11.md. Mac not needed unless an
+   iOS bug is reported. Android exit crashes fixed (c4cd92a). 32-bit Android: waits for the redditor's phone.
 1. **Online play** (above). Release the launcher + PC picture options (cold
    Sandbox PC + Android before any release).
    #14 Android stalls: thread placement + ADPF hint on `main` (S23: no worse, no better; it never stalled). Ask the
