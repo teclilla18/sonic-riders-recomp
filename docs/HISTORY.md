@@ -664,6 +664,7 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Launcher icon: a "fan-made" logo silhouette was turned down (looks extracted from an official Flash file and
   copies the logo). Fan art with characters needs the artist's permission; a request was sent to one artist
   (no reply yet). The committed banner's origin should be checked the same way.
+  [2026-11-09: the icon question is closed: the icon is the user's ChatGPT art; only the banner check stays open.]
 - Plan after iOS (user's order): higher internal resolution + anti-aliasing, then bloom + colour grading, then
   per-pixel character lighting.
 

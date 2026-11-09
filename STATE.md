@@ -32,8 +32,9 @@ install pages on a device, a Mac without Xcode/Homebrew. Missing execute bit on 
 1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
 
 **Windows launcher: done for the PC zip** (notes/launcher.md), unreleased. Button remapping **accepted**
-(2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Banner origin to check
-(fan art needs the artist's permission; HISTORY 2026-11-07 late; do not ask the user, they will bring it up). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
+(2026-11-07, race played); F1 Controls tab shows the live map. Cold Sandbox install PASS. Launcher ICON is settled: the
+user's own ChatGPT Super Sonic art, public (notes/launcher.md). Only the BANNER (launcher/banner.jpg, public fan art) still has an
+open origin check with its artist (HISTORY 2026-11-07 late; do not ask the user, they will bring it up). Not done: Switch/Android pages. Online play paused at a clean point (section below). On `main`, unreleased: launcher +
 remapping, screenshot fix, Android fast-core threads + ADPF (#14), disc-read backstop fix. OLED on v0.5.3 (dev
 build on the SD as `sonicriders.dev-20261107.nro`); the S23 has a dev APK.
 
