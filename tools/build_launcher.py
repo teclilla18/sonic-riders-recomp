@@ -16,6 +16,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(os.environ.get("LOCALAPPDATA", ""), "SonicRidersSetup", "tools")
 
 
+MANIFEST = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security>
+  </trustInfo>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application><supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/></application>
+  </compatibility>
+</assembly>
+"""
+
+
 def write_png_ico(path, pngs):
     """an .ico whose entries are PNG files (Windows Vista and later); sizes read from each PNG's header"""
     import struct
@@ -60,6 +72,12 @@ def main():
     rc, res = os.path.join(out_dir, "launcher.rc"), os.path.join(out_dir, "launcher_res.o")
     with open(rc, "w") as f:
         f.write('APPICON ICON "%s"\n' % ico.replace("\\", "/"))
+        # run as the user who starts it: without a manifest Windows treats an exe named "Install ..." (the Switch /
+        # Android installer) as a setup program and asks for administrator rights
+        man = os.path.join(out_dir, "launcher.manifest")
+        with open(man, "w") as m:
+            m.write(MANIFEST)
+        f.write('1 24 "%s"\n' % man.replace("\\", "/"))  # 24 = RT_MANIFEST
     windres = os.path.join(a.llvm_mingw, "bin", "x86_64-w64-mingw32-windres.exe")
     subprocess.run([windres, rc, "-O", "coff", "-o", res], check=True)
     srcs.append(res)
