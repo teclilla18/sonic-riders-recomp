@@ -893,3 +893,6 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   the -Wformat-extra-args warning was hidden by a too-narrow grep of the build output). F1 changes to sharpness /
   background pad applied in the running game but were not saved. Fixed; settings.c compiles clean [confirmed];
   the exe not relinked yet (a game was running). Lesson: assert every scripted replace; grep builds for "warning".
+- User played FSR sharpening + the background pad option: **accepted** ("I absolutely love it"). Exe relinked with
+  the save fix after the game closed (clean build, 0 warnings). A scripted F1 toggle to prove the save did not
+  change any option (menu focus), so save + restart stays unproven by run [likely].
