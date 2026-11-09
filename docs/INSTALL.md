@@ -199,9 +199,10 @@ iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
    pictures.
 2. **Open the launcher the first time** (once; it's free and not signed by Apple, so macOS asks you to allow it):
    1. Double-click **Sonic Riders Launcher**.
-   2. A warning appears ("“Sonic Riders Launcher” Not Opened"): click **Done**. **Don't** click *Move to Trash*.
+   2. A warning appears ("“Sonic Riders Launcher.app” Not Opened"): click **Done**, the lower grey button.
+      **Don't** click the blue *Move to Trash* button above it (it is highlighted, but deletes the launcher).
    3. Open *System Settings* → *Privacy & Security* and scroll down to *Security*: next to "“Sonic Riders
-      Launcher” was blocked to protect your Mac" click **Open Anyway** and confirm with your password or Touch ID.
+      Launcher.app” was blocked to protect your Mac" click **Open Anyway** and confirm with your password or Touch ID.
       (The button only appears after step 1.)
    4. Double-click the launcher again and choose **Open**.
 3. **In the launcher:**

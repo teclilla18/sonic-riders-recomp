@@ -222,7 +222,8 @@ First-boot findings [confirmed on the iPhone]:
   `SR_LAUNCHER_IPA_DIR` (never the Desktop folder in tests).
 - Gatekeeper on macOS 27.2 (strings read from CoreServicesUIAgent Quarantine*.loctable and SecurityPrivacyExtension
   Localizable.loctable, not from screenshots: this session had no screen-recording permission): first open ->
-  "“X” Not Opened" / "Apple could not verify “X” is free of malware..." with Done / Move to Trash; then System
+  "“X” Not Opened" / "Apple could not verify “X” is free of malware..." (X = "Sonic Riders Launcher.app"); the blue default button on
+  top is Move to Trash, Done is the grey one below; the icon is the lock dial, not the app's (user's screenshot); then System
   Settings > Privacy & Security > Security: "“X” was blocked to protect your Mac." + Open Anyway. A downloaded
   *script* (.command) gets "File Not Opened" ("Scammers often encourage ... running scripts"), which is why the
   .app is the main route. The exact final confirmation dialog was not seen [uncertain].

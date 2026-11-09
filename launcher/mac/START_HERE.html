@@ -37,6 +37,24 @@ b.k { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 4px; f
 .dlg .hd { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
 .dlg .bt { display: block; width: 100%; margin-top: 8px; padding: 6px; border-radius: 7px; background: #d9d9de; font-weight: 600; position: relative; }
 .dlg .bt.blue { background: var(--blue); color: #fff; }
+/* macOS 26/27 Gatekeeper alert: dark glass, left-aligned, lock-dial icon with a warning sign, the blue default
+   button on top is Move to Trash (drawn from a real screenshot, 2026-11-09) */
+.gk { width: 300px; background: rgba(48,48,52,.97); color: #f2f2f4; border-radius: 26px; padding: 22px 20px 18px;
+      box-shadow: 0 14px 44px rgba(0,0,0,.55); font-size: 14px; position: relative; border: 1px solid rgba(255,255,255,.12); }
+.gk .help { position: absolute; top: 16px; right: 16px; width: 26px; height: 26px; border-radius: 50%;
+            background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; font-weight: 600; }
+.gk .lock { position: relative; width: 62px; height: 62px; border-radius: 15px; margin-bottom: 14px;
+            background: linear-gradient(#f4f4f6, #b9bac0); }
+.gk .lock::before { content: ""; position: absolute; inset: 9px; border-radius: 50%;
+            background: radial-gradient(circle, #8d8f96 0 30%, #2b2c30 31% 60%, #6b6d74 61% 66%, #2b2c30 67%); }
+.gk .warnsign { position: absolute; right: -9px; bottom: -7px; width: 0; height: 0; border-left: 15px solid transparent;
+            border-right: 15px solid transparent; border-bottom: 26px solid #f5c400; }
+.gk .warnsign::after { content: "!"; position: absolute; left: -3px; top: 8px; font: 800 15px/1 -apple-system, sans-serif; color: #222; }
+.gk .hd { font-weight: 700; font-size: 17px; line-height: 1.3; margin-bottom: 8px; }
+.gk .tx { line-height: 1.4; margin-bottom: 14px; }
+.gk .bt { display: block; text-align: center; margin-top: 9px; padding: 9px; border-radius: 22px; font-weight: 500;
+          background: rgba(255,255,255,.14); position: relative; }
+.gk .bt.blue { background: #3478f6; color: #fff; }
 .mark { outline: 4px solid var(--green); outline-offset: 3px; }
 .no { outline: 4px solid var(--red); outline-offset: 3px; opacity: .8; }
 .tag { position: absolute; right: -128px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 800; padding: 2px 8px;
@@ -82,15 +100,17 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
 </div></div>
 
 <div class="step"><div class="num">2</div><div>
-  <h3>A warning appears: click <b class="k">Done</b></h3>
-  <p>macOS says it could not verify the app. Click <b class="k">Done</b>.
-  <span class="warn">Do not click "Move to Trash"</span> (that deletes the launcher; if it happened, unzip again).</p>
-  <div class="shot"><div class="dlg">
-    <img class="ic" src="launcher/icon_256.png" onerror="this.onerror=null; this.src='../icon_256.png'" alt="">
-    <div class="hd">“Sonic Riders Launcher” Not Opened</div>
-    <div>Apple could not verify “Sonic Riders Launcher” is free of malware that may harm your Mac or compromise your privacy.</div>
-    <span class="bt blue mark">Done<span class="tag ok">CLICK THIS</span></span>
-    <span class="bt no">Move to Trash<span class="tag bad">NOT THIS</span></span>
+  <h3>A warning appears: click <b class="k">Done</b> (the lower, grey button)</h3>
+  <p>macOS says it could not verify the app. Click <b class="k">Done</b>, the <b>grey button at the bottom</b>.
+  <span class="warn">Do not click the blue "Move to Trash" button above it</span>: it is highlighted, but it deletes
+  the launcher (if that happened, unzip again).</p>
+  <div class="shot"><div class="gk">
+    <span class="help">?</span>
+    <div class="lock"><span class="warnsign"></span></div>
+    <div class="hd">“Sonic Riders Launcher.app” Not Opened</div>
+    <div class="tx">Apple could not verify “Sonic Riders Launcher.app” is free of malware that may harm your Mac or compromise your privacy.</div>
+    <span class="bt blue no">Move to Trash<span class="tag bad">NOT THIS</span></span>
+    <span class="bt mark">Done<span class="tag ok">CLICK THIS</span></span>
   </div></div>
 </div></div>
 
@@ -105,7 +125,7 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
       <div class="scroll">↓ scroll down ↓</div>
       <div class="sec">Security</div>
       <div class="row"><span class="grow">Allow applications from</span><span class="pill">App Store &amp; Known Developers</span></div>
-      <div class="row"><span class="grow">“Sonic Riders Launcher” was blocked to protect your Mac.</span>
+      <div class="row"><span class="grow">“Sonic Riders Launcher.app” was blocked to protect your Mac.</span>
         <span class="pill mark">Open Anyway</span></div>
     </div>
   </div></div>
@@ -115,10 +135,11 @@ launcher guides you through everything else (Xcode, building, Sideloadly, Develo
   <h3>Double-click the launcher again and choose <b class="k">Open</b></h3>
   <p>macOS asks one last time. Click <b class="k">Open</b> (it may say <b class="k">Open Anyway</b>) and confirm with your
   password or Touch ID if asked. From now on the launcher opens normally.</p>
-  <div class="shot"><div class="dlg">
-    <img class="ic" src="launcher/icon_256.png" onerror="this.onerror=null; this.src='../icon_256.png'" alt="">
-    <div class="hd">macOS asks about “Sonic Riders Launcher” once more</div>
-    <div>(the exact wording depends on your macOS version)</div>
+  <div class="shot"><div class="gk">
+    <span class="help">?</span>
+    <div class="lock"><span class="warnsign"></span></div>
+    <div class="hd">macOS asks about “Sonic Riders Launcher.app” once more</div>
+    <div class="tx">(the exact wording depends on your macOS version)</div>
     <span class="bt blue mark">Open / Open Anyway<span class="tag ok">CLICK THIS</span></span>
     <span class="bt">Cancel</span>
   </div></div>
