@@ -278,8 +278,8 @@ def build_launcher(ref):
         return f.read()
 
 
-MAC_LAUNCHER_SRC = ["launcher/mac", "launcher/banner.jpg", "tools/build_mac_launcher.py", "tools/launcher_icon.py",
-                    "tools/make_icon.py"]
+MAC_LAUNCHER_SRC = ["launcher/mac", "launcher/banner.jpg", "launcher/icon_256.png", "launcher/icon_32.png",
+                    "tools/build_mac_launcher.py", "tools/launcher_icon.py", "tools/make_icon.py"]
 MAC_APP = "Sonic Riders Launcher.app"
 
 

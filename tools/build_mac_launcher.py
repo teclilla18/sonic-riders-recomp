@@ -41,22 +41,28 @@ INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 def icns(out_dir, work):
-    """the PC launcher's drawing (tools/launcher_icon.py: gold ring on blue) as AppIcon.icns"""
-    import launcher_icon
-    import make_icon
-    big = os.path.join(work, "icon512.png")
-    if not os.path.isfile(big):  # pure Python drawing: ~10 s
-        with open(big, "wb") as f:
-            f.write(make_icon.png(launcher_icon.draw(512)))
+    """AppIcon.icns: the Super Sonic art every launcher uses (launcher/icon_256.png + icon_32.png, the user's own,
+    pinned in OWN_ART), sizes up to 256 px (macOS scales it for bigger views); without those files the PC
+    launcher's fallback drawing (tools/launcher_icon.py: gold ring on blue)"""
     iconset = os.path.join(work, "AppIcon.iconset")
     shutil.rmtree(iconset, ignore_errors=True)
     os.makedirs(iconset)
-    for pt in (16, 32, 128, 256, 512):
-        for scale in (1, 2):
-            px = pt * scale
-            name = "icon_%dx%d%s.png" % (pt, pt, "@2x" if scale == 2 else "")
-            subprocess.check_call(["sips", "-z", str(px), str(px), big, "--out", os.path.join(iconset, name)],
-                                  stdout=subprocess.DEVNULL)
+    big, small = (os.path.join(ROOT, "launcher", "icon_%d.png" % n) for n in (256, 32))
+    if os.path.isfile(big) and os.path.isfile(small):
+        sizes = {"16x16": (small, 16), "16x16@2x": (small, 32), "32x32": (small, 32), "32x32@2x": (big, 64),
+                 "128x128": (big, 128), "128x128@2x": (big, 256), "256x256": (big, 256)}
+    else:
+        import launcher_icon
+        import make_icon
+        big = os.path.join(work, "icon512.png")
+        if not os.path.isfile(big):  # pure Python drawing: ~10 s
+            with open(big, "wb") as f:
+                f.write(make_icon.png(launcher_icon.draw(512)))
+        sizes = {"%dx%d%s" % (pt, pt, "@2x" if sc == 2 else ""): (big, pt * sc)
+                 for pt in (16, 32, 128, 256, 512) for sc in (1, 2) if pt * sc <= 512}
+    for name, (src, px) in sizes.items():
+        subprocess.check_call(["sips", "-s", "format", "png", "-z", str(px), str(px), src, "--out",
+                               os.path.join(iconset, "icon_%s.png" % name)], stdout=subprocess.DEVNULL)
     subprocess.check_call(["iconutil", "-c", "icns", iconset, "-o", os.path.join(out_dir, "AppIcon.icns")])
 
 

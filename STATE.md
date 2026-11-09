@@ -20,7 +20,8 @@ incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sidel
 [confirmed, user]. Not tested: a Mac without Homebrew/Xcode; the signed "install from the Mac" route from the zip.
 **Mac launcher for the iOS zip: implemented + tested on `main`, not released, not yet accepted** (notes/ios.md "Mac
 launcher"): Sonic Riders Launcher.app (Get ready / Build / Install / Renew / About), custom app icon from any picture,
-START HERE (Mac).html. Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
+START HERE (Mac).html. All launchers (PC, Switch/Android installer, Mac) use the user's Super Sonic icon art
+(launcher/icon_256.png + icon_32.png; the Mac .icns is generated into build/). Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
 ad-hoc signature (Gatekeeper "rejected" = Open Anyway, not "damaged"); full build driven by the launcher from that
 folder with a HEIC icon -> .ipa with the cropped icon [confirmed]. Not tested: the four Gatekeeper clicks by a person
 (no screen-recording permission here; dialog words read from macOS 27.2's own strings), the Sideloadly / from-Mac

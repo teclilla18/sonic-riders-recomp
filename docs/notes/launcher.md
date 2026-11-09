@@ -35,7 +35,10 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
   race not tested by us.
 - Icon (2026-11-09, user's choice): `launcher/icon_256.png` + `icon_32.png` (a tighter face crop), Super Sonic art the user made
   with ChatGPT, pinned in the guard's OWN_ART; build_launcher.py packs them into an .ico. Without that file build_launcher.py falls back to tools/launcher_icon.py's gold ring.
-  build_launcher.py compiles it in as resource APPICON.
+  build_launcher.py compiles it in as resource APPICON. **Every launcher uses this art** (user, 2026-11-09): the PC
+  launcher, the Switch / Android installer windows (same exe) and the Mac launcher (build_mac_launcher.py makes
+  AppIcon.icns from the same two PNGs, sizes up to 256 px, into build/; gold-ring fallback likewise). Not the
+  official-art SonicRidersFanIcon.png (local builds only).
 - Next:
   later Switch/Android pages. Done 2026-11-07: the exe in the PC zip (make_release.py builds it from the committed
   source), cold Sandbox install through the launcher PASS (`sandbox_test.py --launcher`, SR_LAUNCHER_INSTALL).

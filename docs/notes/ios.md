@@ -202,8 +202,8 @@ First-boot findings [confirmed on the iPhone]:
 ## Mac launcher (2026-11-09)
 
 - `launcher/mac/SonicRidersLauncher.swift` (SwiftUI, one file) -> `Sonic Riders Launcher.app` by
-  `tools/build_mac_launcher.py` (xcrun swiftc, arm64, macOS 13+; icon = tools/launcher_icon.py drawing via
-  iconutil; banner.jpg in Resources). Signed ad hoc **after** assembling (`codesign --force --deep -s -`): a bundle
+  `tools/build_mac_launcher.py` (xcrun swiftc, arm64, macOS 13+; icon = the Super Sonic art of every launcher,
+  launcher/icon_256.png + icon_32.png -> AppIcon.icns via sips + iconutil, 16-256 px; gold-ring fallback; banner.jpg in Resources). Signed ad hoc **after** assembling (`codesign --force --deep -s -`): a bundle
   whose files don't match its signature is "damaged" to Gatekeeper with no Open Anyway. make_release.py --flavor ios
   builds it (on a Mac only; refuses if its sources differ from REF) and ships it with "START HERE (Mac).html"
   (launcher/mac/START_HERE.html) next to the .command (kept as the Terminal route).
