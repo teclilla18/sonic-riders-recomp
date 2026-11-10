@@ -1036,3 +1036,5 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   no size+time-skipping copy step (no self-update; ditto into a fresh folder; shutil copies always write).
 - Accepted: the user clicked DOWNLOAD AND INSTALL in their v0.7.2 Switch installer folder and got v0.7.3 ("worked
   beautifully") [confirmed, user].
+- Same day: repo description now names every platform; README banner `docs/images/banner.jpg` (fan art, unknown
+  artist, credit line asks them to open an issue; pinned in OWN_ART). User back Thursday 2026-11-12.
