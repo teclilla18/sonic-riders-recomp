@@ -102,6 +102,9 @@ into C, so the app is ordinary native code. The runtime has no `PROT_EXEC`, `for
 - Controllers: SDL2's iOS joystick driver uses GameController.framework, so Xbox Series, DualSense / DualShock 4,
   Switch Pro and MFi pads work over Bluetooth with the same `input_sdl.c` mapping (triggers as axes). Joy-Cons in
   pairs only as iOS presents them. Touch controls hide when a pad is used, as on Android.
+- iPadOS also delivers pad buttons as UIKit presses that SDL turns into keys (A/Cross = Select = Enter = our
+  START, B = Escape, D-pad = arrows): A paused races (2026-11-09). `input_pump` ignores the keyboard on iOS while a
+  controller is open.
 
 ## Performance expectations
 

@@ -1038,3 +1038,13 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   beautifully") [confirmed, user].
 - Same day: repo description now names every platform; README banner `docs/images/banner.jpg` (fan art, unknown
   artist, credit line asks them to open an issue; pinned in OWN_ART). User back Thursday 2026-11-12.
+
+## 2026-11-09, iOS pads and app IDs
+
+- iPad (Xbox One and PS5 pads): A / Cross paused the race instead of jumping [confirmed, user]. Cause [likely, not
+  yet checked in the SDL source or on the device]: iPadOS also sends pad buttons as UIKit presses; SDL2's uikit view
+  maps Select to Enter, and the keyboard's Enter is START in `input_sdl.c`. Fix: under `SR_IOS` the keyboard is
+  ignored while a controller is open. Implemented, compiles (PC syntax check with `SR_IOS`); not tested on iOS.
+- Updating with Sideloadly made a second app (new bundle ID, empty Documents) on the iPhone and the iPad
+  [confirmed, user]. The old apps were Xcode-installed (`net.srnative.sonicriders.t<hash>`); Sideloadly's default
+  appends its team ID. The iPhone took the update with the old ID entered by hand. The Mac backed up the iPhone's saves.

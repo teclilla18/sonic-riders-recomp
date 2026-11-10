@@ -253,6 +253,14 @@ static void update_gamepads(void) {
 void input_pump(void) {
     GcPad p = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     const Uint8* k = SDL_GetKeyboardState(NULL);
+#ifdef SR_IOS
+    /* iPadOS also sends a controller's buttons to the app as UIKit presses, and SDL turns those into keys (A/Cross =
+     * Select = Enter, B = Menu = Escape, D-pad = arrows). Enter is START here, so A paused the race. While a
+     * controller is open, the keyboard is ignored. */
+    update_gamepads();
+    for (int i = 0; i < PORTS; i++)
+        if (g_ctl[i]) k = NULL;
+#endif
     if (k) {
         /* keyboard (default WASD stick, arrows C-stick, J/K/L/I = A/B/X/Y, U/O/P = L/R/Z, Enter START, T/G/F/H the
          * D-pad; controls_load) */
