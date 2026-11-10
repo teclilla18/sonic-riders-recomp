@@ -1062,3 +1062,11 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   removed afterwards, the user's app, save and disc untouched. setup_mac's new functions checked against the iPad
   Pro (plain ID), iPhone (`.t<hash>`) and no device (last build's ID) [confirmed]; a full setup_mac run (cold
   test) not done yet [uncertain]. Older `.t<hash>` installs keep their ID (Sideloadly: untick).
+
+## 2026-11-10: GitHub shows the last 5 releases
+
+User: "I want people to be able to see the last 5 releases from the most recent one" (replaces the only-latest rule).
+v0.7.0, v0.7.1, v0.7.2, v0.7.3 re-created from their kept tags with `--latest=false` (v0.7.4 stays Latest, so the
+launcher's update check is unchanged), notes from CHANGELOG. Zips re-uploaded from build/old and build/release; each
+zip's VERSION names its tag's commit [confirmed]. Not restored: v0.7.1's zips (not kept; release has notes only) and
+the iOS zips of all four (made on the Mac). From now on: publish the new release, delete the one that falls to 6th.

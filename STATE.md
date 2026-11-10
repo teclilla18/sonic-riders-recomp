@@ -7,7 +7,7 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 **v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: built on the Mac from 6db6158 with the re-dated entries, cold check PASS, uploaded (user approved); all 5 zips on the release. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
-Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
+GitHub lists the 5 newest releases (v0.7.0-v0.7.4; v0.7.4 is Latest); on each release delete the 6th (tag kept). OLED and S23 still run v0.5.3 builds.
 
 **iOS, 2026-11-09:** pad fix (A paused races on iPad) accepted on the iPad Pro, on main (ee3aaa1), unreleased;
 Stable iOS app IDs implemented (Mac route `<base>.<team>`, plain-ID .ipa so Sideloadly's default reaches the same app; reuse of an installed ID) and tested on the iPad Pro; full setup_mac cold run still to do (HISTORY 2026-11-09 "iOS pads").
