@@ -4,7 +4,7 @@ Read this at the start of every session. Rewrite it in place at the end of each 
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 
-**v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: the Mac session uploads it after the user approves. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
+**v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: built on the Mac from 6db6158 with the re-dated entries, cold check PASS, uploaded (user approved); all 5 zips on the release. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
@@ -18,7 +18,7 @@ Release pieces done: `tools/setup_mac.py` ("Install Sonic Riders (iOS).command")
 INSTALL/README section, unsigned .ipa without an Apple ID in Xcode (Sideloadly), save-icon app icon, missing /
 incomplete disc message. Cold Mac test from the zip PASS (unsigned route); Sideloadly install, message and icon
 [confirmed, user]. Not tested: a Mac without Homebrew/Xcode; the signed "install from the Mac" route from the zip.
-**Mac launcher for the iOS zip: released in v0.7.2; first start accepted by the user (macOS 27.2)** (notes/ios.md "Mac
+**Mac launcher for the iOS zip: released in v0.7.2 (current v0.7.3); first start accepted by the user (macOS 27.2)** (notes/ios.md "Mac
 launcher"): Sonic Riders Launcher.app (Get ready / Build / Install / Renew / About), custom app icon from any picture,
 START HERE (Mac).html. All launchers (PC, Switch/Android installer, Mac) use the user's Super Sonic icon art
 (launcher/icon_256.png + icon_32.png; the Mac .icns is generated into build/). Tested by us: a cold Archive Utility extract of the zip (quarantined) keeps 0755 and a valid
@@ -27,7 +27,9 @@ folder with a HEIC icon -> .ipa with the cropped icon [confirmed]. First start d
 screenshots: Done, Open Anyway in Settings, Open Anyway in the second alert, Touch ID, Allow Downloads/Desktop);
 START HERE redrawn from them [confirmed, user]. Not tested: the Sideloadly / from-Mac
 install pages on a device, a Mac without Xcode/Homebrew. Missing execute bit on the .command: not reproduced
-(v0.7.1's zip stores 0755). Building the .ipa on a PC: dropped (user).
+(v0.7.1's zip stores 0755). Building the .ipa on a PC: dropped (user). Every iOS zip is made on the Mac
+(`make_release.py --flavor ios --ref <commit>`, not the annotated tag, so VERSION names the commit like the others).
+Mac next: the user's free iOS signatures run out ~2026-11-15 (renew); Install/Renew pages with a real device.
 
 **Plan after iOS (user's order), PC only:** (a) internal resolution + anti-aliasing: done on `main` (F1 > Display,
 1x-4x, MSAA; HISTORY "2026-11-07, later"), (b) bloom + colour grading, (c) per-pixel character lighting.
