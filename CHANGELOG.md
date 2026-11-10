@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.7.4 (2026-11-10)
 
 - **iPhone and iPad: no more second app when renewing.** The Mac installer builds with the ID of the Sonic Riders
   app already on your device, and new installs use the ID Sideloadly makes with its default settings, so renewing
