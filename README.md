@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.jpg" alt="Sonic, Tails, Knuckles, Jet, Wave and Storm racing on Extreme Gear through a neon city" width="100%">
+</p>
+
 # Sonic Riders native port
 
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
@@ -110,5 +114,6 @@ forks (`third_party/LICENSE-MPL-2.0`).
 - [AMD FidelityFX Super Resolution 1](https://github.com/GPUOpen-Effects/FidelityFX-FSR) (MIT): the PC
   sharpening and upscaling (EASU, RCAS), ported to GLSL in `runtime/src/platform/host/fsr1_gl.h`.
 - gamemasterplc's 16:9 Gecko code: the idea behind the widescreen option.
+- Banner image: fan art by an unknown artist. If it's yours, open an issue and we'll credit you or remove it.
 
 Sonic Riders is © SEGA. This project is not affiliated with SEGA.

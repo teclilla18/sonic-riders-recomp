@@ -50,6 +50,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # picture is refused until its SHA-1 is put here. Also the launcher banner (the user's OK, 2026-11-07): public
 # fan art the user chose, not from the game.
 OWN_ART = {
+    "docs/images/banner.jpg": "54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b",  # README banner (fan art, user's choice, 2026-11-09)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     "launcher/icon_256.png": "80541e60eb82d9440c001da3bc4c7240bda2b111",  # launcher icon (user's ChatGPT art, 2026-11-09)
     "launcher/icon_32.png": "24e3018e7e6651be4cbba8228f81364bf9d0a70e",
