@@ -9,6 +9,8 @@ Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 Only the latest release is listed on GitHub (v0.5.3 delisted, tags kept). OLED and S23 still run v0.5.3 builds.
 
+**iOS, 2026-11-09:** pad fix (A paused races on iPad) accepted on the iPad Pro, on main (ee3aaa1), unreleased;
+Mac doing the stable bundle-ID work (no second app on update; HISTORY 2026-11-09 "iOS pads").
 **iOS (Mac session; notes/ios.md): verified for v0.7.0** (main 9932634). Races on touch [confirmed, logs]:
 iPhone 17 Pro 59.9 fps, iPad Pro 11 M1 59.5, iPad A16 59.3 (first-use shader stutters only), iPad 7th gen ~57
 with dips to 40 (A10 GPU ~10 ms/frame). Lock screen 3 min mid-race: no error (game clock held while paused,

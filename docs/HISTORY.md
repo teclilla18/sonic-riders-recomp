@@ -1044,7 +1044,11 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
 - iPad (Xbox One and PS5 pads): A / Cross paused the race instead of jumping [confirmed, user]. Cause [likely, not
   yet checked in the SDL source or on the device]: iPadOS also sends pad buttons as UIKit presses; SDL2's uikit view
   maps Select to Enter, and the keyboard's Enter is START in `input_sdl.c`. Fix: under `SR_IOS` the keyboard is
-  ignored while a controller is open. Implemented, compiles (PC syntax check with `SR_IOS`); not tested on iOS.
+  ignored while a controller is open. SDL 2.32.10 `scancodeFromPress` checked by the Mac (Select -> RETURN) [confirmed].
+  **Accepted**: iPad Pro 11" 3rd gen, Xbox One and PS5 pads, build v0.7.3-9-gee3aaa14: "Both controllers now work as
+  intended" [confirmed, user]. Not released yet.
 - Updating with Sideloadly made a second app (new bundle ID, empty Documents) on the iPhone and the iPad
   [confirmed, user]. The old apps were Xcode-installed (`net.srnative.sonicriders.t<hash>`); Sideloadly's default
-  appends its team ID. The iPhone took the update with the old ID entered by hand. The Mac backed up the iPhone's saves.
+  appends its team ID. The iPhone took the update with the old ID entered by hand. The Mac backed up all saves (iPhone, 3 iPads).
+  Device IDs differ (iPad Pro plain `net.srnative.sonicriders`, others `.t<hash>`). Plan (Mac, own commit): reuse an
+  installed app's ID; new installs use `<ipa ID>.<TEAMID>` = Sideloadly's default; Files-app save-copy section in INSTALL.md.

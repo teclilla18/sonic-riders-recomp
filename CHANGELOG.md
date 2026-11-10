@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **iPhone and iPad: controllers.** With an Xbox or PlayStation pad, A / Cross paused the race instead of jumping
+  (iPadOS also sends pad buttons as key presses). The keyboard is ignored while a controller is connected.
+
 ## v0.7.3 (2026-11-09)
 
 - **Update from the launcher works now.** After DOWNLOAD AND INSTALL and a restart, the launcher still showed the old
