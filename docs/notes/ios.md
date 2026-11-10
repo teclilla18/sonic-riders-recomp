@@ -168,8 +168,7 @@ First-boot findings [confirmed on the iPhone]:
   Apple silicon only; the folder path must have no spaces. Docs: INSTALL.md "Install on iPhone / iPad".
 - Signing: `ios_build.find_team()` = the Apple Development certificate, else `defaults read com.apple.dt.Xcode
   IDEProvisioningTeamByIdentifier` (an Apple ID added in Xcode, no manual project step). No team or `--team none`:
-  an unsigned app/.ipa (CODE_SIGNING_ALLOWED=NO) that Sideloadly / AltStore sign. Bundle ID: per-team suffix;
-  unsigned = `net.srnative.sonicriders`; Sideloadly appends the team ID (a new app, empty Documents, the first time).
+  an unsigned app/.ipa (CODE_SIGNING_ALLOWED=NO) that Sideloadly / AltStore sign. Bundle ID: see "App IDs" below.
 - Disc: `platform_disc_path` also looks for `*.iso` at the top of Documents (Finder's Files tab puts it there).
   main.c (SR_IOS): no image -> a message; smaller than 1,459,978,240 bytes -> "incomplete" (opened mid-copy hung
   at the loading icon). Messages before the game's window need a window attached to the scene
@@ -184,11 +183,21 @@ First-boot findings [confirmed on the iPhone]:
   (8/16-bit, grey/RGB/palette). `ios_build.py icon <in> <out.png>` = the same conversion (the launcher's preview).
   setup_mac.py copies the picture to build/ios/custom_icon.<ext> (never git; a path without spaces for ninja).
 - A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
-- Renewal: renew the same way as installed. Sideloadly on a Mac-installed app appends the team ID (a second,
-  empty app) unless Advanced Options > "Use automatic bundle ID" is unticked (keeps the .ipa's ID): tested on the iPad Pro 2026-11-08,
-  one app kept, disc + saves kept [confirmed]; Sideloadly stored info_props CFBundleIdentifier =
-  net.srnative.sonicriders.t<hash>. setup_mac.py writes "How to renew (every 7 days).txt" next to the .ipa with
-  that ID; a re-run asks separately about copying the disc image.
+- App IDs (a different ID = a second app with an empty Documents). Sideloadly's default ("Use automatic bundle ID"
+  ticked) ALWAYS appends ".<team ID>" to the .ipa's ID, even when it already ends with it (2026-11-09, iPad Pro:
+  `<base>.<team>` became `<base>.<team>.<team>` [confirmed]); unticked, it keeps the .ipa's ID (2026-11-08, iPad Pro
+  [confirmed]). So (base = `ios_build.BASE_ID` = net.srnative.sonicriders):
+  - signed (Mac) builds default to `<base>.<team>`; `ios_build.ipa_bundle_id` writes `<base>` into the .ipa
+    (make_ipa, plutil on the copy; Sideloadly/AltStore re-sign), so a Sideloadly renewal with default settings lands
+    on the Mac-installed app (2026-11-09, iPad Pro: devicectl install of `<base>.<team>`, then Sideloadly default
+    with the `<base>` .ipa: still one test app [confirmed]). Any other ID goes into the .ipa unchanged (untick).
+  - unsigned builds: `<base>`; the first Sideloadly install makes `<base>.<team>`.
+  - setup_mac.py asks for the device BEFORE building: `ios_run.installed_ids` (devicectl apps) -> an installed
+    net.srnative.sonicriders* app's ID is passed as --bundle-id (prefers `.<team>`); no device -> the last build's
+    ID. Older Mac installs (`<base>.t<sha1(team)[:8]>`, before 2026-11-09) keep their ID; renew notes then say
+    untick. setup_mac.py writes "How to renew (every 7 days).txt" next to the .ipa with the matching Sideloadly
+    wording; a re-run asks separately about copying the disc image.
+  - Two apps already: INSTALL.md "Ended up with two Sonic Riders apps?" (Files app, copy saves/card_a.raw).
 - Cold test: extract the zip with `ditto -x -k` into a fresh folder, run the .command with `SR_NOPAUSE=1 --yes
   --unsigned --iso <img> --tools <fresh dir> --ipa-dir <scratch>` (never the Desktop folder). PASS 2026-11-08.
   Not covered: a Mac without Homebrew or Xcode; the signed install route from the zip.

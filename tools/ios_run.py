@@ -46,6 +46,18 @@ def devices():
     return found
 
 
+def installed_ids(dev):
+    """bundle IDs of the Sonic Riders apps already on the device (net.srnative.sonicriders*), sorted"""
+    with tempfile.TemporaryDirectory() as d:
+        out = os.path.join(d, "apps.json")
+        subprocess.run(["xcrun", "devicectl", "device", "info", "apps", "--device", dev, "--json-output", out],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(out) as f:
+            apps = json.load(f).get("result", {}).get("apps", [])
+    return sorted(a.get("bundleIdentifier", "") for a in apps
+                  if a.get("bundleIdentifier", "").startswith("net.srnative.sonicriders"))
+
+
 def pick_device(want):
     devs = devices()
     if want:

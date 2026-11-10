@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **iPhone and iPad: no more second app when renewing.** The Mac installer builds with the ID of the Sonic Riders
+  app already on your device, and new installs use the ID Sideloadly makes with its default settings, so renewing
+  either way updates the same app (saves and disc image stay). If you already have two, INSTALL.md shows how to
+  move your save across in the Files app.
 - **iPhone and iPad: controllers.** With an Xbox or PlayStation pad, A / Cross paused the race instead of jumping
   (iPadOS also sends pad buttons as key presses). The keyboard is ignored while a controller is connected.
 

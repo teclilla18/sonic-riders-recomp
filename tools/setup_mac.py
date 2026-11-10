@@ -134,8 +134,48 @@ def devices():
         return []
 
 
-def write_renew_notes(ipa_dir, ipa, bundle, signed):
+def pick_device(team, a):
+    """the connected device to install on (signed builds only), asked before building: its app ID decides the build's"""
+    devs = devices() if team else []
+    if team and not devs:
+        log("No iPhone/iPad found on the cable (connect it, unlock it, tap Trust; Developer Mode must be on).", "yellow")
+    if a.device:
+        devs = [x for x in devs if a.device in (x["id"], x["name"])]
+    if len(devs) > 1:
+        log("Connected: " + ", ".join(x["name"] for x in devs))
+        want = ask("Which one? (name)", devs[0]["name"], a.yes)
+        devs = [x for x in devs if x["name"] == want] or devs[:1]
+    return devs[0] if devs else None
+
+
+def existing_app_id(team, d):
+    """the app ID to build with when Sonic Riders is already installed, so the install updates that app (saves and
+    disc image stay): the one on the device, else the last build's. '' = the default (ios_build.BASE_ID.<team>).
+    Unsigned builds always use the plain ID: Sideloadly adds the player's team ID itself."""
+    if not team:
+        return ""
+    import ios_run
+    if d:
+        try:
+            ids = ios_run.installed_ids(d["id"])
+        except Exception:
+            ids = []
+        if ids:
+            pick = next((i for i in ids if i.endswith("." + team)), ids[0])
+            log("Sonic Riders is already on %s (%s): building with that ID, so it is updated in place." % (d["name"], pick))
+            if len(ids) > 1:
+                log("Other Sonic Riders apps on it: %s (left alone)." % ", ".join(i for i in ids if i != pick), "yellow")
+            return pick
+    info = os.path.join(ROOT, "build", "ios", "xcode", "build", "Release-iphoneos", "SonicRiders.app", "Info.plist")
+    prev = out(["plutil", "-extract", "CFBundleIdentifier", "raw", info]) if os.path.isfile(info) else ""
+    return prev if prev.startswith("net.srnative.sonicriders") else ""
+
+
+def write_renew_notes(ipa_dir, ipa, bundle, team):
     """'How to renew (every 7 days).txt' next to the .ipa: both ways, with this build's app ID"""
+    import ios_build
+    signed = bool(team)
+    default_ok = ios_build.ipa_bundle_id(bundle, team) != bundle  # Sideloadly's default appends .<team>
     lines = [
         "Sonic Riders on iPhone / iPad: renewing every 7 days",
         "",
@@ -152,11 +192,21 @@ def write_renew_notes(ipa_dir, ipa, bundle, signed):
             "YOU INSTALLED IT FROM THE MAC (the installer copied it to the device)",
             "  Either: connect the device, unlock it, and run \"Install Sonic Riders (iOS).command\" again; answer y",
             "          to installing and n to copying the disc image.",
-            "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above, open Advanced",
-            "          Options and UNTICK \"Use automatic bundle ID\" (ticked, Sideloadly makes a second app), then",
-            "          Start. The app keeps its ID: " + bundle,
-            "",
         ]
+        if default_ok:
+            lines += [
+                "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above with the same",
+                "          Apple ID, leave the settings as they are (\"Use automatic bundle ID\" ticked) and Start.",
+                "          Sideloadly adds your team ID and reaches the same app: " + bundle,
+                "",
+            ]
+        else:
+            lines += [
+                "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above, open Advanced",
+                "          Options and UNTICK \"Use automatic bundle ID\" (ticked, Sideloadly makes a second app), then",
+                "          Start. The app keeps its ID: " + bundle,
+                "",
+            ]
     lines += [
         "YOU INSTALLED IT WITH SIDELOADLY (or AltStore)",
         "  Connect the device, open Sideloadly, drag in the .ipa above with the same Apple ID and the same",
@@ -261,8 +311,11 @@ def main():
 
     # 6 -------------------------------------------------------------
     step(6, "Recompiling and building the app (10-20 minutes the first time)")
+    d = pick_device(team, a)
+    bundle = existing_app_id(team, d)
     conf = [sys.executable, "configure.py", "--target", "ios", "--sdl-src", sdl, "--moltenvk", mvk, "--imgui", imgui,
-            "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else [])
+            "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else []) + \
+        (["--bundle-id", bundle] if bundle else [])
     run("configure", conf)
     run("build the app", ["ninja"])
     ipa = os.path.join(ipa_dir, "SonicRiders.ipa")
@@ -275,27 +328,15 @@ def main():
     app = os.path.join(ROOT, "build", "ios", "xcode", "build", "Release-iphoneos", "SonicRiders.app")
     bundle = out(["plutil", "-extract", "CFBundleIdentifier", "raw", os.path.join(app, "Info.plist")])
     installed = False
-    d = None
-    devs = devices() if team else []
-    if team and not devs:
-        log("No iPhone/iPad found on the cable (connect it, unlock it, tap Trust; Developer Mode must be on).", "yellow")
-    if devs:
-        if a.device:
-            devs = [x for x in devs if a.device in (x["id"], x["name"])]
-        if len(devs) > 1:
-            log("Connected: " + ", ".join(x["name"] for x in devs))
-            want = ask("Which one? (name)", devs[0]["name"], a.yes)
-            devs = [x for x in devs if x["name"] == want] or devs[:1]
-        d = devs[0] if devs else None
-        if d and (a.install or ("yes" if ask("Install on %s? (y/n)" % d["name"], "y", a.yes).lower().startswith("y")
-                                else "no")) == "yes":
-            run("install the app on %s" % d["name"], [sys.executable, "tools/ios_run.py", "--device", d["id"], "install"])
-            installed = True
-            if ask("Copy your disc image to %s (1.4 GB, a few minutes; not needed again when you only renew)? (y/n)"
-                   % d["name"], "y", a.yes).lower().startswith("y"):
-                run("copy the disc image to %s" % d["name"],
-                    [sys.executable, "tools/ios_run.py", "--device", d["id"], "push-iso", iso])
-    renew = write_renew_notes(ipa_dir, ipa, bundle, signed=bool(team))
+    if d and (a.install or ("yes" if ask("Install on %s? (y/n)" % d["name"], "y", a.yes).lower().startswith("y")
+                            else "no")) == "yes":
+        run("install the app on %s" % d["name"], [sys.executable, "tools/ios_run.py", "--device", d["id"], "install"])
+        installed = True
+        if ask("Copy your disc image to %s (1.4 GB, a few minutes; not needed again when you only renew)? (y/n)"
+               % d["name"], "y", a.yes).lower().startswith("y"):
+            run("copy the disc image to %s" % d["name"],
+                [sys.executable, "tools/ios_run.py", "--device", d["id"], "push-iso", iso])
+    renew = write_renew_notes(ipa_dir, ipa, bundle, team)
     log()
     if installed:
         log("Done. Sonic Riders is on your %s." % ("iPad" if "iPad" in d["model"] else "iPhone"), "green")

@@ -1052,3 +1052,13 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   appends its team ID. The iPhone took the update with the old ID entered by hand. The Mac backed up all saves (iPhone, 3 iPads).
   Device IDs differ (iPad Pro plain `net.srnative.sonicriders`, others `.t<hash>`). Plan (Mac, own commit): reuse an
   installed app's ID; new installs use `<ipa ID>.<TEAMID>` = Sideloadly's default; Files-app save-copy section in INSTALL.md.
+- Stable app IDs (Mac). Sideloadly's default turned out to ALWAYS append ".<team>": an .ipa already carrying
+  `net.srnative.sonicriders.<team>` became `...<team>.<team>` (iPad Pro, user ran Sideloadly) [confirmed]. So the plan
+  changed: signed builds default to `<base>.<team>` and the .ipa gets the plain `<base>` ID (ios_build.ipa_bundle_id,
+  make_ipa rewrites Info.plist); setup_mac.py picks the device before building and reuses an installed
+  net.srnative.sonicriders* ID (else the last build's); renew notes say "defaults" or "untick" to match; INSTALL.md
+  has "Ended up with two Sonic Riders apps?" (Files app). Tested: devicectl install of `<base>.<team>` on the iPad
+  Pro, then Sideloadly with defaults and the `<base>` .ipa -> still one test app [confirmed]; both test apps
+  removed afterwards, the user's app, save and disc untouched. setup_mac's new functions checked against the iPad
+  Pro (plain ID), iPhone (`.t<hash>`) and no device (last build's ID) [confirmed]; a full setup_mac run (cold
+  test) not done yet [uncertain]. Older `.t<hash>` installs keep their ID (Sideloadly: untick).

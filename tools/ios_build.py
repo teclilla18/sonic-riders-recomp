@@ -6,7 +6,6 @@ static library from its source with SDL's own Xcode project, and then runs xcode
 needs (Personal Team, 7-day builds). Nothing here is game data; the .app it makes is (never publish it).
 """
 import glob
-import hashlib
 import os
 import re
 import shutil
@@ -28,6 +27,16 @@ def _run(cmd):
         return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return ""
+
+
+BASE_ID = "net.srnative.sonicriders"
+
+
+def ipa_bundle_id(bundle, team):
+    """the ID written into the .ipa for Sideloadly/AltStore: Sideloadly's default always appends ".<team ID>"
+    (tested 2026-11-09: an .ipa with <base>.<team> became <base>.<team>.<team>), so an app installed as
+    <base>.<team> gets an .ipa with <base>; any other ID stays as it is (Sideloadly: untick "automatic")"""
+    return bundle[:-len(team) - 1] if team and bundle.endswith("." + team) else bundle
 
 
 def find_team():
@@ -73,9 +82,10 @@ class Tools:
         self.team = "" if args.team == "none" else (args.team or find_team())
         print("ios: %s" % ("signed for Apple team %s" % self.team if self.team else
                            "no Apple team: an unsigned .ipa (Sideloadly / AltStore sign it with your Apple ID)"))
-        # the bundle ID must be unique across Apple: a per-team suffix keeps it out of the repository
-        self.bundle_id = args.bundle_id or ("net.srnative.sonicriders.t" + hashlib.sha1(self.team.encode()).hexdigest()[:8]
-                                            if self.team else "net.srnative.sonicriders")
+        # the bundle ID must be unique across Apple: <base>.<team ID>, the same ID Sideloadly's default
+        # ("Use automatic bundle ID") makes from the plain-ID .ipa, so both ways of installing reach one app
+        self.bundle_id = args.bundle_id or (BASE_ID + "." + self.team if self.team else BASE_ID)
+        self.ipa_id = ipa_bundle_id(self.bundle_id, self.team)
 
     def rel(self, p):
         return os.path.relpath(p, self.root).replace("\\", "/")
@@ -119,19 +129,23 @@ def add_build(n, t, objs, out, py):
             implicit=[proj + "/project.pbxproj", out + "/xcode/Info.plist"] + ([t.rel(t.icon)] if t.icon else []))
     # the .ipa (Payload/SonicRiders.app zipped) for sideloading tools that re-sign it (Sideloadly, AltStore)
     ipa = out + "/SonicRiders.ipa"
-    n.rule("ipa", "%s tools/ios_build.py ipa %s $out%s" % (py, app, (' "%s"' % t.ipa_dir) if t.ipa_dir else ""),
+    n.rule("ipa", "%s tools/ios_build.py ipa %s $out %s%s" % (py, app, t.ipa_id, (' "%s"' % t.ipa_dir) if t.ipa_dir else ""),
            description="IPA $out")
     n.build(ipa, "ipa", app + "/SonicRiders", implicit=["tools/ios_build.py"])
     n.default(ipa)
     return app + "/SonicRiders"
 
 
-def make_ipa(app, ipa, copy_dir=""):
-    """zip the signed .app as Payload/SonicRiders.app; optionally copy it to copy_dir (previous one kept as -prev)"""
+def make_ipa(app, ipa, bundle_id, copy_dir=""):
+    """zip the .app as Payload/SonicRiders.app with bundle_id (ipa_bundle_id; Sideloadly and AltStore re-sign it);
+    optionally copy it to copy_dir (previous one kept as -prev)"""
     tmp = ipa + ".tmp"
     shutil.rmtree(tmp, ignore_errors=True)
     os.makedirs(os.path.join(tmp, "Payload"))
-    subprocess.check_call(["ditto", app, os.path.join(tmp, "Payload", os.path.basename(app))])
+    dst_app = os.path.join(tmp, "Payload", os.path.basename(app))
+    subprocess.check_call(["ditto", app, dst_app])
+    subprocess.check_call(["plutil", "-replace", "CFBundleIdentifier", "-string", bundle_id,
+                           os.path.join(dst_app, "Info.plist")])
     if os.path.exists(ipa + ".part"):
         os.remove(ipa + ".part")
     subprocess.check_call(["ditto", "-c", "-k", "--norsrc", "--keepParent", "Payload", os.path.abspath(ipa + ".part")], cwd=tmp)
@@ -394,7 +408,7 @@ def make_icon(src, dst):
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "icon":  # ios_build.py icon <picture> <out.png>
         make_icon(sys.argv[2], sys.argv[3])
-    elif len(sys.argv) >= 4 and sys.argv[1] == "ipa":  # from build.ninja: ios_build.py ipa <app> <out.ipa> [copy dir]
-        make_ipa(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "")
+    elif len(sys.argv) >= 5 and sys.argv[1] == "ipa":  # from build.ninja: ios_build.py ipa <app> <out.ipa> <id> [copy dir]
+        make_ipa(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else "")
     else:
-        sys.exit("usage: ios_build.py ipa <SonicRiders.app> <out.ipa> [copy dir] | icon <picture> <out.png>")
+        sys.exit("usage: ios_build.py ipa <SonicRiders.app> <out.ipa> <bundle id> [copy dir] | icon <picture> <out.png>")
