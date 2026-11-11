@@ -20,7 +20,7 @@ Parameters (all optional; asked for when missing):
   -CopyIso yes|no    also copy the disc image to the SD card (the Switch build needs it there once)
   -DesktopShortcut yes|no   PC: also put a "Sonic Riders" shortcut on the desktop
   -Icon PATH         your own icon picture for PC / Android / the Switch HOME screen (.ico or .png; other
-                     pictures are converted) instead of the game's save icon
+                     pictures are converted) instead of the fan-made icon in setup\icon.png
   -HomeIcon yes|no   Switch: also make a HOME-screen icon (a forwarder .nsp); needs -Keys
   -Keys PATH         Switch HOME-screen icon: your console's prod.keys (dumped with Lockpick_RCM; read in
                      place, never copied)
@@ -241,12 +241,14 @@ if ($HomeIcon -eq "yes") {
         $Keys = (Resolve-Path -LiteralPath $Keys).Path
         Log "Keys: $Keys (read in place)"
         if (-not $Icon -and -not $Yes) {
-            if ((Ask "Use your own picture for the icon? Otherwise the game's memory card icon. (y/n)" "n") -match "^[yY]") {
+            if ((Ask "Use your own picture for the icon? Otherwise the Sonic Riders fan icon (setup\icon.png). (y/n)" "n") -match "^[yY]") {
                 $Icon = Pick-File "Select a picture for the icon (square, 256 x 256 or bigger looks best)" "Pictures|*.png;*.ico;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*"
             }
         }
     }
 }
+# no picture of your own: the fan-made icon shipped in setup\icon.png (by cedry2kio, see README credits)
+if (-not $Icon -and (Test-Path -LiteralPath (Join-Path $Root "setup\icon.png") -PathType Leaf)) { $Icon = Join-Path $Root "setup\icon.png" }
 if ($Icon) {
     if (-not (Test-Path -LiteralPath $Icon -PathType Leaf)) { Fail "Icon picture not found: $Icon" }
     $Icon = (Resolve-Path -LiteralPath $Icon).Path

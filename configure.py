@@ -401,8 +401,11 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("nacp", "%s/tools/bin/nacptool.exe --create \"Sonic Riders\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,
                description="NACP $out")
         n.build(OUT + "/sonicriders.nacp", "nacp")
-        n.rule("nro", "%s/tools/bin/elf2nro.exe $in $out --nacp=%s/sonicriders.nacp" % (dkp, OUT), description="NRO $out")
-        n.build(OUT + "/sonicriders.nro", "nro", exe, implicit=[OUT + "/sonicriders.nacp"])
+        # the Homebrew Menu icon: setup/icon_256.jpg (256 x 256 JPEG; the fan-made icon by cedry2kio, README credits)
+        nro_icon = "setup/icon_256.jpg" if os.path.isfile(os.path.join(ROOT, "setup/icon_256.jpg")) else ""
+        n.rule("nro", "%s/tools/bin/elf2nro.exe $in $out --nacp=%s/sonicriders.nacp%s" % (dkp, OUT, " --icon=" + nro_icon if nro_icon else ""),
+               description="NRO $out")
+        n.build(OUT + "/sonicriders.nro", "nro", exe, implicit=[OUT + "/sonicriders.nacp"] + ([nro_icon] if nro_icon else []))
         n.default(OUT + "/sonicriders.nro")
     if args.target == "host" and sdl_dll:
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
@@ -411,8 +414,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     if args.target == "android":
         dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
         apk = "build/android/sonicriders-%s.apk" % args.abi
-        # the app icon: your own (--icon), else the game's save icon from your disc (like the PC icon)
-        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "baserom/_Main.rel"
+        # the app icon: your own (--icon), else the fan-made icon in setup/icon.png, else the game's save icon
+        fan_icon = "setup/icon.png" if os.path.isfile(os.path.join(ROOT, "setup/icon.png")) else "baserom/_Main.rel"
+        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else fan_icon
         if not os.path.isfile(os.path.join(ROOT, app_icon)):
             print("configure: no app icon (%s not found); the APK gets Android's default icon" % app_icon)
             app_icon = ""

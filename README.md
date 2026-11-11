@@ -111,9 +111,12 @@ forks (`third_party/LICENSE-MPL-2.0`).
   [hacBrewPack](https://github.com/The-4n/hacBrewPack): the optional forwarder NSP.
 - [SDL2](https://www.libsdl.org/) and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw): the PC version.
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT): the settings menu; its layout follows [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD)'s settings overlay.
-- [AMD FidelityFX Super Resolution 1](https://github.com/GPUOpen-Effects/FidelityFX-FSR) (MIT): the PC
-  sharpening and upscaling (EASU, RCAS), ported to GLSL in `runtime/src/platform/host/fsr1_gl.h`.
+- [AMD FidelityFX Super Resolution 1](https://github.com/GPUOpen-Effects/FidelityFX-FSR) (MIT): the
+  sharpening and upscaling (EASU, RCAS), ported to GLSL in `runtime/src/platform/host/fsr1_gl.h` and
+  `runtime/shaders/vk_easu.frag` / `vk_rcas.frag`.
 - gamemasterplc's 16:9 Gecko code: the idea behind the widescreen option.
 - Banner image: fan art by an unknown artist. If it's yours, open an issue and we'll credit you or remove it.
+- Game icon (`setup/icon.png`): fan-made Sonic Riders icon by [cedry2kio](https://www.deviantart.com/cedry2kio) on
+  DeviantArt, used with credit. cedry2kio, if you'd like it changed or removed, open an issue and we'll do it right away.
 
 Sonic Riders is © SEGA. This project is not affiliated with SEGA.
