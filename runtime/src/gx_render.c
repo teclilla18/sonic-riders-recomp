@@ -70,7 +70,12 @@ static GxFrame* frame(void) {
         /* after the finish line (results screen: menu flag 0) the rank/name/time rows must stay together */
         menu_frames = ld32(GAME_MENU_FLAG) || ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED ? menu_frames + 1 : 0;
         int racing = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && menu_frames < 8;
-        g_frame->in_race = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE;
+        /* bloom: races only. Mode 8 alone stays on in menus (character select / Player Entry after a race,
+         * notes/game-addresses.md), so also the menu flag, 8 frames in a row to leave (it blips in races);
+         * the results screen (menu flag 0) keeps it */
+        static unsigned bloom_menu_frames;
+        bloom_menu_frames = ld32(GAME_MENU_FLAG) ? bloom_menu_frames + 1 : 0;
+        g_frame->in_race = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && bloom_menu_frames < 8;
         g_gx.xf_reg[GX_XR_WIDE_FLAGS] =
             g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (racing ? GX_WIDE_HUD_EDGES : 0u)
             : g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
