@@ -6,7 +6,7 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 
 **v0.7.4 released 2026-11-10** (tag on 039bd81; all five zips incl. iOS): iOS controller fix (pad A paused the race) + stable iOS app IDs. Cold Sandbox test skipped at the user's request [not tested cold].
 
-**v0.8.0 released 2026-11-11** (tag on 54997c5; zips replaced 2026-11-11 from 1a195a4 with the new "Icon 3" game icon on blue; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS after a setup fix: build\ made before the icon .ico): picture options on Linux (tested), Android (accepted, S23), Switch (accepted, OLED handheld 1785/614/2133). Fan icon by cedry2kio (README credit). v0.7.0 delisted (tag kept); 'it's out' posted in #19. **Next: Mac session for iOS** (test render_vk.c options on MoltenVK, turn on the PIC_* defines for SR_IOS, build the iOS zip with --ref 54997c5 or later and upload it to the v0.8.0 release, as the notes promise 'later today'). Then: MSAA + smooth lighting on Android/Switch; items 2-4 of the 2026-11-12 prompt (update popup, sharpness-restart check, custom music). Switch SD: test build as sonicriders.nro, user's old one as sonicriders.user-1109.nro.
+**v0.8.0 released 2026-11-11** (tag on 54997c5; PC/Switch/Android/Linux zips replaced twice on 2026-11-11, last from be45877 with the bloom fix 00d3861 + fan icon as the only default (cold Sandbox PC + Android PASS); iOS zip from 00d3861; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS after a setup fix: build\ made before the icon .ico): picture options on Linux (tested), Android (accepted, S23), Switch (accepted, OLED handheld 1785/614/2133). Fan icon by cedry2kio (README credit). v0.7.0 delisted (tag kept); 'it's out' posted in #19. **Next: Mac session for iOS** (test render_vk.c options on MoltenVK, turn on the PIC_* defines for SR_IOS, build the iOS zip with --ref 54997c5 or later and upload it to the v0.8.0 release, as the notes promise 'later today'). Then: MSAA + smooth lighting on Android/Switch; items 2-4 of the 2026-11-12 prompt (update popup, sharpness-restart check, custom music). Switch SD: test build as sonicriders.nro, user's old one as sonicriders.user-1109.nro.
 
 **v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: built on the Mac from 6db6158 with the re-dated entries, cold check PASS, uploaded (user approved); all 5 zips on the release. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
@@ -113,11 +113,6 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
-- **Bloom fix 00d3861 (Mac; bloom off in menus that keep race mode, e.g. character select after a race) is not in
-  the PC / Switch / Android v0.8.0 zips** (only iOS). PC check (SR_BLOOM=100 route, 2026-11-11): Player Entry no
-  bloom, race and results screen with bloom, Back to Menu -> Normal Race / Track Select / Player Entry after a race
-  no bloom (same brightness as before the race) [confirmed, frames]. PASS.
-  Then ask the user about a v0.8.1 for the other platforms.
 - **TOP PRIORITY (user, 2026-11-11): ring cap in races 100 -> 999.** Find the cap check(s), the HUD ring counter
   (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
   setting (default off?) on every platform.

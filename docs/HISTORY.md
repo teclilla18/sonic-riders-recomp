@@ -1145,3 +1145,19 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   untick "automatic bundle ID" and type that ID. iPhone wireless
   link failed (CoreDeviceError 4000 "Can't assign requested address", also on cable) until an Xcode update and a
   phone restart; error 4016 = not unlocked since restart.
+
+## 2026-11-11 (PC "Mike"): icons, bloom check, v0.8.0 zips replaced again
+
+- Save icon never a default any more (user): setup.ps1 no longer writes build\icon.ico from _Main.rel; configure.py
+  makes build/icon_default.ico from setup/icon.png (default_pc_icon); setup_linux.py and the Switch forwarder default
+  to setup/icon.png (ca93fdc); iOS the same on the Mac (42c9217).
+- PC check of the Mac's bloom fix 00d3861 (SR_BLOOM=100, scripted 3-lap Metal City Free Race, minimized): Player
+  Entry before the race and Normal Race / Track Select / Player Entry after "Back to Menu" without bloom (post-race
+  Player Entry mean RGB equal to pre-race), race and results screen with bloom [confirmed, frames].
+- User: keep it on v0.8.0. PC/Switch/Android/Linux zips rebuilt from be45877 and replaced on the release (tag stays
+  on 54997c5); cold Sandbox PC (2 installs, one with a space; fan icon in the log) and Android PASS [confirmed];
+  downloaded PC zip = built zip [confirmed, hash]; release notes got a bloom line. Old zips in
+  build/old/release-v0.8.0-before-bloomfix/.
+- Guard: PAST_ART history allow-list from the Heroes repo (a09bbbb, user's request) as 71bcfd2, committed with the
+  noreply identity; GitHub's history scan green again (it had failed on old versions of the icons and stick knob).
+- S23: APK v0.8.0-4-g4a24700a installed over USB. Next-session prompts no longer go in STATE.md (user).
