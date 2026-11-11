@@ -10,7 +10,7 @@ screen starts the .nro as an application (full memory, no need to hold R over a 
 - Your console's prod.keys (dumped with Lockpick_RCM) are needed to pack an NSP. They are read where they are by
   hacBrewPack, never copied, and the NSP is yours only: never share it.
 - --icon: your own picture (.png or .ico; any size, square looks best; it becomes a 256 x 256 JPEG). Without it,
-  the game's memory card icon from your own disc (baserom/_Main.rel) is used.
+  the fan-made icon in setup/icon.png is used (by cedry2kio, README credits).
 - --cc: a C compiler for this PC, used once for hacBrewPack (llvm-mingw's clang on Windows, "zig cc" or cc on
   Linux). --devkitpro: devkitPro with devkitA64, libnx and switch-tools (the setup's own).
 
@@ -330,17 +330,17 @@ def main():
     ap.add_argument("--devkitpro", required=True)
     ap.add_argument("--cc", default="", help="host C compiler command for hacBrewPack (e.g. a clang path)")
     ap.add_argument("--keys", default="", help="your console's prod.keys")
-    ap.add_argument("--icon", default="", help="your picture (.png/.ico); default: the game's save icon")
+    ap.add_argument("--icon", default="", help="your picture (.png/.ico); default: setup/icon.png")
     ap.add_argument("--out", default=os.path.join(ROOT, "build", "nsp", "SonicRiders.nsp"))
     ap.add_argument("--work", default=os.path.join(ROOT, "build", "nsp", "work"))
     ap.add_argument("--icon-only", metavar="JPG", help="only write the icon JPEG (to check a picture)")
     ap.add_argument("--print-hashes", action="store_true", help="(maintainers) print the sources' tree hashes")
     a = ap.parse_args()
     try:
-        icon_src = a.icon or os.path.join(ROOT, "baserom", "_Main.rel")
+        icon_src = a.icon or os.path.join(ROOT, "setup", "icon.png")
         if not os.path.isfile(icon_src):
             raise Error("icon picture not found: %s" % icon_src)
-        log("Icon: %s" % (a.icon or "the game's memory card icon from your disc"))
+        log("Icon: %s" % (a.icon or "the Sonic Riders fan icon (setup/icon.png)"))
         jpg = jpeg(icon_pixels(icon_src))
         if a.icon_only:
             open(a.icon_only, "wb").write(jpg)

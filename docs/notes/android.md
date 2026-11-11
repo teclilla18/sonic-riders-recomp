@@ -66,8 +66,8 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
   Quit inside the ImGui frame now trigger a redraw (`overlay_image`, `open_before`); no Fullscreen on Android;
   Controls tab text for touch + pads.
 - App icon: `tools/android_icon.py` makes an adaptive icon (foreground 432 px with the picture in the middle 288 px,
-  background of its edge colour) at APK build time from `baserom/_Main.rel` (the save icon without its 2-px frame,
-  whole-pixel scaled), or from `configure.py --icon <.ico|.png>` / setup `-Icon` (also used for the PC .exe icon).
+  background of its edge colour) at APK build time from `setup/icon.png` (the fan icon by cedry2kio; since 2026-11-11 the save icon is never
+  used as a default), or from `configure.py --icon <.ico|.png>` / setup `-Icon` (also used for the PC .exe icon).
   aapt2 compiles it (`res.zip`) and the manifest gets `android:icon` through `@ICON@`.
 - Triggers (PC and Android, input_sdl.c `trigger`): per pad, the deepest press is learned (start 26000 of 32767);
   analog = value scaled to that peak; digital L/R click from 85% of the peak (analog 255 while clicked). Log:

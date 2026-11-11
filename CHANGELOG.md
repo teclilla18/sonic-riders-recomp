@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **The fan-made icon is the only default icon.** The PC program, Android app, Linux desktop entry and Switch
+  HOME-screen icon no longer fall back to the game's save icon from your disc; without a picture of your own they
+  always use the fan icon (by cedry2kio). Developers running `configure.py` without `--icon` get it too.
+
 ## v0.8.0 (2026-11-11)
 
 - **Picture options on Switch, Android and Linux / Steam Deck.** The settings menu's Display tab now has the PC's

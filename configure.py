@@ -52,8 +52,8 @@ ap.add_argument("--bundle-id", default="", help="ios: app bundle ID (default: ne
 ap.add_argument("--moltenvk", default="", help="ios: MoltenVK folder holding include/ and static/ (default build/ext/MoltenVK/MoltenVK)")
 ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
-ap.add_argument("--icon", default="", help="your own program icon (.ico; android and ios also .png) instead of the game's save icon "
-                "(PC: build/icon.ico from the setup; android: from baserom/_Main.rel). Keep it out of git unless it is your own art")
+ap.add_argument("--icon", default="", help="your own program icon (.ico; android and ios also .png) instead of the fan-made icon in "
+                "setup/icon.png. Keep it out of git unless it is your own art")
 ap.add_argument("--android-app", choices=["game", "probe"], default="game", help="android: the game, or the milestone 1 probe APK")
 args = ap.parse_args()
 
@@ -133,6 +133,22 @@ def shader_key_files():
     (build/shaderkeys/*.txt, e.g. keys a console reported that the list lacks)"""
     files = ["config/GXEE8P/shader_keys.txt"] if os.path.exists(os.path.join(ROOT, "config/GXEE8P/shader_keys.txt")) else []
     return files + sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "build/shaderkeys/*.txt")))
+
+
+def default_pc_icon():
+    """build/icon_default.ico from setup/icon.png (16-256 px PNGs in one .ico), or "" if the picture is missing"""
+    src, dst = os.path.join(ROOT, "setup", "icon.png"), os.path.join(ROOT, "build", "icon_default.ico")
+    if not os.path.isfile(src):
+        return ""
+    if not os.path.isfile(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        import android_icon
+        import make_icon
+        px = android_icon.load(src)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "wb") as f:
+            f.write(make_icon.ico([android_icon.resample(px, n) for n in (16, 32, 48, 64, 128, 256)]))
+    return "build/icon_default.ico"
 
 
 def cmd_path(p, program=False):
@@ -381,9 +397,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         o = "%s/obj/imgui_%s.o" % (OUT, src)
         n.build(o, "cxx", IMGUI + "/" + src, variables={"extra": "-O2 -w"})
         objs.append(o)
-    # optional program icon (PC, llvm-mingw): build/icon.ico if present. It lives in build/ (never
-    # committed); the setup or the user puts it there.
-    icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "build/icon.ico"
+    # program icon (PC, llvm-mingw): your own .ico (--icon), else build/icon_default.ico, made here from the
+    # fan-made icon in setup/icon.png (by cedry2kio, README credits)
+    icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else default_pc_icon()
     if args.target == "host" and args.toolchain == "mingw" and os.path.isfile(os.path.join(ROOT, icon)):
         rc = OUT + "/gen/icon.rc"
         with open(os.path.join(ROOT, rc), "w", encoding="utf-8") as f:
@@ -414,9 +430,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
     if args.target == "android":
         dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
         apk = "build/android/sonicriders-%s.apk" % args.abi
-        # the app icon: your own (--icon), else the fan-made icon in setup/icon.png, else the game's save icon
-        fan_icon = "setup/icon.png" if os.path.isfile(os.path.join(ROOT, "setup/icon.png")) else "baserom/_Main.rel"
-        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else fan_icon
+        # the app icon: your own (--icon), else the fan-made icon in setup/icon.png
+        app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "setup/icon.png"
         if not os.path.isfile(os.path.join(ROOT, app_icon)):
             print("configure: no app icon (%s not found); the APK gets Android's default icon" % app_icon)
             app_icon = ""

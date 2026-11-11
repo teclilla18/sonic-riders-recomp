@@ -395,13 +395,8 @@ def main():
             log("Linked the disc image into baserom/ (a symbolic link: keep the image where it is).")
     os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
     icon = os.path.join(ROOT, "setup", "icon.png")  # the fan-made icon by cedry2kio (README credits)
-    r = subprocess.CompletedProcess([], 0)
-    if not os.path.isfile(icon):  # else the game's own save icon, from your disc
-        icon = os.path.join(ROOT, "build", "icon.png")
-        r = subprocess.run([sys.executable, "-I", "tools/make_icon.py", "baserom/_Main.rel", "build/icon.ico", "--preview", "build/icon.png"],
-                           cwd=ROOT, capture_output=True, text=True)
-    if r.returncode != 0:
-        log("Could not make the program icon (%s); the game works without it." % (r.stderr.strip() or r.stdout.strip()), "yellow")
+    if not os.path.isfile(icon):
+        log("No program icon (setup/icon.png is missing); the game works without it.", "yellow")
         icon = ""
 
     # 4 -------------------------------------------------------------

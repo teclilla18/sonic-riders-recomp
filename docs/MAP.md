@@ -64,7 +64,7 @@ vk_*.frag / vk_quad.vert: Vulkan helpers (copies, fills, touch controls).
 | Android APK steps (no Gradle), icon into resources | tools/android_build.py (`step_apk`, `add_apk`) |
 | Android app icon | tools/android_icon.py |
 | Phone test runs over adb | tools/android_run.py |
-| PC icon from the save icon | tools/make_icon.py |
+| Program icons (default `setup/icon.png`; PC .ico made in configure.py `default_pc_icon`) | configure.py, tools/android_icon.py, tools/make_icon.py (.ico/.png writers) |
 | Touch pictures into a header | tools/embed_icons.py (`decode_png`) |
 | Recompiler | tools/recomp/gcrecomp.py, ppc2c.py |
 | Game-data guard | tools/check_no_game_data.py (`OWN_ART`) |

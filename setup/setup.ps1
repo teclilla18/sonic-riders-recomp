@@ -470,16 +470,6 @@ Step "4/7  Extracting the game code from your disc image"
 $baserom = Join-Path $Root "baserom"
 New-Item -ItemType Directory -Force -Path $baserom | Out-Null
 Run "extract main.dol and _Main.rel" $python @("-I", "tools\extract_iso.py", $Iso, "baserom", "--no-verify-iso")
-if ($doPc) {
-    # the PC program's icon: the game's own save icon, from your disc (configure.py builds it in)
-    New-Item -ItemType Directory -Force -Path (Join-Path $Root "build") | Out-Null
-    $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-    $out = (& $python -I (Join-Path $Root "tools\make_icon.py") (Join-Path $baserom "_Main.rel") (Join-Path $Root "build\icon.ico") 2>&1 | ForEach-Object { "$_" }) -join " "
-    $code = $LASTEXITCODE
-    $ErrorActionPreference = $old
-    Write-LogFile "  $out"
-    if ($code -ne 0) { Log "Could not make the program icon ($out); the game works without it." "Yellow" }
-}
 
 Step "5/7  Analysing the game code"
 Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P")
@@ -524,7 +514,7 @@ if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
         $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore, "--imgui", $imgui)
-        if ($Icon) { $andArgs += @("--icon", $Icon) }  # else the save icon from baserom\_Main.rel
+        if ($Icon) { $andArgs += @("--icon", $Icon) }  # setup\icon.png unless you picked your own
         Run "configure (Android, $a)" $python $andArgs
         Run "build the Android APK ($a; this takes a while)" $ninja @()
         $apk = Join-Path $Root "build\android\sonicriders-$a.apk"

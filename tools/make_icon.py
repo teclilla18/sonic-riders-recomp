@@ -1,4 +1,7 @@
-"""Make the PC program icon from the player's own game files: the game's memory card save icon.
+"""PNG and .ico writers for the program icons (configure.py, android_icon.py, launcher_icon.py).
+
+Its command line (the save-icon decoder) is no longer used by any build: since 2026-11-11 every default icon
+is setup/icon.png. Kept as a tool:
 
     python tools/make_icon.py baserom/_Main.rel build/icon.ico [--preview PNG]
 
