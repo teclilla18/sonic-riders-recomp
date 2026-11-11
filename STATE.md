@@ -115,7 +115,8 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 - **Bloom fix 00d3861 (Mac; bloom off in menus that keep race mode, e.g. character select after a race) is not in
   the PC / Switch / Android v0.8.0 zips** (only iOS). PC check (SR_BLOOM=100 route, 2026-11-11): Player Entry no
-  bloom, race and results screen with bloom [confirmed, frames]; character select after a race: rerun pending.
+  bloom, race and results screen with bloom, Back to Menu -> Normal Race / Track Select / Player Entry after a race
+  no bloom (same brightness as before the race) [confirmed, frames]. PASS.
   Then ask the user about a v0.8.1 for the other platforms.
 - **TOP PRIORITY (user, 2026-11-11): ring cap in races 100 -> 999.** Find the cap check(s), the HUD ring counter
   (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
