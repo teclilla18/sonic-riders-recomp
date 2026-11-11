@@ -65,7 +65,22 @@ OWN_ART = {
 }
 
 
-def check(path, data):
+# Earlier versions of approved pictures, accepted only by --history (they sit in old commits; GitHub Actions scans
+# every version ever committed). Fan art the project uses with credit (README credits): the banner (public fan art,
+# the user's choice, 2026-11-07) and cedry2kio's game icon (the user's OK, 2026-11-10); and the maintainer's own
+# touch-control art. Committing any of these again as a new file is still refused unless it is in OWN_ART.
+PAST_ART = {
+    "docs/images/banner.jpg": {"54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b"},
+    "launcher/banner.jpg": {"a1d51fb7890668be5dfd126311b946aec8744339"},
+    "setup/icon.png": {"b84f997daba5df2563d0c3526cf633aa87151ebf", "b42362f551138986cd53dda64721510c101a80e2"},
+    "setup/icon_256.jpg": {"4ab58b2f4da4418a9febadea57937eae7f2da5a6", "849b075587a60443ed7ac41ab4cbf3f61736b4a0"},
+    "android/touch_icons/stick_knob.png": {"0c95f1650e2502ae0522a3da1351c9961b19b472"},
+}
+
+
+def check(path, data, past=False):
+    if past and hashlib.sha1(data).hexdigest() in PAST_ART.get(path, ()) and (data[:8] == b"\x89PNG\r\n\x1a\n" or data[:3] == b"\xff\xd8\xff") and len(data) <= MAX_BYTES:
+        return []
     if OWN_ART.get(path) == hashlib.sha1(data).hexdigest() and (data[:8] == b"\x89PNG\r\n\x1a\n" or data[:3] == b"\xff\xd8\xff") and len(data) <= MAX_BYTES:
         return []
     problems = []
@@ -135,7 +150,7 @@ def main():
     for name, get in items:
         if name.replace("\\", "/") == "tools/check_no_game_data.py":
             continue
-        for p in check(name, get()):
+        for p in check(name, get(), past=(mode == "--history")):
             print("refused: %s: %s" % (name, p))
             bad += 1
     if bad:
