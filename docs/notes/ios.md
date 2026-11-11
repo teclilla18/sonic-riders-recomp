@@ -162,6 +162,9 @@ First-boot findings [confirmed on the iPhone]:
 
 ## Release (v0.7.0 onward)
 
+- v0.7.4 (2026-11-10, tag 039bd81) is the first release with the pad fix (keyboard ignored while a controller is
+  open) and the stable app IDs ("App IDs" below). v0.7.0-v0.7.3 have no iOS zip listed on GitHub.
+
 - Players: `SonicRiders-iOS-Setup-<ver>.zip` (`tools/make_release.py --flavor ios`): "Install Sonic Riders
   (iOS).command" runs `tools/setup_mac.py` (7 steps: disc check, Xcode + Metal Toolchain + Homebrew ninja/shaderc
   + Apple ID, pinned downloads from setup/toolchain.json "mac", extract, dtk, configure + ninja, install).

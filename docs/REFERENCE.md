@@ -13,6 +13,8 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/architecture.md](notes/architecture.md) | Reference | project goal, GLSL (uam) rules, device/HLE boundary, shader cache plan, architecture decisions, SDK map, naming |
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |
 | [notes/ultrawide-fov.md](notes/ultrawide-fov.md) | Plan | ultrawide without stretching (fit-window mode, wider EFB, 2D at 4:3 proportions) and a FOV setting; FOV input of `fn_800645DC` |
+| [notes/picture-options-port.md](notes/picture-options-port.md) | Draft | PC picture options on Linux / Android / Switch: what exists, agreed order, Android (Vulkan) pass design |
+| [notes/reference-projects.md](notes/reference-projects.md) | Reference | other recompilation projects we borrow ideas from: what each is, what was taken, license cautions |
 | [notes/launcher.md](notes/launcher.md) | Reference | Windows launcher: build, pages, settings, install flow, SR_LAUNCHER_SHOT |
 | [notes/plans-2026-11.md](notes/plans-2026-11.md) | Plan | look-back camera, nitrous-style boost toggle, windowed launcher, building on Linux/Deck/Android, custom icons per device |
 | [notes/boost-effect.md](notes/boost-effect.md) | Plan | NFS-style boost camera (FOV kick, pull-back, edge radial blur) at boost levels 2/3; research on speed cues; steps |

@@ -1063,6 +1063,12 @@ to v0.7.2 by hand. Not tested: the click-through in a real launcher from v0.7.2 
   Pro (plain ID), iPhone (`.t<hash>`) and no device (last build's ID) [confirmed]; a full setup_mac run (cold
   test) not done yet [uncertain]. Older `.t<hash>` installs keep their ID (Sideloadly: untick).
 
+## 2026-11-10: v0.7.4 (iOS controllers, stable app IDs)
+
+Released: tag v0.7.4 on 039bd81, five zips (PC, Switch, Android, Linux, iOS from the Mac). Contents: the iOS pad fix
+(pad A paused the race; accepted on the iPad Pro, entry above) and stable iOS app IDs. The cold Sandbox test was
+skipped at the user's request, so this release was not tested cold [not tested].
+
 ## 2026-11-10: GitHub shows the last 5 releases
 
 User: "I want people to be able to see the last 5 releases from the most recent one" (replaces the only-latest rule).
@@ -1070,3 +1076,12 @@ v0.7.0, v0.7.1, v0.7.2, v0.7.3 re-created from their kept tags with `--latest=fa
 launcher's update check is unchanged), notes from CHANGELOG. Zips re-uploaded from build/old and build/release; each
 zip's VERSION names its tag's commit [confirmed]. Not restored: v0.7.1's zips (not kept; release has notes only) and
 the iOS zips of all four (made on the Mac). From now on: publish the new release, delete the one that falls to 6th.
+
+## 2026-11-10 (night): picture options for every platform, plan only
+
+User's task: the PC F1 > Display set on Linux/Deck, Android and Switch (replaces "PC only"). Session ended early
+(model change) with the survey and plan done, no feature code. Findings: Linux builds the same render_gl.c and menu
+block, so it already has everything [confirmed, code]; Android/Switch have only 1x/1.5x/2x; MSAA and per-pixel
+lighting are the large items (lighting needs lit variants of the specialized shaders). Order agreed by the user:
+Linux check, shared menu, Android (resolution, FSR 1, colour, bloom), Switch the same, then MSAA, then lighting.
+Design: notes/picture-options-port.md. Linux: the WSL run with captures was started and skipped at the user's request [not tested].

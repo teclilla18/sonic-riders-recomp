@@ -1,8 +1,12 @@
-# State (2026-11-09)
+# State (2026-11-10)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
+
+**v0.7.4 released 2026-11-10** (tag on 039bd81; all five zips incl. iOS): iOS controller fix (pad A paused the race) + stable iOS app IDs. Cold Sandbox test skipped at the user's request [not tested cold].
+
+**Now (2026-11-10; release when done, announced for 2026-11-12 in Discussion #19):** the PC picture options go to Linux/Steam Deck, Android and Switch as options with light defaults (replaces "PC only"; iOS later). Plan, agreed order and the Android design: notes/picture-options-port.md. **Nothing implemented yet** (session ended early for a model change). Linux already has the whole set (same GL renderer, same menu block) [confirmed, code]; the WSL run with captures was started and skipped at the user's request [not tested]. Boost camera effect: paused on local branch `boost-fx` (not pushed, does not compile; must not be in the release).
 
 **v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: built on the Mac from 6db6158 with the re-dated entries, cold check PASS, uploaded (user approved); all 5 zips on the release. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,
@@ -140,3 +144,16 @@ Console: overclocked unless the test is about stock clocks (say which). Build fr
 - [ ] Story mode: watch one cutscene through and skip one with START; check the monitor (#4).
 - [ ] A single sideways Joy-Con as player 1 and as player 2.
 - [ ] Copy back `sonicriders.log`, `perftest.json`, `shader_keys.txt` (add new keys to the local key set).
+
+## Next session
+
+```
+Continue task 1: bring the PC picture options (F1 > Display) to Linux/Steam Deck, Android and Switch; release when tested and played by me.
+Read docs/notes/picture-options-port.md first: it has the agreed order and the Android (render_vk.c) design; no feature code exists yet.
+Work on main in the sr-main worktree (never dx-private). Start with the Linux check: ~/sr in WSL already has build/host-linux/sonicriders;
+capture a demo-race frame with options off and on (SR_SCALE, SR_MSAA, SR_BLOOM, SR_SHARPNESS, SR_CHARLIGHT; SR_MINIMIZED=1).
+Then the shared menu block (menu.cpp tab_display) and Android: resolution radio, FSR 1, colour, bloom; ask me to connect the phone to test with adb taps.
+Then the same four on Switch (uam rules, per_warp_scratch 0, /hw-test with mode, clocks and [perf] per feature on/off). MSAA and character lighting last.
+Release steps after I have played it: cold Sandbox test, zips, notes (iOS later), delete the 6th-newest release (keep its tag), reply in Discussion #19.
+Unproven: everything; only the survey and plan are done.
+```
