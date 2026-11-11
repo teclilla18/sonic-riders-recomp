@@ -91,8 +91,6 @@ Last hardware test: 2026-11-07 afternoon (OLED handheld 1785/614/2133, switch-re
 ## Wish list / paused
 
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
-Ring cap in races 100 -> 999 (user, 2026-11-11: explore; find the cap check, the HUD digit count and what rings feed:
-level-ups, air, ring-gear boosts).
 PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
@@ -108,6 +106,9 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
+- **TOP PRIORITY (user, 2026-11-11): ring cap in races 100 -> 999.** Find the cap check(s), the HUD ring counter
+  (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
+  setting (default off?) on every platform.
 - **PC freeze with NVIDIA ShadowPlay recording** (2026-11-08, user): froze loading a race after character select.
   Retest with logging + recording: no freeze, not reproduced [uncertain]. If it recurs: keep the hung process,
   inspect its threads. Workaround given: OBS Game Capture. (HISTORY 2026-11-08 late night)
