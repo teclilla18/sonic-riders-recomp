@@ -8,6 +8,11 @@ Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
+| Original | This port (PC, 21:9) |
+|:---:|:---:|
+| <a href="docs/images/compare/original-1.jpg"><img src="docs/images/compare/original-1.jpg" alt="Metal City race start in the original game, 4:3 with black bars, 30 fps"></a> | <a href="docs/images/compare/recomp-1.jpg"><img src="docs/images/compare/recomp-1.jpg" alt="The same race start in this port, ultrawide"></a> |
+| <a href="docs/images/compare/original-2.jpg"><img src="docs/images/compare/original-2.jpg" alt="Metal City stage intro in the original game, 4:3"></a> | <a href="docs/images/compare/recomp-2.jpg"><img src="docs/images/compare/recomp-2.jpg" alt="The same Metal City intro in this port, ultrawide"></a> |
+
 > [!IMPORTANT]
 > **Switch:** no overclock needed for a steady 30 fps: at stock clocks races run at 30 fps, and
 > the *60 fps* setting gives 60 in lighter parts of a race and 30 in the busiest ones. A steady 60 still

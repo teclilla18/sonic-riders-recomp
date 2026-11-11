@@ -52,6 +52,11 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 OWN_ART = {
     "docs/images/banner.jpg": "54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b",  # README banner (fan art, user's choice, 2026-11-09)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
+    # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four
+    "docs/images/compare/original-1.jpg": "4bd5401024ca6f240715dc878434d6d298f59421",
+    "docs/images/compare/recomp-1.jpg": "0c6a55e5adb65b61a34af262b847ada0e7df3a8e",
+    "docs/images/compare/original-2.jpg": "12b047881bffee3a6474c4d276a37ad03c827d6b",
+    "docs/images/compare/recomp-2.jpg": "fcd82ec1a09589caf26a55fcaf501e0f7bd4cdde",
     "launcher/icon_256.png": "80541e60eb82d9440c001da3bc4c7240bda2b111",  # launcher icon (user's ChatGPT art, 2026-11-09)
     "launcher/icon_32.png": "24e3018e7e6651be4cbba8228f81364bf9d0a70e",
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
