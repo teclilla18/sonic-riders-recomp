@@ -1,4 +1,4 @@
-# State (2026-11-10)
+# State (2026-11-11)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -6,7 +6,7 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 
 **v0.7.4 released 2026-11-10** (tag on 039bd81; all five zips incl. iOS): iOS controller fix (pad A paused the race) + stable iOS app IDs. Cold Sandbox test skipped at the user's request [not tested cold].
 
-**Now (2026-11-10; release when done, announced for 2026-11-12 in Discussion #19):** the PC picture options go to Linux/Steam Deck, Android and Switch as options with light defaults (replaces "PC only"; iOS later). Plan, agreed order and the Android design: notes/picture-options-port.md. **Nothing implemented yet** (session ended early for a model change). Linux already has the whole set (same GL renderer, same menu block) [confirmed, code]; the WSL run with captures was started and skipped at the user's request [not tested]. Boost camera effect: paused on local branch `boost-fx` (not pushed, does not compile; must not be in the release).
+**v0.8.0 (to release 2026-11-11, announced in Discussion #19): picture options on Linux, Android, Switch** (HISTORY 2026-11-10/11, notes/picture-options-port.md). Linux has everything [tested, WSL]; Android: resolution 1x/1.5x/2x, FSR 1, bloom, colour + finger scrolling in the menu [accepted, S23]; Switch: FSR 1, bloom, colour [accepted, OLED handheld 1785/614/2133; GPU 1x race 6.9 ms off, 13.2 ms all on, 60 fps]. Game icon = cedry2kio's fan icon (setup/icon.png, README credit). Not in it: MSAA + smooth lighting on Android/Switch, iOS (Mac session: test render_vk.c options + iOS zip). Release steps left: user types `/release 0.8.0` (cold Sandbox PC + Android, zips, publish, delete v0.7.0 from the list, keep tag, reply in #19).
 
 **v0.7.3 released 2026-11-09** (tag on 6db6158): launcher update fix. robocopy skipped same-size, same-time files and every zip used one fixed date, so updating never replaced VERSION (the update was offered again forever). Fix: robocopy /IS /IT /IM, zip entries carry the commit time (so v0.7.1/v0.7.2 launchers update correctly to v0.7.3). Cold Sandbox PC + Android PASS. Zips replaced the same day with entry dates one day before the commit (UTC dates were in the future west of UTC: extra ninja rebuilds). iOS zip: built on the Mac from 6db6158 with the re-dated entries, cold check PASS, uploaded (user approved); all 5 zips on the release. v0.7.2 (Mac launcher) delisted, tag kept. **Accepted** 2026-11-09: the user updated a v0.7.2 Switch installer folder to v0.7.3 with DOWNLOAD AND INSTALL ("worked beautifully").
 Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the PC picture options (1x-4x, MSAA,

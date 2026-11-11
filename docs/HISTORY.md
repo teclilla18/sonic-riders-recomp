@@ -1085,3 +1085,26 @@ block, so it already has everything [confirmed, code]; Android/Switch have only 
 lighting are the large items (lighting needs lit variants of the specialized shaders). Order agreed by the user:
 Linux check, shared menu, Android (resolution, FSR 1, colour, bloom), Switch the same, then MSAA, then lighting.
 Design: notes/picture-options-port.md. Linux: the WSL run with captures was started and skipped at the user's request [not tested].
+
+## 2026-11-10/11 (night): picture options on Linux, Android, Switch; fan icon; phone menu scrolling
+
+- Menu: `PIC_*` defines per platform in menu.cpp (an option shows only where its renderer does it). PC/Linux all;
+  Android and Switch: resolution 1x/1.5x/2x, Sharpness (FSR 1), Bloom, Colour. MSAA and smooth character lighting
+  stay PC/Linux (MSAA needs a resolve before every EFB copy; lighting needs lit variants of every specialized shader).
+- Linux [tested]: WSL build, perf-test route, off vs 3x + MSAA 4 + bloom + FSR + lighting + Vivid: frames right.
+- Android (render_vk.c) [accepted: "Absolutely gorgeous on my phone. FPS was more than acceptable. Approved."]: S23
+  Ultra, 1x, fit-window: demo 1P 59.4 fps off / 57.9 with bloom 60 + Vivid + FSR 60 (854x480 -> 2562x1440); GPU about
+  +8 ms in menus (FSR at 1440p), +2-3 ms in races. Menu taps (adb, wireless) change and save the options.
+- Phone menu could not be scrolled by finger (the Display tab is taller than the screen): `touch_scroll()` (a
+  vertical drag scrolls and lets go of the widget it started on) [tested, adb swipes; accepted with the above].
+- Switch (render_deko.c, Vulkan quad shaders built for deko3d with `QUAD_DK`, uniform buffer 3) [accepted: 60 and
+  pretty for the most part, dips in heavy areas; 2x suits 30 fps]. OLED handheld, overclocked 1785 / 614 / 2133,
+  1x, demo 1P GPU per frame: off 6.9 ms, bloom + Vivid 9.0 ms, + FSR 13.2 ms; game 59.94 fps in all (switch-remote
+  perf-test runs). Hardware bug found: FSR's integer clamp + texelFetch read only the first column on the console
+  (horizontal stripes; fine in Eden and on Vulkan); float coordinates + nearest sampler fixed it. All dksh
+  `per_warp_scratch 0`.
+- Game icon: cedry2kio's fan-made round icon (DeviantArt) on a black background, `setup/icon.png` (+ 256 JPEG for the
+  NRO), the default in setup.ps1 / setup_linux.py / configure.py; README credit; guard allow-list (user's OK).
+  The launcher keeps the AI art icon.
+- `SR_BLOOM` / `SR_GRADE` moved to settings.c (all platforms); `SR_RES=0-2` added.
+

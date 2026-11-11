@@ -1,6 +1,6 @@
 # Picture options on Linux, Android and Switch (plan, 2026-11-10)
 
-Kind: Draft (design, nothing implemented yet). Goal (user, 2026-11-10): the PC's F1 > Display set (resolution,
+Kind: Working note (Linux, Android, Switch done for v0.8.0; MSAA, lighting, iOS open). Goal (user, 2026-11-10): the PC's F1 > Display set (resolution,
 anti-aliasing, FSR 1, bloom, colour presets + sliders, character lighting) on every platform as options, same names
 and saved keys, light defaults. Replaces the old "PC only" rule. iOS later (Mac session).
 
@@ -58,8 +58,20 @@ shaders listed in `embed_shaders.py` `PROGRAMS_VK` + `configure.py` `shader_src`
 - Shaders: `vk_bright`, `vk_blur` (also the screen-blend composite, `color.z` = tint), `vk_grade`, `vk_easu`,
   `vk_rcas`; quad kinds `Q_BRIGHT`..`Q_RCAS`; `post_process` / `fsr_present` in render_vk.c.
 
-## Switch (render_deko.c), to design
+## Switch (render_deko.c), done 2026-11-11
 
-Same passes as dksh (`PROGRAMS_DK`); presents with `dkCmdBufBlitImage` today, so FSR needs a shader present path.
-Rules: no runtime vector / local-array indexing, every dksh `per_warp_scratch 0`. Test on hardware with mode,
-clocks and `[perf]` per feature on and off.
+- The Vulkan quad shaders are built for deko3d too (`embed_shaders.py` `PROGRAMS_DK` `dk_*`, define `QUAD_DK`):
+  parameters in uniform buffer 3 (GX uses 0-2), `gl_VertexID`, clip y flipped. `pp_quad` binds them; `gx_rebind`
+  binds the GX setup again after a pass (render target, shaders, vertex state, `apply_state`).
+- Images from the image pool on first use at fixed sizes (bloom levels at the largest EFB, scene = EFB, FSR =
+  1280x720), each with an image descriptor; the EFB gets a descriptor for sampling.
+- FSR replaces the 2D-engine blit when Sharpness is on. **Hardware rule found:** FSR's integer clamp + `texelFetch`
+  read only the first column on the console (Eden and Vulkan were fine); lookups now use float coordinates with the
+  nearest sampler (`tx()` in vk_easu/vk_rcas).
+- Cost (OLED handheld 1785/614/2133, 1x, demo 1P): GPU per frame off 6.9 ms, bloom + Vivid 9.0, + FSR 13.2; 59.94 fps.
+
+## Still open
+
+- MSAA on Android/Switch (multisampled EFB + resolve before every EFB copy and XFB copy).
+- Character lighting on Android/Switch (second vertex shader with the lighting varyings, lit specialized shaders).
+- iOS (same render_vk.c on MoltenVK): turn the `PIC_*` defines on after a test on the Mac.
