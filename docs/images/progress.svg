@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="334" viewBox="0 0 720 334" role="img" aria-label="Road to v1.0: 70% done">
+<title>Road to v1.0: 70% done</title>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1a3f"/><stop offset="1" stop-color="#132c66"/></linearGradient>
+<linearGradient id="fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1e5bff"/><stop offset="0.6" stop-color="#2fb8ff"/><stop offset="1" stop-color="#ffd23f"/></linearGradient>
+<linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<clipPath id="barclip"><rect x="28" y="74" width="664" height="22" rx="11"/></clipPath>
+</defs>
+<rect width="720" height="334" rx="14" fill="url(#bg)"/>
+<rect x="0.5" y="0.5" width="719" height="333" rx="14" fill="none" stroke="#2a4a99"/>
+<g font-family="'Segoe UI', -apple-system, 'Helvetica Neue', Arial, sans-serif">
+<text x="28" y="44" fill="#ffffff" font-size="22" font-weight="700" letter-spacing="1.5">ROAD TO v1.0</text>
+<text x="28" y="63" fill="#8fa6d9" font-size="12.5">Current release v0.8.0 · updated 2026-11-11</text>
+<text x="692" y="56" fill="#ffd23f" font-size="40" font-weight="800" text-anchor="end">70%</text>
+<rect x="28" y="74" width="664" height="22" rx="11" fill="#08132e" stroke="#2a4a99"/>
+<g clip-path="url(#barclip)">
+<rect x="28" y="74" width="464.8" height="22" fill="url(#fill)"/>
+<rect x="94.4" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="160.8" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="227.2" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="293.6" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="360.0" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="426.4" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="492.8" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="559.2" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="625.6" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
+<rect x="28" y="74" width="664" height="22" fill="url(#shine)"/>
+</g>
+<line x1="28" y1="110" x2="692" y2="110" stroke="#2a4a99" stroke-dasharray="3 4"/>
+<text x="28" y="133" fill="#dfe8ff" font-size="14">Whole game playable</text>
+<rect x="278" y="122" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="122" width="322.2" height="12" rx="6" fill="#ffd23f"/>
+<text x="692" y="133" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">90%</text>
+<text x="28" y="163" fill="#dfe8ff" font-size="14">Graphics match the GameCube</text>
+<rect x="278" y="152" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="152" width="286.4" height="12" rx="6" fill="#2fb8ff"/>
+<text x="692" y="163" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">80%</text>
+<text x="28" y="193" fill="#dfe8ff" font-size="14">Switch performance</text>
+<rect x="278" y="182" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="182" width="232.7" height="12" rx="6" fill="#2fb8ff"/>
+<text x="692" y="193" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">65%</text>
+<text x="28" y="223" fill="#dfe8ff" font-size="14">Platforms</text>
+<rect x="278" y="212" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="212" width="304.3" height="12" rx="6" fill="#ffd23f"/>
+<text x="692" y="223" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">85%</text>
+<text x="28" y="253" fill="#dfe8ff" font-size="14">Online play</text>
+<rect x="278" y="242" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="242" width="107.4" height="12" rx="6" fill="#ff7a59"/>
+<text x="692" y="253" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">30%</text>
+<text x="28" y="283" fill="#dfe8ff" font-size="14">Features and polish</text>
+<rect x="278" y="272" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
+<rect x="278" y="272" width="214.8" height="12" rx="6" fill="#2fb8ff"/>
+<text x="692" y="283" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">60%</text>
+</g>
+</svg>

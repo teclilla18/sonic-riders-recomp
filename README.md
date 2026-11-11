@@ -58,6 +58,26 @@ Switch and PC, 2 on one phone: connect more controllers. [Full controls, setting
 
 ## Status
 
+<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 70% done"></p>
+
+<details>
+<summary><b>What v1.0 means, and what each bar still needs</b></summary>
+
+v1.0 = the whole game plays like the GameCube original on every supported platform, Switch races hold their
+frame rate, and you can race friends online. The overall number is a weighted average (game 25 %, the
+rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws the card.
+
+| Area | Done | Left for v1.0 |
+|---|---|---|
+| Whole game playable | 90 % | Grand Prix freeze after character select (#18), rare "Now Loading" hang (#6) |
+| Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
+| Switch performance | 65 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) |
+| Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
+| Online play | 30 % | Lockstep works on one PC; still to do: LAN and internet sessions, Switch-Switch, PC-Switch, a menu to join |
+| Features and polish | 60 % | Custom music, right-stick camera, ring cap option, in-game updates, code mods |
+
+</details>
+
 Playable from boot to races, story mode and 4-player Free Race, with sound, on both platforms.
 
 - **PC:** 60 fps on the test PC (RTX 3060), 4 players included.
