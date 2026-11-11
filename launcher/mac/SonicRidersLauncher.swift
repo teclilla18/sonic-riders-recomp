@@ -126,6 +126,8 @@ final class Model: ObservableObject {
         recheck()
     }
 
+    /// the default app icon (setup/icon.png, cedry2kio's fan art), shown while no picture is chosen
+    lazy var defaultIconImage: NSImage? = root.flatMap { NSImage(contentsOfFile: $0 + "/setup/icon.png") }
     var folderOK: Bool { guard let root else { return false }; return !root.contains(" ") && root.allSatisfy(\.isASCII) }
     var ready: Bool { checks.allSatisfy { $0.state == .ok || $0.state == .optional } && !checks.isEmpty }
     var busy: Bool { !task.isEmpty }
@@ -574,12 +576,12 @@ struct BuildPage: View {
                 Section_(t: "App icon").padding(.top, 8)
                 HStack(alignment: .top, spacing: 14) {
                     Group {
-                        if let img = m.iconPreview {
+                        if let img = m.iconPreview ?? m.defaultIconImage {
                             Image(nsImage: img).resizable().interpolation(.high)
                         } else {
                             ZStack {
                                 Color(11, 61, 145)
-                                Text("game's\nsave icon").font(.system(size: 11)).multilineTextAlignment(.center).foregroundColor(kText)
+                                Text("default\nicon").font(.system(size: 11)).multilineTextAlignment(.center).foregroundColor(kText)
                             }
                         }
                     }.frame(width: 76, height: 76).clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **iOS (iPhone / iPad): the v0.8.0 picture options.** The Display tab gets the Android set: 1x / 1.5x / 2x
+  resolution, Sharpness (AMD FSR 1), Bloom and Colour, all off by default. The app icon is the fan icon too (your own
+  picture in the Mac launcher still replaces it). The v0.8.0 iOS zip is built from this.
 - **The fan-made icon is the only default icon.** The PC program, Android app, Linux desktop entry and Switch
   HOME-screen icon no longer fall back to the game's save icon from your disc; without a picture of your own they
   always use the fan icon (by cedry2kio). Developers running `configure.py` without `--icon` get it too.

@@ -51,7 +51,7 @@ void mods_set_enabled(int i, int on);
 #define PIC_BLOOM 1
 #define PIC_GRADE 1
 #endif
-#if defined(__ANDROID__)  /* render_vk.c; iOS (the same renderer on MoltenVK) once tested there */
+#if defined(__ANDROID__) || defined(SR_IOS)  /* render_vk.c (iOS: the same renderer on MoltenVK) */
 #define PIC_RES_RADIO 1
 #define PIC_FSR 1
 #define PIC_BLOOM 1

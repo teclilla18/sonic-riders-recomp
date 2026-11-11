@@ -180,8 +180,9 @@ First-boot findings [confirmed on the iPhone]:
   -> "still copying" message. Finder's Files tab writes the file growing from 0 [confirmed: devicectl copy on the
   iPad Pro, Finder copy on the A16 iPad, user]. After deleting + reinstalling the app, Finder's Files tab shows
   the old folder ("The required file cannot be found") until Finder is refreshed (click away and back).
-- App icon: `--icon <picture>` (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF: `ios_build.ICON_EXTS`), else the save icon from
-  baserom/_Main.rel (make_icon.decode_icon, 32x nearest). `ios_build.square_png`: centre square with sips (two
+- App icon: `--icon <picture>` (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF: `ios_build.ICON_EXTS`), else the default icon
+  setup/icon.png (cedry2kio's fan art on blue, as on the other builds; also the Mac launcher's preview), else (file
+  missing) no icon. The disc's save icon is never a default (user, 2026-11-11). `ios_build.square_png`: centre square with sips (two
   calls: in one, sips scales before it crops), 1024 px; `flatten_png` fills transparency with ICON_BACKGROUND
   (8/16-bit, grey/RGB/palette). `ios_build.py icon <in> <out.png>` = the same conversion (the launcher's preview).
   setup_mac.py copies the picture to build/ios/custom_icon.<ext> (never git; a path without spaces for ninja).

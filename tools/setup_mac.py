@@ -226,7 +226,7 @@ def main():
     ap = argparse.ArgumentParser(description="Sonic Riders setup for iPhone / iPad (on a Mac)")
     ap.add_argument("--iso", default="", help="your Sonic Riders (USA) disc image (GXEE8P revision 0, 1.4 GB .iso)")
     ap.add_argument("--icon", default="", help="your own app icon: any picture (PNG, JPG, HEIC, WEBP, GIF, BMP, TIFF; the "
-                    "centre square is used), or 'default' for the game's save icon (default: ask)")
+                    "centre square is used), or 'default' for the default icon (setup/icon.png) (default: ask)")
     ap.add_argument("--yes", action="store_true", help="no questions (needs --iso)")
     ap.add_argument("--tools", default=os.path.join(os.path.expanduser("~"), ".local", "share", "SonicRidersSetup", "tools-mac"),
                     help="where the downloaded tools go (default ~/.local/share/SonicRidersSetup/tools-mac)")
@@ -269,10 +269,10 @@ def main():
     iso_size = S.check_iso(iso)
     icon = a.icon
     if not icon and not a.yes and sys.stdin.isatty():
-        if ask("App icon: the game's save icon (d) or your own picture (p)?", "d", False).lower().startswith("p"):
+        if ask("App icon: the default icon (d) or your own picture (p)?", "d", False).lower().startswith("p"):
             icon = pick_icon()
     icon = prepare_icon(os.path.abspath(os.path.expanduser(icon))) if icon and icon != "default" else ""
-    log("App icon: %s" % ("your picture" if icon else "the game's save icon"))
+    log("App icon: %s" % ("your picture" if icon else "the default icon"))
 
     # 2 -------------------------------------------------------------
     step(2, "Xcode, build tools and your Apple ID")

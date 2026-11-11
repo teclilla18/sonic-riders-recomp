@@ -73,11 +73,12 @@ class Tools:
             sys.exit("glslc not found: brew install shaderc")
         if not _run(["xcrun", "--sdk", SDK, "--show-sdk-path"]):
             sys.exit("the iOS SDK was not found: install Xcode and run xcode-select -s /Applications/Xcode.app")
-        # the app icon: your own picture (--icon, any common format; kept out of git), else the game's
-        # memory card save icon from your disc (baserom/_Main.rel, like the PC and Android icons)
-        rel = os.path.join(root, "baserom", "_Main.rel")
+        # the app icon: your own picture (--icon, any common format; kept out of git), else the default icon
+        # (setup/icon.png, cedry2kio's fan art, as on PC, Android, Linux and Switch), else none
+        fan = os.path.join(root, "setup", "icon.png")
+        default = fan if os.path.isfile(fan) else ""
         self.icon = (os.path.abspath(args.icon) if args.icon.lower().endswith(ICON_EXTS) else
-                     rel if not args.icon and os.path.isfile(rel) else "")
+                     default if args.icon.lower() in ("", "default") else "")
         self.ipa_dir = os.path.abspath(os.path.expanduser(args.ipa_dir)) if args.ipa_dir not in ("", "none") else ""
         self.team = "" if args.team == "none" else (args.team or find_team())
         print("ios: %s" % ("signed for Apple team %s" % self.team if self.team else
@@ -226,14 +227,7 @@ def write_xcode_project(t, out):
     if t.icon:
         # iOS app icons are opaque: one 1024 x 1024 picture, transparent parts filled (Xcode makes the sizes)
         tmp = os.path.join(xdir, "icon_1024_alpha.png")
-        if t.icon.endswith(".rel"):  # the 32 x 32 save icon, enlarged 32x with sharp pixels
-            import make_icon
-            with open(t.icon, "rb") as f:
-                px = make_icon.decode_icon(f.read())
-            with open(tmp, "wb") as f:
-                f.write(make_icon.png(make_icon.scale(px, 32)))
-        else:
-            square_png(t.icon, tmp)
+        square_png(t.icon, tmp)
         flatten_png(tmp, os.path.join(icon_set, "icon_1024.png"), ICON_BACKGROUND)
         images = [{"filename": "icon_1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}]
     import json

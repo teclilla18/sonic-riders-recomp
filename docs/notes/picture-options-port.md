@@ -74,4 +74,6 @@ shaders listed in `embed_shaders.py` `PROGRAMS_VK` + `configure.py` `shader_src`
 
 - MSAA on Android/Switch (multisampled EFB + resolve before every EFB copy and XFB copy).
 - Character lighting on Android/Switch (second vertex shader with the lighting varyings, lit specialized shaders).
-- iOS (same render_vk.c on MoltenVK): turn the `PIC_*` defines on after a test on the Mac.
+- iOS (same render_vk.c on MoltenVK): `PIC_*` on for SR_IOS (2026-11-11). Tested: iPad Pro 11 M1, perf route,
+  off 1P 59.5 / 2P 59.9 fps; SR_BLOOM=60 SR_SHARPNESS=60 SR_GRADE=0,118,160,0 both 59.9, FSR 640x480 -> 2224x1668,
+  frames look right (not a pixel diff: no SR_DETCLOCK). iPhone 17 Pro not tested yet.
