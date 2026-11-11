@@ -27,6 +27,12 @@ build.ninja holds one target at a time: configure, then ninja. From Git Bash use
   title ~2900, 1P demo race 3304-7183 (e.g. 5300), title 8000, 2P demo race from 9013 (e.g. 10500).
 - PC menu route from an empty card (`SR_CARD=<new file>`): START at 300/600/900/1200, A every 250 from 1500 to 6500
   → Player Entry; then START + A at 6800/7100/... → Free Race at Metal City (mode 8 from step ~6825).
+- Full race to the results screen and back (2026-11-11, bloom check): the menu route above, START 6800, A at
+  7100/7400/7700/8000, then `8300:SY=100` and every 120 fields `SX=-60/+60` with an A tap until 26000 (3 laps of
+  Metal City, finish ~27800); A every 400 from 26500 to 28100 through the results; the results menu (Restart /
+  Replay / Back to Menu) is up at ~28600: DOWN 28700, DOWN 28850, A 29000 -> Normal Race / Track Select /
+  Player Entry by ~30600. A at 28900 instead picks Restart. ~545 steps; ~10 min minimized; not deterministic
+  without SR_DETCLOCK (take shots every 100-200 frames).
 
 ## Switch: build, install and test
 
