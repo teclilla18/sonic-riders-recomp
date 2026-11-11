@@ -13,6 +13,13 @@ Windows launcher (+ remapping, fan-art banner kept by the user's choice) and the
 bloom, colour grading, per-pixel lighting). iOS not in it (needs a Mac setup + `--flavor ios`: notes/ios.md end).
 GitHub lists the 5 newest releases (v0.7.0-v0.7.4; v0.7.4 is Latest); on each release delete the 6th (tag kept). OLED and S23 still run v0.5.3 builds.
 
+**iOS v0.8.0 released 2026-11-11** (Mac session; SonicRiders-iOS-Setup-v0.8.0.zip from 00d3861, uploaded to the
+v0.8.0 release with the user's OK): picture options on (MoltenVK), fan icon as the only default icon, bloom fix.
+iPad Pro 11 M1 on max settings: "flawless" [accepted, user]; 59.9 fps, ~1.3 ms game time per step. iPhone 17 Pro:
+perf route only (1P/2P 59.94 fps, <1 ms per step, options on or off) [confirmed, logs]; one 1P frame with options
+on had a big white haze (dust + bloom + contrast?) [uncertain]. Not done: a cold Mac test from the zip.
+Sideloadly renewals: untick "automatic bundle ID" and type the device's app ID (IDs in CLAUDE.local.md).
+
 **iOS, 2026-11-09:** pad fix (A paused races on iPad) accepted on the iPad Pro, on main (ee3aaa1), unreleased;
 Stable iOS app IDs implemented (Mac route `<base>.<team>`, plain-ID .ipa so Sideloadly's default reaches the same app; reuse of an installed ID) and tested on the iPad Pro; full setup_mac cold run still to do (HISTORY 2026-11-09 "iOS pads").
 **iOS (Mac session; notes/ios.md): verified for v0.7.0** (main 9932634). Races on touch [confirmed, logs]:
@@ -106,6 +113,10 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Open items, in priority order
 
+- **Bloom fix 00d3861 (Mac; bloom off in menus that keep race mode, e.g. character select after a race) is not in
+  the PC / Switch / Android v0.8.0 zips** (only iOS). PC check (SR_BLOOM=100 route, 2026-11-11): Player Entry no
+  bloom, race and results screen with bloom [confirmed, frames]; character select after a race: rerun pending.
+  Then ask the user about a v0.8.1 for the other platforms.
 - **TOP PRIORITY (user, 2026-11-11): ring cap in races 100 -> 999.** Find the cap check(s), the HUD ring counter
   (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
   setting (default off?) on every platform.
@@ -156,11 +167,8 @@ Console: overclocked unless the test is about stock clocks (say which). Build fr
 ## Next session
 
 ```
-Mac session (iOS): the v0.8.0 notes promise the iPhone/iPad build "later today" on the same release.
-On the Mac, pull main (54997c5 or later); in runtime/src/menu.cpp turn on PIC_RES_RADIO, PIC_FSR, PIC_BLOOM, PIC_GRADE for SR_IOS
-(render_vk.c already has the passes; MoltenVK is untested). notes/picture-options-port.md has the design; notes/ios.md the build.
-Test on the iPhone 17 Pro / iPad: SR_PERFTEST route with SR_BLOOM=60 SR_SHARPNESS=60 SR_GRADE=0,118,160,0, compare frames and fps with off;
-check finger scrolling in the menu (touch_scroll) and the new icon (setup/icon.png). Then ask me to play.
-Release: make_release.py --flavor ios --ref <commit>, upload the zip to v0.8.0 (gh release upload), add an iOS line to the notes.
-After that (PC session): MSAA and smooth lighting on Android/Switch, or the in-game update popup (plan first).
+PC session: finish the bloom check of 00d3861 on PC (character select after a race, SR_BLOOM=100 route
+with Back to Menu on the results menu); ask the user about a v0.8.1 (PC/Switch/Android lack the fix).
+Then the top open item: ring cap in races 100 -> 999 (find the cap, HUD digits, what rings feed).
+Later: MSAA and smooth lighting on Android/Switch; higher fps on iOS/Android; in-game update popup (plan first).
 ```
