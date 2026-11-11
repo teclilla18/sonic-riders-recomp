@@ -109,6 +109,11 @@ PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 - **TOP PRIORITY (user, 2026-11-11): ring cap in races 100 -> 999.** Find the cap check(s), the HUD ring counter
   (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
   setting (default off?) on every platform.
+- **Higher frame rates on iOS and Android** (user, 2026-11-11, so people can experiment): port the PC in-between
+  pictures (render_gl.c pc_fps, settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist
+  CADisableMinimumFrameDuration, present at 120), Android: follow the display refresh rate. Phone menu: 120 etc.
+  next to 60 / Auto / 30, off by default. (iPad Pro 11 3rd gen, all picture options: 59.9 fps, ~1.3 ms game time
+  per step, 120 Hz screen [user].)
 - **PC freeze with NVIDIA ShadowPlay recording** (2026-11-08, user): froze loading a race after character select.
   Retest with logging + recording: no freeze, not reproduced [uncertain]. If it recurs: keep the hung process,
   inspect its threads. Workaround given: OBS Game Capture. (HISTORY 2026-11-08 late night)
