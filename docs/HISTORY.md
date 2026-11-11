@@ -1107,4 +1107,10 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   NRO), the default in setup.ps1 / setup_linux.py / configure.py; README credit; guard allow-list (user's OK).
   The launcher keeps the AI art icon.
 - `SR_BLOOM` / `SR_GRADE` moved to settings.c (all platforms); `SR_RES=0-2` added.
-
+- Released v0.8.0 (tag on 54997c5; PC, Switch, Android, Linux zips; iOS to follow from the Mac). Cold Sandbox: the
+  first PC run FAILED in setup step 2 (the new default icon's PNG -> ICO step wrote into build\ before it existed;
+  that path only ran for a player's own picture before) [confirmed, setup log]; fixed in 54997c5, PC PASS (2 installs,
+  one with a space) and Android PASS [confirmed]. v0.7.0 delisted (tag kept); reply posted in Discussion #19.
+- Switch SD: sonicriders.nro = the v0.8.0 code (+ NRO icon); new HOME-screen forwarder with the fan icon as
+  /switch/sonicriders/SonicRiders.nsp (user installs it with DBI); leftovers moved to /switch/sonicriders/_delete-me.
+- PC check before the release: build OK; perf route with bloom + FSR + Vivid 59.94 fps, frame right [confirmed].

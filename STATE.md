@@ -148,12 +148,11 @@ Console: overclocked unless the test is about stock clocks (say which). Build fr
 ## Next session
 
 ```
-Continue task 1: bring the PC picture options (F1 > Display) to Linux/Steam Deck, Android and Switch; release when tested and played by me.
-Read docs/notes/picture-options-port.md first: it has the agreed order and the Android (render_vk.c) design; no feature code exists yet.
-Work on main in the sr-main worktree (never dx-private). Start with the Linux check: ~/sr in WSL already has build/host-linux/sonicriders;
-capture a demo-race frame with options off and on (SR_SCALE, SR_MSAA, SR_BLOOM, SR_SHARPNESS, SR_CHARLIGHT; SR_MINIMIZED=1).
-Then the shared menu block (menu.cpp tab_display) and Android: resolution radio, FSR 1, colour, bloom; ask me to connect the phone to test with adb taps.
-Then the same four on Switch (uam rules, per_warp_scratch 0, /hw-test with mode, clocks and [perf] per feature on/off). MSAA and character lighting last.
-Release steps after I have played it: cold Sandbox test, zips, notes (iOS later), delete the 6th-newest release (keep its tag), reply in Discussion #19.
-Unproven: everything; only the survey and plan are done.
+Mac session (iOS): the v0.8.0 notes promise the iPhone/iPad build "later today" on the same release.
+On the Mac, pull main (54997c5 or later); in runtime/src/menu.cpp turn on PIC_RES_RADIO, PIC_FSR, PIC_BLOOM, PIC_GRADE for SR_IOS
+(render_vk.c already has the passes; MoltenVK is untested). notes/picture-options-port.md has the design; notes/ios.md the build.
+Test on the iPhone 17 Pro / iPad: SR_PERFTEST route with SR_BLOOM=60 SR_SHARPNESS=60 SR_GRADE=0,118,160,0, compare frames and fps with off;
+check finger scrolling in the menu (touch_scroll) and the new icon (setup/icon.png). Then ask me to play.
+Release: make_release.py --flavor ios --ref <commit>, upload the zip to v0.8.0 (gh release upload), add an iOS line to the notes.
+After that (PC session): MSAA and smooth lighting on Android/Switch, or the in-game update popup (plan first).
 ```
