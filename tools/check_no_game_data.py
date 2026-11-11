@@ -54,8 +54,8 @@ OWN_ART = {
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     "launcher/icon_256.png": "80541e60eb82d9440c001da3bc4c7240bda2b111",  # launcher icon (user's ChatGPT art, 2026-11-09)
     "launcher/icon_32.png": "24e3018e7e6651be4cbba8228f81364bf9d0a70e",
-    "setup/icon.png": "b42362f551138986cd53dda64721510c101a80e2",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
-    "setup/icon_256.jpg": "849b075587a60443ed7ac41ab4cbf3f61736b4a0",  # the same, 256 x 256 for the Switch NRO
+    "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
+    "setup/icon_256.jpg": "4ab58b2f4da4418a9febadea57937eae7f2da5a6",  # the same, 256 x 256 for the Switch NRO
     "android/touch_icons/boost_b.png": "e91d748d8a99c76b0aad985ea40ae1437c10e982",
     "android/touch_icons/drift_r.png": "45e1558994abaad8f85966ad7c8ff32ee5cde5ac",
     "android/touch_icons/jump_a.png": "d1ff0d81d64478b89993997059c635d42cd3c331",
