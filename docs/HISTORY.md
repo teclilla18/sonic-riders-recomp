@@ -1141,7 +1141,7 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - SonicRiders-iOS-Setup-v0.8.0.zip from 00d3861 uploaded to v0.8.0, the notes' "later today" line replaced
   (user's OK) [released]. Not done: a cold Mac test from this zip.
 - Device notes: devicectl install with a different bundle ID = a second app (empty Documents): build with
-  `--bundle-id <installed ID>` (`devicectl device info apps`). iPad Pro: net.srnative.sonicriders; iPhone:
-  net.srnative.sonicriders.tedb86a30. Sideloadly: untick "automatic bundle ID" and type that ID. iPhone wireless
+  `--bundle-id <installed ID>` (`devicectl device info apps`; the test devices' IDs: NOTES.local.md). Sideloadly:
+  untick "automatic bundle ID" and type that ID. iPhone wireless
   link failed (CoreDeviceError 4000 "Can't assign requested address", also on cable) until an Xcode update and a
   phone restart; error 4016 = not unlocked since restart.
