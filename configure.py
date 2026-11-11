@@ -314,7 +314,8 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         # SPIR-V for the Vulkan backend (platform/android/render_vk.c), compiled with the NDK's glslc (iOS: shaderc's)
         shader_h = OUT + "/gen/gx_shaders_spv.h"
         shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_tex.frag", "runtime/shaders/vk_fill.frag",
-                       "runtime/shaders/vk_touch.frag"]
+                       "runtime/shaders/vk_touch.frag", "runtime/shaders/vk_bright.frag", "runtime/shaders/vk_blur.frag",
+                       "runtime/shaders/vk_grade.frag", "runtime/shaders/vk_easu.frag", "runtime/shaders/vk_rcas.frag"]
         n.rule("shaders", "%s tools/embed_shaders.py spv $out %s %s/shaders" % (py, glslc, OUT), description="GLSLC $out")
         # the touch controls' pictures (android/touch_icons; order = TOUCH_IMG_* in touch_android.h)
         icons = ["android/touch_icons/%s.png" % k for k in ("stick_base", "stick_knob", "jump_a", "boost_b", "drift_r", "tornado_lr")]

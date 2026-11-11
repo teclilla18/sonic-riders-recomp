@@ -138,6 +138,16 @@ void settings_load(void) {
     if (pf && settings_pc_fps_valid(atoi(pf))) g_settings.pc_fps = atoi(pf);
     const char* sh = getenv("SR_SHARPNESS");  /* testing: FSR sharpening 0-100 (not saved unless changed in the menu) */
     if (sh && atoi(sh) >= 0 && atoi(sh) <= 100) g_settings.sharpness = atoi(sh);
+    /* testing, not saved unless changed in the menu: SR_BLOOM=0-100, SR_GRADE=brightness,contrast,saturation,warmth,
+     * SR_RES=0-2 (1x / 1.5x / 2x; Switch and phones) */
+    const char* bl = getenv("SR_BLOOM");
+    if (bl && atoi(bl) >= 0 && atoi(bl) <= 100) g_settings.bloom = atoi(bl);
+    const char* gr = getenv("SR_GRADE");
+    if (gr && *gr)
+        sscanf(gr, "%d,%d,%d,%d", &g_settings.grade_bright, &g_settings.grade_contrast, &g_settings.grade_sat,
+               &g_settings.grade_warm);
+    const char* rs = getenv("SR_RES");
+    if (rs && atoi(rs) >= 0 && atoi(rs) < RES_MODES) g_settings.resolution = atoi(rs);
     /* testing, not saved unless changed in the menu: SR_SCREEN=0-3 (SCREEN_*), SR_FOV=80-130, SR_HUDSTRETCH=0/1 */
     const char* sc = getenv("SR_SCREEN");
     if (sc && atoi(sc) >= 0 && atoi(sc) < SCREEN_MODES) g_settings.screen = atoi(sc);

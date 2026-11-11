@@ -15,10 +15,11 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
   -1 = unlimited; 30/60 are `framerate`/0). Log: `[gl] in-between pictures: target, measured /s, draws paired`.
 - `SR_SCALE=<1-4>` / `SR_MSAA=<1|2|4|8>` (PC): internal resolution and anti-aliasing for this run (settings
   `pc_scale` / `msaa`, F1 > Display); the log's `[gl] EFB` line shows what is in use.
-- `SR_SHARPNESS=<0-100>` (PC): FSR 1 sharpening for this run (setting `sharpness`; above 0 also EASU upscaling
-  when the window is bigger than the picture). Log line `[gl] FSR 1 (EASU + RCAS) on the presented picture`.
-- `SR_BLOOM=<0-100>` / `SR_GRADE=<brightness>,<contrast>,<saturation>,<warmth>` (PC): bloom and colour grading for
-  this run (settings `bloom`, `grade_*`; neutral = `0,100,100,0`).
+- `SR_SHARPNESS=<0-100>` (PC, Android): FSR 1 sharpening for this run (setting `sharpness`; above 0 also EASU upscaling
+  when the window is bigger than the picture). Log line `[gl] FSR 1 (EASU + RCAS) on the presented picture` / `[vk] FSR 1 ...`.
+- `SR_BLOOM=<0-100>` / `SR_GRADE=<brightness>,<contrast>,<saturation>,<warmth>` (PC, Android; read in settings.c): bloom
+  and colour grading for this run (settings `bloom`, `grade_*`; neutral = `0,100,100,0`). Android logs `[vk] picture options`.
+- `SR_RES=<0-2>` (Switch, Android): resolution 1x / 1.5x / 2x for this run (setting `resolution`).
 - `SR_CHARLIGHT=1` (PC): per-pixel lighting for this run (setting `char_light`).
 - `SR_SCALE_AT=<frame>:<scale>[:<msaa>]` (PC): change resolution / MSAA at that presented frame, as the F1 menu does.
 - `SR_HEADLESS=1` (PC): no window. `SR_NOVSYNC=1` (PC): present without vsync.

@@ -44,6 +44,20 @@ shaders listed in `embed_shaders.py` `PROGRAMS_VK` + `configure.py` `shader_src`
 - Hook: copy `render_gl.c` `execute`'s `post_at` scan (after the last 3D draw, `xfr[0x26] == 0`, before each XFB
   copy); bloom only when `f->in_race`. New images: lazy, own memory, `img_destroy` in `device_teardown`.
 
+## Status (2026-11-10)
+
+- **Menu:** `menu.cpp` `PIC_*` defines per platform (an option shows only where it works): PC/Linux all; Switch
+  resolution radio; Android resolution radio, FSR, bloom, colour (iOS off until tested there).
+- **Linux, tested** (WSL Ubuntu, build of 2026-11-10, d3d12 on the Intel iGPU, perf-test route `SR_PERFTEST=1
+  SR_DETCLOCK=1 SR_SHOTSTEP=4200,4800`): off vs `SR_SCALE=3 SR_MSAA=4 SR_BLOOM=60 SR_SHARPNESS=60 SR_CHARLIGHT=1
+  SR_GRADE=0,118,160,0`: Metal City demo race correct, smoother edges, Vivid colours, HUD unchanged [confirmed, frames].
+- **Android, implemented as designed above and tested** (S23 Ultra, same route, `SR_RES=0`, fit-window wide):
+  bloom + colour + FSR on: picture right, FSR 854x480 -> 2562x1440, no errors [confirmed, frames]; demo 1P 58.3 fps
+  (off 59.4), 2P 59.4 (59.9); GPU +7 ms/frame in menus (FSR at 1440p), +1.5-2 ms in races. Menu by adb taps: the
+  options show, 2x radio and bloom slider respond and save [confirmed]. Not played by the user yet.
+- Shaders: `vk_bright`, `vk_blur` (also the screen-blend composite, `color.z` = tint), `vk_grade`, `vk_easu`,
+  `vk_rcas`; quad kinds `Q_BRIGHT`..`Q_RCAS`; `post_process` / `fsr_present` in render_vk.c.
+
 ## Switch (render_deko.c), to design
 
 Same passes as dksh (`PROGRAMS_DK`); presents with `dkCmdBufBlitImage` today, so FSR needs a shader present path.

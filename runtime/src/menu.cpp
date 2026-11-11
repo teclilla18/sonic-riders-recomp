@@ -33,6 +33,26 @@ void mods_set_enabled(int i, int on);
 #if defined(__ANDROID__) || defined(SR_IOS)
 #define SR_PHONE 1
 #endif
+/* picture options (Display tab): each one shows only on platforms whose renderer does it
+ * (docs/notes/picture-options-port.md). PC and Linux: render_gl.c has them all. */
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
+#define PIC_SCALE_SLIDER 1  /* 1x-4x */
+#define PIC_MSAA 1
+#define PIC_FSR 1
+#define PIC_BLOOM 1
+#define PIC_GRADE 1
+#define PIC_CHARLIGHT 1
+#define PIC_WINDOW 1
+#endif
+#if defined(__SWITCH__)
+#define PIC_RES_RADIO 1  /* 1x / 1.5x / 2x (the EFB is allocated at 2x) */
+#endif
+#if defined(__ANDROID__)  /* render_vk.c; iOS (the same renderer on MoltenVK) once tested there */
+#define PIC_RES_RADIO 1
+#define PIC_FSR 1
+#define PIC_BLOOM 1
+#define PIC_GRADE 1
+#endif
 #if !defined(__SWITCH__) && !defined(SR_PHONE)
 #define HAVE_BUG_REPORT 1
 int platform_bug_report(char* name, size_t n);  /* platform_host.c */
@@ -340,14 +360,21 @@ void tab_display() {
         g_settings.fov = 100;
         settings_apply();
     }
-#ifdef __SWITCH__
+#ifdef PIC_RES_RADIO
     heading("Resolution");
     for (int r = 0; r < RES_MODES; r++) {
         static const char* const names[RES_MODES] = {"1x  (640x528)", "1.5x  (960x792)", "2x  (1280x1056)"};
+#ifdef __SWITCH__
         static const char* const tips[RES_MODES] = {
             "The GameCube's own resolution: the fastest, best for playing without an overclock.",
             "Sharper; needs more from the graphics chip.",
             "Sharpest; needs an overclocked console in busy races."};
+#else
+        static const char* const tips[RES_MODES] = {
+            "The GameCube's own resolution: the fastest and easiest on the battery.",
+            "Sharper; needs more from the graphics chip.",
+            "Sharpest; needs a fast phone in busy races."};
+#endif
         if (r) ImGui::SameLine();
         if (radio(names[r], g_settings.resolution == r, tips[r])) {
             g_settings.resolution = r;
@@ -355,7 +382,8 @@ void tab_display() {
         }
     }
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
-#elif !defined(SR_PHONE)  /* phones are always full screen */
+#endif
+#ifdef PIC_SCALE_SLIDER
     heading("Resolution");
     {
         char fmt[48];
@@ -366,6 +394,8 @@ void tab_display() {
              "Higher is sharper and needs a stronger graphics card; 3x suits 1440p, 4x suits 4K (the most).");
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
     }
+#endif
+#ifdef PIC_MSAA
     heading("Anti-aliasing");
     for (int i = 0; i < 4; i++) {
         static const int samples[4] = {1, 2, 4, 8};
@@ -378,20 +408,27 @@ void tab_display() {
             settings_apply();
         }
     }
-    /* bloom and colour grading (render_gl.c post_process): the 3D picture only, the HUD stays as drawn */
+#endif
+    /* bloom and colour grading (post-processing): the 3D picture only, the HUD stays as drawn */
     auto slider = [](const char* id, int* v, int lo, int hi, const char* fmt, const char* tip) {
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
         ImGui::SliderInt(id, v, lo, hi, fmt);
         help(tip);
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_apply();
     };
+    (void)slider;
+#ifdef PIC_FSR
     heading("Sharpness (AMD FSR 1)");
     slider("##sharp", &g_settings.sharpness, 0, 100, g_settings.sharpness ? "%d%%" : "Off",
-           "Sharpens the final picture (FSR 1 RCAS). When the window is bigger than the resolution above, FSR also "
+           "Sharpens the final picture (FSR 1 RCAS). When the screen is bigger than the resolution above, FSR also "
            "does the upscaling (EASU) instead of a plain stretch. Off = the picture as before.");
+#endif
+#ifdef PIC_BLOOM
     heading("Bloom");
     slider("##bloom", &g_settings.bloom, 0, 100, g_settings.bloom ? "%d%%" : "Off",
            "A soft glow around bright parts of the picture (sky, lights, boost). The HUD does not glow.");
+#endif
+#ifdef PIC_GRADE
     heading("Colour");
     {
         struct Preset { const char* name; int bright, contrast, sat, warm; const char* tip; };
@@ -420,6 +457,8 @@ void tab_display() {
     slider("##gcontrast", &g_settings.grade_contrast, 50, 150, "Contrast %d%%", "Difference between dark and light.");
     slider("##gsat", &g_settings.grade_sat, 0, 200, "Saturation %d%%", "Colour strength; 0% is black and white.");
     slider("##gwarm", &g_settings.grade_warm, -50, 50, "Warmth %+d", "Bluer (left) or redder (right).");
+#endif
+#ifdef PIC_CHARLIGHT
     heading("Character lighting");
     if (radio("Original##light", !g_settings.char_light, "Lighting worked out at the corners of each triangle, as on the GameCube.")) {
         g_settings.char_light = 0;
@@ -431,6 +470,8 @@ void tab_display() {
         g_settings.char_light = 1;
         settings_apply();
     }
+#endif
+#ifdef PIC_WINDOW
     heading("Window");
     if (check("Fullscreen  (F11 / Alt+Enter)", &g_settings.fullscreen, "Borderless fullscreen on the current display."))
         settings_apply();

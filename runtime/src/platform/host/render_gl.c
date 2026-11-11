@@ -280,11 +280,7 @@ static void gl_setup(void) {
     const char* e;
     if ((e = getenv("SR_SCALE")) && *e) g_settings.pc_scale = atoi(e);  /* tests: internal resolution */
     if ((e = getenv("SR_MSAA")) && *e) g_settings.msaa = atoi(e);      /* tests: anti-aliasing samples */
-    if ((e = getenv("SR_BLOOM")) && *e) g_settings.bloom = atoi(e);    /* tests: bloom 0-100 */
     if ((e = getenv("SR_CHARLIGHT")) && *e) g_settings.char_light = atoi(e) != 0;  /* tests: per-pixel lighting */
-    if ((e = getenv("SR_GRADE")) && *e)                                 /* tests: brightness,contrast,saturation,warmth */
-        sscanf(e, "%d,%d,%d,%d", &g_settings.grade_bright, &g_settings.grade_contrast, &g_settings.grade_sat,
-               &g_settings.grade_warm);
     efb_config();
     efb_resize(1.0f);
     p_glGenFramebuffers(1, &g_copy_fbo);

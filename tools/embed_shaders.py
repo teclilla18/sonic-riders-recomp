@@ -52,7 +52,11 @@ PRELUDE_VK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(
 PROGRAMS_VK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
                ("vk_quad_vert", "vk_quad", "vert", None), ("vk_tex_frag", "vk_tex", "frag", None),
-               ("vk_fill_frag", "vk_fill", "frag", None), ("vk_touch_frag", "vk_touch", "frag", None))
+               ("vk_fill_frag", "vk_fill", "frag", None), ("vk_touch_frag", "vk_touch", "frag", None),
+               # picture options: bloom, colour grading, FSR 1 (docs/notes/picture-options-port.md)
+               ("vk_bright_frag", "vk_bright", "frag", None), ("vk_blur_frag", "vk_blur", "frag", None),
+               ("vk_grade_frag", "vk_grade", "frag", None), ("vk_easu_frag", "vk_easu", "frag", None),
+               ("vk_rcas_frag", "vk_rcas", "frag", None))
 
 
 def spv_main(out, glslc, work):

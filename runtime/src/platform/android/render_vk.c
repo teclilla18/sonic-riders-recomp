@@ -144,6 +144,7 @@ static uint32_t g_stage_off;
 static VkDescriptorSetLayout g_dsl_ubo, g_dsl_tex, g_dsl_one;
 static VkPipelineLayout g_pl_gx, g_pl_quad;
 static VkShaderModule g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch;
+static VkShaderModule g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas;  /* picture options */
 /* Specialized fragment shaders (as on the Switch): one per recorded state key, with the TEV setup folded
  * into constants. A GX pipeline key carries SPEC_FLAG and the low 24 bits of the state's key hash in
  * bits 36-59; states without one use the ubershader, and their keys go to shader_keys.txt in the app
@@ -359,7 +360,8 @@ static VkImg* tex_prepare(int id) {
 
 /* ---------------------------------------------------------------- pipelines */
 enum { TGT_EFB, TGT_TEX, TGT_SWAP };
-enum { Q_TEX_OPAQUE, Q_TEX_OVER, Q_FILL, Q_TOUCH };
+/* new kinds go at the end: the pipeline-key files of earlier runs stay valid */
+enum { Q_TEX_OPAQUE, Q_TEX_OVER, Q_FILL, Q_TOUCH, Q_BRIGHT, Q_BLUR, Q_SCREEN, Q_GRADE, Q_EASU, Q_RCAS };
 
 typedef struct { uint64_t key; VkPipeline p; } PipeEntry;
 static PipeEntry* g_pipes;
@@ -478,8 +480,17 @@ static VkPipeline quad_pipe_make(uint64_t key) {
         b.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         b.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         b.colorBlendOp = b.alphaBlendOp = VK_BLEND_OP_ADD;
+    } else if (kind == Q_SCREEN) {  /* bloom: screen blend, 1 - (1 - dst) * (1 - src) */
+        b.blendEnable = VK_TRUE;
+        b.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        b.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        b.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        b.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        b.colorBlendOp = b.alphaBlendOp = VK_BLEND_OP_ADD;
     }
-    VkShaderModule fs = kind == Q_FILL ? g_sm_fill : kind == Q_TOUCH ? g_sm_touch : g_sm_tex;
+    VkShaderModule fs = kind == Q_FILL ? g_sm_fill : kind == Q_TOUCH ? g_sm_touch : kind == Q_BRIGHT ? g_sm_bright
+                      : kind == Q_BLUR || kind == Q_SCREEN ? g_sm_blur : kind == Q_GRADE ? g_sm_grade
+                      : kind == Q_EASU ? g_sm_easu : kind == Q_RCAS ? g_sm_rcas : g_sm_tex;
     VkPipelineDepthStencilStateCreateInfo ds = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
     return pipe_build(g_sm_qvs, fs, g_pl_quad, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, &b, &ds, VK_CULL_MODE_NONE, target);
 }
@@ -834,6 +845,11 @@ static void device_setup(void) {
     g_sm_tex = shader(k_vk_tex_frag_spv, sizeof k_vk_tex_frag_spv);
     g_sm_fill = shader(k_vk_fill_frag_spv, sizeof k_vk_fill_frag_spv);
     g_sm_touch = shader(k_vk_touch_frag_spv, sizeof k_vk_touch_frag_spv);
+    g_sm_bright = shader(k_vk_bright_frag_spv, sizeof k_vk_bright_frag_spv);
+    g_sm_blur = shader(k_vk_blur_frag_spv, sizeof k_vk_blur_frag_spv);
+    g_sm_grade = shader(k_vk_grade_frag_spv, sizeof k_vk_grade_frag_spv);
+    g_sm_easu = shader(k_vk_easu_frag_spv, sizeof k_vk_easu_frag_spv);
+    g_sm_rcas = shader(k_vk_rcas_frag_spv, sizeof k_vk_rcas_frag_spv);
     if (getenv("SR_NOSPEC") && atoi(getenv("SR_NOSPEC"))) g_spec_on = 0;
     for (int i = 0; i < GX_SPEC_COUNT; i++) {
         int dup = 0;  /* two keys with the same low 24 bits: the second is left out */
@@ -1281,6 +1297,160 @@ static void picture_rect(float aspect, float out[4]) {
     out[3] = out[1] + dh;
 }
 
+/* ---------------------------------------------------------------- picture options: bloom, colour, FSR 1
+ * As render_gl.c's post_process / fsr_present (docs/notes/picture-options-port.md). Bloom and grading run on
+ * the EFB right after the last 3D draw before each picture (XFB copy), so the HUD and menus stay as the game
+ * drew them; the EFB alpha is kept (RGB write mask). FSR 1 replaces the present's linear stretch (the HUD is
+ * part of the picture, so it is scaled and sharpened too). Images: made on first use, own memory. */
+#define BL_W(l) ((uint32_t)(EFB_WIDTH * WIDE_K_MAX + 0.5f) / (4u << (l)) + 1)
+#define BL_H(l) ((uint32_t)EFB_HEIGHT / (4u << (l)) + 1)
+#define RGB_MASK (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT)
+static VkImg g_scene, g_bl[4], g_fsr;  /* g_bl: two ping-pong images per level (1/4 and 1/8 of 640 x k by 528) */
+static int g_post_logged, g_fsr_logged;
+static void img_destroy(VkImg* t);
+
+static int grade_wanted(void) {
+    return g_settings.grade_bright != 0 || g_settings.grade_contrast != 100 || g_settings.grade_sat != 100 ||
+           g_settings.grade_warm != 0;
+}
+static int post_wanted(void) { return g_settings.bloom > 0 || grade_wanted(); }
+
+/* an image of at least w x h (made again, bigger, when the screen grows: rare, so the GPU is simply waited for) */
+static void post_image(VkImg* t, uint32_t w, uint32_t h, VkImageUsageFlags usage) {
+    if (t->live && t->w >= w && t->h >= h) return;
+    if (t->live) {
+        vkDeviceWaitIdle(g_dev);
+        if (t->w > w) w = t->w;
+        if (t->h > h) h = t->h;
+        img_destroy(t);
+    }
+    image_make(t, w, h, VK_FORMAT_R8G8B8A8_UNORM, usage, 0);
+}
+
+static void post_teardown(void) {
+    img_destroy(&g_scene);
+    img_destroy(&g_fsr);
+    for (int i = 0; i < 4; i++) img_destroy(&g_bl[i]);
+}
+
+/* one blur pass, src's top-left sw x sh into dst's dw x dh; dir in source texels (0: a linear copy) */
+static void blur_pass(VkImg* s, float sw, float sh, VkImg* d, float dw, float dh, float dirx, float diry) {
+    to_layout(s, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    to_layout(d, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    target_begin(d->view, (uint32_t)dw, (uint32_t)dh, 0);
+    float px[4] = {0, 0, dw, dh}, uv[4] = {0, 0, sw / s->w, sh / s->h};
+    float col[4] = {dirx / s->w, diry / s->h, 1, 0}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
+    quad(Q_BLUR, TGT_TEX, 15, s->view, g_samp_lin, dw, dh, px, uv, col, shape);
+    p_end_rendering(g_cmd);
+}
+
+static void post_process(int in_race) {
+    float bloom = in_race ? (float)g_settings.bloom / 100.0f : 0.0f;  /* menus with lit models went white (GL) */
+    int grade = grade_wanted();
+    if (bloom <= 0.0f && !grade) return;
+    uint32_t uw = XSC(EFB_WIDTH), uh = SC(EFB_HEIGHT);  /* the EFB's used part */
+    if (uw > (uint32_t)EFB_W) uw = EFB_W;
+    if (uh > (uint32_t)EFB_H) uh = EFB_H;
+    if (!g_post_logged) {
+        g_post_logged = 1;
+        rt_log("[vk] picture options: bloom %d%%, colour %+d/%d/%d/%+d", g_settings.bloom, g_settings.grade_bright,
+               g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm);
+    }
+    efb_end();
+    float px[4] = {0, 0, (float)uw, (float)uh};
+    if (bloom > 0.0f) {
+        for (int i = 0; i < 4; i++)
+            post_image(&g_bl[i], BL_W(i >> 1), BL_H(i >> 1), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        float bw[2], bh[2];
+        for (int l = 0; l < 2; l++) {  /* the same look at every internal resolution */
+            bw[l] = floorf((float)EFB_WIDTH * g_k / (float)(4 << l));
+            bh[l] = floorf((float)EFB_HEIGHT / (float)(4 << l));
+        }
+        /* bright pass: the EFB's used part into level 0 */
+        to_layout(&g_efb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        to_layout(&g_bl[0], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        target_begin(g_bl[0].view, (uint32_t)bw[0], (uint32_t)bh[0], 0);
+        float bpx[4] = {0, 0, bw[0], bh[0]}, uv[4] = {0, 0, (float)uw / EFB_W, (float)uh / EFB_H};
+        float step[4] = {(float)uw / bw[0] / EFB_W / 4.0f, (float)uh / bh[0] / EFB_H / 4.0f, 0, 0};
+        float clampuv[4] = {0, 0, ((float)uw - 0.5f) / EFB_W, ((float)uh - 0.5f) / EFB_H};
+        quad(Q_BRIGHT, TGT_TEX, 15, g_efb.view, g_samp_lin, bw[0], bh[0], bpx, uv, step, clampuv);
+        p_end_rendering(g_cmd);
+        for (int l = 0; l < 2; l++) {
+            VkImg* t = &g_bl[2 * l];
+            if (l) blur_pass(&g_bl[0], bw[0], bh[0], t, bw[1], bh[1], 0, 0);  /* the 1/8 level from the 1/4 */
+            for (int k = 0; k < 2; k++) {  /* two rounds: wider glow */
+                blur_pass(&t[0], bw[l], bh[l], &t[1], bw[l], bh[l], 1, 0);
+                blur_pass(&t[1], bw[l], bh[l], &t[0], bw[l], bh[l], 0, 1);
+            }
+        }
+        /* both levels onto the EFB with a screen blend (render_gl.c: clamp(b0 + b1), then one screen) */
+        for (int l = 0; l < 2; l++) to_layout(&g_bl[2 * l], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        efb_begin();
+        for (int l = 0; l < 2; l++) {
+            VkImg* t = &g_bl[2 * l];
+            float luv[4] = {0, 0, bw[l] / t->w, bh[l] / t->h};
+            float col[4] = {0, 0, bloom * 0.72f, 0}, shape[4] = {0, 0, (bw[l] - 0.5f) / t->w, (bh[l] - 0.5f) / t->h};
+            quad(Q_SCREEN, TGT_EFB, RGB_MASK, t->view, g_samp_lin, EFB_W, EFB_H, px, luv, col, shape);
+        }
+        efb_end();
+    }
+    if (grade) {  /* a copy of the picture, graded back into the EFB */
+        post_image(&g_scene, EFB_W, EFB_H, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        to_layout(&g_efb, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        to_layout(&g_scene, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        VkImageCopy r = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {uw, uh, 1}};
+        vkCmdCopyImage(g_cmd, g_efb.img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, g_scene.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &r);
+        to_layout(&g_scene, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        efb_begin();
+        float uv[4] = {0, 0, (float)uw / g_scene.w, (float)uh / g_scene.h};
+        float g[4] = {exp2f((float)g_settings.grade_bright / 100.0f), (float)g_settings.grade_contrast / 100.0f,
+                      (float)g_settings.grade_sat / 100.0f, (float)g_settings.grade_warm / 50.0f * 0.16f};
+        quad(Q_GRADE, TGT_EFB, RGB_MASK, g_scene.view, g_samp_near, EFB_W, EFB_H, px, uv, g, NULL);
+        efb_end();
+    }
+    g_bound = VK_NULL_HANDLE;
+    g_dyn_valid = 0;
+    g_tex_valid = 0;
+}
+
+/* FSR 1 present: the EFB's sx,sy,sw,sh onto the screen's picture rect px (rounded here). EASU into g_fsr when
+ * the picture is bigger than the source (else a linear stretch), then RCAS onto the screen. 0 when off. */
+static int fsr_present(uint32_t sx, uint32_t sy, uint32_t sw, uint32_t sh, float px[4]) {
+    if (g_settings.sharpness <= 0 || !sw || !sh) return 0;
+    for (int i = 0; i < 4; i++) px[i] = floorf(px[i] + 0.5f);
+    uint32_t dw = (uint32_t)(px[2] - px[0]), dh = (uint32_t)(px[3] - px[1]);
+    if (!dw || !dh) return 0;
+    if (!g_fsr_logged) {
+        g_fsr_logged = 1;
+        rt_log("[vk] FSR 1 on the presented picture: %ux%u -> %ux%u, sharpness %d%%", sw, sh, dw, dh, g_settings.sharpness);
+    }
+    post_image(&g_fsr, dw, dh, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    to_layout(&g_efb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    to_layout(&g_fsr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    target_begin(g_fsr.view, dw, dh, 0);
+    float opx[4] = {0, 0, (float)dw, (float)dh};
+    if (dw > sw || dh > sh) {
+        float kx = (float)sw / (float)dw, ky = (float)sh / (float)dh;
+        float con[4] = {kx, ky, 0.5f * kx - 0.5f, 0.5f * ky - 0.5f};
+        float src[4] = {(float)sx, (float)sy, (float)(sx + sw - 1), (float)(sy + sh - 1)};
+        quad(Q_EASU, TGT_TEX, 15, g_efb.view, g_samp_near, (float)dw, (float)dh, opx, opx, con, src);
+    } else {
+        float uv[4] = {(float)sx / EFB_W, (float)sy / EFB_H, (float)(sx + sw) / EFB_W, (float)(sy + sh) / EFB_H};
+        quad(Q_TEX_OPAQUE, TGT_TEX, 15, g_efb.view, g_samp_lin, (float)dw, (float)dh, opx, uv, NULL, NULL);
+    }
+    p_end_rendering(g_cmd);
+    to_layout(&g_fsr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 1);
+    /* 100% = AMD's strongest; each 50% less halves it */
+    float sharp[4] = {exp2f(-(float)(100 - g_settings.sharpness) / 50.0f), 0, 0, 0};
+    float last[4] = {0, 0, (float)(dw - 1), (float)(dh - 1)};
+    quad(Q_RCAS, TGT_SWAP, 15, g_fsr.view, g_samp_near, (float)g_ext.width, (float)g_ext.height, px, opx, sharp, last);
+    p_end_rendering(g_cmd);
+    to_layout(&g_efb, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    return 1;
+}
+
 /* the XFB copy: the EFB's picture onto the screen image, letterboxed to the chosen aspect */
 static void present_picture(const GxCmd* c) {
     if (!acquire()) return;
@@ -1295,6 +1465,7 @@ static void present_picture(const GxCmd* c) {
     float uv[4] = {(float)XSC(x) / EFB_W, sy / EFB_H, (float)XSC(x + w) / EFB_W, (sy + sh) / EFB_H};
     float px[4];
     picture_rect(aspect, px);
+    if (fsr_present(XSC(x), (uint32_t)sy, XSC(x + w) - XSC(x), (uint32_t)sh, px)) return;
     to_layout(&g_efb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 1);
@@ -1581,6 +1752,7 @@ static void device_teardown(void) {
     img_destroy(&g_ov);
     img_destroy(&g_dummy);
     img_destroy(&g_icons);
+    post_teardown();
     vkFreeMemory(g_dev, g_pool_mem, NULL);
     g_pool_mem = VK_NULL_HANDLE;
     swap_destroy();
@@ -1617,8 +1789,9 @@ static void device_teardown(void) {
     for (int i = 0; i < GX_SPEC_COUNT; i++)
         if (g_spec_sm[i]) vkDestroyShaderModule(g_dev, g_spec_sm[i], NULL);
     memset(g_spec_sm, 0, sizeof g_spec_sm);
-    VkShaderModule sm[7] = {g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch};
-    for (int i = 0; i < 7; i++) vkDestroyShaderModule(g_dev, sm[i], NULL);
+    VkShaderModule sm[12] = {g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch,
+                             g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas};
+    for (int i = 0; i < 12; i++) vkDestroyShaderModule(g_dev, sm[i], NULL);
     vkDestroyDevice(g_dev, NULL);
     g_dev = VK_NULL_HANDLE;
     /* per-frame state that pointed at the old objects */
@@ -1746,7 +1919,32 @@ static void execute(GxFrame* f) {
     int sets_bound = 0;
     unsigned draws = 0;
     g_fr_binds = 0;
+    /* bloom / grading (post_process): after the last 3D draw before each picture (XFB copy), as render_gl.c */
+    static uint32_t* post_at;
+    static uint32_t post_cap;
+    uint32_t npost = 0, ipost = 0;
+    if (post_wanted() && ubo_ok) {
+        int64_t last3d = -1;
+        uint32_t ureg = ~0u;
+        for (uint32_t i = 0; i < f->ncmds; i++) {
+            const GxCmd* c = &f->cmds[i];
+            if (c->type == GXC_STATE) ureg = c->a;
+            else if (c->type == GXC_DRAW && ureg < f->nunis && f->unis[ureg].xfr[0x26] == 0) last3d = i;
+            else if (c->type == GXC_COPY && c->copy[4]) {
+                if (last3d >= 0) {
+                    if (npost == post_cap) post_at = realloc(post_at, (post_cap = post_cap ? post_cap * 2 : 8) * sizeof *post_at);
+                    post_at[npost++] = (uint32_t)last3d;
+                }
+                last3d = -1;
+            }
+        }
+    }
     for (uint32_t i = 0; i < f->ncmds; i++) {
+        if (ipost < npost && i > post_at[ipost]) {
+            ipost++;
+            post_process(f->in_race);
+            sets_bound = 0;
+        }
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE:
