@@ -1,14 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- **iOS (iPhone / iPad): the v0.8.0 picture options.** The Display tab gets the Android set: 1x / 1.5x / 2x
-  resolution, Sharpness (AMD FSR 1), Bloom and Colour, all off by default. The app icon is the fan icon too (your own
-  picture in the Mac launcher still replaces it). The v0.8.0 iOS zip is built from this.
-- **The fan-made icon is the only default icon.** The PC program, Android app, Linux desktop entry and Switch
-  HOME-screen icon no longer fall back to the game's save icon from your disc; without a picture of your own they
-  always use the fan icon (by cedry2kio). Developers running `configure.py` without `--icon` get it too.
-
 ## v0.8.0 (2026-11-11)
 
 - **Picture options on Switch, Android and Linux / Steam Deck.** The settings menu's Display tab now has the PC's
@@ -19,9 +10,12 @@
   - **Android:** the same three, plus the 1x / 1.5x / 2x resolution choice (new on phones).
   - **Linux / Steam Deck:** already had everything the Windows version has (resolution 1x-4x, anti-aliasing,
     sharpness, bloom, colour, smooth character lighting); checked for this release.
-  - Not yet on Switch and Android: anti-aliasing and smooth character lighting. iPhone / iPad: later.
+  - **iPhone / iPad:** the Android set (resolution, Sharpness, Bloom, Colour), all off by default.
+  - Not yet on Switch, Android, iPhone and iPad: anti-aliasing and smooth character lighting.
+- **Bloom stays off in menus.** With Bloom turned on, character select after a race could glow almost white; bloom
+  now shows only in races and on the results screen.
 - **New game icon** on every platform: a fan-made Sonic Riders icon by cedry2kio (DeviantArt). The installers use it
-  unless you pick your own picture.
+  unless you pick your own picture (the game's save icon is no longer used).
 
 ## v0.7.4 (2026-11-10)
 
