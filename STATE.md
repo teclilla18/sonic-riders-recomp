@@ -91,6 +91,8 @@ Last hardware test: 2026-11-07 afternoon (OLED handheld 1785/614/2133, switch-re
 ## Wish list / paused
 
 Picture enhancements (resolution scale, bloom, HD textures); edge-anchored HUD for ultrawide; boost effect (top).
+Ring cap in races 100 -> 999 (user, 2026-11-11: explore; find the cap check, the HUD digit count and what rings feed:
+level-ups, air, ring-gear boosts).
 PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
 
 ## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
