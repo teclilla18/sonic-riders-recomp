@@ -57,6 +57,7 @@ OWN_ART = {
     "docs/images/compare/recomp-1.jpg": "0c6a55e5adb65b61a34af262b847ada0e7df3a8e",
     "docs/images/compare/original-2.jpg": "12b047881bffee3a6474c4d276a37ad03c827d6b",
     "docs/images/compare/recomp-2.jpg": "fcd82ec1a09589caf26a55fcaf501e0f7bd4cdde",
+    "docs/images/settings-display.jpg": "c02503fd7d6f88b77049d5b695505cab0fc6bb7b",  # settings menu screenshot for the v0.8.0 notes (the user's OK, 2026-11-11)
     "launcher/icon_256.png": "80541e60eb82d9440c001da3bc4c7240bda2b111",  # launcher icon (user's ChatGPT art, 2026-11-09)
     "launcher/icon_32.png": "24e3018e7e6651be4cbba8228f81364bf9d0a70e",
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
