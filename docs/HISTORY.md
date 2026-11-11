@@ -1123,3 +1123,25 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - v0.8.0 PC/Switch/Android/Linux zips rebuilt from 1a195a4 and replaced on the release (tag stays on 54997c5);
   downloaded PC zip has the new icon [confirmed, hash]. Original zips kept in build/old/release-v0.8.0-first-icon/.
   Not rebuilt: the user's Switch SD forwarder NSP and NRO still show the old icon until rebuilt.
+
+## 2026-11-11, Mac: v0.8.0 iOS zip, bloom on character select
+
+- Picture options on for SR_IOS (menu.cpp, the Android set on render_vk.c / MoltenVK) and the fan icon as the only
+  default iOS icon, no save-icon fallback (matches ca93fdc): 42c9217. Perf route [confirmed, logs], options off vs
+  SR_BLOOM=60 SR_SHARPNESS=60 SR_GRADE=0,118,160,0: iPad Pro 11 M1 (wired) 1P 59.5 / 2P 59.9 fps -> 59.9 / 59.9;
+  iPhone 17 Pro 59.9 / 59.9 -> 59.9 / 59.9 (game 0.9 -> 1.0 ms per step), FSR 854x480 -> 2146x1206, all states
+  specialized. Frames look right (different moments, no SR_DETCLOCK: not a pixel diff). One iPhone 1P shot with
+  options on has a big white haze, probably game dust made brighter by bloom + contrast [uncertain].
+- Bloom lit character select on the iPad (user): GAME_TOP_MODE stays 8 there. in_race now also needs fewer than 8
+  frames in a row with GAME_MENU_FLAG set (results screen keeps bloom): 00d3861, shared by all renderers. iPad: no
+  bloom on character select, bloom in races [confirmed, user]. PC route check: PC session. Not in the other
+  v0.8.0 zips.
+- User played the iPad Pro build on max settings: "runs so so well ... flawless" [accepted, iPad Pro]. iPhone: perf
+  route only. Finger scrolling: not checked separately.
+- SonicRiders-iOS-Setup-v0.8.0.zip from 00d3861 uploaded to v0.8.0, the notes' "later today" line replaced
+  (user's OK) [released]. Not done: a cold Mac test from this zip.
+- Device notes: devicectl install with a different bundle ID = a second app (empty Documents): build with
+  `--bundle-id <installed ID>` (`devicectl device info apps`). iPad Pro: net.srnative.sonicriders; iPhone:
+  net.srnative.sonicriders.tedb86a30. Sideloadly: untick "automatic bundle ID" and type that ID. iPhone wireless
+  link failed (CoreDeviceError 4000 "Can't assign requested address", also on cable) until an Xcode update and a
+  phone restart; error 4016 = not unlocked since restart.
