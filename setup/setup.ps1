@@ -281,7 +281,8 @@ if ($Icon -and $doPc -and $Icon -notmatch "\.ico$") {
         $pngBytes = $ms.ToArray()
     } finally { $g.Dispose(); $bmp.Dispose(); $src.Dispose() }
     $IconIco = Join-Path $Root "build\icon_picture.ico"
-    $hdr = [byte[]](0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 32, 0) + [BitConverter]::GetBytes([uint32]$pngBytes.Length) + [BitConverter]::GetBytes([uint32]22)
+    New-Item -ItemType Directory -Force -Path (Split-Path $IconIco) | Out-Null  # a fresh install has no build\ yet
+    $hdr =[byte[]](0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 32, 0) + [BitConverter]::GetBytes([uint32]$pngBytes.Length) + [BitConverter]::GetBytes([uint32]22)
     [IO.File]::WriteAllBytes($IconIco, [byte[]]($hdr + $pngBytes))
 }
 
