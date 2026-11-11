@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "imgui.h"
+#include "imgui_internal.h"  /* ClearActiveID: touch scrolling (phones) */
 #include "menu_raster.h"
 #include "overlay.h"
 #include "runtime.h"
@@ -327,6 +328,29 @@ void close_menu() {
     g_gate = true;
     g_quit_popup = false;
 }
+
+#ifdef SR_PHONE
+/* phones: a finger drag up or down scrolls the page (ImGui has no touch scrolling). Once the drag is clearly
+ * vertical, whatever it started on (a radio button, a slider) is let go, so it is not changed or pressed. */
+static void touch_scroll() {
+    static bool scrolling;
+    if (!ImGui::IsMouseDown(0)) {
+        scrolling = false;
+        return;
+    }
+    if (!scrolling) {
+        ImVec2 d = ImGui::GetMouseDragDelta(0, 0.0f);
+        if (fabsf(d.y) > ImGui::GetFontSize() * 0.6f && fabsf(d.y) > fabsf(d.x) * 1.5f &&
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+            scrolling = true;
+            ImGui::ClearActiveID();
+            ImGui::SetScrollY(ImGui::GetScrollY() - d.y);  /* the movement so far */
+        }
+        return;
+    }
+    ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+}
+#endif
 
 /* ---- tabs ---- */
 void tab_display() {
@@ -753,6 +777,9 @@ void settings_window() {
                     /* the page ends one row above the window's bottom: the Close / Quit row */
                     ImGui::BeginChild("page", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 4), ImGuiChildFlags_NavFlattened);
                     tabs[i].draw();
+#ifdef SR_PHONE
+                    touch_scroll();
+#endif
                     ImGui::EndChild();
                     ImGui::EndTabItem();
                 }

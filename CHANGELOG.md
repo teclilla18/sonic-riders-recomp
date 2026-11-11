@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.8.0 (2026-11-11)
+
+- **Picture options on Switch, Android and Linux / Steam Deck.** The settings menu's Display tab now has the PC's
+  picture options on more platforms, all off by default so nothing gets slower unless you turn them on:
+  - **Switch:** Sharpness (AMD FSR 1), Bloom, Colour (Original / Vivid / Warm / Cool and sliders), next to the
+    1x / 1.5x / 2x resolution. On an overclocked OLED (handheld) a 1x race with all three on still runs at 60 fps;
+    2x with them suits the 30 fps mode better.
+  - **Android:** the same three, plus the 1x / 1.5x / 2x resolution choice (new on phones).
+  - **Linux / Steam Deck:** already had everything the Windows version has (resolution 1x-4x, anti-aliasing,
+    sharpness, bloom, colour, smooth character lighting); checked for this release.
+  - Not yet on Switch and Android: anti-aliasing and smooth character lighting. iPhone / iPad: later.
+- **New game icon** on every platform: a fan-made Sonic Riders icon by cedry2kio (DeviantArt). The installers use it
+  unless you pick your own picture.
+
 ## v0.7.4 (2026-11-10)
 
 - **iPhone and iPad: no more second app when renewing.** The Mac installer builds with the ID of the Sonic Riders
