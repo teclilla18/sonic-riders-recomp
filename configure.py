@@ -329,6 +329,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.rule("shaders", "%s tools/embed_shaders.py gl $out" % py, description="SHADERS $out")
     else:
         shader_h = OUT + "/gen/gx_shaders_dksh.h"
+        # the picture options' passes share the Vulkan quad shaders (QUAD_DK)
+        shader_src += ["runtime/shaders/vk_quad.vert", "runtime/shaders/vk_bright.frag", "runtime/shaders/vk_blur.frag",
+                       "runtime/shaders/vk_grade.frag", "runtime/shaders/vk_easu.frag", "runtime/shaders/vk_rcas.frag"]
         n.rule("shaders", "%s tools/embed_shaders.py dksh $out %s/tools/bin/uam.exe %s/shaders" % (py, dkp, OUT),
                description="UAM $out")
     if shader_h:

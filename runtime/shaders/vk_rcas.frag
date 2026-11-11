@@ -13,13 +13,23 @@
 // CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Vulkan backend (render_vk.c): FSR 1 RCAS, the scaled picture sharpened onto the screen. uv runs over the
+// Vulkan (render_vk.c) and deko3d (render_deko.c, QUAD_DK): FSR 1 RCAS, the scaled picture sharpened onto the screen. uv runs over the
 // source's pixels; color.x = sharpness (AMD's con.x: 1 = the most); shape.zw = the last texel.
 layout(location = 0) in vec2 v_uv;
+#ifdef QUAD_DK  // deko3d (render_deko.c): a uniform buffer at binding 3, beside the GX shaders' 0-2
+layout(binding = 0) uniform sampler2D u_tex;
+layout(std140, binding = 3) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#else
 layout(set = 0, binding = 0) uniform sampler2D u_tex;
 layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#endif
 layout(location = 0) out vec4 o_color;
-vec3 tx(ivec2 p) { return texelFetch(u_tex, clamp(p, ivec2(0), ivec2(pc.shape.zw)), 0).rgb; }
+// a texel by float coordinates with the nearest sampler: on Switch hardware an integer clamp + texelFetch
+// read only the first column (fine in Eden and on Vulkan)
+vec3 tx(ivec2 p) {
+  vec2 q = clamp(vec2(p), vec2(0.0), pc.shape.zw) + 0.5;
+  return textureLod(u_tex, q / vec2(textureSize(u_tex, 0)), 0.0).rgb;
+}
 void main() {
   ivec2 p = ivec2(floor(v_uv));
   vec3 b = tx(p + ivec2(0, -1)), d = tx(p + ivec2(-1, 0)), e = tx(p), f = tx(p + ivec2(1, 0)), h = tx(p + ivec2(0, 1));

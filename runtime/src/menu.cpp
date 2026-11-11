@@ -46,6 +46,9 @@ void mods_set_enabled(int i, int on);
 #endif
 #if defined(__SWITCH__)
 #define PIC_RES_RADIO 1  /* 1x / 1.5x / 2x (the EFB is allocated at 2x) */
+#define PIC_FSR 1        /* render_deko.c */
+#define PIC_BLOOM 1
+#define PIC_GRADE 1
 #endif
 #if defined(__ANDROID__)  /* render_vk.c; iOS (the same renderer on MoltenVK) once tested there */
 #define PIC_RES_RADIO 1

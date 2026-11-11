@@ -62,7 +62,8 @@ static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
-static DkShader g_vsh_ssbo;  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
+static DkShader g_vsh_ssbo;
+static DkShader g_qvs, g_q_bright, g_q_blur, g_q_grade, g_q_easu, g_q_rcas;  /* picture options (quads) */  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
 
 /* SR_GPU_AB=1 (hardware testing): alternates every frame between the vertex shader reading XF memory
  * from uniform buffers (normal) and the old one reading it from a storage buffer, and logs the GPU
@@ -304,7 +305,9 @@ static void dk_setup(void) {
     g_cmd = dkCmdBufCreate(&cm);
 
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
-                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + 6 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + 6 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT +
+                       sizeof k_dk_quad_vert_dksh + sizeof k_dk_bright_frag_dksh + sizeof k_dk_blur_frag_dksh + sizeof k_dk_grade_frag_dksh +
+                       sizeof k_dk_easu_frag_dksh + sizeof k_dk_rcas_frag_dksh + 6 * DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -313,6 +316,12 @@ static void dk_setup(void) {
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
     shader_load(&g_vsh_ssbo, k_gx_vert_ssbo_dksh, sizeof k_gx_vert_ssbo_dksh, &off);
+    shader_load(&g_qvs, k_dk_quad_vert_dksh, sizeof k_dk_quad_vert_dksh, &off);  /* picture options */
+    shader_load(&g_q_bright, k_dk_bright_frag_dksh, sizeof k_dk_bright_frag_dksh, &off);
+    shader_load(&g_q_blur, k_dk_blur_frag_dksh, sizeof k_dk_blur_frag_dksh, &off);
+    shader_load(&g_q_grade, k_dk_grade_frag_dksh, sizeof k_dk_grade_frag_dksh, &off);
+    shader_load(&g_q_easu, k_dk_easu_frag_dksh, sizeof k_dk_easu_frag_dksh, &off);
+    shader_load(&g_q_rcas, k_dk_rcas_frag_dksh, sizeof k_dk_rcas_frag_dksh, &off);
     for (int i = 0; i < GX_SPEC_COUNT; i++) shader_load(&g_spec[i], k_spec_blob + k_spec_off[i], k_spec_size[i], &off);
     if (getenv("SR_NOSPEC")) g_spec_on = 0;
     rt_log("[deko3d] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
@@ -496,6 +505,248 @@ static void bind_textures(const GxCmd* c, const GxUniforms* u) {
     dkCmdBufBindTextures(g_cmd, DkStage_Fragment, 0, h, 8);
 }
 
+
+/* ---- picture options: bloom, colour grading, FSR 1 (as render_vk.c / render_gl.c;
+ * docs/notes/picture-options-port.md). The passes are screen quads with the Vulkan quad shaders built for
+ * deko3d (QUAD_DK: parameters in uniform buffer 3, beside the GX shaders' 0-2). Images are made on first use
+ * from the image pool, at fixed sizes (the largest EFB, the 1280x720 screen). After a pass the GX state is bound
+ * again (gx_rebind). */
+#define BL_W(l) ((uint32_t)(EFB_WIDTH * WIDE_K_MAX + 0.5f) / (4u << (l)) + 1)
+#define BL_H(l) ((uint32_t)EFB_HEIGHT / (4u << (l)) + 1)
+#define SAMP_NEAR 0  /* clamp, nearest (sampler index: wrap S * 12 + wrap T * 4 + mag * 2 + min) */
+#define SAMP_LIN 3   /* clamp, linear */
+typedef struct PpImg { DkImage image; DkImageView view; uint32_t off, size, slot, w, h; int live; } PpImg;
+static PpImg g_pp_efb, g_pp_scene, g_pp_bl[4], g_pp_fsr;  /* g_pp_efb: a descriptor for sampling the EFB */
+static uint8_t* g_fr_cpu;
+static DkGpuAddr g_fr_gpu, g_fr_vb, g_fr_ib;
+static uint32_t g_fr_vbytes;
+static int g_post_logged, g_fsr_logged;
+enum { PB_OPAQUE, PB_SCREEN };
+
+static uint32_t desc_slot(void) {
+    if (!g_nslot_free) rt_fatal("out of texture descriptors");
+    return g_slot_free[--g_nslot_free];
+}
+
+/* a descriptor for an existing image (the EFB), or a new pool image of w x h */
+static void pp_img(PpImg* p, uint32_t w, uint32_t h, int usage2d) {
+    if (p->live) return;
+    make_image(&p->image, &p->off, &p->size, w, h, DkImageFlags_UsageRender | (usage2d ? DkImageFlags_Usage2DEngine : 0),
+               DkImageFormat_RGBA8_Unorm);
+    dkImageViewDefaults(&p->view, &p->image);
+    p->slot = desc_slot();
+    dkImageDescriptorInitialize(&descriptors()[p->slot], &p->view, false, false);
+    dkCmdBufBarrier(g_cmd, DkBarrier_None, DkInvalidateFlags_Descriptors);
+    p->w = w, p->h = h;
+    p->live = 1;
+}
+static void pp_efb_desc(void) {
+    if (g_pp_efb.live) return;
+    g_pp_efb.view = g_efb_view;
+    g_pp_efb.slot = desc_slot();
+    g_pp_efb.w = EFB_W, g_pp_efb.h = EFB_H;
+    dkImageDescriptorInitialize(&descriptors()[g_pp_efb.slot], &g_efb_view, false, false);
+    dkCmdBufBarrier(g_cmd, DkBarrier_None, DkInvalidateFlags_Descriptors);
+    g_pp_efb.live = 1;
+}
+
+static int grade_wanted(void) {
+    return g_settings.grade_bright != 0 || g_settings.grade_contrast != 100 || g_settings.grade_sat != 100 ||
+           g_settings.grade_warm != 0;
+}
+static int post_wanted(void) { return g_settings.bloom > 0 || grade_wanted(); }
+
+/* render into this image (no depth) */
+static void pp_target(const DkImageView* v) {
+    DkImageView const* t[1] = {v};
+    dkCmdBufBindRenderTargets(g_cmd, t, 1, NULL);
+}
+
+/* one screen quad with fragment shader fs into the bound target of w x h; rect in its pixels (vk_quad.vert) */
+static void pp_quad(const DkShader* fs, const PpImg* tex, uint32_t samp, int blend, uint32_t mask, float w, float h,
+                    const float px[4], const float uv[4], const float color[4], const float shape[4]) {
+    if (g_stage_off + 256 > SLOT_STAGE) return;
+    uint32_t so = SLOT_CMD + SLOT_VTX + SLOT_UBO + g_stage_off;
+    float pc[20] = {px[0] / w * 2 - 1, px[1] / h * 2 - 1, px[2] / w * 2 - 1, px[3] / h * 2 - 1};
+    static const float uv01[4] = {0, 0, 1, 1}, white[4] = {1, 1, 1, 1}, zero[4] = {0, 0, 0, 0}, ident[4] = {1, 0, 0, 1};
+    memcpy(pc + 4, uv ? uv : uv01, 16);
+    memcpy(pc + 8, color ? color : white, 16);
+    memcpy(pc + 12, shape ? shape : zero, 16);
+    memcpy(pc + 16, ident, 16);
+    memcpy(g_fr_cpu + so, pc, sizeof pc);
+    g_stage_off += 256;
+    DkShader const* sh[2] = {&g_qvs, fs};
+    dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, sh, 2);
+    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 3, g_fr_gpu + so, sizeof pc);
+    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 3, g_fr_gpu + so, sizeof pc);
+    dkCmdBufBindVtxAttribState(g_cmd, NULL, 0);
+    dkCmdBufBindVtxBufferState(g_cmd, NULL, 0);
+    DkViewport vp = {0, 0, w, h, 0.0f, 1.0f};
+    dkCmdBufSetViewports(g_cmd, 0, &vp, 1);
+    DkScissor sc = {0, 0, (uint32_t)w, (uint32_t)h};
+    dkCmdBufSetScissors(g_cmd, 0, &sc, 1);
+    DkRasterizerState rs;
+    dkRasterizerStateDefaults(&rs);
+    rs.cullMode = DkFace_None;
+    dkCmdBufBindRasterizerState(g_cmd, &rs);
+    DkDepthStencilState ds;
+    dkDepthStencilStateDefaults(&ds);
+    ds.depthTestEnable = false;
+    ds.depthWriteEnable = false;
+    dkCmdBufBindDepthStencilState(g_cmd, &ds);
+    DkColorState cs;
+    dkColorStateDefaults(&cs);
+    dkColorStateSetBlendEnable(&cs, 0, blend == PB_SCREEN);
+    dkCmdBufBindColorState(g_cmd, &cs);
+    if (blend == PB_SCREEN) {  /* 1 - (1 - dst) * (1 - src) */
+        DkBlendState bs;
+        dkBlendStateDefaults(&bs);
+        dkBlendStateSetOps(&bs, DkBlendOp_Add, DkBlendOp_Add);
+        dkBlendStateSetFactors(&bs, DkBlendFactor_InvDstColor, DkBlendFactor_One, DkBlendFactor_Zero, DkBlendFactor_One);
+        dkCmdBufBindBlendStates(g_cmd, 0, &bs, 1);
+    }
+    DkColorWriteState cw;
+    dkColorWriteStateDefaults(&cw);
+    dkColorWriteStateSetMask(&cw, 0, mask);
+    dkCmdBufBindColorWriteState(g_cmd, &cw);
+    dkCmdBufBindTexture(g_cmd, DkStage_Fragment, 0, dkMakeTextureHandle(tex->slot, samp));
+    dkCmdBufDraw(g_cmd, DkPrimitive_TriangleStrip, 4, 1, 0, 0);
+    g_st_valid = 0;
+}
+
+/* the GX draw setup again after a pass (execute binds it once per frame) */
+static void gx_rebind(const GxUniforms* cur) {
+    DkImageView const* targets[1] = {&g_efb_view};
+    dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
+    DkShader const* shaders[2] = {g_ab_mode == 1 ? &g_vsh_ssbo : &g_vsh, g_fsh_bound};
+    dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
+    static const uint32_t offs[10] = {
+        offsetof(GxVertex, pos), offsetof(GxVertex, nrm), offsetof(GxVertex, col[0]), offsetof(GxVertex, col[1]),
+        offsetof(GxVertex, tex[0]), offsetof(GxVertex, tex[2]), offsetof(GxVertex, tex[4]), offsetof(GxVertex, tex[6]),
+        offsetof(GxVertex, tmtx[0]), offsetof(GxVertex, tmtx[4])};
+    DkVtxAttribState attrs[10];
+    for (int i = 0; i < 10; i++) {
+        memset(&attrs[i], 0, sizeof attrs[i]);
+        attrs[i].bufferId = 0;
+        attrs[i].offset = offs[i];
+        attrs[i].size = DkVtxAttribSize_4x32;
+        attrs[i].type = DkVtxAttribType_Float;
+    }
+    dkCmdBufBindVtxAttribState(g_cmd, attrs, 10);
+    DkVtxBufferState vb = {sizeof(GxVertex), 0};
+    dkCmdBufBindVtxBufferState(g_cmd, &vb, 1);
+    dkCmdBufBindVtxBuffer(g_cmd, 0, g_fr_vb, g_fr_vbytes ? g_fr_vbytes : 16);
+    dkCmdBufBindIdxBuffer(g_cmd, DkIdxFormat_Uint32, g_fr_ib);
+    g_st_valid = 0;
+    if (cur) apply_state(cur);
+}
+
+/* one blur pass, src's top-left sw x sh into dst's dw x dh; dir in source texels (0: a linear copy) */
+static void blur_pass(const PpImg* s, float sw, float sh, const PpImg* d, float dw, float dh, float dirx, float diry) {
+    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    pp_target(&d->view);
+    float px[4] = {0, 0, dw, dh}, uv[4] = {0, 0, sw / s->w, sh / s->h};
+    float col[4] = {dirx / s->w, diry / s->h, 1, 0}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
+    pp_quad(&g_q_blur, s, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, dw, dh, px, uv, col, shape);
+}
+
+/* bloom and grading on the EFB, right after the last 3D draw before a picture (the HUD stays as drawn) */
+static void post_process(int in_race, const GxUniforms* cur) {
+    float bloom = in_race ? (float)g_settings.bloom / 100.0f : 0.0f;  /* menus with lit models went white (GL) */
+    int grade = grade_wanted();
+    if (bloom <= 0.0f && !grade) return;
+    uint32_t uw = XSC(EFB_WIDTH), uh = SC(EFB_HEIGHT);  /* the EFB's used part */
+    if (uw > (uint32_t)EFB_W) uw = EFB_W;
+    if (uh > (uint32_t)EFB_H) uh = EFB_H;
+    if (!g_post_logged) {
+        g_post_logged = 1;
+        rt_log("[deko3d] picture options: bloom %d%%, colour %+d/%d/%d/%+d", g_settings.bloom, g_settings.grade_bright,
+               g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm);
+    }
+    pp_efb_desc();
+    float px[4] = {0, 0, (float)uw, (float)uh};
+    if (bloom > 0.0f) {
+        for (int i = 0; i < 4; i++) pp_img(&g_pp_bl[i], BL_W(i >> 1), BL_H(i >> 1), 0);
+        float bw[2], bh[2];
+        for (int l = 0; l < 2; l++) {  /* the same look at every internal resolution */
+            bw[l] = floorf((float)EFB_WIDTH * g_k / (float)(4 << l));
+            bh[l] = floorf((float)EFB_HEIGHT / (float)(4 << l));
+        }
+        /* bright pass: the EFB's used part into level 0 */
+        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+        pp_target(&g_pp_bl[0].view);
+        float bpx[4] = {0, 0, bw[0], bh[0]}, uv[4] = {0, 0, (float)uw / EFB_W, (float)uh / EFB_H};
+        float step[4] = {(float)uw / bw[0] / EFB_W / 4.0f, (float)uh / bh[0] / EFB_H / 4.0f, 0, 0};
+        float clampuv[4] = {0, 0, ((float)uw - 0.5f) / EFB_W, ((float)uh - 0.5f) / EFB_H};
+        pp_quad(&g_q_bright, &g_pp_efb, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, bw[0], bh[0], bpx, uv, step, clampuv);
+        for (int l = 0; l < 2; l++) {
+            const PpImg* t = &g_pp_bl[2 * l];
+            if (l) blur_pass(&g_pp_bl[0], bw[0], bh[0], t, bw[1], bh[1], 0, 0);  /* the 1/8 level from the 1/4 */
+            for (int k = 0; k < 2; k++) {  /* two rounds: wider glow */
+                blur_pass(&t[0], bw[l], bh[l], &t[1], bw[l], bh[l], 1, 0);
+                blur_pass(&t[1], bw[l], bh[l], &t[0], bw[l], bh[l], 0, 1);
+            }
+        }
+        /* both levels onto the EFB with a screen blend, RGB only (the EFB alpha is kept) */
+        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+        pp_target(&g_efb_view);
+        for (int l = 0; l < 2; l++) {
+            const PpImg* t = &g_pp_bl[2 * l];
+            float luv[4] = {0, 0, bw[l] / t->w, bh[l] / t->h};
+            float col[4] = {0, 0, bloom * 0.72f, 0}, shape[4] = {0, 0, (bw[l] - 0.5f) / t->w, (bh[l] - 0.5f) / t->h};
+            pp_quad(&g_q_blur, t, SAMP_LIN, PB_SCREEN, DkColorMask_RGB, EFB_W, EFB_H, px, luv, col, shape);
+        }
+    }
+    if (grade) {  /* a copy of the picture, graded back into the EFB */
+        pp_img(&g_pp_scene, EFB_W, EFB_H, 1);
+        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
+        DkImageRect r = {0, 0, 0, uw, uh, 1};
+        dkCmdBufCopyImage(g_cmd, &g_efb_view, &r, &g_pp_scene.view, &r, 0);
+        dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image);
+        pp_target(&g_efb_view);
+        float uv[4] = {0, 0, (float)uw / g_pp_scene.w, (float)uh / g_pp_scene.h};
+        float g[4] = {exp2f((float)g_settings.grade_bright / 100.0f), (float)g_settings.grade_contrast / 100.0f,
+                      (float)g_settings.grade_sat / 100.0f, (float)g_settings.grade_warm / 50.0f * 0.16f};
+        pp_quad(&g_q_grade, &g_pp_scene, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGB, EFB_W, EFB_H, px, uv, g, NULL);
+    }
+    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    gx_rebind(cur);
+}
+
+/* FSR 1 present: the EFB's src rect onto the screen image fv at dst. EASU into g_pp_fsr when the picture is
+ * bigger than the source (else a linear stretch), then RCAS onto the screen. 0 when off (the caller blits). */
+static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkImageRect* dst) {
+    if (g_settings.sharpness <= 0 || !src->width || !src->height || !dst->width || !dst->height) return 0;
+    uint32_t sx = src->x, sy = src->y, sw = src->width, sh = src->height, dw = dst->width, dh = dst->height;
+    if (!g_fsr_logged) {
+        g_fsr_logged = 1;
+        rt_log("[deko3d] FSR 1 on the presented picture: %ux%u -> %ux%u, sharpness %d%%", sw, sh, dw, dh, g_settings.sharpness);
+    }
+    pp_efb_desc();
+    pp_img(&g_pp_fsr, FB_W, FB_H, 0);
+    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    pp_target(&g_pp_fsr.view);
+    float opx[4] = {0, 0, (float)dw, (float)dh};
+    if (dw > sw || dh > sh) {
+        float kx = (float)sw / (float)dw, ky = (float)sh / (float)dh;
+        float con[4] = {kx, ky, 0.5f * kx - 0.5f, 0.5f * ky - 0.5f};
+        float s[4] = {(float)sx, (float)sy, (float)(sx + sw - 1), (float)(sy + sh - 1)};
+        pp_quad(&g_q_easu, &g_pp_efb, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, opx, opx, con, s);
+    } else {  /* a smaller picture: a linear copy (vk_blur with no direction) */
+        float uv[4] = {(float)sx / EFB_W, (float)sy / EFB_H, (float)(sx + sw) / EFB_W, (float)(sy + sh) / EFB_H};
+        float col[4] = {0, 0, 1, 0}, shape[4] = {0, 0, uv[2], uv[3]};
+        pp_quad(&g_q_blur, &g_pp_efb, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, opx, uv, col, shape);
+    }
+    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    pp_target(fv);
+    /* 100% = AMD's strongest; each 50% less halves it */
+    float px[4] = {(float)dst->x, (float)dst->y, (float)(dst->x + dw), (float)(dst->y + dh)};
+    float sharp[4] = {exp2f(-(float)(100 - g_settings.sharpness) / 50.0f), 0, 0, 0};
+    float last[4] = {0, 0, (float)(dw - 1), (float)(dh - 1)};
+    pp_quad(&g_q_rcas, &g_pp_fsr, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, px, opx, sharp, last);
+    return 1;
+}
+
 /* ---- EFB copies and presentation ---- */
 static int g_fb_slot = -1;
 
@@ -614,9 +865,14 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         if ((float)FB_W > FB_H * aspect) dw = (uint32_t)(FB_H * aspect + 0.5f);
         else dh = (uint32_t)(FB_W / aspect + 0.5f);
         DkImageRect dst = {(FB_W - dw) / 2, (FB_H - dh) / 2, 0, dw, dh, 1};
-        dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
-        DkImageView const* efb_targets[1] = {&g_efb_view};
-        dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
+        if (fsr_present(&src, &fv, &dst)) {
+            dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+            gx_rebind(u);  /* the EFB as the target again, GX shaders and vertex state */
+        } else {
+            dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
+            DkImageView const* efb_targets[1] = {&g_efb_view};
+            dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
+        }
     } else if ((int)c->copy[8] >= 0) {  /* to a texture */
         int id = (int)c->copy[8];
         tex_prepare(id);
@@ -882,6 +1138,7 @@ static void execute(GxFrame* f) {
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
     dkCmdBufBindIdxBuffer(g_cmd, DkIdxFormat_Uint32, gpu + ioff);
     if (g_ab_mode == 1) dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
+    g_fr_cpu = cpu, g_fr_gpu = gpu, g_fr_vb = gpu + SLOT_CMD, g_fr_ib = gpu + ioff, g_fr_vbytes = vbytes;  /* gx_rebind */
 
     /* the register blocks and chunk tables, uploaded once each at the uniform buffer alignment;
      * STATE commands bind them by index */
@@ -899,7 +1156,31 @@ static void execute(GxFrame* f) {
     }
     const GxUniforms* cur = NULL;
     uint32_t cur_regs = ~0u, cur_xtab = ~0u;
+    /* bloom / grading (post_process): after the last 3D draw before each picture (XFB copy), as render_gl.c */
+    static uint32_t* post_at;
+    static uint32_t post_cap;
+    uint32_t npost = 0, ipost = 0;
+    if (post_wanted() && ubo_ok) {
+        int64_t last3d = -1;
+        uint32_t ureg = ~0u;
+        for (uint32_t i = 0; i < f->ncmds; i++) {
+            const GxCmd* c = &f->cmds[i];
+            if (c->type == GXC_STATE) ureg = c->a;
+            else if (c->type == GXC_DRAW && ureg < f->nunis && f->unis[ureg].xfr[0x26] == 0) last3d = i;
+            else if (c->type == GXC_COPY && c->copy[4]) {
+                if (last3d >= 0) {
+                    if (npost == post_cap) post_at = realloc(post_at, (post_cap = post_cap ? post_cap * 2 : 8) * sizeof *post_at);
+                    post_at[npost++] = (uint32_t)last3d;
+                }
+                last3d = -1;
+            }
+        }
+    }
     for (uint32_t i = 0; i < f->ncmds; i++) {
+        if (ipost < npost && i > post_at[ipost]) {
+            ipost++;
+            post_process(f->in_race, cur);
+        }
         const GxCmd* c = &f->cmds[i];
         switch (c->type) {
         case GXC_STATE: {

@@ -13,14 +13,24 @@
 // CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Vulkan backend (render_vk.c): FSR 1 EASU, the EFB's shown part scaled up to the picture's size. The quad's uv
+// Vulkan (render_vk.c) and deko3d (render_deko.c, QUAD_DK): FSR 1 EASU, the EFB's shown part scaled up to the picture's size. The quad's uv
 // runs over output pixels (0..size, centres at .5), so the screen's pre-rotation does not matter.
 // color = AMD's con0 (input / output size, 0.5 * that - 0.5); shape = first and last texel of the source rect.
 layout(location = 0) in vec2 v_uv;
+#ifdef QUAD_DK  // deko3d (render_deko.c): a uniform buffer at binding 3, beside the GX shaders' 0-2
+layout(binding = 0) uniform sampler2D u_tex;
+layout(std140, binding = 3) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#else
 layout(set = 0, binding = 0) uniform sampler2D u_tex;
 layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#endif
 layout(location = 0) out vec4 o_color;
-vec3 tx(ivec2 p) { return texelFetch(u_tex, clamp(p, ivec2(pc.shape.xy), ivec2(pc.shape.zw)), 0).rgb; }
+// a texel by float coordinates with the nearest sampler: on Switch hardware an integer clamp + texelFetch
+// read only the first column (fine in Eden and on Vulkan)
+vec3 tx(ivec2 p) {
+  vec2 q = clamp(vec2(p), pc.shape.xy, pc.shape.zw) + 0.5;
+  return textureLod(u_tex, q / vec2(textureSize(u_tex, 0)), 0.0).rgb;
+}
 float lum(vec3 c) { return c.b * 0.5 + (c.r * 0.5 + c.g); }
 void tap(inout vec3 aC, inout float aW, vec2 off, vec2 dir, vec2 len, float lob, float clp, vec3 c) {
   vec2 v = vec2(off.x * dir.x + off.y * dir.y, off.x * -dir.y + off.y * dir.x) * len;

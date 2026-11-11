@@ -38,7 +38,14 @@ PROGRAMS_GL = (("gx_vert", "gx", "vert", "#define PERPIXEL_LIGHT 1\n"),
 PROGRAMS_DK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
                ("gx_vert_ssbo", "gx", "vert", "#define BIND_UBO_XT , binding = 2\n"),  # GPU cost test (SR_GPU_AB)
-               ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""))
+               ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""),
+               # picture options (bloom, colour grading, FSR 1): the Vulkan quad shaders built for deko3d
+               ("dk_quad_vert", "vk_quad", "vert", "#define QUAD_DK 1\n"),
+               ("dk_bright_frag", "vk_bright", "frag", "#define QUAD_DK 1\n"),
+               ("dk_blur_frag", "vk_blur", "frag", "#define QUAD_DK 1\n"),
+               ("dk_grade_frag", "vk_grade", "frag", "#define QUAD_DK 1\n"),
+               ("dk_easu_frag", "vk_easu", "frag", "#define QUAD_DK 1\n"),
+               ("dk_rcas_frag", "vk_rcas", "frag", "#define QUAD_DK 1\n"))
 
 
 # Vulkan (platform/android/render_vk.c): set 0 = the uniform buffers (registers, XF memory; dynamic offsets),

@@ -1,6 +1,11 @@
 // Vulkan backend (render_vk.c): one screen-space quad per draw, placed by push constants: the presented
 // picture, the overlay image, masked clears and the touch controls. Triangle strip of 4 vertices.
+#ifdef QUAD_DK  // deko3d (render_deko.c): picture options' passes; a uniform buffer, clip +y up
+#define gl_VertexIndex gl_VertexID
+layout(std140, binding = 3) uniform PC {
+#else
 layout(push_constant) uniform PC {
+#endif
   vec4 rect;   // x0, y0, x1, y1 in clip space (+y down: Vulkan)
   vec4 uv;     // u0, v0, u1, v1
   vec4 color;  // fill colour / tint
@@ -13,4 +18,7 @@ void main() {
   v_uv = vec2(r ? pc.uv.z : pc.uv.x, b ? pc.uv.w : pc.uv.y);
   vec2 p = vec2(r ? pc.rect.z : pc.rect.x, b ? pc.rect.w : pc.rect.y);
   gl_Position = vec4(mat2(pc.rot.xy, pc.rot.zw) * p, 0.0, 1.0);
+#ifdef QUAD_DK
+  gl_Position.y = -gl_Position.y;
+#endif
 }

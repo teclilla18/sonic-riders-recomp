@@ -1,8 +1,13 @@
-// Vulkan backend (render_vk.c): colour grading of the 3D picture (as render_gl.c's composite).
+// Vulkan (render_vk.c) and deko3d (render_deko.c, QUAD_DK): colour grading of the 3D picture (as render_gl.c's composite).
 // color = exposure, contrast, saturation, warmth.
 layout(location = 0) in vec2 v_uv;
+#ifdef QUAD_DK  // deko3d (render_deko.c): a uniform buffer at binding 3, beside the GX shaders' 0-2
+layout(binding = 0) uniform sampler2D u_tex;
+layout(std140, binding = 3) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#else
 layout(set = 0, binding = 0) uniform sampler2D u_tex;
 layout(push_constant) uniform PC { vec4 rect; vec4 uv; vec4 color; vec4 shape; vec4 rot; } pc;
+#endif
 layout(location = 0) out vec4 o_color;
 void main() {
   vec3 c = texture(u_tex, v_uv).rgb;
