@@ -1114,3 +1114,12 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Switch SD: sonicriders.nro = the v0.8.0 code (+ NRO icon); new HOME-screen forwarder with the fan icon as
   /switch/sonicriders/SonicRiders.nsp (user installs it with DBI); leftovers moved to /switch/sonicriders/_delete-me.
 - PC check before the release: build OK; perf route with bloom + FSR + Vivid 59.94 fps, frame right [confirmed].
+
+## 2026-11-11 (morning): game icon swapped to cedry2kio's "Sonic Riders Icon 3"
+
+- User's choice: the same artist's other icon (DeviantArt "sonic_riders_icon_3"), transparent outside filled with the
+  blue the iOS build showed (RGB 12, 62, 144). `setup/icon.png` (512) + `setup/icon_256.jpg`, guard hashes updated
+  (1a195a4). Launcher icon unchanged; README credit unchanged.
+- v0.8.0 PC/Switch/Android/Linux zips rebuilt from 1a195a4 and replaced on the release (tag stays on 54997c5);
+  downloaded PC zip has the new icon [confirmed, hash]. Original zips kept in build/old/release-v0.8.0-first-icon/.
+  Not rebuilt: the user's Switch SD forwarder NSP and NRO still show the old icon until rebuilt.
