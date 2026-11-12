@@ -633,6 +633,11 @@ void tab_gameplay() {
               "unlocked."))
         settings_apply();
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
+    heading("Races");
+    if (check("Up to 999 rings", &g_settings.ring_cap_999,
+              "On by default: a racer keeps collecting rings past 100, up to 999. "
+              "Turn off for the original game's limit of 100 rings."))
+        settings_apply();
 }
 
 void tab_mods() {

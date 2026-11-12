@@ -8,7 +8,10 @@
 #include "settings.h"
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1};
+/* the 999 ring cap starts on, the original 100 one menu switch away (user, 2026-11-12) */
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1};
+volatile int g_ring_cap = 999;  /* patches.txt: the most rings a racer holds */
+static int g_fixed_ring_cap;    /* settings_fix_ring_cap, 0 = the setting's */
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -65,13 +68,13 @@ float settings_wide_k(void) { return g_wide_k; }
 /* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
 static void settings_log(const char* when) {
     rt_log("[settings] %sscreen: %s (%.3f), HUD %s, field of view %d%%, fps counter %s, resolution %s, frame rate %s, PC pictures %d/s, "
-           "sharpness %d%%, pad in background %s, handheld graphics %s, Chaos Emerald gear %s",
+           "sharpness %d%%, pad in background %s, handheld graphics %s, Chaos Emerald gear %s, ring cap %d",
            when, settings_screen_name(g_settings.screen), settings_display_aspect(),
            g_settings.screen == SCREEN_FIT ? "at the edges" : g_settings.hud_stretch ? "stretched" : "4:3", g_settings.fov, g_settings.show_fps ? "on" : "off",
            settings_resolution_name(g_settings.resolution),
            settings_framerate_name(g_settings.framerate), g_settings.pc_fps,
            g_settings.sharpness, g_settings.pad_background ? "on" : "off", g_settings.handheld_gpu ? "384 MHz" : "system default",
-           g_settings.chaos_emerald ? "unlocked" : "as in the save");
+           g_settings.chaos_emerald ? "unlocked" : "as in the save", (int)g_ring_cap);
 }
 
 static void apply_view(void) {
@@ -84,6 +87,7 @@ static void apply_view(void) {
 
 static void apply(void) {
     apply_view();
+    g_ring_cap = g_fixed_ring_cap ? g_fixed_ring_cap : g_settings.ring_cap_999 ? 999 : 100;
     platform_set_handheld_gpu(g_settings.handheld_gpu);
 }
 
@@ -124,6 +128,7 @@ void settings_load(void) {
             else if (!strcmp(line, "pad_background")) g_settings.pad_background = v != 0;
             else if (!strcmp(line, "sharpness") && v >= 0 && v <= 100) g_settings.sharpness = v;
             else if (!strcmp(line, "update_check")) g_settings.update_check = v != 0;
+            else if (!strcmp(line, "ring_cap_999")) g_settings.ring_cap_999 = v != 0;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -167,6 +172,14 @@ void settings_fix_wide_k(float k) {
 
 int settings_wide_k_fixed(void) { return g_fixed_k >= 1.0f; }
 
+void settings_fix_ring_cap(int cap) {
+    g_fixed_ring_cap = cap == 100 || cap == 999 ? cap : 0;
+    apply();
+    rt_log("[settings] ring cap fixed for this run: %d", (int)g_ring_cap);
+}
+
+int settings_ring_cap(void) { return g_ring_cap; }
+
 void settings_set_window_aspect(float aspect) {
     if (!(aspect > 0.1f) || fabsf(aspect - g_window_aspect) < 0.001f) return;
     g_window_aspect = aspect;
@@ -185,11 +198,12 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\nupdate_check=%d\nring_cap_999=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
-            g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check);
+            g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
+            g_settings.ring_cap_999);
     fclose(f);
 }

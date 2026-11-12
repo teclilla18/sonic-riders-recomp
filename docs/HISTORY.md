@@ -1161,3 +1161,17 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Guard: PAST_ART history allow-list from the Heroes repo (a09bbbb, user's request) as 71bcfd2, committed with the
   noreply identity; GitHub's history scan green again (it had failed on old versions of the icons and stick knob).
 - S23: APK v0.8.0-4-g4a24700a installed over USB. Next-session prompts no longer go in STATE.md (user).
+
+## 2026-11-12 (PC): 999 ring cap, launcher icon text
+
+- Launcher step 3 named the memory card picture; now the fan icon by cedry2kio (7bc8a74). PC/Switch/Android
+  installer modes opened for the user (SR_INSTALLER=switch|android).
+- Ring cap: scan of build/gen for `cmpwi/cmplwi x,100` + `li x,100`: rings at racer + 0xB98 (stride 0x1080). Sites:
+  per-frame racer loops 81831A78 / 8182B828 / 81835F28 (`if > 100 = 100`), branchless min 81815CA8/CB0, HUD rolling
+  counter 8182BC20 / 81830628 / 81831CF8. 81973F4C / 81974AF0 are percentages (byte at 81AB7A1C), not rings.
+  Pickups (+10/+20/+30 boxes 81889EB8.., 8188A658, 8195F7B0) write the racer's own word; no team/partner count.
+- Test: scratchpad ringrun.sh (full-race route to field 20000, SR_POKEAT=14000:81A0E2D8:000000FA, SR_PEEK).
+  999: 250 -> 279, HUD 3 digits; vanilla: 250 -> 100. A first vanilla run run in parallel stopped logging at field
+  ~3750 (menus); alone it was fine [uncertain why].
+- settings.ini never saved `update_check` (format string ended at sharpness): fixed with the new key.
+- User: the next release waits for the Heroes alpha (notes open with a call for Heroes alpha testers).

@@ -34,6 +34,8 @@ typedef struct Settings {
     int pad_background; /* PC: controllers keep working while the window is not focused (SDL hint) */
     int sharpness;      /* PC: FSR 1 RCAS sharpening of the final picture in percent, 0 (off)..100 */
     int update_check;   /* PC: ask GitHub at start-up whether a newer release exists (update_check.c) */
+    int ring_cap_999;   /* races: a racer holds up to 999 rings (default) instead of the original 100
+                           (g_ring_cap, read by the cap checks in config/GXEE8P/patches.txt) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -66,6 +68,9 @@ const char* settings_screen_name(int mode);
  * for the whole run, the same on every machine (EFB width factor k; 0 = not fixed). Screen settings
  * and window size changes then only change how the picture is shown. */
 void settings_fix_wide_k(float k);
+/* the ring cap from a recording or the online host (999 or 100): game state, kept for this run */
+void settings_fix_ring_cap(int cap);
+int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);

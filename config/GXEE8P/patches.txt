@@ -56,3 +56,18 @@ decl extern volatile int g_det_lspin;
 81959D1C before { g_det_lspin = (int)ld32(0x800000E4u); vi_det_loop_point(); }
 81959D44 before { g_det_lspin = 0; }
 81959DA4 before { g_det_lspin = 0; }
+# ---- Ring cap (settings.c g_ring_cap: 999 by default, 100 = the original). The game holds a racer's rings
+# in a word at racer + 0xB98 (racers 0x1080 apart from 0x81A0D740) and caps it at 100 in five places:
+decl extern volatile int g_ring_cap;
+# three copies of the per-frame racer loop: `if (rings > 100) rings = 100` (r3 + r6 = the ring word, r5 the
+# value stored): with another cap the stored value is min(rings, cap)
+81831A78 after { int32_t v = (int32_t)ld32(c->r[3] + c->r[6]); c->r[5] = (uint32_t)(v > g_ring_cap ? g_ring_cap : v); }
+8182B828 after { int32_t v = (int32_t)ld32(c->r[3] + c->r[6]); c->r[5] = (uint32_t)(v > g_ring_cap ? g_ring_cap : v); }
+81835F28 after { int32_t v = (int32_t)ld32(c->r[3] + c->r[6]); c->r[5] = (uint32_t)(v > g_ring_cap ? g_ring_cap : v); }
+# a branchless min(rings, 100) (li 100, then rings - 100): both constants become the cap
+81815CA8 after { c->r[0] = (uint32_t)g_ring_cap; }
+81815CB0 after { c->r[4] = c->r[5] - (uint32_t)g_ring_cap; }
+# the HUD's rolling ring counter counts up toward min(rings, 100) (rings in r0, from racer r21 / r21 / r26)
+8182BC20 after { uint32_t v = ld32(c->r[21] + 0xB98u); c->r[0] = v > (uint32_t)g_ring_cap ? (uint32_t)g_ring_cap : v; }
+81830628 after { uint32_t v = ld32(c->r[21] + 0xB98u); c->r[0] = v > (uint32_t)g_ring_cap ? (uint32_t)g_ring_cap : v; }
+81831CF8 after { uint32_t v = ld32(c->r[26] + 0xB98u); c->r[0] = v > (uint32_t)g_ring_cap ? (uint32_t)g_ring_cap : v; }

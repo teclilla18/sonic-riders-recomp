@@ -81,7 +81,7 @@ static uint32_t get32(const uint8_t* b) { return (uint32_t)b[0] | (uint32_t)b[1]
 
 /* ------------------------------------------------------------------ recording and replay */
 /* File: a 64-byte header ("SRINPUT1", u32 version 1, u32 ports, u32 flags (1: an online session,
- * 2: the generated online save), f32 the run's camera aspect as the EFB width factor k (settings.h
+ * 2: the generated online save, 4: the 999 ring cap; without it 100, as before the setting), f32 the run's camera aspect as the EFB width factor k (settings.h
  * settings_fix_wide_k; 0 in older recordings), the build version, 40 bytes), then per frame: u32 game step, u32 state checksum,
  * ports x 8 bytes (buttons u16, stick x/y, C x/y, L/R). Little-endian. */
 #define REC_HEADER 64
@@ -98,7 +98,7 @@ static void rec_open(const char* path, int flags) {
     memcpy(h, "SRINPUT1", 8);
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
-    put32(h + 16, (uint32_t)flags);
+    put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u));
     float k = settings_wide_k();
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -129,6 +129,7 @@ static int rep_open(const char* path) {
     memcpy(build, h + 24, 40);
     build[40] = 0;
     if (get32(h + 16) & 2) g_online_save = 1;  /* recorded on the generated online save: replayed on it too */
+    settings_fix_ring_cap(get32(h + 16) & 4 ? 999 : 100);  /* the recorded ring cap: game state */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
@@ -236,10 +237,10 @@ static void net_send_input(void) {
     g_last_send_ns = platform_now_ns();
 }
 
-/* welcome: player number, input delay, players, and the host's camera aspect (EFB width factor k,
- * f32 at byte 8): game state, so every machine in the session uses the host's */
+/* welcome: player number, input delay, players, the host's ring cap (byte 6 bit 0: 999, else 100) and
+ * camera aspect (EFB width factor k, f32 at byte 8): game state, so every machine in the session uses the host's */
 static void net_send_welcome(void) {
-    uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, 0, 0};
+    uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, settings_ring_cap() == 999, 0};
     float k = settings_wide_k();
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -497,6 +498,7 @@ static void net_connect(const char* spec) {
                 float k;
                 memcpy(&k, &kb, 4);
                 settings_fix_wide_k(k);  /* the host's camera aspect */
+                settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
                 break;
             }
         }
@@ -533,6 +535,7 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
     /* the camera aspect is game state: fixed for the run (a replay already took the recorded one); the
      * host and a recording use this machine's, a joiner the host's (net_connect) */
     if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
+    if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
     if (net) net_connect(net);
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);

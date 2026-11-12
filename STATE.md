@@ -49,9 +49,13 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-1. **Ring cap in races 100 -> 999 (user's top priority, 2026-11-11).** Find the cap check(s), the HUD ring counter
-   (3 digits?), and what the ring count feeds (gear level-ups, air, ring-gear boosts, results/rings saved); then a
-   setting (off by default) on every platform.
+0. **Next release ON HOLD** (user, 2026-11-12) until the user says the Sonic Heroes alpha is out; its notes open
+   with a call for Heroes alpha testers + a link to that release. Waiting in it: 999 ring cap, launcher icon text.
+1. **999 ring cap: implemented, default on** (user's choice, 2026-11-12; Gameplay > "Up to 999 rings" off = 100).
+   Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
+   online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting
+   (279), HUD shows 251/253, Lv. 3; vanilla clamps to 100 [confirmed, log + shots]. Story, WGP, Tag, 2-4P: no
+   other cap in the code (all racers' word), not played [likely]. Not on Switch/Android/iOS hardware yet.
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
    Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.
