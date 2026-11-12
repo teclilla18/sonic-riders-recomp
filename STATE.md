@@ -54,7 +54,9 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 1. **999 ring cap: implemented, default on** (user's choice, 2026-11-12; Gameplay > "Up to 999 rings" off = 100).
    Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
    online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting
-   (279), HUD shows 251/253, Lv. 3; vanilla clamps to 100 [confirmed, log + shots]. Story, WGP, Tag, 2-4P: no
+   (279), HUD shows 251/253, Lv. 3; vanilla clamps to 100 [confirmed, log + shots]. Label "Ring Limit set to 999";
+   with it a boost hit takes 100 rings (fn 81849394) and the max-level box keeps rings above 100 [implemented,
+   compile + code; hit path seen firing in a debug run]. Falling off the course (fn 81817264) still zeroes rings. Story, WGP, Tag, 2-4P: no
    other cap in the code (all racers' word), not played [likely]. Not on Switch/Android/iOS hardware yet.
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
