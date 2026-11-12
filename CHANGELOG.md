@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Windows launcher:** the icon step now says the fan icon by cedry2kio is used unless you pick your own picture
+  (it still named the old memory card picture; the icon itself was already right).
+
 ## v0.8.0 (2026-11-11)
 
 - **Picture options on Switch, Android and Linux / Steam Deck.** The settings menu's Display tab now has the PC's

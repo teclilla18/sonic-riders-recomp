@@ -729,7 +729,7 @@ std::wstring pick_file(HWND owner, const wchar_t* filter, const wchar_t* title) 
 std::string installer_blocker() {
     if (!g_ready.setup) return "setup\\setup.ps1 is missing: unpack the whole zip again.";
     if (g_disc_choice.empty()) return "Select your disc image.";
-    if (g_ic.own_icon && g_ic.icon.empty()) return "Pick your icon picture (or untick \"Use my own icon\").";
+    if (g_ic.own_icon && g_ic.icon.empty()) return "Pick your icon picture (or untick \"Use my own picture\").";
     if (g_mode == M_SWITCH && g_ic.home_icon && g_ic.keys.empty()) return "Pick your prod.keys (or untick the HOME-screen icon).";
     if (g_mode == M_ANDROID && !g_ic.license) return "Accept the Android SDK License to continue.";
     return "";
@@ -896,7 +896,7 @@ void page_installer(float w) {
             ImGui::SameLine();
             ImGui::TextUnformatted(g_ic.icon.empty() ? "none" : short_path(g_ic.icon, 30).c_str());
         }
-        note("Otherwise the game's memory card picture. Square pictures of 256 x 256 or more look best.");
+        note("Otherwise the Sonic Riders fan icon by cedry2kio (DeviantArt), credited in the README. Square pictures of 256 x 256 or more look best.");
         if (g_mode == M_SWITCH) {
             ImGui::Spacing();
             ImGui::Checkbox("Make a HOME-screen icon", &g_ic.home_icon);
