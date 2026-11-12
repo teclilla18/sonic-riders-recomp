@@ -77,3 +77,7 @@ decl extern volatile int g_ring_cap;
 # the item box that sets the rings to 100 (max level; item switch case 8188A0E8, stored at 8188A0F0): with the
 # 999 cap it raises them to 100 at least, never lowers them
 8188A0E8 after { if (g_ring_cap != 100) { uint32_t v = ld32(c->r[21] + 0xB98u); if (v > 100u) c->r[0] = v; } }
+# falling off the course: the respawn (fn 81817264) stores 0 (r6, which also clears other fields after it) as the
+# rings; with the 999 cap a fall takes 100 rings like a hit (the old count kept before the store, rewritten after)
+81817A58 before int32_t ring_before = (int32_t)ld32(c->r[25] + 0xB98u);
+81817A58 after if (g_ring_cap != 100) st32(c->r[25] + 0xB98u, (uint32_t)(ring_before > 100 ? ring_before - 100 : 0));

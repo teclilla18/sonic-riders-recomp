@@ -3,7 +3,7 @@
 ## Unreleased
 
 - **Up to 999 rings in a race** (new default, every mode: Normal Race, World Grand Prix, Story, Tag, 1-4 players).
-  A hit from an opponent's boost now takes 100 rings instead of all of them. The original game stops at 100 and
+  A hit from an opponent's boost or a fall off the course now takes 100 rings instead of all of them. The original game stops at 100 and
   loses everything; settings menu > Gameplay > "Ring Limit set to 999" (untick) brings that back. The max-level
   item box no longer lowers a count above 100.
 - The "check for updates" switch (F1 > About) is now remembered after a restart.

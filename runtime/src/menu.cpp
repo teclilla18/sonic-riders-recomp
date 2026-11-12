@@ -636,8 +636,8 @@ void tab_gameplay() {
     heading("Races");
     if (check("Ring Limit set to 999", &g_settings.ring_cap_999,
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
-              "boost takes 100 rings instead of all of them. Turn off for the original game: at most 100 rings, "
-              "and a hit takes them all."))
+              "boost or a fall off the course takes 100 rings instead of all of them. Turn off for the original "
+              "game: at most 100 rings, and a hit or a fall takes them all."))
         settings_apply();
 }
 

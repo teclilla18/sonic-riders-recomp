@@ -1178,4 +1178,5 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Later: menu label "Ring Limit set to 999"; with it a boost hit (fn 81849394, store 81849410) takes 100 rings,
   not all; the max-level item box (case 8188A0E8) no longer lowers rings above 100. Found with temporary
   `[ringdbg]` patches on every store to racer 0's ring word: 81817A58 (fn 81817264) is the fall-off-course
-  respawn, rings -> 0 (seen in shots: fall, black fade, respawn); left as in the original, user asked.
+  respawn, rings -> 0 (seen in shots: fall, black fade, respawn). User chose 100 for falls too (patch keeps the
+  old count before the store, r6 = 0 also clears other fields). PC run poked at 9500: 258 -> 158 -> 58 -> 0.
