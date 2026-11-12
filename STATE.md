@@ -1,4 +1,4 @@
-# State (2026-11-11)
+# State (2026-11-12)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -6,6 +6,12 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 
 ## Releases
+
+**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips; no iOS zip, v0.8.0's stays
+current for iPhone/iPad). Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Contents: call for Sonic
+Heroes alpha testers (top of the notes, README line 1, launcher sidebar on PC/Switch/Android modes [confirmed,
+launcher screenshots], Linux/Mac setup end message), 999 ring limit, menu L/R tabs + wrap, update_check saved.
+v0.7.1 delisted (tag kept).
 
 **v0.8.0 released 2026-11-11** (tag on 54997c5; all five zips). PC/Switch/Android/Linux zips last replaced
 2026-11-11 from be45877 (bloom fix 00d3861 + fan icon as the only default icon); cold Sandbox PC (2 installs, one
@@ -53,7 +59,7 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    Notes open with the call for Sonic Heroes alpha testers; README "Alpha testers needed:"; every launcher /
    installer links to the Heroes repo. No iOS zip (Mac launcher needs a Mac; Swift change compile-unchecked).
    Released but not played by the user: capsule +100, hit/fall -100; L/R tabs and menu wrap accepted ("it works").
-1. **999 ring cap: implemented, default on** (user's choice, 2026-11-12; Gameplay > "Up to 999 rings" off = 100).
+1. **999 ring cap: released in v0.8.1, default on** (user's choice, 2026-11-12; Gameplay > "Ring Limit set to 999").
    Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
    online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting
    (279), HUD shows 251/253, Lv. 3; vanilla clamps to 100 [confirmed, log + shots]. Label "Ring Limit set to 999";

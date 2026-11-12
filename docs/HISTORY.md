@@ -1180,3 +1180,12 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   `[ringdbg]` patches on every store to racer 0's ring word: 81817A58 (fn 81817264) is the fall-off-course
   respawn, rings -> 0 (seen in shots: fall, black fade, respawn). User chose 100 for falls too (patch keeps the
   old count before the store, r6 = 0 also clears other fields). PC run poked at 9500: 258 -> 158 -> 58 -> 0.
+
+## 2026-11-12 (PC, later): v0.8.1 released with the Sonic Heroes alpha call
+
+- User announced the Heroes alpha build and asked to release 0.8.1 with the call for alpha testers. Done: release
+  notes open with it (link to the Heroes repo main page), README line 1 "Alpha testers needed:", the Windows
+  launcher sidebar (all modes) gets the message + a "Sonic Heroes recomp" button [confirmed, SR_LAUNCHER_SHOT in
+  PC and Switch modes], Linux and Mac setup print it at the end, Mac launcher About page [implemented, not built:
+  needs a Mac]. Cold Sandbox PC + Android PASS (2 installs each) [confirmed]. Zips: PC, Switch, Android, Linux;
+  no iOS zip (make_release --flavor ios builds the Mac launcher, only on a Mac).
