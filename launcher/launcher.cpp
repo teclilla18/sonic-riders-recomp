@@ -1562,6 +1562,17 @@ void draw_ui(float W, float H) {
         ImGui::PopID();
         y += 40 * s;
     }
+    /* call for Sonic Heroes alpha testers (the sister project), under the page list */
+    y += 18 * s;
+    ImGui::SetCursorPos(ImVec2(18 * s, y));
+    ImGui::PushTextWrapPos(side - 18 * s);
+    ImGui::TextColored(kGoldV, "Alpha testers needed:");
+    ImGui::SetCursorPosX(18 * s);
+    ImGui::TextColored(ImVec4(0.75f, 0.80f, 0.90f, 1), "the Sonic Heroes native port has its first alpha build.");
+    ImGui::PopTextWrapPos();
+    ImGui::SetCursorPosX(18 * s);
+    if (ImGui::Button("Sonic Heroes recomp", ImVec2(side - 36 * s, 0)))
+        ShellExecuteW(nullptr, L"open", L"https://github.com/teclilla18/sonic-heroes-recomp", nullptr, nullptr, SW_SHOWNORMAL);
     std::string upd = update_tag();
     if (!upd.empty()) {  /* a newer release: a gold button to its download page, above Quit */
         ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 64 * s));

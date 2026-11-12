@@ -801,6 +801,8 @@ struct AboutPage: View {
             Para("Sonic Riders native port \(m.version): an unofficial fan project, not affiliated with SEGA or Nintendo. "
                  + "The app is built on your Mac from your own disc image. Never share the .ipa or your disc image: they contain the game.")
             if let r = m.root { Para("Folder: \(shortPath(r))", kDim) }
+            Para("Alpha testers needed: the Sonic Heroes native port has its first alpha build.", kGold)
+            Btn(t: "Sonic Heroes recomp") { open("https://github.com/teclilla18/sonic-heroes-recomp") }
             HStack(spacing: 8) {
                 Btn(t: "Project page") { open("https://github.com/teclilla18/sonic-riders-recomp") }
                 Btn(t: "Report a problem") { open("https://github.com/teclilla18/sonic-riders-recomp/issues") }

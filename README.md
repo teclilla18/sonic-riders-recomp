@@ -1,4 +1,4 @@
-> **Also in the works:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
+> **Alpha testers needed:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
 
 <p align="center">
   <img src="docs/images/banner.jpg" alt="Sonic, Tails, Knuckles, Jet, Wave and Storm racing on Extreme Gear through a neon city" width="100%">

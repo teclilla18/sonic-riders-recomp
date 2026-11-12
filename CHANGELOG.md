@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.8.1 (2026-11-12)
+
+- **Alpha testers needed for the Sonic Heroes native port:** the README and every launcher / installer (PC, Switch,
+  Android, Linux, Mac) now link to https://github.com/teclilla18/sonic-heroes-recomp.
 - **Up to 999 rings in a race** (new default, every mode: Normal Race, World Grand Prix, Story, Tag, 1-4 players).
   A hit from an opponent's boost or a fall off the course now takes 100 rings instead of all of them. The original game stops at 100 and
   loses everything; settings menu > Gameplay > "Ring Limit set to 999" (untick) brings that back. The 100-ring
