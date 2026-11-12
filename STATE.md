@@ -58,6 +58,8 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    with it a boost hit takes 100 rings (fn 81849394) and the max-level box keeps rings above 100 [implemented,
    compile + code; hit path seen firing in a debug run]. A fall off the course (fn 81817264) takes 100 too (user's choice); PC run: 258 -> 158 -> 58 -> 0 [confirmed, log]. Story, WGP, Tag, 2-4P: no
    other cap in the code (all racers' word), not played [likely]. Not on Switch/Android/iOS hardware yet.
+1b. **Gear Lv. 4 and 5** past the original 3, each with more top speed and boost (user, 2026-11-12; with the 999
+   ring limit): plan in notes/plans-2026-11.md "Gear levels 4 and 5".
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
    Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.

@@ -191,6 +191,16 @@ static void trigger(int port, int side, int v, uint8_t* analog, uint16_t* button
 }
 
 /* one gamepad's state added into *p */
+/* a GameCube input's mapped controller button held (a trigger half way down counts); for the settings menu, so
+ * the phones' on-screen buttons merged into the pad do not switch its tabs */
+static int pad_mapped_down(SDL_GameController* c, int in) {
+    int src = g_padsrc[in];
+    if (src == PAD_NONE) return 0;
+    if (src == PAD_LT || src == PAD_RT)
+        return SDL_GameControllerGetAxis(c, src == PAD_RT ? SDL_CONTROLLER_AXIS_TRIGGERRIGHT : SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000;
+    return SDL_GameControllerGetButton(c, (SDL_GameControllerButton)src);
+}
+
 static void read_gamepad(SDL_GameController* c, int port, GcPad* p) {
     int lx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTX), ly = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTY);
     int rx = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTX), ry = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_RIGHTY);
@@ -305,6 +315,10 @@ void input_pump(void) {
         for (size_t i = 0; i < sizeof om / sizeof om[0]; i++)
             if (SDL_GameControllerGetButton(g_ctl[0], om[i].b)) ov |= om[i].m;
     }
+    /* the game's own L / R as the player mapped them (a controller's triggers, the keyboard's U / O by default)
+     * switch tabs too, like L / R / ZL / ZR on the Switch */
+    if ((g_ctl[0] && pad_mapped_down(g_ctl[0], IN_L)) || (k && key_down(k, IN_L))) ov |= OV_TAB_L;
+    if ((g_ctl[0] && pad_mapped_down(g_ctl[0], IN_R)) || (k && key_down(k, IN_R))) ov |= OV_TAB_R;
     /* the first input changes go to the log (bug reports: does a controller/F1 reach the game?) */
     static int logged;
     static uint16_t prev_btn[PORTS];

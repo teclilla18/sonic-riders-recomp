@@ -4,8 +4,10 @@
 
 - **Up to 999 rings in a race** (new default, every mode: Normal Race, World Grand Prix, Story, Tag, 1-4 players).
   A hit from an opponent's boost or a fall off the course now takes 100 rings instead of all of them. The original game stops at 100 and
-  loses everything; settings menu > Gameplay > "Ring Limit set to 999" (untick) brings that back. The max-level
-  item box no longer lowers a count above 100.
+  loses everything; settings menu > Gameplay > "Ring Limit set to 999" (untick) brings that back. The 100-ring
+  capsule adds 100 rings (up to 999) instead of setting the count to 100.
+- **Settings menu tabs with L / R:** besides the shoulder buttons, Q / E and Page Up / Page Down, the buttons you
+  use as the game's L and R now switch tabs too (a controller's triggers, U / O on the keyboard by default).
 - The "check for updates" switch (F1 > About) is now remembered after a restart.
 - **Windows launcher:** the icon step now says the fan icon by cedry2kio is used unless you pick your own picture
   (it still named the old memory card picture; the icon itself was already right).
