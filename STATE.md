@@ -49,8 +49,10 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-0. **Next release ON HOLD** (user, 2026-11-12) until the user says the Sonic Heroes alpha is out; its notes open
-   with a call for Heroes alpha testers + a link to that release. Waiting in it: 999 ring cap, launcher icon text.
+0. **v0.8.1 released 2026-11-12** (tag at 77620bb; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS).
+   Notes open with the call for Sonic Heroes alpha testers; README "Alpha testers needed:"; every launcher /
+   installer links to the Heroes repo. No iOS zip (Mac launcher needs a Mac; Swift change compile-unchecked).
+   Released but not played by the user: capsule +100, hit/fall -100; L/R tabs and menu wrap accepted ("it works").
 1. **999 ring cap: implemented, default on** (user's choice, 2026-11-12; Gameplay > "Up to 999 rings" off = 100).
    Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
    online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting
