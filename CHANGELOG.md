@@ -8,6 +8,8 @@
   capsule adds 100 rings (up to 999) instead of setting the count to 100.
 - **Settings menu tabs with L / R:** besides the shoulder buttons, Q / E and Page Up / Page Down, the buttons you
   use as the game's L and R now switch tabs too (a controller's triggers, U / O on the keyboard by default).
+- **Settings menu wraps around:** Up from the tabs goes to Close / Quit Game at the bottom, and Down from there back to
+  the tabs.
 - The "check for updates" switch (F1 > About) is now remembered after a restart.
 - **Windows launcher:** the icon step now says the fan icon by cedry2kio is used unless you pick your own picture
   (it still named the old memory card picture; the icon itself was already right).

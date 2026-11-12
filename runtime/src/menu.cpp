@@ -795,6 +795,8 @@ void settings_window() {
         }
         ImGui::Separator();
         quit_row();
+        /* up from the top row (the tabs) goes to the Close / Quit row and down from there back to the top */
+        ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY);
     }
     ImGui::End();
 }
