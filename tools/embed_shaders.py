@@ -38,11 +38,15 @@ PROGRAMS_GL = (("gx_vert", "gx", "vert", "#define PERPIXEL_LIGHT 1\n"),
 PROGRAMS_DK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
                ("gx_vert_ssbo", "gx", "vert", "#define BIND_UBO_XT , binding = 2\n"),  # GPU cost test (SR_GPU_AB)
+               # GPU cost test (SR_GPU_AB=2): the vertex shader without lighting / without texgen matrices
+               ("gx_vert_nolight", "gx", "vert", "#define XF_UBO 1\n#define GX_TEST_NOLIGHT 1\n"),
+               ("gx_vert_notexgen", "gx", "vert", "#define XF_UBO 1\n#define GX_TEST_NOTEXGEN 1\n"),
                ("overlay_vert", "overlay", "vert", ""), ("overlay_frag", "overlay", "frag", ""),
                # picture options (bloom, colour grading, FSR 1): the Vulkan quad shaders built for deko3d
                ("dk_quad_vert", "vk_quad", "vert", "#define QUAD_DK 1\n"),
                ("dk_bright_frag", "vk_bright", "frag", "#define QUAD_DK 1\n"),
                ("dk_blur_frag", "vk_blur", "frag", "#define QUAD_DK 1\n"),
+               ("dk_bloom_mix_frag", "vk_bloom_mix", "frag", "#define QUAD_DK 1\n"),
                ("dk_grade_frag", "vk_grade", "frag", "#define QUAD_DK 1\n"),
                ("dk_easu_frag", "vk_easu", "frag", "#define QUAD_DK 1\n"),
                ("dk_rcas_frag", "vk_rcas", "frag", "#define QUAD_DK 1\n"))

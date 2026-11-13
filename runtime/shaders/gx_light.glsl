@@ -41,6 +41,9 @@ vec4 channel(int c, vec4 vcol, vec3 pos, vec3 n) {
   vec3 mat = bits(cc, 0, 1) != 0u ? vcol.rgb : matr.rgb;
   float mata = bits(ac, 0, 1) != 0u ? vcol.a : matr.a;
   vec3 rgb = mat; float a = mata;
+#ifdef GX_TEST_NOLIGHT
+  return vec4(rgb, a);  /* GPU cost test (SR_GPU_AB=2): what the lighting costs */
+#endif
   if (bits(cc, 1, 1) != 0u) rgb = mat * lights(cc, pos, n, vec4(bits(cc, 6, 1) != 0u ? vcol.rgb : ambr.rgb, 0.0)).rgb;
   if (bits(ac, 1, 1) != 0u) a = mata * lights(ac, pos, n, vec4(0.0, 0.0, 0.0, bits(ac, 6, 1) != 0u ? vcol.a : ambr.a)).a;
   return vec4(rgb, a);

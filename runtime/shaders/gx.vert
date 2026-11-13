@@ -45,6 +45,9 @@ vec3 texgen(int i, vec3 pos_raw, vec3 n, vec4 c0, vec4 c1, float tmtx) {
     s = t;
   }
   if (bits(info, 2, 1) == 0u) s.z = 1.0;  /* AB11 */
+#ifdef GX_TEST_NOTEXGEN
+  return vec3(s.xy, 1.0);  /* GPU cost test (SR_GPU_AB=2): what the texgen matrices cost */
+#endif
   vec3 c;
   if (type == 2u) c = vec3(c0.rg, 1.0);
   else if (type == 3u) c = vec3(c1.rg, 1.0);

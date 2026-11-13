@@ -62,22 +62,50 @@ static DkQueue g_queue;
 static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
-static DkShader g_vsh_ssbo;
-static DkShader g_qvs, g_q_bright, g_q_blur, g_q_grade, g_q_easu, g_q_rcas;  /* picture options (quads) */  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
+static DkShader g_vsh_ssbo, g_vsh_nolight, g_vsh_notexgen;
+static DkShader g_qvs, g_q_bright, g_q_blur, g_q_mix, g_q_grade, g_q_easu, g_q_rcas;  /* picture options (quads) */  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
 
 /* SR_GPU_AB=1 (hardware testing): alternates every frame between the vertex shader reading XF memory
  * from uniform buffers (normal) and the old one reading it from a storage buffer, and logs the GPU
  * time of each every AB_LOG frames. Both draw the same picture. */
-#define AB_MODES 2
+/* SR_GPU_AB=2: rotates every frame through the normal picture and the picture options one by one off (bloom,
+ * colour grading, FSR, all three). SR_GPU_AB=3: the normal picture, the vertex shader without lighting, without
+ * texgen matrices, with the tiled cache on, and without the picture options. What each costs in the same
+ * views. Test only: the picture flickers. */
+#define AB_MODES 5
 #define AB_FRAMES 1
 #define AB_LOG 600
-static int g_ab_on = -1;
+static int g_ab_on = -1;  /* SR_GPU_AB's value: 0 off, 1 or 2 */
+static int g_ab_count;    /* modes in rotation */
 static unsigned g_ab_frame;
 static int g_ab_mode;
 static int g_ts_mode[2];
+#define AB_SSBO (g_ab_on == 1 && g_ab_mode == 1)
+#define AB_TILED (g_ab_on == 3 && g_ab_mode == 3)
+#define AB_OLDPP (g_ab_on == 4 && g_ab_mode == 1)  /* SR_GPU_AB=4: the old bloom composite and FSR copy */
+#define AB_NOPOST (g_ab_mode == 4 && (g_ab_on == 2 || g_ab_on == 3))
+#define AB_NOBLOOM (AB_NOPOST || (g_ab_on == 2 && g_ab_mode == 1))
+#define AB_NOGRADE (AB_NOPOST || (g_ab_on == 2 && g_ab_mode == 2))
+#define AB_NOFSR (AB_NOPOST || (g_ab_on == 2 && g_ab_mode == 3))
+static unsigned g_ab_posts;  /* post_process runs, for the [gpu-ab] lines */
+static const DkShader* ab_vsh(void) {
+    if (AB_SSBO) return &g_vsh_ssbo;
+    if (g_ab_on == 3 && g_ab_mode == 1) return &g_vsh_nolight;
+    if (g_ab_on == 3 && g_ab_mode == 2) return &g_vsh_notexgen;
+    return &g_vsh;
+}
 static double g_ab_ms[AB_MODES], g_ab_vs[AB_MODES], g_ab_fs[AB_MODES], g_ab_pr[AB_MODES];
 static unsigned g_ab_n[AB_MODES];
-static const char* const k_ab_names[AB_MODES] = {"XF in uniform buffers (new)", "XF in a storage buffer (old)"};
+static const char* const k_ab_names1[2] = {"XF in uniform buffers (new)", "XF in a storage buffer (old)"};
+static const char* const k_ab_names2[AB_MODES] = {"normal", "no bloom", "no colour grading", "no FSR", "picture options off"};
+static const char* const k_ab_names4[2] = {"bloom mix in one pass (new)", "bloom in two passes (old)"};
+static const char* const k_ab_names3[AB_MODES] = {"normal", "vertex shader without lighting", "vertex shader without texgen",
+                                                  "tiled cache on", "picture options off"};
+/* a barrier; with the tiled cache on (SR_GPU_AB=2's test mode) binned primitives are flushed first */
+static void bar(DkBarrier mode, uint32_t inv) {
+    if (AB_TILED) dkCmdBufTiledCacheOp(g_cmd, DkTiledCacheOp_Flush);
+    dkCmdBufBarrier(g_cmd, mode, inv);
+}
 static const DkShader* g_fsh_bound;  /* the fragment shader bound in this frame's command list */
 static DkShader g_spec[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];  /* specialized fragment shaders */
 static int g_spec_on = 1;              /* SR_NOSPEC=1: the ubershader only */
@@ -305,9 +333,9 @@ static void dk_setup(void) {
     g_cmd = dkCmdBufCreate(&cm);
 
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
-                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + 6 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT +
+                       sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + sizeof k_gx_vert_nolight_dksh + sizeof k_gx_vert_notexgen_dksh + 8 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT +
                        sizeof k_dk_quad_vert_dksh + sizeof k_dk_bright_frag_dksh + sizeof k_dk_blur_frag_dksh + sizeof k_dk_grade_frag_dksh +
-                       sizeof k_dk_easu_frag_dksh + sizeof k_dk_rcas_frag_dksh + 6 * DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_dk_easu_frag_dksh + sizeof k_dk_rcas_frag_dksh + sizeof k_dk_bloom_mix_frag_dksh + 7 * DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -316,9 +344,12 @@ static void dk_setup(void) {
     shader_load(&g_ovs, k_overlay_vert_dksh, sizeof k_overlay_vert_dksh, &off);
     shader_load(&g_ofs, k_overlay_frag_dksh, sizeof k_overlay_frag_dksh, &off);
     shader_load(&g_vsh_ssbo, k_gx_vert_ssbo_dksh, sizeof k_gx_vert_ssbo_dksh, &off);
+    shader_load(&g_vsh_nolight, k_gx_vert_nolight_dksh, sizeof k_gx_vert_nolight_dksh, &off);
+    shader_load(&g_vsh_notexgen, k_gx_vert_notexgen_dksh, sizeof k_gx_vert_notexgen_dksh, &off);
     shader_load(&g_qvs, k_dk_quad_vert_dksh, sizeof k_dk_quad_vert_dksh, &off);  /* picture options */
     shader_load(&g_q_bright, k_dk_bright_frag_dksh, sizeof k_dk_bright_frag_dksh, &off);
     shader_load(&g_q_blur, k_dk_blur_frag_dksh, sizeof k_dk_blur_frag_dksh, &off);
+    shader_load(&g_q_mix, k_dk_bloom_mix_frag_dksh, sizeof k_dk_bloom_mix_frag_dksh, &off);
     shader_load(&g_q_grade, k_dk_grade_frag_dksh, sizeof k_dk_grade_frag_dksh, &off);
     shader_load(&g_q_easu, k_dk_easu_frag_dksh, sizeof k_dk_easu_frag_dksh, &off);
     shader_load(&g_q_rcas, k_dk_rcas_frag_dksh, sizeof k_dk_rcas_frag_dksh, &off);
@@ -536,7 +567,7 @@ static void pp_img(PpImg* p, uint32_t w, uint32_t h, int usage2d) {
     dkImageViewDefaults(&p->view, &p->image);
     p->slot = desc_slot();
     dkImageDescriptorInitialize(&descriptors()[p->slot], &p->view, false, false);
-    dkCmdBufBarrier(g_cmd, DkBarrier_None, DkInvalidateFlags_Descriptors);
+    bar(DkBarrier_None, DkInvalidateFlags_Descriptors);
     p->w = w, p->h = h;
     p->live = 1;
 }
@@ -546,7 +577,7 @@ static void pp_efb_desc(void) {
     g_pp_efb.slot = desc_slot();
     g_pp_efb.w = EFB_W, g_pp_efb.h = EFB_H;
     dkImageDescriptorInitialize(&descriptors()[g_pp_efb.slot], &g_efb_view, false, false);
-    dkCmdBufBarrier(g_cmd, DkBarrier_None, DkInvalidateFlags_Descriptors);
+    bar(DkBarrier_None, DkInvalidateFlags_Descriptors);
     g_pp_efb.live = 1;
 }
 
@@ -618,7 +649,7 @@ static void pp_quad(const DkShader* fs, const PpImg* tex, uint32_t samp, int ble
 static void gx_rebind(const GxUniforms* cur) {
     DkImageView const* targets[1] = {&g_efb_view};
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
-    DkShader const* shaders[2] = {g_ab_mode == 1 ? &g_vsh_ssbo : &g_vsh, g_fsh_bound};
+    DkShader const* shaders[2] = {ab_vsh(), g_fsh_bound};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
     static const uint32_t offs[10] = {
         offsetof(GxVertex, pos), offsetof(GxVertex, nrm), offsetof(GxVertex, col[0]), offsetof(GxVertex, col[1]),
@@ -643,7 +674,7 @@ static void gx_rebind(const GxUniforms* cur) {
 
 /* one blur pass, src's top-left sw x sh into dst's dw x dh; dir in source texels (0: a linear copy) */
 static void blur_pass(const PpImg* s, float sw, float sh, const PpImg* d, float dw, float dh, float dirx, float diry) {
-    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(&d->view);
     float px[4] = {0, 0, dw, dh}, uv[4] = {0, 0, sw / s->w, sh / s->h};
     float col[4] = {dirx / s->w, diry / s->h, 1, 0}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
@@ -652,9 +683,10 @@ static void blur_pass(const PpImg* s, float sw, float sh, const PpImg* d, float 
 
 /* bloom and grading on the EFB, right after the last 3D draw before a picture (the HUD stays as drawn) */
 static void post_process(int in_race, const GxUniforms* cur) {
-    float bloom = in_race ? (float)g_settings.bloom / 100.0f : 0.0f;  /* menus with lit models went white (GL) */
-    int grade = grade_wanted();
+    float bloom = in_race && !AB_NOBLOOM ? (float)g_settings.bloom / 100.0f : 0.0f;  /* menus with lit models went white (GL) */
+    int grade = grade_wanted() && !AB_NOGRADE;
     if (bloom <= 0.0f && !grade) return;
+    g_ab_posts++;
     uint32_t uw = XSC(EFB_WIDTH), uh = SC(EFB_HEIGHT);  /* the EFB's used part */
     if (uw > (uint32_t)EFB_W) uw = EFB_W;
     if (uh > (uint32_t)EFB_H) uh = EFB_H;
@@ -673,7 +705,7 @@ static void post_process(int in_race, const GxUniforms* cur) {
             bh[l] = floorf((float)EFB_HEIGHT / (float)(4 << l));
         }
         /* bright pass: the EFB's used part into level 0 */
-        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+        bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
         pp_target(&g_pp_bl[0].view);
         float bpx[4] = {0, 0, bw[0], bh[0]}, uv[4] = {0, 0, (float)uw / EFB_W, (float)uh / EFB_H};
         float step[4] = {(float)uw / bw[0] / EFB_W / 4.0f, (float)uh / bh[0] / EFB_H / 4.0f, 0, 0};
@@ -688,9 +720,17 @@ static void post_process(int in_race, const GxUniforms* cur) {
             }
         }
         /* both levels onto the EFB with a screen blend, RGB only (the EFB alpha is kept) */
-        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+        bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
         pp_target(&g_efb_view);
-        for (int l = 0; l < 2; l++) {
+        if (!AB_OLDPP) {  /* both levels in one pass (vk_bloom_mix.frag): the same picture */
+            const PpImg* t0 = &g_pp_bl[0];
+            const PpImg* t1 = &g_pp_bl[2];
+            float luv[4] = {0, 0, bw[0] / t0->w, bh[0] / t0->h};
+            float col[4] = {(bw[1] / t1->w) / luv[2], (bh[1] / t1->h) / luv[3], bloom * 0.72f, 0};
+            float shape[4] = {(bw[1] - 0.5f) / t1->w, (bh[1] - 0.5f) / t1->h, (bw[0] - 0.5f) / t0->w, (bh[0] - 0.5f) / t0->h};
+            dkCmdBufBindTexture(g_cmd, DkStage_Fragment, 1, dkMakeTextureHandle(t1->slot, SAMP_LIN));
+            pp_quad(&g_q_mix, t0, SAMP_LIN, PB_SCREEN, DkColorMask_RGB, EFB_W, EFB_H, px, luv, col, shape);
+        } else for (int l = 0; l < 2; l++) {
             const PpImg* t = &g_pp_bl[2 * l];
             float luv[4] = {0, 0, bw[l] / t->w, bh[l] / t->h};
             float col[4] = {0, 0, bloom * 0.72f, 0}, shape[4] = {0, 0, (bw[l] - 0.5f) / t->w, (bh[l] - 0.5f) / t->h};
@@ -699,24 +739,24 @@ static void post_process(int in_race, const GxUniforms* cur) {
     }
     if (grade) {  /* a copy of the picture, graded back into the EFB */
         pp_img(&g_pp_scene, EFB_W, EFB_H, 1);
-        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
+        bar(DkBarrier_Fragments, 0);
         DkImageRect r = {0, 0, 0, uw, uh, 1};
         dkCmdBufCopyImage(g_cmd, &g_efb_view, &r, &g_pp_scene.view, &r, 0);
-        dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image);
+        bar(DkBarrier_Full, DkInvalidateFlags_Image);
         pp_target(&g_efb_view);
         float uv[4] = {0, 0, (float)uw / g_pp_scene.w, (float)uh / g_pp_scene.h};
         float g[4] = {exp2f((float)g_settings.grade_bright / 100.0f), (float)g_settings.grade_contrast / 100.0f,
                       (float)g_settings.grade_sat / 100.0f, (float)g_settings.grade_warm / 50.0f * 0.16f};
         pp_quad(&g_q_grade, &g_pp_scene, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGB, EFB_W, EFB_H, px, uv, g, NULL);
     }
-    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     gx_rebind(cur);
 }
 
 /* FSR 1 present: the EFB's src rect onto the screen image fv at dst. EASU into g_pp_fsr when the picture is
  * bigger than the source (else a linear stretch), then RCAS onto the screen. 0 when off (the caller blits). */
 static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkImageRect* dst) {
-    if (g_settings.sharpness <= 0 || !src->width || !src->height || !dst->width || !dst->height) return 0;
+    if (g_settings.sharpness <= 0 || AB_NOFSR || !src->width || !src->height || !dst->width || !dst->height) return 0;
     uint32_t sx = src->x, sy = src->y, sw = src->width, sh = src->height, dw = dst->width, dh = dst->height;
     if (!g_fsr_logged) {
         g_fsr_logged = 1;
@@ -724,7 +764,7 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
     }
     pp_efb_desc();
     pp_img(&g_pp_fsr, FB_W, FB_H, 0);
-    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(&g_pp_fsr.view);
     float opx[4] = {0, 0, (float)dw, (float)dh};
     if (dw > sw || dh > sh) {
@@ -734,10 +774,10 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
         pp_quad(&g_q_easu, &g_pp_efb, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, opx, opx, con, s);
     } else {  /* a smaller picture: a linear copy (vk_blur with no direction) */
         float uv[4] = {(float)sx / EFB_W, (float)sy / EFB_H, (float)(sx + sw) / EFB_W, (float)(sy + sh) / EFB_H};
-        float col[4] = {0, 0, 1, 0}, shape[4] = {0, 0, uv[2], uv[3]};
+        float col[4] = {0, 0, 1, AB_OLDPP ? 0.0f : 1.0f}, shape[4] = {0, 0, uv[2], uv[3]};
         pp_quad(&g_q_blur, &g_pp_efb, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, opx, uv, col, shape);
     }
-    dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+    bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(fv);
     /* 100% = AMD's strongest; each 50% less halves it */
     float px[4] = {(float)dst->x, (float)dst->y, (float)(dst->x + dw), (float)(dst->y + dh)};
@@ -780,7 +820,7 @@ static void shot_request(DkImageView const* fv) {
         for (size_t i = 0; i < sizeof k_shots / sizeof k_shots[0]; i++) want |= k_shots[i] == n;
     if (!want) return;
     if (!g_shot_mem) g_shot_mem = block(FB_W * FB_H * 4, DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached);
-    dkCmdBufBarrier(g_cmd, DkBarrier_Full, 0);
+    bar(DkBarrier_Full, 0);
     DkCopyBuf dst = {dkMemBlockGetGpuAddr(g_shot_mem), 0, 0};
     DkImageRect r = {0, 0, 0, FB_W, FB_H, 1};
     dkCmdBufCopyImageToBuffer(g_cmd, fv, &r, &dst, 0);
@@ -838,7 +878,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     g_st_valid = 0;  /* binds state of its own */
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
     DkImageRect src = {XSC(x), SC(y), 0, XSC(x + w) - XSC(x), SC(h), 1};
-    dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
+    bar(DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
     if (c->copy[4]) {  /* to the XFB: into the swapchain image, letterboxed to 4:3 */
         if (g_fb_slot < 0) g_fb_slot = dkQueueAcquireImage(g_queue, g_swap);
         DkImageView fv;
@@ -853,7 +893,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         dkCmdBufBindColorWriteState(g_cmd, &cw);
         float black[4] = {0, 0, 0, 1};
         dkCmdBufClearColor(g_cmd, 0, DkColorMask_RGBA, black);
-        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
+        bar(DkBarrier_Fragments, 0);
         /* at the chosen aspect (settings.h), centred */
         float aspect = g_k > 1.0f ? 4.0f / 3.0f * g_k : settings_display_aspect();
         if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
@@ -866,7 +906,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         else dh = (uint32_t)(FB_W / aspect + 0.5f);
         DkImageRect dst = {(FB_W - dw) / 2, (FB_H - dh) / 2, 0, dw, dh, 1};
         if (fsr_present(&src, &fv, &dst)) {
-            dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, DkInvalidateFlags_Image);
+            bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
             gx_rebind(u);  /* the EFB as the target again, GX shaders and vertex state */
         } else {
             dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &fv, &dst, DkBlitFlag_FilterLinear, 0);
@@ -884,7 +924,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             dkCmdBufBlitImage(g_cmd, &g_efb_view, &src, &tv, &dst, DkBlitFlag_FilterLinear, 0);
             uint32_t exec = c->copy[9];
             if ((((exec >> 4) & 7) | ((exec >> 3) & 1) << 3) == 4) {  /* RGB565 target: no alpha, it samples as 1 */
-                dkCmdBufBarrier(g_cmd, DkBarrier_Full, 0);
+                bar(DkBarrier_Full, 0);
                 DkImageView const* tt[1] = {&tv};
                 dkCmdBufBindRenderTargets(g_cmd, tt, 1, NULL);
                 DkScissor fs = {0, 0, t->w, t->h};
@@ -895,7 +935,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
                 if (u) apply_state(u);  /* the scissor (and the rest) of the draws that follow */
             }
-            dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image);
+            bar(DkBarrier_Primitives, DkInvalidateFlags_Image);
         }
     }
     if (c->copy[5]) {  /* clear the copied rectangle */
@@ -921,7 +961,7 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
     static int up_box[4];  /* what the overlay texture holds: content inside, transparent outside */
     const uint8_t* img = overlay_image(&version, box);
     if (!img) return;
-    dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image);  /* after the blit into the picture */
+    bar(DkBarrier_Full, DkInvalidateFlags_Image);  /* after the blit into the picture */
     DkImageView ov;
     dkImageViewDefaults(&ov, &g_ov_image);
     if (version != g_ov_version) {
@@ -947,7 +987,7 @@ static void draw_overlay(uint8_t* cpu, DkGpuAddr gpu) {
             DkCopyBuf src = {gpu + so, 0, 0};
             DkImageRect r = {(uint32_t)u[0], (uint32_t)u[1], 0, uw, uh, 1};
             dkCmdBufCopyBufferToImage(g_cmd, &src, &ov, &r, 0);
-            dkCmdBufBarrier(g_cmd, DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
+            bar(DkBarrier_Full, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
             g_stage_off = (g_stage_off + bytes + 255) & ~255u;
             g_ov_version = version;
             memcpy(up_box, box, sizeof up_box);
@@ -1052,24 +1092,29 @@ static void execute(GxFrame* f) {
     dkCmdBufClear(g_cmd);
     dkCmdBufAddMemory(g_cmd, mem, 0, SLOT_CMD);
     if (g_ab_on < 0) {
-        g_ab_on = getenv("SR_GPU_AB") && atoi(getenv("SR_GPU_AB")) != 0;
-        if (g_ab_on) rt_log("[gpu-ab] GPU cost test on: %d modes of %d frames each", AB_MODES, AB_FRAMES);
+        g_ab_on = getenv("SR_GPU_AB") ? atoi(getenv("SR_GPU_AB")) : 0;
+        if (g_ab_on < 0 || g_ab_on > 4) g_ab_on = 1;
+        g_ab_count = g_ab_on == 2 || g_ab_on == 3 ? AB_MODES : 2;
+        if (g_ab_on) rt_log("[gpu-ab] GPU cost test %d on: %d modes of %d frames each", g_ab_on, g_ab_count, AB_FRAMES);
     }
     if (g_ab_on) {
-        g_ab_mode = (int)((g_ab_frame++ / AB_FRAMES) % AB_MODES);
+        g_ab_mode = (int)((g_ab_frame++ / AB_FRAMES) % (unsigned)g_ab_count);
         if (g_ab_frame % AB_LOG == 0) {
-            for (int m = 0; m < AB_MODES; m++)
+            for (int m = 0; m < g_ab_count; m++)
                 if (g_ab_n[m])
-                    rt_log("[gpu-ab] %-29s GPU %6.2f ms/frame, %6.0f vertex shader runs, %8.0f fragment shader runs, %6.0f primitives per frame",
-                           k_ab_names[m], g_ab_ms[m] / g_ab_n[m], g_ab_vs[m] / g_ab_n[m], g_ab_fs[m] / g_ab_n[m], g_ab_pr[m] / g_ab_n[m]);
+                    rt_log("[gpu-ab] %-31s GPU %6.2f ms/frame, %6.0f vertex shader runs, %8.0f fragment shader runs, %6.0f primitives per frame",
+                           g_ab_on == 4 ? k_ab_names4[m] : g_ab_on == 3 ? k_ab_names3[m] : g_ab_on == 2 ? k_ab_names2[m] : k_ab_names1[m], g_ab_ms[m] / g_ab_n[m], g_ab_vs[m] / g_ab_n[m], g_ab_fs[m] / g_ab_n[m], g_ab_pr[m] / g_ab_n[m]);
             memset(g_ab_ms, 0, sizeof g_ab_ms);
             memset(g_ab_vs, 0, sizeof g_ab_vs);
             memset(g_ab_fs, 0, sizeof g_ab_fs);
             memset(g_ab_pr, 0, sizeof g_ab_pr);
             memset(g_ab_n, 0, sizeof g_ab_n);
+            rt_log("[gpu-ab] bloom/grading passes run %.2f times per frame", g_ab_posts / (double)AB_LOG);
+            g_ab_posts = 0;
         }
     }
     g_ts_mode[g_slot] = g_ab_mode;
+    if (g_ab_on == 3) dkCmdBufTiledCacheOp(g_cmd, AB_TILED ? DkTiledCacheOp_Enable : DkTiledCacheOp_Disable);
     for (int k = 0; k < 4; k++) dkCmdBufReportCounter(g_cmd, k_counters[k], ts_gpu + k * 32);
     g_vtx_off = g_stage_off = 0;
 
@@ -1090,7 +1135,7 @@ static void execute(GxFrame* f) {
     uint32_t xoff = SLOT_CMD + SLOT_VTX + SLOT_UBO + SLOT_STAGE;
     uint32_t xbytes = f->nxchunks * GX_XFM_CHUNK * 4;
     if (xbytes > SLOT_XFM) xbytes = SLOT_XFM;
-    if (g_ab_on > 0) memcpy(cpu + xoff, f->xchunks, xbytes);  /* the old shader's chunk pool */
+    if (g_ab_on == 1) memcpy(cpu + xoff, f->xchunks, xbytes);  /* the old shader's chunk pool */
     uint32_t xioff = xoff + SLOT_XFM, nximg = f->nxtabs < SLOT_XFI / XF_IMAGE_BYTES ? f->nxtabs : SLOT_XFI / XF_IMAGE_BYTES;
     if (nximg < f->nxtabs) {
         static int warned;
@@ -1111,11 +1156,11 @@ static void execute(GxFrame* f) {
         if (f->cmds[i].type == GXC_DRAW)
             for (int m = 0; m < 8; m++)
                 if (f->cmds[i].tex[m] >= 0) tex_prepare(f->cmds[i].tex[m]);
-    dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
+    bar(DkBarrier_Primitives, DkInvalidateFlags_Image | DkInvalidateFlags_Descriptors);
 
     DkImageView const* targets[1] = {&g_efb_view};
     dkCmdBufBindRenderTargets(g_cmd, targets, 1, &g_efb_depth_view);
-    DkShader const* shaders[2] = {g_ab_mode == 1 ? &g_vsh_ssbo : &g_vsh, &g_fsh};
+    DkShader const* shaders[2] = {ab_vsh(), &g_fsh};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, shaders, 2);
     g_fsh_bound = &g_fsh;
     dkCmdBufBindImageDescriptorSet(g_cmd, dkMemBlockGetGpuAddr(g_desc), MAX_IMAGES);
@@ -1137,7 +1182,7 @@ static void execute(GxFrame* f) {
     dkCmdBufBindVtxBufferState(g_cmd, &vb, 1);
     dkCmdBufBindVtxBuffer(g_cmd, 0, gpu + SLOT_CMD, vbytes ? vbytes : 16);
     dkCmdBufBindIdxBuffer(g_cmd, DkIdxFormat_Uint32, gpu + ioff);
-    if (g_ab_mode == 1) dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
+    if (AB_SSBO) dkCmdBufBindStorageBuffer(g_cmd, DkStage_Vertex, 0, gpu + xoff, xbytes ? xbytes : 256);
     g_fr_cpu = cpu, g_fr_gpu = gpu, g_fr_vb = gpu + SLOT_CMD, g_fr_ib = gpu + ioff, g_fr_vbytes = vbytes;  /* gx_rebind */
 
     /* the register blocks and chunk tables, uploaded once each at the uniform buffer alignment;
@@ -1189,7 +1234,7 @@ static void execute(GxFrame* f) {
                 cur_xtab = c->b;
                 uint32_t t = c->b < nximg ? c->b : nximg - 1;
                 if (nximg) dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 1, gpu + xioff + (DkGpuAddr)t * XF_IMAGE_BYTES, XF_IMAGE_BYTES);
-                if (g_ab_mode == 1)
+                if (AB_SSBO)
                     dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 2, gpu + xoff_ubo + c->b * xstride, (uint32_t)sizeof(GxXTab));
             }
             if (c->a == cur_regs) break;
@@ -1245,9 +1290,9 @@ static void execute(GxFrame* f) {
             dkImageViewDefaults(&sv, &s->image);
             dkImageViewDefaults(&dv, &d->image);
             DkImageRect sr = {0, 0, 0, sw, sh, 1}, dr = {0, 0, 0, dw, dh, 1};
-            dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, 0);
+            bar(DkBarrier_Primitives, 0);
             dkCmdBufBlitImage(g_cmd, &sv, &sr, &dv, &dr, sw == dw && sh == dh ? 0 : DkBlitFlag_FilterLinear, 0);
-            dkCmdBufBarrier(g_cmd, DkBarrier_Primitives, DkInvalidateFlags_Image);
+            bar(DkBarrier_Primitives, DkInvalidateFlags_Image);
             break;
         }
         default: break;
@@ -1259,7 +1304,7 @@ static void execute(GxFrame* f) {
         /* screenshots show what the screen shows (the menu's own "Save screenshot" closes it first) */
         DkImageView fv;
         dkImageViewDefaults(&fv, &g_fb[g_fb_slot]);
-        dkCmdBufBarrier(g_cmd, DkBarrier_Fragments, 0);
+        bar(DkBarrier_Fragments, 0);
         shot_request(&fv);
     }
     for (int k = 0; k < 4; k++) dkCmdBufReportCounter(g_cmd, k_counters[k], ts_gpu + k * 32 + 16);

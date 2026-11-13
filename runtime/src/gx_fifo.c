@@ -413,7 +413,10 @@ static size_t g_tail_seen;          /* the game thread's last look at g_ring_tai
 static mtx_t g_gp_lock;
 static cnd_t g_gp_cv, g_space_cv;
 static int g_gx_async = 1;
+uint64_t gx_render_wait_total(void);  /* gx_render.c: GP-thread ticks spent waiting for the render thread, ever */
+static _Atomic uint64_t g_gp_wait;     /* those waits, since the last gx_gp_wait_ticks() */
 uint64_t gx_gp_busy_ticks(void) { return atomic_exchange(&g_gp_busy, 0); }
+uint64_t gx_gp_wait_ticks(void) { return atomic_exchange(&g_gp_wait, 0); }
 static _Atomic uint64_t g_gp_busy_all;  /* never reset (frame_pacing.c measures it per frame) */
 uint64_t gx_gp_busy_total(void) { return atomic_load_explicit(&g_gp_busy_all, memory_order_relaxed); }
 /* FIFO bytes written but not yet processed by the GP thread (0 in synchronous mode) */
@@ -493,14 +496,18 @@ static int gp_thread(void* arg) {
         size_t off = tail & (RING_SIZE - 1), n = head - tail;
         if (n > RING_SIZE - off) n = RING_SIZE - off;  /* up to the end of the ring; the rest next time */
         if (n > 65536) n = 65536;
-        uint64_t t0 = rt_ticks();
+        uint64_t t0 = rt_ticks(), w0 = gx_render_wait_total();
         gp_feed(g_ring + off, n);
         if (gp_slow > 1.0) {  /* SR_GPSLOW: emulate a slower CPU (the Switch) on the PC */
             uint64_t until = t0 + (uint64_t)((rt_ticks() - t0) * gp_slow);
             while (rt_ticks() < until) {}
         }
         {
-            uint64_t d = rt_ticks() - t0;
+            /* work only: the time gx_render.c spent waiting for the render thread (a free frame, or the
+             * previous frame still not taken) is back-pressure from the GPU, counted on its own */
+            uint64_t w = gx_render_wait_total() - w0, d = rt_ticks() - t0;
+            d = d > w ? d - w : 0;
+            atomic_fetch_add_explicit(&g_gp_wait, w, memory_order_relaxed);
             atomic_fetch_add_explicit(&g_gp_busy, d, memory_order_relaxed);
             atomic_fetch_add_explicit(&g_gp_busy_all, d, memory_order_relaxed);
         }

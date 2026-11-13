@@ -41,6 +41,7 @@ static void* grow(void* p, uint32_t* cap, uint32_t need, size_t elem) {
 /* host time (timebase ticks) for the [perf] breakdown */
 static uint64_t g_wait_ticks, g_tex_ticks;
 static uint64_t g_wait_total, g_tex_total;  /* never reset ([hitch] deltas) */
+uint64_t gx_render_wait_total(void) { return g_wait_total; }  /* read by the GP thread itself (gx_fifo.c) */
 static unsigned long long g_verts_total;  /* vertices emitted (after primitive expansion) */
 static uint64_t g_draw_total;              /* time in gx_draw (decode, state, lookups) */
 static uint64_t g_decode_ticks, g_state_ticks;  /* parts of it: vertex decode, state snapshots ([perf]) */
@@ -955,11 +956,11 @@ static void efb_copy(uint32_t v) {
                 static unsigned long long st0, by0;
                 static uint64_t draw_t0;
                 static unsigned long long verts0;
-                uint64_t gx_gp_busy_ticks(void);
+                uint64_t gx_gp_busy_ticks(void); uint64_t gx_gp_wait_ticks(void);
                 rt_log("[perf]   GX pipe: %llu stores/frame (%llu KB); draw processing %.2f ms/frame (lookups included), "
-                       "%llu vertices/frame; GP thread busy %.2f ms/frame", (g_pipe_stores - st0) / 120,
+                       "%llu vertices/frame; GP thread busy %.2f ms/frame (+ %.2f waiting for the render thread)", (g_pipe_stores - st0) / 120,
                        (g_pipe_bytes - by0) / 120 >> 10, (g_draw_total - draw_t0) * 1000.0 / 40500000.0 / 120,
-                       (g_verts_total - verts0) / 120, gx_gp_busy_ticks() * 1000.0 / 40500000.0 / 120);
+                       (g_verts_total - verts0) / 120, gx_gp_busy_ticks() * 1000.0 / 40500000.0 / 120, gx_gp_wait_ticks() * 1000.0 / 40500000.0 / 120);
                 draw_t0 = g_draw_total;
                 verts0 = g_verts_total;
                 st0 = g_pipe_stores;
