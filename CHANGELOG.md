@@ -9,6 +9,9 @@
   "Lv. 5" in the game's own digit style (drawn at run time from the HUD's other digits). Dropping below 200 rings
   (a hit or a fall takes 100) goes back to Lv. 3. Split screen: the levels work; the HUD digit there is not
   checked yet.
+- **The gold 100-ring capsule comes back** (with "Ring Limit set to 999"): 25 seconds after it is taken (normal
+  capsules keep their 3 seconds), and it gives +100 rings each time. With the original 100-ring limit it stays gone
+  for the race, as before.
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 
