@@ -47,6 +47,7 @@ PROGRAMS_DK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx"
                ("dk_bright_frag", "vk_bright", "frag", "#define QUAD_DK 1\n"),
                ("dk_blur_frag", "vk_blur", "frag", "#define QUAD_DK 1\n"),
                ("dk_bloom_mix_frag", "vk_bloom_mix", "frag", "#define QUAD_DK 1\n"),
+               ("dk_bloom_grade_frag", "vk_bloom_grade", "frag", "#define QUAD_DK 1\n"),
                ("dk_grade_frag", "vk_grade", "frag", "#define QUAD_DK 1\n"),
                ("dk_easu_frag", "vk_easu", "frag", "#define QUAD_DK 1\n"),
                ("dk_rcas_frag", "vk_rcas", "frag", "#define QUAD_DK 1\n"))

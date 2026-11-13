@@ -63,7 +63,7 @@ static DkCmdBuf g_cmd;
 static DkMemBlock g_code, g_slots[2], g_images, g_desc;
 static DkShader g_vsh, g_fsh, g_fsh_ind, g_ovs, g_ofs;  /* the GX ubershader (+ indirect variant); the overlay */
 static DkShader g_vsh_ssbo, g_vsh_nolight, g_vsh_notexgen;
-static DkShader g_qvs, g_q_bright, g_q_blur, g_q_mix, g_q_grade, g_q_easu, g_q_rcas;  /* picture options (quads) */  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
+static DkShader g_qvs, g_q_bright, g_q_blur, g_q_mix, g_q_bgrade, g_q_grade, g_q_easu, g_q_rcas;  /* picture options (quads) */  /* the old vertex shader (XF memory from a storage buffer), for SR_GPU_AB */
 
 /* SR_GPU_AB=1 (hardware testing): alternates every frame between the vertex shader reading XF memory
  * from uniform buffers (normal) and the old one reading it from a storage buffer, and logs the GPU
@@ -82,7 +82,7 @@ static int g_ab_mode;
 static int g_ts_mode[2];
 #define AB_SSBO (g_ab_on == 1 && g_ab_mode == 1)
 #define AB_TILED (g_ab_on == 3 && g_ab_mode == 3)
-#define AB_OLDPP (g_ab_on == 4 && g_ab_mode == 1)  /* SR_GPU_AB=4: the old bloom composite and FSR copy */
+#define AB_OLDPP (g_ab_on == 4 && g_ab_mode == 1)  /* SR_GPU_AB=4: the picture options' passes as before 2026-11-13 */
 #define AB_NOPOST (g_ab_mode == 4 && (g_ab_on == 2 || g_ab_on == 3))
 #define AB_NOBLOOM (AB_NOPOST || (g_ab_on == 2 && g_ab_mode == 1))
 #define AB_NOGRADE (AB_NOPOST || (g_ab_on == 2 && g_ab_mode == 2))
@@ -98,9 +98,10 @@ static double g_ab_ms[AB_MODES], g_ab_vs[AB_MODES], g_ab_fs[AB_MODES], g_ab_pr[A
 static unsigned g_ab_n[AB_MODES];
 static const char* const k_ab_names1[2] = {"XF in uniform buffers (new)", "XF in a storage buffer (old)"};
 static const char* const k_ab_names2[AB_MODES] = {"normal", "no bloom", "no colour grading", "no FSR", "picture options off"};
-static const char* const k_ab_names4[2] = {"bloom mix in one pass (new)", "bloom in two passes (old)"};
+static const char* const k_ab_names4[2] = {"fewer passes (new)", "old passes"};
 static const char* const k_ab_names3[AB_MODES] = {"normal", "vertex shader without lighting", "vertex shader without texgen",
                                                   "tiled cache on", "picture options off"};
+static void pt_mark(int label);
 /* a barrier; with the tiled cache on (SR_GPU_AB=2's test mode) binned primitives are flushed first */
 static void bar(DkBarrier mode, uint32_t inv) {
     if (AB_TILED) dkCmdBufTiledCacheOp(g_cmd, DkTiledCacheOp_Flush);
@@ -154,6 +155,39 @@ static const DkCounter k_counters[4] = {DkCounter_Timestamp, DkCounter_VertexSha
                                         DkCounter_FragmentShaderInvocations, DkCounter_InputPrimitives};
 static double g_cnt_sum[3];          /* vertex shader runs, fragment shader runs, primitives (for the log) */
 static int g_ts_valid[2];
+/* GPU timestamps between the picture options' passes (pt_mark), from 1024 + slot * 1024 in g_ts; each mark's
+ * time since the previous one is charged to its label, for the [deko3d] / [gpu-ab] lines */
+enum { PT_START, PT_BRIGHT, PT_BLUR, PT_MIX, PT_GRADE, PT_FSR0, PT_FSR_COPY, PT_FSR_END, PT_N };
+#define PT_MAX 32
+static const char* const k_pt_names[PT_N] = {"", "bright pass", "blur", "bloom mix", "grading (with its copy)", "",
+                                             "FSR copy/EASU", "FSR sharpen"};
+static uint8_t g_pt_lab[2][PT_MAX];
+static unsigned g_pt_n[2];
+static double g_pt_ms[5][PT_N];  /* per SR_GPU_AB mode */
+static unsigned g_pt_frames[5];
+static void pt_mark(int label) {
+    unsigned n = g_pt_n[g_slot];
+    if (n >= PT_MAX) return;
+    dkCmdBufReportCounter(g_cmd, DkCounter_Timestamp, dkMemBlockGetGpuAddr(g_ts) + 1024 + g_slot * 1024 + n * 16);
+    g_pt_lab[g_slot][n] = (uint8_t)label;
+    g_pt_n[g_slot] = n + 1;
+}
+/* the picture options' GPU ms per frame since the last call, of SR_GPU_AB mode m (0 when off) */
+static void pt_log(int m, const char* what) {
+    if (!g_pt_frames[m]) return;
+    double n = g_pt_frames[m], sum = 0;
+    char line[320];
+    int k = snprintf(line, sizeof line, "[deko3d]   picture options%s%s, GPU ms/frame:", *what ? " " : "", what);
+    for (int l = 0; l < PT_N; l++)
+        if (k_pt_names[l][0] && g_pt_ms[m][l] > 0 && k < (int)sizeof line - 40) {
+            k += snprintf(line + k, sizeof line - k, " %s %.2f,", k_pt_names[l], g_pt_ms[m][l] / n);
+            sum += g_pt_ms[m][l] / n;
+        }
+    snprintf(line + k, sizeof line - k, " total %.2f", sum);
+    rt_log("%s", line);
+    memset(g_pt_ms[m], 0, sizeof g_pt_ms[m]);
+    g_pt_frames[m] = 0;
+}
 static uint64_t g_gpu_frame_ns;      /* the last measured frame */
 static uint64_t g_gpu_ns_sum, g_gpu_ns_max;
 static unsigned g_gpu_n;
@@ -335,7 +369,7 @@ static void dk_setup(void) {
     g_code = block(sizeof k_gx_vert_dksh + sizeof k_gx_frag_dksh + sizeof k_gx_frag_ind_dksh + sizeof k_overlay_vert_dksh +
                        sizeof k_overlay_frag_dksh + sizeof k_gx_vert_ssbo_dksh + sizeof k_gx_vert_nolight_dksh + sizeof k_gx_vert_notexgen_dksh + 8 * DK_SHADER_CODE_ALIGNMENT + sizeof k_spec_blob + DK_SHADER_CODE_ALIGNMENT +
                        sizeof k_dk_quad_vert_dksh + sizeof k_dk_bright_frag_dksh + sizeof k_dk_blur_frag_dksh + sizeof k_dk_grade_frag_dksh +
-                       sizeof k_dk_easu_frag_dksh + sizeof k_dk_rcas_frag_dksh + sizeof k_dk_bloom_mix_frag_dksh + 7 * DK_SHADER_CODE_ALIGNMENT,
+                       sizeof k_dk_easu_frag_dksh + sizeof k_dk_rcas_frag_dksh + sizeof k_dk_bloom_mix_frag_dksh + sizeof k_dk_bloom_grade_frag_dksh + 8 * DK_SHADER_CODE_ALIGNMENT,
                    DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code);
     uint32_t off = 0;
     shader_load(&g_vsh, k_gx_vert_dksh, sizeof k_gx_vert_dksh, &off);
@@ -350,6 +384,7 @@ static void dk_setup(void) {
     shader_load(&g_q_bright, k_dk_bright_frag_dksh, sizeof k_dk_bright_frag_dksh, &off);
     shader_load(&g_q_blur, k_dk_blur_frag_dksh, sizeof k_dk_blur_frag_dksh, &off);
     shader_load(&g_q_mix, k_dk_bloom_mix_frag_dksh, sizeof k_dk_bloom_mix_frag_dksh, &off);
+    shader_load(&g_q_bgrade, k_dk_bloom_grade_frag_dksh, sizeof k_dk_bloom_grade_frag_dksh, &off);
     shader_load(&g_q_grade, k_dk_grade_frag_dksh, sizeof k_dk_grade_frag_dksh, &off);
     shader_load(&g_q_easu, k_dk_easu_frag_dksh, sizeof k_dk_easu_frag_dksh, &off);
     shader_load(&g_q_rcas, k_dk_rcas_frag_dksh, sizeof k_dk_rcas_frag_dksh, &off);
@@ -593,23 +628,28 @@ static void pp_target(const DkImageView* v) {
     dkCmdBufBindRenderTargets(g_cmd, t, 1, NULL);
 }
 
+/* two more vec4s for the next pp_quad's fragment shader (ext0, ext1: vk_bloom_grade.frag), then cleared */
+static const float* g_pp_ext;
 /* one screen quad with fragment shader fs into the bound target of w x h; rect in its pixels (vk_quad.vert) */
 static void pp_quad(const DkShader* fs, const PpImg* tex, uint32_t samp, int blend, uint32_t mask, float w, float h,
                     const float px[4], const float uv[4], const float color[4], const float shape[4]) {
     if (g_stage_off + 256 > SLOT_STAGE) return;
     uint32_t so = SLOT_CMD + SLOT_VTX + SLOT_UBO + g_stage_off;
-    float pc[20] = {px[0] / w * 2 - 1, px[1] / h * 2 - 1, px[2] / w * 2 - 1, px[3] / h * 2 - 1};
+    float pc[28] = {px[0] / w * 2 - 1, px[1] / h * 2 - 1, px[2] / w * 2 - 1, px[3] / h * 2 - 1};
+    uint32_t pcsize = g_pp_ext ? 28 * 4 : 20 * 4;
+    if (g_pp_ext) memcpy(pc + 20, g_pp_ext, 32);
+    g_pp_ext = NULL;
     static const float uv01[4] = {0, 0, 1, 1}, white[4] = {1, 1, 1, 1}, zero[4] = {0, 0, 0, 0}, ident[4] = {1, 0, 0, 1};
     memcpy(pc + 4, uv ? uv : uv01, 16);
     memcpy(pc + 8, color ? color : white, 16);
     memcpy(pc + 12, shape ? shape : zero, 16);
     memcpy(pc + 16, ident, 16);
-    memcpy(g_fr_cpu + so, pc, sizeof pc);
+    memcpy(g_fr_cpu + so, pc, pcsize);
     g_stage_off += 256;
     DkShader const* sh[2] = {&g_qvs, fs};
     dkCmdBufBindShaders(g_cmd, DkStageFlag_GraphicsMask, sh, 2);
-    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 3, g_fr_gpu + so, sizeof pc);
-    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 3, g_fr_gpu + so, sizeof pc);
+    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Vertex, 3, g_fr_gpu + so, pcsize);
+    dkCmdBufBindUniformBuffer(g_cmd, DkStage_Fragment, 3, g_fr_gpu + so, pcsize);
     dkCmdBufBindVtxAttribState(g_cmd, NULL, 0);
     dkCmdBufBindVtxBufferState(g_cmd, NULL, 0);
     DkViewport vp = {0, 0, w, h, 0.0f, 1.0f};
@@ -673,11 +713,11 @@ static void gx_rebind(const GxUniforms* cur) {
 }
 
 /* one blur pass, src's top-left sw x sh into dst's dw x dh; dir in source texels (0: a linear copy) */
-static void blur_pass(const PpImg* s, float sw, float sh, const PpImg* d, float dw, float dh, float dirx, float diry) {
+static void blur_pass(const PpImg* s, float sw, float sh, const PpImg* d, float dw, float dh, float dirx, float diry, float mode) {
     bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(&d->view);
     float px[4] = {0, 0, dw, dh}, uv[4] = {0, 0, sw / s->w, sh / s->h};
-    float col[4] = {dirx / s->w, diry / s->h, 1, 0}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
+    float col[4] = {dirx / s->w, diry / s->h, 1, mode}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
     pp_quad(&g_q_blur, s, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, dw, dh, px, uv, col, shape);
 }
 
@@ -687,6 +727,10 @@ static void post_process(int in_race, const GxUniforms* cur) {
     int grade = grade_wanted() && !AB_NOGRADE;
     if (bloom <= 0.0f && !grade) return;
     g_ab_posts++;
+    pt_mark(PT_START);
+    /* bloom and grading together: one pass draws both (vk_bloom_grade.frag) instead of the bloom mix + grading */
+    int combined = bloom > 0.0f && grade && !AB_OLDPP;
+    float bw[2] = {0, 0}, bh[2] = {0, 0};
     uint32_t uw = XSC(EFB_WIDTH), uh = SC(EFB_HEIGHT);  /* the EFB's used part */
     if (uw > (uint32_t)EFB_W) uw = EFB_W;
     if (uh > (uint32_t)EFB_H) uh = EFB_H;
@@ -699,7 +743,6 @@ static void post_process(int in_race, const GxUniforms* cur) {
     float px[4] = {0, 0, (float)uw, (float)uh};
     if (bloom > 0.0f) {
         for (int i = 0; i < 4; i++) pp_img(&g_pp_bl[i], BL_W(i >> 1), BL_H(i >> 1), 0);
-        float bw[2], bh[2];
         for (int l = 0; l < 2; l++) {  /* the same look at every internal resolution */
             bw[l] = floorf((float)EFB_WIDTH * g_k / (float)(4 << l));
             bh[l] = floorf((float)EFB_HEIGHT / (float)(4 << l));
@@ -711,14 +754,23 @@ static void post_process(int in_race, const GxUniforms* cur) {
         float step[4] = {(float)uw / bw[0] / EFB_W / 4.0f, (float)uh / bh[0] / EFB_H / 4.0f, 0, 0};
         float clampuv[4] = {0, 0, ((float)uw - 0.5f) / EFB_W, ((float)uh - 0.5f) / EFB_H};
         pp_quad(&g_q_bright, &g_pp_efb, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, bw[0], bh[0], bpx, uv, step, clampuv);
+        pt_mark(PT_BRIGHT);
         for (int l = 0; l < 2; l++) {
             const PpImg* t = &g_pp_bl[2 * l];
-            if (l) blur_pass(&g_pp_bl[0], bw[0], bh[0], t, bw[1], bh[1], 0, 0);  /* the 1/8 level from the 1/4 */
+            if (l) blur_pass(&g_pp_bl[0], bw[0], bh[0], t, bw[1], bh[1], 0, 0, AB_OLDPP ? 0.0f : 1.0f);  /* the 1/8 level from the 1/4 */
+            if (!AB_OLDPP) {  /* both rounds in one (the 9-tap blur twice = their 17-tap convolution) */
+                blur_pass(&t[0], bw[l], bh[l], &t[1], bw[l], bh[l], 1, 0, 2.0f);
+                blur_pass(&t[1], bw[l], bh[l], &t[0], bw[l], bh[l], 0, 1, 2.0f);
+                continue;
+            }
             for (int k = 0; k < 2; k++) {  /* two rounds: wider glow */
-                blur_pass(&t[0], bw[l], bh[l], &t[1], bw[l], bh[l], 1, 0);
-                blur_pass(&t[1], bw[l], bh[l], &t[0], bw[l], bh[l], 0, 1);
+                blur_pass(&t[0], bw[l], bh[l], &t[1], bw[l], bh[l], 1, 0, 0.0f);
+                blur_pass(&t[1], bw[l], bh[l], &t[0], bw[l], bh[l], 0, 1, 0.0f);
             }
         }
+        pt_mark(PT_BLUR);
+    }
+    if (bloom > 0.0f && !combined) {
         /* both levels onto the EFB with a screen blend, RGB only (the EFB alpha is kept) */
         bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
         pp_target(&g_efb_view);
@@ -736,8 +788,9 @@ static void post_process(int in_race, const GxUniforms* cur) {
             float col[4] = {0, 0, bloom * 0.72f, 0}, shape[4] = {0, 0, (bw[l] - 0.5f) / t->w, (bh[l] - 0.5f) / t->h};
             pp_quad(&g_q_blur, t, SAMP_LIN, PB_SCREEN, DkColorMask_RGB, EFB_W, EFB_H, px, luv, col, shape);
         }
+        pt_mark(PT_MIX);
     }
-    if (grade) {  /* a copy of the picture, graded back into the EFB */
+    if (grade) {  /* a copy of the picture, graded back into the EFB (with the bloom when combined) */
         pp_img(&g_pp_scene, EFB_W, EFB_H, 1);
         bar(DkBarrier_Fragments, 0);
         DkImageRect r = {0, 0, 0, uw, uh, 1};
@@ -747,7 +800,21 @@ static void post_process(int in_race, const GxUniforms* cur) {
         float uv[4] = {0, 0, (float)uw / g_pp_scene.w, (float)uh / g_pp_scene.h};
         float g[4] = {exp2f((float)g_settings.grade_bright / 100.0f), (float)g_settings.grade_contrast / 100.0f,
                       (float)g_settings.grade_sat / 100.0f, (float)g_settings.grade_warm / 50.0f * 0.16f};
-        pp_quad(&g_q_grade, &g_pp_scene, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGB, EFB_W, EFB_H, px, uv, g, NULL);
+        if (combined) {
+            const PpImg* t0 = &g_pp_bl[0];
+            const PpImg* t1 = &g_pp_bl[2];
+            float shape[4] = {(bw[0] / t0->w) / uv[2], (bh[0] / t0->h) / uv[3], (bw[1] / t1->w) / uv[2], (bh[1] / t1->h) / uv[3]};
+            static float ext[8];
+            ext[0] = (bw[0] - 0.5f) / t0->w, ext[1] = (bh[0] - 0.5f) / t0->h;
+            ext[2] = (bw[1] - 0.5f) / t1->w, ext[3] = (bh[1] - 0.5f) / t1->h;
+            ext[4] = bloom * 0.72f, ext[5] = ext[6] = ext[7] = 0;
+            dkCmdBufBindTexture(g_cmd, DkStage_Fragment, 1, dkMakeTextureHandle(t0->slot, SAMP_LIN));
+            dkCmdBufBindTexture(g_cmd, DkStage_Fragment, 2, dkMakeTextureHandle(t1->slot, SAMP_LIN));
+            g_pp_ext = ext;
+            pp_quad(&g_q_bgrade, &g_pp_scene, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGB, EFB_W, EFB_H, px, uv, g, shape);
+        } else
+            pp_quad(&g_q_grade, &g_pp_scene, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGB, EFB_W, EFB_H, px, uv, g, NULL);
+        pt_mark(PT_GRADE);
     }
     bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     gx_rebind(cur);
@@ -764,6 +831,7 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
     }
     pp_efb_desc();
     pp_img(&g_pp_fsr, FB_W, FB_H, 0);
+    pt_mark(PT_FSR0);
     bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(&g_pp_fsr.view);
     float opx[4] = {0, 0, (float)dw, (float)dh};
@@ -777,6 +845,7 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
         float col[4] = {0, 0, 1, AB_OLDPP ? 0.0f : 1.0f}, shape[4] = {0, 0, uv[2], uv[3]};
         pp_quad(&g_q_blur, &g_pp_efb, SAMP_LIN, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, opx, uv, col, shape);
     }
+    pt_mark(PT_FSR_COPY);
     bar(DkBarrier_Fragments, DkInvalidateFlags_Image);
     pp_target(fv);
     /* 100% = AMD's strongest; each 50% less halves it */
@@ -784,6 +853,7 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
     float sharp[4] = {exp2f(-(float)(100 - g_settings.sharpness) / 50.0f), 0, 0, 0};
     float last[4] = {0, 0, (float)(dw - 1), (float)(dh - 1)};
     pp_quad(&g_q_rcas, &g_pp_fsr, SAMP_NEAR, PB_OPAQUE, DkColorMask_RGBA, (float)FB_W, (float)FB_H, px, opx, sharp, last);
+    pt_mark(PT_FSR_END);
     return 1;
 }
 
@@ -1076,12 +1146,22 @@ static void execute(GxFrame* f) {
         g_ab_fs[m] += fs;
         g_ab_pr[m] += pr;
         g_ab_n[m]++;
+        {  /* the passes' marks: each one's time since the previous mark, by its label */
+            volatile uint64_t* pt = (volatile uint64_t*)dkMemBlockGetCpuAddr(g_ts) + (1024 + g_slot * 1024) / 8;
+            for (unsigned i = 1; i < g_pt_n[g_slot]; i++) {
+                int lab = g_pt_lab[g_slot][i];
+                if (lab == PT_START || lab == PT_FSR0 || pt[i * 2 + 1] < pt[i * 2 - 1]) continue;
+                g_pt_ms[m][lab] += dkTimestampToNs(pt[i * 2 + 1] - pt[i * 2 - 1]) / 1e6;
+            }
+            g_pt_frames[m]++;
+        }
         double ms = g_gpu_frame_ns / 1e6;
         g_gpu_ms_avg = g_gpu_ms_avg < 0 ? ms : g_gpu_ms_avg * 0.9 + ms * 0.1;
         g_gpu_ns_sum += g_gpu_frame_ns;
         if (g_gpu_frame_ns > g_gpu_ns_max) g_gpu_ns_max = g_gpu_frame_ns;
         g_gpu_n++;
     }
+    g_pt_n[g_slot] = 0;
     g_s = settings_internal_scale();
     g_s_sum += g_s;
     settings_set_window_aspect((float)FB_W / (float)FB_H);  /* the fit mode: the screen's */
@@ -1098,7 +1178,10 @@ static void execute(GxFrame* f) {
         if (g_ab_on) rt_log("[gpu-ab] GPU cost test %d on: %d modes of %d frames each", g_ab_on, g_ab_count, AB_FRAMES);
     }
     if (g_ab_on) {
+        static int fix = -2;  /* SR_GPU_AB_FIX=<mode>: that mode only (picture comparisons) */
+        if (fix == -2) fix = getenv("SR_GPU_AB_FIX") ? atoi(getenv("SR_GPU_AB_FIX")) : -1;
         g_ab_mode = (int)((g_ab_frame++ / AB_FRAMES) % (unsigned)g_ab_count);
+        if (fix >= 0 && fix < g_ab_count) g_ab_mode = fix;
         if (g_ab_frame % AB_LOG == 0) {
             for (int m = 0; m < g_ab_count; m++)
                 if (g_ab_n[m])
@@ -1110,6 +1193,7 @@ static void execute(GxFrame* f) {
             memset(g_ab_pr, 0, sizeof g_ab_pr);
             memset(g_ab_n, 0, sizeof g_ab_n);
             rt_log("[gpu-ab] bloom/grading passes run %.2f times per frame", g_ab_posts / (double)AB_LOG);
+            for (int m = 0; m < g_ab_count; m++) pt_log(m, g_ab_on == 4 ? k_ab_names4[m] : "");
             g_ab_posts = 0;
         }
     }
@@ -1343,6 +1427,7 @@ static void execute(GxFrame* f) {
                "%.0f fragment shader runs, %.0f primitives",
                g_gpu_ns_sum / n / 1e6, g_gpu_ns_max / 1e6, g_s_sum / 120, g_cnt_sum[0] / n, g_cnt_sum[1] / n, g_cnt_sum[2] / n);
         g_cnt_sum[0] = g_cnt_sum[1] = g_cnt_sum[2] = 0;
+        if (!g_ab_on) pt_log(0, "");
         g_gpu_ns_sum = g_gpu_ns_max = 0;
         g_gpu_n = 0;
         g_s_sum = 0.0f;
