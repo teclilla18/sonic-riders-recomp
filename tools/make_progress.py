@@ -7,7 +7,7 @@ what each area still needs; keep the two in step.
 """
 from pathlib import Path
 
-VERSION = "v0.8.2"
+VERSION = "v0.8.1"
 UPDATED = "2026-11-13"
 
 # (label, weight, percent done)

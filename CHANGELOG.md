@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## v0.8.2 (2026-11-13)
+## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 
 - **iPhone / iPad: one app ID for everyone, no more second empty app.** Every install now uses
   `net.srnative.sonicriders.<your team ID>`, the same ID Sideloadly makes with its default settings, so renewing is
@@ -13,8 +13,6 @@
   Install will do (update, new, or move from an older app ID). The disc image is not copied again when it is
   already on the device.
 - **iPhone / iPad:** Settings > About shows the app ID, and says how to move an older one.
-
-## v0.8.1 (2026-11-12)
 
 - **Alpha testers needed for the Sonic Heroes native port:** the README and every launcher / installer (PC, Switch,
   Android, Linux, Mac) now link to https://github.com/teclilla18/sonic-heroes-recomp.

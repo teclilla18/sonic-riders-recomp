@@ -242,7 +242,7 @@ default settings. The game shows its ID in *Settings → About*.
 - **With Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly with the same Apple
   ID, leave the settings as they are ("Use automatic bundle ID" ticked) and *Start*.
 
-**An older install** (installed by v0.8.1 or earlier, ID `net.srnative.sonicriders` or `net.srnative.sonicriders.t…`;
+**An older install** (installed before 2026-11-13, ID `net.srnative.sonicriders` or `net.srnative.sonicriders.t…`;
 *Settings → About* says "Older app ID"): connect it to the Mac and click **Install** in the launcher (or run the
 `.command`). It moves the app to the standard ID by itself: your saves, settings and the disc image are copied to
 the Mac, the old app is removed, the new one installed and everything copied back. A copy of the saves stays in
