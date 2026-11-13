@@ -320,7 +320,7 @@ def main():
 
     root = git("rev-parse", "--show-toplevel").decode().strip()
     os.chdir(root)
-    commit = git("rev-parse", "--short=8", args.ref).decode().strip()
+    commit = git("rev-parse", "--short=8", args.ref + "^{commit}").decode().strip()  # a tag: its commit
     if git("status", "--porcelain", "--untracked-files=no").strip():
         print("note: the working tree has uncommitted changes; only %s (%s) is packaged" % (args.ref, commit))
 
