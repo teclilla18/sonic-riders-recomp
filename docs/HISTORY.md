@@ -1276,3 +1276,30 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   (user does not like them).
 - Open: the heavy-view cost itself (GP thread draw processing + GPU) at these settings; ideas in plans-2026-11.md
   (SwitchWakerHD list: PGO, tiled cache, core 3) and a steadier Auto (30 when busy) the user declined for now.
+
+## 2026-11-14 (PC, Mike, later): Switch heavy-view dips fixed: three swapchain images; cheaper bloom
+
+- **"GP thread busy" was mostly waiting** [confirmed, code + logs]: it was timed around gp_feed, which includes
+  render_submit / render_take_free_frame (waits for the render thread). Heavy blocks: 24.7 ms "busy" = 17.1 ms
+  waiting + 7.6 ms work. Real GP work in heavy views ~6-8 ms. Now logged apart ("+ X waiting for the render
+  thread"); frame_pacing's Auto check uses the work only (8b8ed8c).
+- **GPU cost split on the OLED** (handheld 1785/614/2133, Fit window wide, 1.5x, bloom 70, grading, sharpness 50,
+  Metal City 1P; new `SR_GPU_AB=2/3/4`, rotating per frame on the same views) [confirmed, logs]: in heavy race views
+  picture options ~5 ms (bloom ~3.0, FSR ~1.25, grading ~0.9), vertex lighting ~1.3, texgen ~0.8; tiled cache on
+  +0.6 ms (worse). GPU time was the same at 1.25x and 1.5x. So specialized vertex shaders are worth ~2 ms at most.
+- **Bloom/FSR passes** (8b8ed8c, 049f5b9): the bloom composite and FSR's 1:1 copy ran vk_blur with no direction
+  (5 reads of one texel per pixel, the composite twice at full size). Now one-pass mix (vk_bloom_mix.frag), one-read
+  copies, both blur rounds as one 17-tap pass, bloom + grading in one pass (vk_bloom_grade.frag). Same picture:
+  same demo-race frame in Eden with SR_DETCLOCK + SR_GPU_AB_FIX, mean difference 0.3/255 (FPS counter only)
+  [confirmed]. OLED A/B: -1.0 ms GPU per frame in heavy views, -0.25 ms elsewhere [confirmed]; per-pass timestamps
+  (new "[deko3d]   picture options ... GPU ms/frame" line): bright 1.5, blur 0.36, bloom + grading 1.26, FSR copy
+  0.33, FSR sharpen 1.04 ms. Pass and barrier counts were not the cost; picture reads/writes are.
+- **Three swapchain images** (c840558; `SR_SWAP_IMAGES=2` = the old two): heavy views at 12-15 ms of GPU still ran
+  46-52 fps with two, because a frame that ended just after a retrace kept the other image on screen and the next
+  picture waited a whole refresh. Same settings and race, one run each [confirmed, logs]: two images 4-5k draws
+  57.3 fps avg (low 39.3), 5k+ 52.9 (low 33.4); three images 59.9 (low 59.9) and 58.9 (low 56.2); GPU peak the
+  same (17-18 ms). User: "best run yet", controls felt the same [accepted, Metal City 1P at these settings only].
+- Eden v0.1.1 crashed at start (host access violation, log empty) on a fragment shader with an early `return`
+  (vk_blur's first one-read version); the if/else form runs [confirmed, bisect]. Rule added to the shader notes.
+- Not checked: other tracks, 2-4P, docked, stock clocks with three images; Android with the shared vk_blur change
+  (Android always passes color.w = 0, so the old path) [uncertain, not built]; the PC Auto mode with the new GP figure.

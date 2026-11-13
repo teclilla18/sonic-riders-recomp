@@ -1,4 +1,4 @@
-# State (2026-11-13)
+# State (2026-11-14)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -23,11 +23,8 @@ with a space) + Android PASS [confirmed]; downloaded PC zip = built zip [confirm
 finger scrolling in phone menus; cedry2kio's "Icon 3" fan icon on every platform (README credit); bloom only in
 races and on the results screen. The version number stayed v0.8.0 (user: few downloads so far), so launchers that
 already updated don't see the replacement.
-- Switch picture options on hardware [accepted: "60 and pretty", dips in heavy areas; OLED handheld 1785/614/2133].
 - iPad Pro 11 M1 on max settings: "flawless" [accepted, user]; iPhone 17 Pro: perf route only (59.94 fps,
   <1 ms per step) [confirmed, logs]; one iPhone frame with options on had a big white haze [uncertain].
-- Bloom fix on PC (SR_BLOOM=100 route): Player Entry before and after a race without bloom, race and results with
-  bloom [confirmed, frames]; on the iPad [confirmed, user].
 - The user's free iOS signatures run out ~2026-11-15. iPhone and the A16 iPad moved to the standard ID
   (2026-11-13, saves MD5-equal) [confirmed]; the iPad Pro got v0.8.1 + ID change silently in place under its old
   plain ID (in use); it and one more iPad still need one move over the cable before Sideloadly default renewals.
@@ -36,12 +33,16 @@ already updated don't see the replacement.
 ## Devices
 
 - S23 Ultra: v0.8.0-4-g4a24700a APK (installed over USB; wireless debugging was offline).
-- OLED (switch-remote): `sonicriders.nro` = 9ce8fd5 content (1.25x, panels +25, shoes +80, Lv. 5 at 350), v0.8.0
-  kept as `sonicriders.v080.nro` (A/B build), settings 1.25x / Fit window (wide) / Auto. Forwarder `SonicRiders.nsp`
+- OLED (switch-remote): `sonicriders.nro` = c840558 (three swapchain images, cheaper bloom, all 999 gameplay), env.txt
+  empty; the user's previous build kept as `sonicriders.user-20261113.nro`, v0.8.0 as `sonicriders.v080.nro`;
+  settings 1.5x / Fit window (wide) / Auto / bloom 70 / grading / sharpness 50. Forwarder `SonicRiders.nsp`
   with "Icon 3" in the game folder (user installs it with DBI). Clocks: handheld 1785 / 614 / 2133 (sys-clk
   overlay, never changed), docked 1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
-- **OLED fps dips (2026-11-14):** heavy views (4,000-5,900 draws) need GPU 15-17 ms + GP thread 12-24 ms at these
-  settings; v0.8.0 dips the same in Metal City [confirmed, A/B logs], so not the 999 changes. HISTORY 2026-11-14.
+- **OLED heavy-view dips fixed on main (2026-11-14, c840558):** three swapchain images; Metal City 1P at the user's
+  settings (handheld 1785/614/2133, 1.5x, bloom/grading/sharpness): 4-5k draws 59.9 fps (low 59.9), 5k+ 58.9 (low
+  56.2) vs two images 57.3 (low 39.3) / 52.9 (low 33.4) [confirmed, A/B runs]; user: "best run yet", controls the
+  same [accepted, that track and settings only]. "GP thread busy" had been mostly waiting for the GPU (real work
+  6-8 ms); bloom/grading -1 ms GPU (same picture). HISTORY "2026-11-14 (PC, Mike, later)".
 
 ## Platforms
 
@@ -89,9 +90,15 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
      229 -> 255 [confirmed, log]; shoes forced by a test hook in its replay: 198 -> 278, 134 -> 214 [confirmed].
      Kind 0x848 (dash ring?) untouched.
    - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
-1d. **SwitchWakerHD v1.3.0 ideas, ranked** (plans-2026-11.md, end): PGO, on-console shader compiles, deko3d tiled
-   cache / dual issue, core 3, 30 fps pacing, FXAA, anisotropic filtering, PC HDR. Nothing started; go through the list
-   with the user first.
+0c. **v0.8.2 candidate** (main, unreleased): the 999 gameplay set (item 1), 1.25x, the Switch heavy-view fix
+   (three swapchain images, bloom passes). Before `/release`: the OLED Splash Canyon 999 check (checklist), a
+   docked / 2P race with three images, an Android build + one race (shared vk_blur.frag change, compile-checked
+   only), the PC Auto mode with the new GP figure (PC smoke run only); cold Sandbox PC + Android as always.
+1d. **SwitchWakerHD v1.3.0 ideas** (plans-2026-11.md, end), measured 2026-11-14 on the OLED: tiled cache made frames
+   0.6 ms slower (drop it); specialized vertex shaders could save at most ~2 ms (lighting 1.3 + texgen 0.8); PGO /
+   core 3 are CPU and the CPU is not the limit at 1P. Left: on-console shader compiles, 30 fps pacing, FXAA,
+   anisotropic filtering, PC HDR. Remaining picture-option cost in heavy views: bright pass ~1.5 ms, FSR sharpen ~1.0
+   (FSR at 1.5x could sharpen straight from the EFB: saves ~0.3 ms, moves the picture by a pixel; user's call).
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
    Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.
@@ -113,8 +120,9 @@ Edge-anchored HUD for ultrawide; HD textures; PS4/PS5 on hold; Vita paused (bran
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] Upload the 31ff87b NRO (staged in the switch-remote work folder), then Splash Canyon with 999 on: Lv. 5 at 350,
-      gold capsule back after 25 s, dash panel at boost speed keeps it.
+- [ ] The current OLED build (c840558, already on the SD), Splash Canyon with 999 on: Lv. 5 at 350, gold capsule
+      back after 25 s, dash panel at boost speed keeps it; fps in heavy views on another track and in a 2P race.
+- [ ] Docked (1785/1152/2133) and stock clocks with three swapchain images: fps, no new judder.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9.
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.

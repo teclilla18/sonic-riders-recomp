@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="334" viewBox="0 0 720 334" role="img" aria-label="Road to v1.0: 71% done">
-<title>Road to v1.0: 71% done</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="334" viewBox="0 0 720 334" role="img" aria-label="Road to v1.0: 72% done">
+<title>Road to v1.0: 72% done</title>
 <defs>
 <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1a3f"/><stop offset="1" stop-color="#132c66"/></linearGradient>
 <linearGradient id="fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1e5bff"/><stop offset="0.6" stop-color="#2fb8ff"/><stop offset="1" stop-color="#ffd23f"/></linearGradient>
@@ -10,11 +10,11 @@
 <rect x="0.5" y="0.5" width="719" height="333" rx="14" fill="none" stroke="#2a4a99"/>
 <g font-family="'Segoe UI', -apple-system, 'Helvetica Neue', Arial, sans-serif">
 <text x="28" y="44" fill="#ffffff" font-size="22" font-weight="700" letter-spacing="1.5">ROAD TO v1.0</text>
-<text x="28" y="63" fill="#8fa6d9" font-size="12.5">Current release v0.8.1 · updated 2026-11-13</text>
-<text x="692" y="56" fill="#ffd23f" font-size="40" font-weight="800" text-anchor="end">71%</text>
+<text x="28" y="63" fill="#8fa6d9" font-size="12.5">Current release v0.8.1 · updated 2026-11-14</text>
+<text x="692" y="56" fill="#ffd23f" font-size="40" font-weight="800" text-anchor="end">72%</text>
 <rect x="28" y="74" width="664" height="22" rx="11" fill="#08132e" stroke="#2a4a99"/>
 <g clip-path="url(#barclip)">
-<rect x="28" y="74" width="471.4" height="22" fill="url(#fill)"/>
+<rect x="28" y="74" width="478.1" height="22" fill="url(#fill)"/>
 <rect x="94.4" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
 <rect x="160.8" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
 <rect x="227.2" y="74" width="1.5" height="22" fill="#08132e" opacity="0.55"/>
@@ -37,8 +37,8 @@
 <text x="692" y="163" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">80%</text>
 <text x="28" y="193" fill="#dfe8ff" font-size="14">Switch performance</text>
 <rect x="278" y="182" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
-<rect x="278" y="182" width="232.7" height="12" rx="6" fill="#2fb8ff"/>
-<text x="692" y="193" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">65%</text>
+<rect x="278" y="182" width="250.6" height="12" rx="6" fill="#2fb8ff"/>
+<text x="692" y="193" fill="#dfe8ff" font-size="14" font-weight="600" text-anchor="end">70%</text>
 <text x="28" y="223" fill="#dfe8ff" font-size="14">Platforms</text>
 <rect x="278" y="212" width="358" height="12" rx="6" fill="#08132e" stroke="#22407f"/>
 <rect x="278" y="212" width="304.3" height="12" rx="6" fill="#ffd23f"/>

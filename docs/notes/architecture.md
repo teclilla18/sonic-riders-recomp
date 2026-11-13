@@ -23,6 +23,8 @@ see HISTORY.md):
   accumulate vectors (`lights()` in gx.vert).
 - After shader changes, every dksh in `build/switch/shaders/` must report `per_warp_scratch 0` (DkshProgramHeader at
   `programs_off`, offset 20).
+- No early `return` in deko3d fragment shaders: one in vk_blur.frag made Eden v0.1.1 crash at start (host access
+  violation, empty log; 2026-11-14). Use if/else around the work instead.
 - Specialized-shader keys must only include state the shader reads (gx_shader_key.c, gen_shaders.py): a stray bit
   makes every state miss and fall back to the ubershader (the 2026-10-26 slowdown). Check the `[deko3d]`
   "specialized shaders for N of M states" line in hardware logs.

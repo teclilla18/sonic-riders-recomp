@@ -56,7 +56,11 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_PERFTEST=1` (+ `SR_PERFTEST_OUT=<path>`): the standard performance test, see docs/PERF.md.
 - Android: `SR_NOPIN=1` (no fast-core placement / nice values), `SR_NOHINT=1` (no ADPF performance hint session).
 - `SR_DET_SLOWREAD=<ms>` (SR_DETCLOCK, testing): every disc read takes that long, like a slow SD card.
-- `SR_GPU_AB=1` (Switch): GPU timestamps and shader counters, alternating XF paths per frame.
+- `SR_GPU_AB=1` (Switch): GPU timestamps and shader counters, alternating XF paths per frame. `=2`: per frame normal /
+  no bloom / no grading / no FSR / no picture options; `=3`: normal / vertex shader without lighting / without texgen /
+  tiled cache on / no picture options; `=4`: picture-option passes new vs old (same picture). `[gpu-ab]` lines every
+  600 frames. `SR_GPU_AB_FIX=<mode>`: that mode only (picture comparisons, with SR_DETCLOCK).
+- `SR_SWAP_IMAGES=2` (Switch): two swapchain images as before 2026-11-14 (default three).
 
 **Graphics debugging**
 - `SR_GXDEBUG=<frame>` (+ `SR_GXDEBUG_ALL`): that frame's viewport/scissor/copies/draws.

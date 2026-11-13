@@ -17,6 +17,10 @@
   own speed + 25 km/h, whichever is higher.
 - **Speed Shoes add speed** (with "Ring Limit set to 999"): the Speed Shoes item set your speed to 200 km/h, which did
   nothing (or slowed you) above 200. Now you get your own speed + 80 km/h, and at least 200.
+- **Switch: heavy race views hold 60 fps** with the picture options on. The Switch now draws into three screen
+  images instead of two, so a frame that finishes just after the screen refresh no longer makes the next one wait a
+  whole refresh; bloom and colour grading also need about 1 ms less per frame (same picture). On the OLED, overclocked,
+  handheld, 1.5x with bloom, grading and sharpness, Metal City's busiest views went from dips to 33-39 fps to 56-60.
 - **Switch and phones: 1.25x resolution** (800x660) between 1x and 1.5x, for sharper races that stay at 60 fps
   where 1.5x is too heavy (Display tab).
 
