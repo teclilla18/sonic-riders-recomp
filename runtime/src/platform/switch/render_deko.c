@@ -135,7 +135,8 @@ static const DkShader* frag_shader_for(const GxUniforms* u) {
 static DkImage g_ov_image;
 static unsigned g_ov_version = ~0u;
 static DkSwapchain g_swap;
-static DkImage g_fb[2], g_efb, g_efb_depth;
+static DkImage g_fb[3], g_efb, g_efb_depth;  /* g_fb: g_nfb swapchain images */
+static int g_nfb = 3;
 static DkImageView g_efb_view, g_efb_depth_view;
 static unsigned g_slot;
 static DkFence g_slot_fence[2];      /* signalled when the GPU has finished a slot's frame */
@@ -423,15 +424,18 @@ static void dk_setup(void) {
     make_image(&g_efb_depth, &o, &sz, EFB_W, EFB_H, DkImageFlags_UsageRender | DkImageFlags_HwCompression, DkImageFormat_Z24S8);
     dkImageViewDefaults(&g_efb_view, &g_efb);
     dkImageViewDefaults(&g_efb_depth_view, &g_efb_depth);
-    DkImage const* fbs[2];
-    for (int i = 0; i < 2; i++) {
+    /* three swapchain images (SR_SWAP_IMAGES=2: two, as before 2026-11-13): with two, a frame that ends just
+     * after a retrace keeps the other image on screen, and the next frame's picture waits a whole refresh for it */
+    if (getenv("SR_SWAP_IMAGES") && atoi(getenv("SR_SWAP_IMAGES")) == 2) g_nfb = 2;
+    DkImage const* fbs[3];
+    for (int i = 0; i < g_nfb; i++) {
         make_image(&g_fb[i], &o, &sz, FB_W, FB_H,
                    DkImageFlags_UsageRender | DkImageFlags_UsagePresent | DkImageFlags_Usage2DEngine,
                    DkImageFormat_RGBA8_Unorm);
         fbs[i] = &g_fb[i];
     }
     DkSwapchainMaker sm;
-    dkSwapchainMakerDefaults(&sm, g_dev, nwindowGetDefault(), fbs, 2);
+    dkSwapchainMakerDefaults(&sm, g_dev, nwindowGetDefault(), fbs, g_nfb);
     g_swap = dkSwapchainCreate(&sm);
 
     /* the overlay image */
@@ -467,7 +471,7 @@ static void dk_setup(void) {
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     dkQueueWaitIdle(g_queue);
     dkCmdBufClear(g_cmd);
-    rt_log("[deko3d] ready: EFB %dx%d, image pool %u MiB", EFB_W, EFB_H, IMAGE_POOL >> 20);
+    rt_log("[deko3d] ready: EFB %dx%d, image pool %u MiB, %d swapchain images", EFB_W, EFB_H, IMAGE_POOL >> 20, g_nfb);
 }
 
 /* ---- per-draw state ---- */
