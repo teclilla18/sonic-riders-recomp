@@ -1216,3 +1216,25 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   published), PC session told to stop; CHANGELOG entries folded into v0.8.1; v0.8.1's iOS zip rebuilt from
   abedb6a (`--version v0.8.1 --ref HEAD`), cold Mac test PASS, launcher About "v0.8.1 (abedb6a0)" [confirmed],
   uploaded with --clobber; release notes got an "iPhone / iPad" section on how the one app ID works.
+
+## 2026-11-13 (PC, Mike): gear Lv. 4 and Lv. 5; v0.8.1 preview
+
+- User asked for Lv. 4/5 past the original 3 with the 999 ring limit; values: Lv. 4 at 200, Lv. 5 at 500, Blue
+  Star 210/300 and 240/350 (top/boost), others scaled from their own Lv. 3. User's playtest of v0.8.1: capsule
+  +100 and hit/fall -100 "worked perfectly" [accepted].
+- Found statically (dtk asm) and checked in RAM dumps: level byte racer +0x102E, thresholds {30, 60, 255} at
+  819C2B94, three 0x38 stat blocks from +0x8DC (top +0x08, drift dash +0x30, boost +0x34; Blue Star matches
+  WtR_Flash's GameFAQs guide exactly) [confirmed]. No room for blocks 4/5 and ~100 readers of the byte, so the byte
+  stays 2 and block 3 is raised/restored natively (game_levels.c, hooks in the racer loops) [confirmed, PC].
+- The player's level-up is a fourth copy (fn 81836054, r31); the first three loops never saw racer 0. Replaying
+  it with the byte shown as 1 for one check gives the game's own LEVEL UP!! panel, sparkles and air refill
+  [confirmed, frames + RAM]; sound not heard (muted runs) [likely].
+- HUD digit: the first guess (entries 0x87.., fn_1_2B3B8) was the wrong HUD; poking the REL table did nothing
+  because the HUD reads a heap copy (RAM dump search). The 1P HUD (fn_1_31670) uses entries 0x12 + level (16x16
+  row at the atlas top); a texture-pixel swap attempt showed nothing because of that. Now: "4"/"5" drawn into empty
+  atlas spots at decode from the orange digits, cell pointer redirected per racer to entries at 0x80001F00
+  (zero in RAM dumps) [confirmed 1P, frames]. Split-screen hooks unverified [uncertain].
+- Speed field racer +0xAAC; boosting at Lv. 5 reached 301-333 [confirmed, RAM + speedometer 319 shot].
+- Release notes of v0.8.1: "Coming next" preview with 4 pictures (release assets). The GameFAQs guide is kept
+  locally (docs/local/, ignored; its author forbids re-hosting); docs/notes/gear-stats.md has the numbers + credit.
+- Also: Mac session moved the iOS app-ID fix into v0.8.1 (v0.8.2 dropped by the user).

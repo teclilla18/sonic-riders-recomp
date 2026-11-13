@@ -66,17 +66,24 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    `.t<hash>` -> `.<team>` with the 1.4 GB disc and save (MD5 equal), boot with the save card, About tab shows the
    ID, update path, push-iso skip, signed setup_mac.py run [confirmed]. Not tested: the old-ID warning on screen,
    a move on a device at the 3-app limit, Sideloadly renewal after a move. Not accepted by the user yet.
-0b. **v0.8.1 released** (all five zips now). Released but not played by the user: capsule +100, hit/fall -100;
-   L/R tabs and menu wrap accepted ("it works").
-1. **999 ring cap: released in v0.8.1, default on** (user's choice, 2026-11-12; Gameplay > "Ring Limit set to 999").
-   Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
-   online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting
-   (279), HUD shows 251/253, Lv. 3; vanilla clamps to 100 [confirmed, log + shots]. Label "Ring Limit set to 999";
-   with it a boost hit takes 100 rings (fn 81849394) and the max-level box keeps rings above 100 [implemented,
-   compile + code; hit path seen firing in a debug run]. A fall off the course (fn 81817264) takes 100 too (user's choice); PC run: 258 -> 158 -> 58 -> 0 [confirmed, log]. Story, WGP, Tag, 2-4P: no
-   other cap in the code (all racers' word), not played [likely]. Not on Switch/Android/iOS hardware yet.
-1b. **Gear Lv. 4 and 5** past the original 3, each with more top speed and boost (user, 2026-11-12; with the 999
-   ring limit): plan in notes/plans-2026-11.md "Gear levels 4 and 5".
+0b. **v0.8.1 released** (all five zips). Capsule +100 and hit/fall -100 **accepted** ("It all worked perfectly",
+   2026-11-13); L/R tabs and menu wrap accepted. Release notes now open (after the Heroes alpha call) with a "Coming
+   next: Gear Lv. 4 and Lv. 5" preview: 4 pictures as release assets `preview-lv-*` (chart made by us, HUD strip and
+   two PC screenshots; user asked for in-game shots there, not committed to the repo). 999-cap internals (seven
+   cap sites, recordings/online carry it, story/WGP/2-4P not played): HISTORY 2026-11-12.
+1. **Gear Lv. 4 / Lv. 5, on main (d045b03), unreleased** (user, 2026-11-12/13; part of "Ring Limit set to 999"):
+   Lv. 4 at 200 rings, Lv. 5 at 500 (user's numbers); x(7/6 top, 1.2 boost, 1.2 drift dash) and x(4/3, 1.4, 1.5) on
+   each racer's own Lv. 3 (Blue Star 180/250 -> 210/300 -> 240/350; full table in the chat, user agreed). Level byte
+   stays 2, block 3 raised/restored; the game's LEVEL UP!! replayed via the player's check (game_levels.c).
+   Tested PC 1P Metal City, rings poked [confirmed, logs + RAM + frames]: Lv. 4 at 250, back to Lv. 3 after a hit
+   (162), Lv. 5 at 600; block values exact; LEVEL UP!! panel + sparkles + air refill at the Lv. 5 step; HUD shows
+   "Lv. 4" / "Lv. 5" (1P); boosting at Lv. 5 reached 301-333 (speedometer 319 in a shot). Not checked: sound (runs
+   muted), split-screen HUD digit (hooks 81831148/78 never seen firing), CPU racers' levels, online/recording
+   determinism, Switch/Android/iOS (compile not even checked on GCC/Switch yet). Not played by the user.
+1b. **Dash panels add speed instead of setting it** (user, 2026-11-13: they kill momentum above the panel's speed;
+   asked to do it after a context clear). Not started.
+1c. **100-ring capsule respawns** like the other capsules (user, 2026-11-13). Partly researched (plans-2026-11.md
+   "100-ring capsule respawn"): item-get switch fn_1_88C80, type 12 = 100 rings.
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
    Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.
