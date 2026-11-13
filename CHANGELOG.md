@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Gear Lv. 4 and Lv. 5** (with "Ring Limit set to 999", the default): Lv. 4 at 200 rings, Lv. 5 at 500. Every
+  gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.17 and boost x1.2, Lv. 5
+  top speed x1.33 and boost x1.4 (drift dash x1.2 / x1.5); Sonic's Blue Star goes 180 / 250 -> 210 / 300 -> 240 / 350.
+  Reaching them plays the game's own LEVEL UP!! (sparkle, sound, air refilled), and the HUD shows "Lv. 4" /
+  "Lv. 5" in the game's own digit style (drawn at run time from the HUD's other digits). Dropping below 200 rings
+  (a hit or a fall takes 100) goes back to Lv. 3. Split screen: the levels work; the HUD digit there is not
+  checked yet.
+
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 
 - **iPhone / iPad: one app ID for everyone, no more second empty app.** Every install now uses

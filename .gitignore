@@ -129,3 +129,6 @@ sonicriders.prev[2-4].log
 
 # local mods (contain files derived from the game)
 /mods/
+
+# third-party reference texts kept locally only (not ours to redistribute)
+docs/local/

@@ -160,6 +160,7 @@ static inline void from_tlut(uint8_t* o, uint16_t v, int tfmt) {
 static inline uint16_t be16(const uint8_t* p) { return (uint16_t)(p[0] << 8 | p[1]); }
 
 void gx_frame_retire(int id);
+void lv_texture_decoded(GxTexture* t);
 
 /* SR_DUMPTEX: every decoded texture to build/tex/<id>_f<format>_t<tlut format>_<address>_<w>x<h>.tga
  * (debugging decode problems, desktop) */
@@ -409,6 +410,7 @@ int gx_texture_lookup(int map) {
     g_decoded_bytes += (unsigned long long)w * h * 4;
     decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
     t->gen++;
+    lv_texture_decoded(t);  /* game_levels.c: the HUD's Lv. 4 / Lv. 5 digits */
     dump_texture(t, (int)fmt, tfmt, addr);
     e->key = key;
     e->hash = hsh;

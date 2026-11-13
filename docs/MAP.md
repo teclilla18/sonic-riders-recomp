@@ -25,6 +25,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Settings menu (ImGui) | menu.cpp (760) | `tab_display`, `tab_controls`, `quit_row`, `close_menu`, `overlay_input`, `overlay_pointer`, `overlay_image` |
 | Menu software rasterizer | menu_raster.cpp | |
 | Mods | mods.c, mods_data.c, game_mods.c | |
+| Gear Lv. 4 / 5 (999 rings) | game_levels.c, config/GXEE8P/patches.txt | `lv_racer_update`, `lv_player_update`, `lv_hud_cell`, `lv_texture_decoded` |
 | Online / lockstep | netplay.c (600) | `SR_NET` |
 | Perf test | perftest.c | `SCENE_KEY` |
 

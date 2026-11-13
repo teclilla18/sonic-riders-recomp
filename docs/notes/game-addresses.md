@@ -50,3 +50,6 @@ Guest addresses as the port sees them (REL linked at 0x81800000; original GameCu
 | Speed-blur copy | phys 0x01106980 | 320×240 RGB565 sampled as 512×256 |
 | Save icon | `_Main.rel` file 0x1F7660 (palette 0x1F7420) | tools/make_icon.py |
 | Card file | `SONICRIDERS_GAMEDATA_01` | game data at file offset 0x1440-0x1B50 |
+| Racer level | racer +0x102E (byte, 0..2 = Lv. 1..3) | up when rings >= T[lv], down when rings < T[lv-1]; T = bytes {30, 60, 255} at 819C2B94 (REL rodata 0x19FC). Player's check fn 81836054 (racer r31; on level-up: air refill +0x988, effect task fn_1_24808, LEVEL UP!! panel); per-frame racer loops 8182B864 / 81831AB4 / 81835F64; race start 818EE43C |
+| Racer level stat blocks | racer +0x8DC / +0x914 / +0x94C (0x38 each, built by fn 818F1F4C) | +0x08 top speed, +0x1C max air, +0x28 boost cost (x1000), +0x30 drift dash, +0x34 boost (speeds x216 = speedometer); racer +0x984 air, +0xAAC current speed. Vanilla per-gear numbers: notes/gear-stats.md |
+| HUD sprite table | `lbl_1_data_9F4` (819D84B4, a heap copy is what the HUD reads) | x, y, w, h in the 512x512 HUD texture (phys 01017120 in a race, C8). Level digit: 1P HUD fn_1_31670 entry 0x12 + level (8183320x / 81833300), split screen fn_1_2FE30 entry 0x87 + level (81831148 / 81831178); LAP digits 0x41.. |

@@ -81,3 +81,20 @@ decl extern volatile int g_ring_cap;
 # rings; with the 999 cap a fall takes 100 rings like a hit (the old count kept before the store, rewritten after)
 81817A58 before int32_t ring_before = (int32_t)ld32(c->r[25] + 0xB98u);
 81817A58 after if (g_ring_cap != 100) st32(c->r[25] + 0xB98u, (uint32_t)(ring_before > 100 ? ring_before - 100 : 0));
+# ---- Gear levels 4 and 5 (game_levels.c; with the 999 ring cap): the three per-frame racer loops, just before
+# the game's own level update (racer in r8 / r9 / r8)
+decl void lv_racer_update(uint32_t racer);
+8182B864 before lv_racer_update(c->r[8]);
+81831AB4 before lv_racer_update(c->r[9]);
+81835F64 before lv_racer_update(c->r[8]);
+# the racer's own level-up/down (fn 81835F14 region, racer in r31): this one runs for the player and plays
+# the game's level-up for Lv. 4 / 5
+decl void lv_player_update(uint32_t racer);
+81836054 before lv_player_update(c->r[31]);
+# the HUD's level-digit cell pointer while a racer is at Lv. 4 / 5 (1P HUD fn_1_31670, entries 0x12 + level,
+# racer r26: steady r16, on a change r3; split-screen HUD fn_1_2FE30, entries 0x87 + level, racer r21: r9)
+decl uint32_t lv_hud_cell(uint32_t racer, uint32_t cell, int kind);
+81833204 after c->r[16] = lv_hud_cell(c->r[26], c->r[16], 1);
+81833300 after c->r[3] = lv_hud_cell(c->r[26], c->r[3], 1);
+81831148 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
+81831178 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
