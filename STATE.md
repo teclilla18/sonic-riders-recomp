@@ -87,9 +87,7 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    - **Dash panels keep a faster racer's speed** (31ff87b): max(current, panel). Replay of the user's run: 256 km/h
      stays 256 (was cut to 200), slow arrival still gets 200 [confirmed, replay logs]. Rule chosen overnight without
      the user: **ask whether to add a push** and whether kind 0x848 (dash ring?) should do the same.
-   - **Settings menu details**: arrow after every help text; Y (pad) / I (keyboard) / tap / click opens the text under
-     the option group; arrows are no pad stops [confirmed, PC menu shots with scripted M.INFO]. Not seen on Switch,
-     Android or iOS yet.
+   - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user\'s request (tooltips only).
 1d. **SwitchWakerHD v1.3.0 ideas, ranked** (plans-2026-11.md, end): PGO, on-console shader compiles, deko3d tiled
    cache / dual issue, core 3, 30 fps pacing, FXAA, anisotropic filtering, PC HDR. Nothing started; go through the list
    with the user first.
@@ -115,7 +113,7 @@ Edge-anchored HUD for ultrawide; HD textures; PS4/PS5 on hold; Vita paused (bran
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
 - [ ] Upload the 31ff87b NRO (staged in the switch-remote work folder), then Splash Canyon with 999 on: Lv. 5 at 350,
-      gold capsule back after 25 s, dash panel at boost speed keeps it; settings menu Y opens details (handheld).
+      gold capsule back after 25 s, dash panel at boost speed keeps it.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9.
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.

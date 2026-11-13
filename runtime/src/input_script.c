@@ -40,7 +40,7 @@ static uint16_t button_mask(const char* n) {
 static uint16_t menu_mask(const char* n) {
     static const struct { const char* name; uint16_t m; } t[] = {
         {"MENU", OV_MENU}, {"UP", OV_UP}, {"DOWN", OV_DOWN}, {"LEFT", OV_LEFT}, {"RIGHT", OV_RIGHT},
-        {"ACCEPT", OV_ACCEPT}, {"BACK", OV_BACK}, {"TABL", OV_TAB_L}, {"TABR", OV_TAB_R}, {"INFO", OV_INFO}};
+        {"ACCEPT", OV_ACCEPT}, {"BACK", OV_BACK}, {"TABL", OV_TAB_L}, {"TABR", OV_TAB_R}};
     for (size_t i = 0; i < sizeof t / sizeof t[0]; i++)
         if (!strcmp(n, t[i].name)) return t[i].m;
     return 0;

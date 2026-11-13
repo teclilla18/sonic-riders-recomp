@@ -14,9 +14,6 @@
   for the race, as before.
 - **Dash panels keep your speed** (with "Ring Limit set to 999"): a panel used to set every racer to its own speed
   (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you keep the faster of the two.
-- **Settings menu: a details arrow next to every option** with an explanation. Press Y on a controller (I on the
-  keyboard) on a highlighted option, or tap or click its arrow, and the explanation shows under it, so controller
-  and touch players can read what an option does (before, it only showed as a tooltip under the mouse).
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 

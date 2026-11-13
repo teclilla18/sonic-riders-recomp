@@ -286,28 +286,7 @@ void init() {
 }
 
 /* ---- widgets: SwitchWakerHD's look ---- */
-/* Details drop-downs: every help text also gets a small arrow after its item (A / tap / click opens it), so
-   the explanation reaches pads and touch screens, where the hover tooltip never shows. An open text waits in
-   g_details and is drawn, wrapped and indented, under the item's group: before the next heading or at the
-   page's end (radio choices sit side by side, so it cannot go right under one of them). */
-const char* g_details[16];
-int g_ndetails;
-void details_flush() {
-    if (!g_ndetails) return;
-    ImGui::Indent(22.0f);
-    ImGui::PushStyleColor(ImGuiCol_Text, kNote);
-    for (int i = 0; i < g_ndetails; i++) {
-        ImGui::PushTextWrapPos(ImGui::GetContentRegionMax().x - 8.0f);
-        ImGui::TextUnformatted(g_details[i]);
-        ImGui::PopTextWrapPos();
-        if (i + 1 < g_ndetails) ImGui::Spacing();
-    }
-    ImGui::PopStyleColor();
-    ImGui::Unindent(22.0f);
-    g_ndetails = 0;
-}
 void heading(const char* text) {
-    details_flush();
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, kGold);
     ImGui::SeparatorText(text);
@@ -323,22 +302,9 @@ void warn(const char* text) {
     ImGui::TextWrapped("%s", text);
     ImGui::PopStyleColor();
 }
-/* the explanation of the item just drawn: a tooltip while it is selected, and its details arrow */
+/* the explanation of the item just drawn, while it is selected */
 void help(const char* text) {
-    /* the arrow: open state per text, kept for the run in the window's storage. Y on a pad (I on the keyboard)
-       toggles it while the option is highlighted; the arrow is for touch and the mouse and is no pad stop, so
-       Up / Down still move from option to option */
-    const bool hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip);
-    const bool toggle = ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false);
-    ImGui::PushID(text);
-    const ImGuiID id = ImGui::GetID("details");
-    ImGuiStorage* st = ImGui::GetStateStorage();
-    bool open = st->GetBool(id, false);
-    if (toggle) {
-        open = !open;
-        st->SetBool(id, open);
-    }
-    if (hovered && !open) {  /* the tooltip only while the details are closed (they say the same) */
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
         ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(520, FLT_MAX));
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(500);
@@ -346,19 +312,6 @@ void help(const char* text) {
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
-    ImGui::SameLine(0, 6);
-    ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::ArrowButton("##more", open ? ImGuiDir_Down : ImGuiDir_Right)) {
-        open = !open;
-        st->SetBool(id, open);
-    }
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
-    ImGui::PopItemFlag();
-    ImGui::PopID();
-    if (open && g_ndetails < (int)(sizeof g_details / sizeof g_details[0])) g_details[g_ndetails++] = text;
 }
 bool radio(const char* label, bool active, const char* tip = nullptr) {
     bool clicked = ImGui::RadioButton(label, active) && !active;
@@ -791,7 +744,7 @@ void quit_row() {
 #ifdef SR_PHONE
     ImGui::TextUnformatted("Tap to choose.   Controller: LB / RB tabs, A choose, B back");
 #else
-    ImGui::TextUnformatted("L / R: tabs    A: choose    Y: details    B: back");
+    ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
 #endif
     ImGui::PopStyleColor();
 #ifdef __SWITCH__
@@ -857,7 +810,6 @@ void settings_window() {
                     /* the page ends one row above the window's bottom: the Close / Quit row */
                     ImGui::BeginChild("page", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 4), ImGuiChildFlags_NavFlattened);
                     tabs[i].draw();
-                    details_flush();
 #ifdef SR_PHONE
                     touch_scroll();
 #endif
@@ -1136,7 +1088,6 @@ int overlay_input(unsigned held) {
     feed(ImGuiKey_GamepadDpadLeft, held, changed, OV_LEFT);
     feed(ImGuiKey_GamepadDpadRight, held, changed, OV_RIGHT);
     feed(ImGuiKey_GamepadFaceDown, held, changed, OV_ACCEPT);  /* ImGui's "activate" */
-    feed(ImGuiKey_GamepadFaceUp, held, changed, OV_INFO);     /* help(): open / close the details */
     return 1;
 }
 
