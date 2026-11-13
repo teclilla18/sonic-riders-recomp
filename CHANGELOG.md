@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-- **Gear Lv. 4 and Lv. 5** (with "Ring Limit set to 999", the default): Lv. 4 at 200 rings, Lv. 5 at 500. Every
-  gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.17 and boost x1.2, Lv. 5
-  top speed x1.33 and boost x1.4 (drift dash x1.2 / x1.5); Sonic's Blue Star goes 180 / 250 -> 210 / 300 -> 240 / 350.
+- **Gear Lv. 4 and Lv. 5** (with "Ring Limit set to 999", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
+  gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.14 and boost x1.15, Lv. 5
+  top speed x1.25 and boost x1.3 (drift dash x1.15 / x1.35); Sonic's Blue Star goes 180 / 250 -> 205 / 288 -> 225 / 325.
   Reaching them plays the game's own LEVEL UP!! (sparkle, sound, air refilled), and the HUD shows "Lv. 4" /
   "Lv. 5" in the game's own digit style (drawn at run time from the HUD's other digits). Dropping below 200 rings
   (a hit or a fall takes 100) goes back to Lv. 3. Split screen: the levels work; the HUD digit there is not
@@ -12,6 +12,11 @@
 - **The gold 100-ring capsule comes back** (with "Ring Limit set to 999"): 25 seconds after it is taken (normal
   capsules keep their 3 seconds), and it gives +100 rings each time. With the original 100-ring limit it stays gone
   for the race, as before.
+- **Dash panels keep your speed** (with "Ring Limit set to 999"): a panel used to set every racer to its own speed
+  (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you keep the faster of the two.
+- **Settings menu: a details arrow next to every option** with an explanation. Press Y on a controller (I on the
+  keyboard) on a highlighted option, or tap or click its arrow, and the explanation shows under it, so controller
+  and touch players can read what an option does (before, it only showed as a tooltip under the mouse).
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 

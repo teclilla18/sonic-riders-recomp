@@ -304,6 +304,7 @@ void input_pump(void) {
         if (k[SDL_SCANCODE_ESCAPE] || k[SDL_SCANCODE_K]) ov |= OV_BACK;
         if (k[SDL_SCANCODE_Q] || k[SDL_SCANCODE_PAGEUP]) ov |= OV_TAB_L;
         if (k[SDL_SCANCODE_E] || k[SDL_SCANCODE_PAGEDOWN]) ov |= OV_TAB_R;
+        if (k[SDL_SCANCODE_I]) ov |= OV_INFO;
     }
     if (g_ctl[0]) {
         static const struct { SDL_GameControllerButton b; unsigned m; } om[] = {
@@ -311,7 +312,7 @@ void input_pump(void) {
             {SDL_CONTROLLER_BUTTON_DPAD_DOWN, OV_DOWN}, {SDL_CONTROLLER_BUTTON_DPAD_LEFT, OV_LEFT},
             {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, OV_RIGHT}, {SDL_CONTROLLER_BUTTON_A, OV_ACCEPT},
             {SDL_CONTROLLER_BUTTON_B, OV_BACK}, {SDL_CONTROLLER_BUTTON_LEFTSHOULDER, OV_TAB_L},
-            {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, OV_TAB_R}};
+            {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, OV_TAB_R}, {SDL_CONTROLLER_BUTTON_Y, OV_INFO}};
         for (size_t i = 0; i < sizeof om / sizeof om[0]; i++)
             if (SDL_GameControllerGetButton(g_ctl[0], om[i].b)) ov |= om[i].m;
     }

@@ -28,11 +28,12 @@
 extern volatile int g_ring_cap;
 
 #define LV4_RINGS 200
-#define LV5_RINGS 500
-/* each gear's own Lv. 3 values times these (Blue Star: top speed 180 -> 210 -> 240, boost 250 -> 300 -> 350) */
-static const float k_top[3]   = {1.0f, 210.0f / 180.0f, 240.0f / 180.0f};
-static const float k_boost[3] = {1.0f, 1.20f, 1.40f};
-static const float k_drift[3] = {1.0f, 1.20f, 1.50f};
+#define LV5_RINGS 350
+/* each gear's own Lv. 3 values times these (Blue Star: top speed 180 -> 205 -> 225, boost 250 -> 288 -> 325). User
+   2026-11-13: Lv. 5 at 350 rings (500 was near impossible on the Switch), both levels a little weaker in return */
+static const float k_top[3]   = {1.0f, 205.0f / 180.0f, 225.0f / 180.0f};
+static const float k_boost[3] = {1.0f, 1.15f, 1.30f};
+static const float k_drift[3] = {1.0f, 1.15f, 1.35f};
 
 #define BLK3 0x94Cu  /* the third (Lv. 3) stat block */
 #define OFF_TOP 0x08u

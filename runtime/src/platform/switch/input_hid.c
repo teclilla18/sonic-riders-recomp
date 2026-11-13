@@ -131,6 +131,7 @@ static GcPad read_player(int i, unsigned* ov) {
         if (x > 16000) o |= OV_RIGHT;
         if (p.buttons & B_A) o |= OV_ACCEPT;
         if (p.buttons & B_B) o |= OV_BACK;
+        if (p.buttons & B_Y) o |= OV_INFO;
         if (b & (HidNpadButton_LeftSL | HidNpadButton_RightSL)) o |= OV_TAB_L;
         if (b & (HidNpadButton_LeftSR | HidNpadButton_RightSR)) o |= OV_TAB_R;
     } else {
@@ -155,6 +156,7 @@ static GcPad read_player(int i, unsigned* ov) {
         if (b & HidNpadButton_Right) o |= OV_RIGHT;
         if (b & HidNpadButton_A) o |= OV_ACCEPT;
         if (b & HidNpadButton_B) o |= OV_BACK;
+        if (b & HidNpadButton_Y) o |= OV_INFO;
         if (b & (HidNpadButton_L | HidNpadButton_ZL)) o |= OV_TAB_L;
         if (b & (HidNpadButton_R | HidNpadButton_ZR)) o |= OV_TAB_R;
         /* the menu also follows the left stick */
