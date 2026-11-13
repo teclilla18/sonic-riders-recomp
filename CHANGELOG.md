@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.8.2 (2026-11-13)
+
 - **iPhone / iPad: one app ID for everyone, no more second empty app.** Every install now uses
   `net.srnative.sonicriders.<your team ID>`, the same ID Sideloadly makes with its default settings, so renewing is
   always "drag in the .ipa, change nothing, Start". An app installed by an older version (another ID) is moved over
