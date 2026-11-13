@@ -1,4 +1,4 @@
-# State (2026-11-14)
+# State (2026-11-14, evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -16,23 +16,15 @@ Heroes alpha testers (top of the notes, README line 1, launcher sidebar on PC/Sw
 launcher screenshots], Linux/Mac setup end message), 999 ring limit, menu L/R tabs + wrap, update_check saved.
 v0.7.1 delisted (tag kept).
 
-**v0.8.0 released 2026-11-11** (tag on 54997c5; all five zips). PC/Switch/Android/Linux zips last replaced
-2026-11-11 from be45877 (bloom fix 00d3861 + fan icon as the only default icon); cold Sandbox PC (2 installs, one
-with a space) + Android PASS [confirmed]; downloaded PC zip = built zip [confirmed, hash]. iOS zip from 00d3861
-(Mac). Contents: picture options (bloom, colour grading, FSR 1, resolution) on Switch, Android, iOS; Linux checked;
-finger scrolling in phone menus; cedry2kio's "Icon 3" fan icon on every platform (README credit); bloom only in
-races and on the results screen. The version number stayed v0.8.0 (user: few downloads so far), so launchers that
-already updated don't see the replacement.
-- iPad Pro 11 M1 on max settings: "flawless" [accepted, user]; iPhone 17 Pro: perf route only (59.94 fps,
-  <1 ms per step) [confirmed, logs]; one iPhone frame with options on had a big white haze [uncertain].
-- The user's free iOS signatures run out ~2026-11-15. iPhone and the A16 iPad moved to the standard ID
-  (2026-11-13, saves MD5-equal) [confirmed]; the iPad Pro got v0.8.1 + ID change silently in place under its old
-  plain ID (in use); it and one more iPad still need one move over the cable before Sideloadly default renewals.
+**v0.8.0 released 2026-11-11** (all five zips; replaced in place from be45877, bloom fix + fan icon; cold
+Sandbox PC + Android PASS). Picture options on Switch/Android/iOS, fan icon everywhere. iOS: iPad Pro M1 max
+settings "flawless" [accepted]; one iPhone frame with a white haze [uncertain]. Free iOS signatures run out
+~2026-11-15; iPhone + A16 iPad on the standard ID, the iPad Pro and one more iPad still need a cable move.
 - GitHub lists the 5 newest releases; on each release delete the 6th (tag kept).
 
 ## Devices
 
-- S23 Ultra: v0.8.0-4-g4a24700a APK (installed over USB; wireless debugging was offline).
+- S23 Ultra: main APK v0.8.1-25 (5ec23cd), wireless adb at 10.0.0.140 (`adb connect` the mDNS port first).
 - OLED (switch-remote): `sonicriders.nro` = c840558 (three swapchain images, cheaper bloom, all 999 gameplay), env.txt
   empty; the user's previous build kept as `sonicriders.user-20261113.nro`, v0.8.0 as `sonicriders.v080.nro`;
   settings 1.5x / Fit window (wide) / Auto / bloom 70 / grading / sharpness 50. Forwarder `SonicRiders.nsp`
@@ -71,13 +63,17 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    `.t<hash>` -> `.<team>` with the 1.4 GB disc and save (MD5 equal), boot with the save card, About tab shows the
    ID, update path, push-iso skip, signed setup_mac.py run [confirmed]. Not tested: the old-ID warning on screen,
    a move on a device at the 3-app limit, Sideloadly renewal after a move. Not accepted by the user yet.
-0b. **v0.8.1 released** (all five zips). Capsule +100 and hit/fall -100 **accepted** ("It all worked perfectly",
-   2026-11-13); L/R tabs and menu wrap accepted. Release notes now open (after the Heroes alpha call) with a "Coming
-   next: Gear Lv. 4 and Lv. 5" preview: 4 pictures as release assets `preview-lv-*` (chart made by us, HUD strip and
-   two PC screenshots; user asked for in-game shots there, not committed to the repo). 999-cap internals (seven
-   cap sites, recordings/online carry it, story/WGP/2-4P not played): HISTORY 2026-11-12.
-1. **"Ring Limit 999" gameplay set, on main, unreleased** (all only with the 999 option; notes plans-2026-11.md,
-   game-addresses.md "Capsule" / "Object collisions"):
+0b. **v0.8.1 released** (all five zips). Capsule +100, hit/fall -100, L/R tabs, menu wrap **accepted**
+   (2026-11-13). Release notes open with the Heroes alpha call and a Lv. 4/5 preview (assets `preview-lv-*`).
+1. **"Riders Plus" gameplay set** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
+   choice; key `ring_cap_999` kept), on main, unreleased (notes game-addresses.md "Capsule" / "Object collisions"
+   / "Charge jump"). Recordings and online fix the option for the whole run ("ring cap fixed"), so the menu toggle
+   does nothing during an SR_RECORD run (by design).
+   - **Charge jump grace 0.75 s** (003acfe; user tried 1.5 and 1 s, picked 0.75): the charge slowdown (fn_1_6D5D4)
+     and, after a boost, the decay above top speed (store 81815ABC) wait 0.75 s; every racer. PC, the user's
+     recorded runs: speed holds/creeps up 0.73 s then the old curve [confirmed, SR_RAMSAMPLE]; user played the
+     1 s version ("Perfect") and saw the 0.75 replay ("Perfect amount of hold time") [accepted, PC]. Not
+     played on Switch/phones; CPU racers not checked.
    - **Gear Lv. 4 / 5** (game_levels.c): Lv. 4 at 200, Lv. 5 at **350** (user: 500 "near impossible"), slowed twice by request
      (2026-11-14: Blue Star 200/275 and 215/300 top/boost; x(200/180, 1.1, 1.1) and x(215/180, 1.2, 1.25)). PC: Lv. 4 at 210, Lv. 5 at 360 rings,
      block values exact [confirmed, log + RAM]. Old 200/500 build played by the user on the OLED [tested, user].
@@ -90,10 +86,14 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
      229 -> 255 [confirmed, log]; shoes forced by a test hook in its replay: 198 -> 278, 134 -> 214 [confirmed].
      Kind 0x848 (dash ring?) untouched.
    - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
-0c. **v0.8.2 candidate** (main, unreleased): the 999 gameplay set (item 1), 1.25x, the Switch heavy-view fix
-   (three swapchain images, bloom passes). Before `/release`: the OLED Splash Canyon 999 check (checklist), a
-   docked / 2P race with three images, an Android build + one race (shared vk_blur.frag change, compile-checked
-   only), the PC Auto mode with the new GP figure (PC smoke run only); cold Sandbox PC + Android as always.
+0c. **v0.8.2 ready for `/release v0.8.2`** (main 003acfe + this state commit): Riders Plus set (item 1, incl. the
+   charge jump), 1.25x, the Switch heavy-view fix. Checks done 2026-11-14: OLED (c840558) Splash Canyon Lv. 5 at
+   350, capsule after 25 s, dash panel +20-30 [accepted, user]; docked and 2P handheld/docked 60 fps [accepted,
+   user]; logs: 59.9 fps, dips to 55 only above 6k draws (GP thread 14-15 ms) [confirmed, log-reader]. Android
+   (S23, perf demo, 1x bloom 60 FSR 60): main 51.9-52.6 / 2P 55.2-57.4 vs v0.8.1 51.9-52.3 / 57.7 = no
+   regression; both below the 2026-11-10 record (57.9), phone-side [likely]. PC Metal City race on Auto:
+   213 windows, avg 59.9, none < 58.5 [confirmed]. Left for `/release`: cold Sandbox PC + Android. Then the Mac
+   session builds the iOS zip. Next focus after the release (user): **online play**, everything else after v1.
 1d. **SwitchWakerHD v1.3.0 ideas** (plans-2026-11.md, end), measured 2026-11-14 on the OLED: tiled cache made frames
    0.6 ms slower (drop it); specialized vertex shaders could save at most ~2 ms (lighting 1.3 + texgen 0.8); PGO /
    core 3 are CPU and the CPU is not the limit at 1P. Left: on-console shader compiles, 30 fps pacing, FXAA,
@@ -120,9 +120,8 @@ Edge-anchored HUD for ultrawide; HD textures; PS4/PS5 on hold; Vita paused (bran
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] The current OLED build (c840558, already on the SD), Splash Canyon with 999 on: Lv. 5 at 350, gold capsule
-      back after 25 s, dash panel at boost speed keeps it; fps in heavy views on another track and in a 2P race.
-- [ ] Docked (1785/1152/2133) and stock clocks with three swapchain images: fps, no new judder.
+- [ ] Riders Plus charge jump on the Switch: hold A at cruise and right after a boost (0.75 s hold, then slowdown).
+- [ ] Stock clocks with three swapchain images: fps, no new judder.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9.
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
 - [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.

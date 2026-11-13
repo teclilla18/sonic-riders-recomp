@@ -1303,3 +1303,25 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   (vk_blur's first one-read version); the if/else form runs [confirmed, bisect]. Rule added to the shader notes.
 - Not checked: other tracks, 2-4P, docked, stock clocks with three images; Android with the shared vk_blur change
   (Android always passes color.w = 0, so the old path) [uncertain, not built]; the PC Auto mode with the new GP figure.
+
+## 2026-11-14 (PC, Mike, evening): v0.8.2 checks; Riders Plus charge jump
+
+- v0.8.2 checks: OLED c840558 (user): Splash Canyon Lv. 5 at 350, gold capsule after 25 s, dash panel +20-30,
+  docked 60, 2P handheld/docked 60 [accepted]. Logs (log-reader): 59.9 fps; above 6k draws 55 handheld / 54 docked,
+  GP thread 14-15 ms the limit; handheld 2P "game code" hitches 60-170 ms [confirmed, logs]. S23 (wireless adb,
+  perf demo, 1x bloom 60 FSR 60): main and a v0.8.1 APK built from the tag give the same 1P 52 / 2P 57 fps, so the
+  vk_blur change costs nothing; both below the 2026-11-10 record (57.9), the phone's state [likely]. The first
+  S23 run (49 fps) used the phone's own 1.5x + sharpness 100. PC Metal City race on Auto: avg 59.9, no window
+  below 58.5 [confirmed]; a first try at 30 fps came from docs saying SR_FRAMERATE=2 is Auto (it is 1; note fixed),
+  and a 30 s stall in another try came while the PC was building the old APK on all cores [likely].
+- Charge jump: a debug build logging every store to player 1's speed (+0xAAC, 316 sites, local only) during the
+  user's PC race found fn_1_6D5D4: while racer +0xA28 bit 0x1000 is set it subtracts 0.009259 x (t/50)^2 per step
+  (t = +0x9F4, max 50) down to 80 km/h and zeroes +0xAA8 [confirmed, log + disassembly]. game_levels.c delays that
+  curve (hooks 8186D6AC, 8186D750). The user then found that a hold right after a boost still slowed at once:
+  SR_RAMSAMPLE of the user's recording showed a charge clears the boost bit 0x400 and the decay above top speed
+  (store 81815ABC, racer r24) takes over [confirmed]; it now waits too. User picked 0.75 s after playing 1 s.
+  Verified by replaying the user's SR_RECORD runs: speed holds 0.73 s, then the old curve [confirmed]; accepted on
+  PC. A recording fixes the option for the whole run, so the menu toggle did nothing in the test (by design).
+- Option renamed "Riders Plus" (user's choice). Not done: Switch/phone play of the charge jump, CPU racers.
+- Tooling notes: ninja missed a patches.txt change once (run gcrecomp.py directly after editing patches); sed -i in
+  Git Bash turns CRLF files into LF (restore with sed 's/$/\r/' for files git lists as i/crlf).
