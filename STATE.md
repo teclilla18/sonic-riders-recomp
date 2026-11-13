@@ -7,6 +7,11 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 
 ## Releases
 
+**v0.8.2 in progress 2026-11-13** (tag on 13b02c5; iOS one-app-ID change only). Mac part done: iOS zip, cold Mac
+unzip test PASS (unsigned, fresh tools; launcher About "v0.8.2 (13b02c5b)") [confirmed]; **DRAFT** release with
+notes + the iOS zip (invisible to update checks). Left for the PC session: PC/Switch/Android/Linux zips from the
+tag, cold Sandbox PC + Android, upload, publish (--draft=false --latest), delist the 6th release.
+
 **v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips; iOS zip added 2026-11-13 from the
 Mac, `make_release --flavor ios --ref v0.8.1`). Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Cold
 Mac unzip test of the iOS zip (unsigned, fresh tools) PASS; Mac launcher About page shows the Heroes call
@@ -27,8 +32,9 @@ already updated don't see the replacement.
   <1 ms per step) [confirmed, logs]; one iPhone frame with options on had a big white haze [uncertain].
 - Bloom fix on PC (SR_BLOOM=100 route): Player Entry before and after a race without bloom, race and results with
   bloom [confirmed, frames]; on the iPad [confirmed, user].
-- The user's free iOS signatures run out ~2026-11-15. Devices with an older app ID (no suffix or `.t<hash>`) must
-  be moved once over the cable (launcher Install / ios_run.py install) before Sideloadly's default settings work.
+- The user's free iOS signatures run out ~2026-11-15. iPhone and the A16 iPad moved to the standard ID
+  (2026-11-13, saves MD5-equal) [confirmed]; the iPad Pro got v0.8.1 + ID change silently in place under its old
+  plain ID (in use); it and one more iPad still need one move over the cable before Sideloadly default renewals.
 - GitHub lists the 5 newest releases; on each release delete the 6th (tag kept).
 
 ## Devices
@@ -57,7 +63,7 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-0. **iOS: one app ID per player** (2026-11-13, user's plan, unreleased): tools always build
+0. **iOS: one app ID per player** (2026-11-13, user's plan, in the v0.8.2 draft): tools always build
    `net.srnative.sonicriders.<team>` (= Sideloadly default); `ios_run.py install` moves an older-ID app (backup to
    build/ios/moved, uninstall, install, copy back, size checks); launcher Install page picks the cable device and
    says update/new/move; game About tab shows the App ID (+ warning for old IDs). Tested on the iPad (A16): move

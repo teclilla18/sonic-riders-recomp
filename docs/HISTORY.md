@@ -1207,3 +1207,8 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   MD5 equal, the game boots with the save card, About tab shows the ID [confirmed]; update path, push-iso skip,
   signed setup_mac.py run, launcher Install page line [confirmed]. Unproven: the old-ID warning on screen, a move
   at the 3-app limit, a Sideloadly renewal after a move [uncertain].
+- Later: the user's iPhone moved over the cable (23 files incl. the disc, card_a.raw MD5 equal) [confirmed]; the
+  iPad Pro (in use) updated in place under its old plain ID over the network, no launch. v0.8.1 release notes now
+  list the iOS zip. v0.8.2 tagged on 13b02c5 (user: "release v0.8.2 with the iOS app ID fix"); iOS zip cold Mac
+  test PASS [confirmed]; draft release with the iOS zip, PC session asked to add the other zips, run the Sandbox
+  test and publish. Note: macOS's python3 is 3.9; make_progress.py needs 3.10 (`write_text(newline=)`).
