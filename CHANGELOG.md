@@ -17,6 +17,8 @@
   own speed + 25 km/h, whichever is higher.
 - **Speed Shoes add speed** (with "Ring Limit set to 999"): the Speed Shoes item set your speed to 200 km/h, which did
   nothing (or slowed you) above 200. Now you get your own speed + 80 km/h, and at least 200.
+- **Switch and phones: 1.25x resolution** (800x660) between 1x and 1.5x, for sharper races that stay at 60 fps
+  where 1.5x is too heavy (Display tab).
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 

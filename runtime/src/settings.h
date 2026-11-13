@@ -45,7 +45,7 @@ enum { PC_FPS_UNLIMITED = -1 };
 extern const int settings_pc_fps_presets[];
 int settings_pc_fps_valid(int v);
 
-enum { RES_1X, RES_1_5X, RES_2X, RES_MODES };
+enum { RES_1X, RES_1_5X, RES_2X, RES_1_25X, RES_MODES };  /* saved by number: 1.25x was added last (2026-11-14) */
 
 enum { FOV_MIN = 80, FOV_MAX = 130 };
 enum { PC_SCALE_MIN = 1, PC_SCALE_MAX = 4 };  /* 5x-6x tanked the fps on the maintainer's PC (2026-11-07) */
@@ -74,7 +74,7 @@ int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);
-float settings_internal_scale(void);  /* 1, 1.5 or 2 */
+float settings_internal_scale(void);  /* 1, 1.25, 1.5 or 2 */
 
 #ifdef __cplusplus
 }

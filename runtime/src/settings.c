@@ -24,7 +24,8 @@ const char* settings_screen_name(int mode) {
 }
 
 const char* settings_resolution_name(int res) {
-    static const char* const names[RES_MODES] = {"1x (640x528, fastest)", "1.5x (960x792)", "2x (1280x1056)"};
+    static const char* const names[RES_MODES] = {"1x (640x528, fastest)", "1.5x (960x792)", "2x (1280x1056)",
+                                                         "1.25x (800x660)"};
     return res >= 0 && res < RES_MODES ? names[res] : "?";
 }
 
@@ -41,7 +42,7 @@ const char* settings_framerate_name(int mode) {
     return mode >= 0 && mode < FR_MODES ? names[mode] : "?";
 }
 
-float settings_internal_scale(void) { return g_settings.resolution == RES_2X ? 2.0f : g_settings.resolution == RES_1_5X ? 1.5f : 1.0f; }
+float settings_internal_scale(void) { return g_settings.resolution == RES_2X ? 2.0f : g_settings.resolution == RES_1_5X ? 1.5f : g_settings.resolution == RES_1_25X ? 1.25f : 1.0f; }
 
 /* an aspect from 4:3 to 32:9, rounded so the EFB is a whole number of
  * (even) pixels wide: 640 x k */
@@ -144,7 +145,7 @@ void settings_load(void) {
     const char* sh = getenv("SR_SHARPNESS");  /* testing: FSR sharpening 0-100 (not saved unless changed in the menu) */
     if (sh && atoi(sh) >= 0 && atoi(sh) <= 100) g_settings.sharpness = atoi(sh);
     /* testing, not saved unless changed in the menu: SR_BLOOM=0-100, SR_GRADE=brightness,contrast,saturation,warmth,
-     * SR_RES=0-2 (1x / 1.5x / 2x; Switch and phones) */
+     * SR_RES=0-3 (1x / 1.5x / 2x / 1.25x; Switch and phones) */
     const char* bl = getenv("SR_BLOOM");
     if (bl && atoi(bl) >= 0 && atoi(bl) <= 100) g_settings.bloom = atoi(bl);
     const char* gr = getenv("SR_GRADE");

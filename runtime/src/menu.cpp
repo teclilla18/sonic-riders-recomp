@@ -392,20 +392,25 @@ void tab_display() {
     }
 #ifdef PIC_RES_RADIO
     heading("Resolution");
-    for (int r = 0; r < RES_MODES; r++) {
-        static const char* const names[RES_MODES] = {"1x  (640x528)", "1.5x  (960x792)", "2x  (1280x1056)"};
+    for (int i = 0; i < RES_MODES; i++) {
+        static const int order[RES_MODES] = {RES_1X, RES_1_25X, RES_1_5X, RES_2X};  /* smallest first */
+        const int r = order[i];
+        static const char* const names[RES_MODES] = {"1x  (640x528)", "1.5x  (960x792)", "2x  (1280x1056)",
+                                                     "1.25x  (800x660)"};
 #ifdef __SWITCH__
         static const char* const tips[RES_MODES] = {
             "The GameCube's own resolution: the fastest, best for playing without an overclock.",
             "Sharper; needs more from the graphics chip.",
-            "Sharpest; needs an overclocked console in busy races."};
+            "Sharpest; needs an overclocked console in busy races.",
+            "A little sharper than 1x; lighter than 1.5x in busy races."};
 #else
         static const char* const tips[RES_MODES] = {
             "The GameCube's own resolution: the fastest and easiest on the battery.",
             "Sharper; needs more from the graphics chip.",
-            "Sharpest; needs a fast phone in busy races."};
+            "Sharpest; needs a fast phone in busy races.",
+            "A little sharper than 1x; lighter than 1.5x in busy races."};
 #endif
-        if (r) ImGui::SameLine();
+        if (i) ImGui::SameLine();
         if (radio(names[r], g_settings.resolution == r, tips[r])) {
             g_settings.resolution = r;
             settings_apply();
