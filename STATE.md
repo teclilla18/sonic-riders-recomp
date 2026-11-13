@@ -76,17 +76,17 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    cap sites, recordings/online carry it, story/WGP/2-4P not played): HISTORY 2026-11-12.
 1. **"Ring Limit 999" gameplay set, on main, unreleased** (all only with the 999 option; notes plans-2026-11.md,
    game-addresses.md "Capsule" / "Object collisions"):
-   - **Gear Lv. 4 / 5** (game_levels.c): Lv. 4 at 200, Lv. 5 now **350** (user 2026-11-13 after a Switch run: 500
-     "near impossible" even with 4 laps), both a little weaker: x(205/180, 1.15, 1.15) and x(1.25, 1.3, 1.35)
-     (Blue Star 205/288, 225/325; picked by us overnight, user may tune). PC: Lv. 4 at 210, Lv. 5 at 360 rings,
+   - **Gear Lv. 4 / 5** (game_levels.c): Lv. 4 at 200, Lv. 5 at **350** (user: 500 "near impossible"), slowed twice by request
+     (2026-11-14: Blue Star 200/275 and 215/300 top/boost; x(200/180, 1.1, 1.1) and x(215/180, 1.2, 1.25)). PC: Lv. 4 at 210, Lv. 5 at 360 rings,
      block values exact [confirmed, log + RAM]. Old 200/500 build played by the user on the OLED [tested, user].
      Not checked: sound, split-screen HUD digit, CPU racers' levels.
    - **Gold 100-ring capsule respawns after 25 s** (7bdce20; user's value): user took it 5 times in one PC race,
      +100 each, >= 26 s apart [confirmed, log]; cap 100 replay: taken once only [likely]. On the OLED, not played.
      Max-air capsule (type 13) takes the same path if it is kind 0x11 [uncertain, no stage checked].
-   - **Dash panels keep a faster racer's speed** (31ff87b): max(current, panel). Replay of the user's run: 256 km/h
-     stays 256 (was cut to 200), slow arrival still gets 200 [confirmed, replay logs]. Rule chosen overnight without
-     the user: **ask whether to add a push** and whether kind 0x848 (dash ring?) should do the same.
+   - **Dash panels**: max(panel speed, own + 25 km/h); **Speed Shoes** (item 6): max(200, own + 80 km/h) (values
+     picked by us, user said "you pick"; 2026-11-14). User's PC run (test2.rec): panel 173 -> 200 (original),
+     229 -> 255 [confirmed, log]; shoes forced by a test hook in its replay: 198 -> 278, 134 -> 214 [confirmed].
+     Kind 0x848 (dash ring?) untouched.
    - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
 1d. **SwitchWakerHD v1.3.0 ideas, ranked** (plans-2026-11.md, end): PGO, on-console shader compiles, deko3d tiled
    cache / dual issue, core 3, 30 fps pacing, FXAA, anisotropic filtering, PC HDR. Nothing started; go through the list

@@ -641,10 +641,10 @@ void tab_gameplay() {
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
               "boost or a fall off the course takes 100 rings instead of all of them. Two more gear levels: "
               "Lv. 4 at 200 rings and Lv. 5 at 350, each with a higher top speed and boost. The gold 100-ring "
-              "capsule comes back 25 seconds after it is taken (+100 each time), and dash panels no longer slow "
-              "you down when you are already faster than the panel. Turn off for the original game: at most "
-              "100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is gone once taken and a "
-              "panel sets its own speed."))
+              "capsule comes back 25 seconds after it is taken (+100 each time), dash panels push you 25 km/h "
+              "past your own speed instead of slowing you down, and Speed Shoes add 80 km/h. Turn off for the "
+              "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
+              "gone once taken, and panels and shoes set a fixed speed."))
         settings_apply();
 }
 

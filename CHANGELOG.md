@@ -12,8 +12,11 @@
 - **The gold 100-ring capsule comes back** (with "Ring Limit set to 999"): 25 seconds after it is taken (normal
   capsules keep their 3 seconds), and it gives +100 rings each time. With the original 100-ring limit it stays gone
   for the race, as before.
-- **Dash panels keep your speed** (with "Ring Limit set to 999"): a panel used to set every racer to its own speed
-  (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you keep the faster of the two.
+- **Dash panels push you on** (with "Ring Limit set to 999"): a panel used to set every racer to its own speed
+  (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you get the panel's speed or your
+  own speed + 25 km/h, whichever is higher.
+- **Speed Shoes add speed** (with "Ring Limit set to 999"): the Speed Shoes item set your speed to 200 km/h, which did
+  nothing (or slowed you) above 200. Now you get your own speed + 80 km/h, and at least 200.
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 

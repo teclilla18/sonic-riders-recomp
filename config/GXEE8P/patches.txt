@@ -85,8 +85,11 @@ decl extern volatile int g_ring_cap;
 8188060C after { if (g_ring_cap != 100 && ld32(c->r[30] + 0x50u) == 0x11u) st32(c->r[30] + 0x40u, c->r[3] * 25u / 3u); }
 # dash panels (object kind 0x83E in the collision handler fn 81888D64): the panel stores its own speed (work +0x3C,
 # e.g. 0.926 = 200 km/h) as the racer's speed (+0xAAC, stored at 81889800), which slows a faster racer down. With
-# the 999 cap the racer keeps the faster of the two
-81889800 before { if (g_ring_cap != 100) { union { uint32_t u; float f; } cur_; cur_.u = ld32(c->r[21] + 0xAACu); if ((double)cur_.f > c->f[0].ps0) { c->f[0].ps0 = cur_.f; c->f[0].ps1 = cur_.f; } } }
+# the 999 cap: the higher of the panel's speed and the racer's own + 25 km/h (x216 = km/h)
+81889800 before { if (g_ring_cap != 100) { union { uint32_t u; float f; } cur_; cur_.u = ld32(c->r[21] + 0xAACu); double v_ = (double)cur_.f + 25.0 / 216.0; if (v_ > c->f[0].ps0) { float s_ = (float)v_; c->f[0].ps0 = s_; c->f[0].ps1 = s_; } } }
+# speed shoes (item type 6, case at 8188A010): the speed is set to 200 km/h (rodata, f0) at 8188A018. With the 999
+# cap: the higher of 200 km/h and the racer's own + 80 km/h
+8188A018 before { if (g_ring_cap != 100) { union { uint32_t u; float f; } cur_; cur_.u = ld32(c->r[21] + 0xAACu); double v_ = (double)cur_.f + 80.0 / 216.0; if (v_ > c->f[0].ps0) { float s_ = (float)v_; c->f[0].ps0 = s_; c->f[0].ps1 = s_; } } }
 # falling off the course: the respawn (fn 81817264) stores 0 (r6, which also clears other fields after it) as the
 # rings; with the 999 cap a fall takes 100 rings like a hit (the old count kept before the store, rewritten after)
 81817A58 before int32_t ring_before = (int32_t)ld32(c->r[25] + 0xB98u);
