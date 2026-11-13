@@ -80,10 +80,10 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    "Lv. 4" / "Lv. 5" (1P); boosting at Lv. 5 reached 301-333 (speedometer 319 in a shot). Not checked: sound (runs
    muted), split-screen HUD digit (hooks 81831148/78 never seen firing), CPU racers' levels, online/recording
    determinism, Switch/Android/iOS (compile not even checked on GCC/Switch yet). Not played by the user.
-1b. **Dash panels add speed instead of setting it** (user, 2026-11-13: they kill momentum above the panel's speed;
-   asked to do it after a context clear). Not started.
-1c. **100-ring capsule respawns** like the other capsules (user, 2026-11-13). Partly researched (plans-2026-11.md
+1b. **100-ring capsule respawns** like the other capsules (user, 2026-11-13; do this before the dash panels). Partly researched (plans-2026-11.md
    "100-ring capsule respawn"): item-get switch fn_1_88C80, type 12 = 100 rings.
+1c. **Dash panels add speed instead of setting it** (user, 2026-11-13: they kill momentum above the panel's speed;
+   asked to do it after a context clear). Not started.
 2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
    settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
    Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.
