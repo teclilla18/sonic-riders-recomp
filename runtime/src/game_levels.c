@@ -1,4 +1,4 @@
-/* Gear levels 4 and 5 (part of the "Ring Limit 999" option, settings.c g_ring_cap != 100).
+/* Gear levels 4 and 5 (part of the "Riders Plus" option, formerly "Ring Limit 999": settings.c g_ring_cap != 100).
  *
  * The game keeps a racer's level in a byte at racer +0x102E (0..2 = Lv. 1..3), raised when the rings reach
  * 30 / 60 (byte table at REL rodata 0x19FC) and lowered below them, and three per-level stat blocks of
@@ -226,4 +226,42 @@ void lv_texture_decoded(GxTexture* t) {
     for (int kind = 0; kind < 2; kind++)
         for (int e = 0; e < 2; e++)
             make_cell(t, &k_kind[kind], 319 + 22 * e, 199, 22, 22, k_kind[kind].dx[e], k_kind[kind].dy);
+}
+
+/* Charge jump (also part of the option): holding A to charge a jump keeps the racer's speed for 1 s before
+ * the game's slowdown starts. fn_1_6D5D4 (racer r30), while racer +0xA28 bit 0x1000 (charging) is set, counts
+ * the charge t at racer +0x9F4 (+1 per step, at most 50) and each step takes 0.009259 x (t/50)^2 (up to 2 km/h)
+ * off the speed (+0xAAC), down to 80 km/h, with the acceleration (+0xAA8) at 0. Here the slowdown's t/50 is
+ * replaced by the same curve 1 s later; the jump's own charge (+0x9F4) is untouched. Counted in 60ths of a
+ * second (the game's frame advance), so 30 fps mode holds as long. */
+#define JUMP_HOLD_60THS 60
+#define GAME_FRAME_ADV  0x8021B8D4u  /* u32, as frame_pacing.c */
+static uint32_t g_jump_held[8];
+
+void jump_charge_step(uint32_t racer) {  /* every call of fn_1_6D5D4, so the count resets when a charge ends */
+    int i = racer_index(racer);
+    if (i < 0) return;
+    if (ld32(racer + 0xA28u) & 0x1000u) g_jump_held[i] += ld32(GAME_FRAME_ADV);
+    else g_jump_held[i] = 0;
+}
+
+double jump_charge_scale(uint32_t racer, double orig) {  /* t/50 for the slowdown */
+    int i = racer_index(racer);
+    if (g_ring_cap == 100 || i < 0) return orig;
+    uint32_t adv = ld32(GAME_FRAME_ADV);
+    if (adv < 1) adv = 1;
+    uint32_t held = g_jump_held[i];
+    double t = held > JUMP_HOLD_60THS ? (double)((held - JUMP_HOLD_60THS) / adv) : 0.0;
+    if (t > 50.0) t = 50.0;
+    return t / 50.0;
+}
+
+/* Starting a charge also ends a boost (+0xA28 bit 0x400 cleared), and a racer above its top speed (+0xAB4) is
+ * then eased back down by the game's general decay (fn at 818159F4.., racer r24: speed -= c + k x over^2,
+ * stored at 81815ABC). During the same 1 s of a charge that decay waits too, so a jump charged right after a
+ * boost keeps the boost speed for that second. */
+int jump_charge_grace(uint32_t racer) {
+    int i = racer_index(racer);
+    if (g_ring_cap == 100 || i < 0) return 0;
+    return (ld32(racer + 0xA28u) & 0x1000u) && g_jump_held[i] <= JUMP_HOLD_60THS;
 }

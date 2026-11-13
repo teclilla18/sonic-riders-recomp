@@ -2,20 +2,25 @@
 
 ## Unreleased
 
-- **Gear Lv. 4 and Lv. 5** (with "Ring Limit set to 999", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
+- **"Riders Plus"**: the settings option "Ring Limit set to 999" is now called "Riders Plus" (Gameplay tab), since it
+  holds all of the custom gameplay below as well as the 999 rings. Your saved choice is kept. Off = the original game.
+- **Charging a jump keeps your speed for 1 second** (with "Riders Plus"): holding A to charge a jump made the game
+  slow you down right away. Now your speed holds for 1 second after you first press A, then the game's own
+  slowdown starts as before (gently, then down to 80 km/h). The jump itself is unchanged. Every racer gets it.
+- **Gear Lv. 4 and Lv. 5** (with "Riders Plus", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
   gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.11 and boost x1.1, Lv. 5
   top speed x1.19 and boost x1.2 (drift dash x1.1 / x1.25); Sonic's Blue Star goes 180 / 250 -> 200 / 275 -> 215 / 300.
   Reaching them plays the game's own LEVEL UP!! (sparkle, sound, air refilled), and the HUD shows "Lv. 4" /
   "Lv. 5" in the game's own digit style (drawn at run time from the HUD's other digits). Dropping below 200 rings
   (a hit or a fall takes 100) goes back to Lv. 3. Split screen: the levels work; the HUD digit there is not
   checked yet.
-- **The gold 100-ring capsule comes back** (with "Ring Limit set to 999"): 25 seconds after it is taken (normal
+- **The gold 100-ring capsule comes back** (with "Riders Plus"): 25 seconds after it is taken (normal
   capsules keep their 3 seconds), and it gives +100 rings each time. With the original 100-ring limit it stays gone
   for the race, as before.
-- **Dash panels push you on** (with "Ring Limit set to 999"): a panel used to set every racer to its own speed
+- **Dash panels push you on** (with "Riders Plus"): a panel used to set every racer to its own speed
   (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you get the panel's speed or your
   own speed + 25 km/h, whichever is higher.
-- **Speed Shoes add speed** (with "Ring Limit set to 999"): the Speed Shoes item set your speed to 200 km/h, which did
+- **Speed Shoes add speed** (with "Riders Plus"): the Speed Shoes item set your speed to 200 km/h, which did
   nothing (or slowed you) above 200. Now you get your own speed + 80 km/h, and at least 200.
 - **Switch: heavy race views hold 60 fps** with the picture options on. The Switch now draws into three screen
   images instead of two, so a frame that finishes just after the screen refresh no longer makes the next one wait a

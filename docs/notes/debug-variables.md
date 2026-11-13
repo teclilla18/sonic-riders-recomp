@@ -37,7 +37,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_BUGREPORT=1` (PC/Linux): write the menu's bug-report zip at start-up (test).
 - `SR_PADS=N`: connect ports 1..N without gamepads (PC). `SR_CARD=<path>`: memory card image (both targets).
 - `SR_TEST_MENU=1` / `<tab>` / `mods`: start with the settings menu open on that tab.
-- `SR_FRAMERATE=0/1/2`: 60 fps / 30 fps / Auto for tests. `SR_TEST_GAME_LOAD_MS=DRAW[:LOGIC]`: busy-wait on the game thread to imitate a slow console.
+- `SR_FRAMERATE=0/1/2`: 60 fps / Auto / 30 fps for tests (settings.c). `SR_TEST_GAME_LOAD_MS=DRAW[:LOGIC]`: busy-wait on the game thread to imitate a slow console.
 - `SR_HANDHELD_GPU=0` (Switch): don't apply the 384 MHz handheld GPU profile.
 
 **Hangs, crashes, timing**
