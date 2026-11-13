@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **iPhone / iPad: one app ID for everyone, no more second empty app.** Every install now uses
+  `net.srnative.sonicriders.<your team ID>`, the same ID Sideloadly makes with its default settings, so renewing is
+  always "drag in the .ipa, change nothing, Start". An app installed by an older version (another ID) is moved over
+  by itself when you click Install in the Mac launcher (or run the installer): saves, settings and the disc image
+  come along, the old app is removed, and a copy of the saves stays on the Mac.
+- **Mac launcher, Install page:** finds the device on the cable by itself, shows its full name and says what
+  Install will do (update, new, or move from an older app ID). The disc image is not copied again when it is
+  already on the device.
+- **iPhone / iPad:** Settings > About shows the app ID, and says how to move an older one.
+
 ## v0.8.1 (2026-11-12)
 
 - **Alpha testers needed for the Sonic Heroes native port:** the README and every launcher / installer (PC, Switch,

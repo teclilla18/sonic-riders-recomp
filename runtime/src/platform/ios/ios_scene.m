@@ -34,3 +34,15 @@ void ios_attach_window(SDL_Window* win) {
                (double)w.screen.nativeScale);
     }
 }
+
+/* the app's bundle ID (About tab: one ID per player, tools/ios_run.py) */
+const char* ios_bundle_id(void) {
+    static char id[160];
+    if (!id[0]) {
+        @autoreleasepool {
+            NSString* s = NSBundle.mainBundle.bundleIdentifier;
+            snprintf(id, sizeof id, "%s", s ? s.UTF8String : "?");
+        }
+    }
+    return id;
+}

@@ -232,25 +232,25 @@ days; your saves and the disc image stay on the device. The app file is always o
 `SonicRiders-prev.ipa`), and **`How to renew (every 7 days).txt`** in the same folder has these steps with your
 own app ID filled in.
 
-**Renew the same way you installed**, or the device gets a second, empty Sonic Riders (no disc image, no saves):
+**One rule: renew with Sideloadly and never change its settings.** Every Sonic Riders install should have the
+app ID `net.srnative.sonicriders.<your team ID>`: the Mac installer gives it, and so does Sideloadly with its
+default settings. The game shows its ID in *Settings → About*.
 
-- **You installed it from the Mac** (the installer copied it to the device). Either:
-  - connect the device and in the launcher's *Install* page click *Find devices* and **Install only (renewing)**
-    (or run `Install Sonic Riders (iOS).command` again: **y** to installing, **n** to copying the disc image); or
-  - with Sideloadly, using the same Apple ID: drag in the `.ipa` and follow the `How to renew` file. Apps the Mac
-    installed from this version on have the ID `net.srnative.sonicriders.<your team ID>`, the same one Sideloadly
-    makes with its default settings, so you just press *Start*. An app installed by an older version keeps its
-    older ID (for example `net.srnative.sonicriders.t1a2b3c4d`): there, open **Advanced Options** and **untick
-    "Use automatic bundle ID"** first, or Sideloadly installs a second app. The installer finds an app that is
-    already on the device and builds with its ID, so your saves stay.
-- **You installed it with Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly
-  with the same Apple ID and the same settings as the first time ("Use automatic bundle ID" left ticked, the
-  default), and *Start*. The first Sideloadly install
-  set the app's ID; later ones keep it.
+- **From the Mac:** connect the device. In the launcher's *Install* page the device on the cable is picked by
+  itself; click **Install only (renewing)** (or run `Install Sonic Riders (iOS).command` again). Or use
+  Sideloadly, below: both reach the same app.
+- **With Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly with the same Apple
+  ID, leave the settings as they are ("Use automatic bundle ID" ticked) and *Start*.
 
-**Ended up with two Sonic Riders apps?** Your save is in the old one. Open the Files app → *On My iPad* (or *On
-My iPhone*): there are two *Sonic Riders* folders. Copy `saves/card_a.raw` from the folder that has it into
-`saves/` in the other one (and the disc image, if that one has none). Then delete the app you don't want to
+**An older install** (installed by v0.8.1 or earlier, ID `net.srnative.sonicriders` or `net.srnative.sonicriders.t…`;
+*Settings → About* says "Older app ID"): connect it to the Mac and click **Install** in the launcher (or run the
+`.command`). It moves the app to the standard ID by itself: your saves, settings and the disc image are copied to
+the Mac, the old app is removed, the new one installed and everything copied back. A copy of the saves stays in
+`build/ios/moved/` in the Sonic Riders folder. From then on Sideloadly's default settings renew the same app.
+
+**Ended up with two Sonic Riders apps anyway?** Your save is in the old one. Open the Files app → *On My iPad*
+(or *On My iPhone*): there are two *Sonic Riders* folders. Copy `saves/card_a.raw` from the folder that has it
+into `saves/` in the other one (and the disc image, if that one has none). Then delete the app you don't want to
 keep.
 
 **A free Apple ID allows 3 sideloaded apps per device.** If the install fails with "maximum number of

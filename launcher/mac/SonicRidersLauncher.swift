@@ -6,7 +6,8 @@
 // Testing: SR_LAUNCHER_ROOT=<release folder>, SR_LAUNCHER_PAGE=0-4, SR_LAUNCHER_SHOT=<file.png> (draws the
 // page off-screen, saves the picture and quits), SR_LAUNCHER_BUILD=1 (starts the build at once; with
 // SR_LAUNCHER_SHOT the shot is taken when the build ends), SR_LAUNCHER_ISO=<image> (instead of the saved
-// choice), SR_LAUNCHER_IPA_DIR=<dir> (instead of ~/Desktop/Sonic Riders iOS).
+// choice), SR_LAUNCHER_IPA_DIR=<dir> (instead of ~/Desktop/Sonic Riders iOS), SR_LAUNCHER_ROUTE=mac|sideloadly
+// (instead of the saved one), SR_LAUNCHER_SHOT_DELAY=<s> (default 4; the Install page's device check takes ~10 s).
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -93,7 +94,7 @@ struct Check: Identifiable {
 @MainActor
 final class Model: ObservableObject {
     let root: String?
-    @Published var page: Int = 0
+    @Published var page: Int = 0 { didSet { if page == 2 && route == "mac" && devices.isEmpty && !busy { scanDevices() } } }
     @Published var checks: [Check] = []
     @Published var team = ""
     @Published var iso: String = ProcessInfo.processInfo.environment["SR_LAUNCHER_ISO"] ?? UserDefaults.standard.string(forKey: "iso") ?? ""
@@ -109,10 +110,13 @@ final class Model: ObservableObject {
     @Published var failed = false
     @Published var ipaDate: Date?
     @Published var installedAt: Date? = UserDefaults.standard.object(forKey: "installedAt") as? Date
-    @Published var route: String = UserDefaults.standard.string(forKey: "route") ?? "sideloadly"
+    @Published var route: String = ProcessInfo.processInfo.environment["SR_LAUNCHER_ROUTE"]
+        ?? UserDefaults.standard.string(forKey: "route") ?? "sideloadly"
     @Published var guide: Int = UserDefaults.standard.integer(forKey: "guide")
     @Published var devices: [(id: String, name: String)] = []
-    @Published var device = ""
+    @Published var device = "" { didSet { if device != oldValue { checkDevice() } } }
+    @Published var devStatus = ""       // what Install does on the picked device (ios_run.py status), "" = unknown
+    @Published var devHasDisc = false
     var proc: Process?
     var onTaskEnd: ((Int32) -> Void)?
 
@@ -333,11 +337,11 @@ final class Model: ObservableObject {
     func scanDevices() {
         guard let root else { return }
         DispatchQueue.global().async {
-            let out = sh(["/usr/bin/python3", "-I", "tools/ios_run.py", "devices"], cwd: root).1
+            let out = sh(["/usr/bin/python3", "-I", "tools/ios_run.py", "devices", "--tsv"], cwd: root).1
             let devs: [(id: String, name: String)] = out.split(separator: "\n").compactMap { l in
-                let f = l.split(separator: " ", omittingEmptySubsequences: true)
-                guard f.count >= 2, f[0].count >= 20, l.contains("paired") else { return nil }
-                return (String(f[0]), String(f[1]))
+                let f = l.split(separator: "\t", omittingEmptySubsequences: false)
+                guard f.count >= 4, f[0].count >= 20 else { return nil }
+                return (String(f[0]), f[3] == "cable" ? "\(f[1]) (cable)" : String(f[1]))
             }
             DispatchQueue.main.async {
                 self.devices = devs
@@ -346,12 +350,43 @@ final class Model: ObservableObject {
         }
     }
 
+    /// the app IDs on the picked device and the built app's: Install updates it, installs it new, or moves an app
+    /// under an older ID onto this build's (saves, settings and disc image come along)
+    func checkDevice() {
+        guard let root, !device.isEmpty else { devStatus = ""; return }
+        let dev = device
+        devStatus = "Checking Sonic Riders on the device..."
+        DispatchQueue.global().async {
+            let (rc, out) = sh(["/usr/bin/python3", "-I", "tools/ios_run.py", "--device", dev, "status"], cwd: root)
+            var f: [String: String] = [:]
+            for l in out.split(separator: "\n") {
+                if let c = l.firstIndex(of: ":") { f[String(l[..<c])] = l[l.index(after: c)...].trimmingCharacters(in: .whitespaces) }
+            }
+            let app = f["app"] ?? "?", st = f["status"] ?? ""
+            let text: String
+            if rc != 0 || st.isEmpty { text = "Could not check the device (unlock it and click Find devices again)." }
+            else if st == "update" { text = "✓ Sonic Riders is on this device with the same app ID (\(app)): Install updates it, saves and disc image stay." }
+            else if st == "new" { text = "Sonic Riders is not on this device yet: use Install + copy disc image. App ID: \(app)." }
+            else {
+                let old = st.dropFirst("move ".count)
+                text = "⚠ This device has Sonic Riders under an older app ID (\(old)). Install moves it to \(app): saves, "
+                    + "settings and the disc image come along, then the old app is removed (a few minutes)."
+            }
+            DispatchQueue.main.async {
+                guard dev == self.device else { return }
+                self.devStatus = text
+                self.devHasDisc = f["disc"] == "yes"
+            }
+        }
+    }
+
     func installFromMac(copyDisc: Bool) {
         guard !device.isEmpty else { return }
         let dev = device
-        run("Installing on the device", ["/usr/bin/python3", "-u", "tools/ios_run.py", "--device", dev, "install"]) { rc in
-            guard rc == 0 else { return }
+        run("Installing on the device", ["/usr/bin/python3", "-u", "tools/ios_run.py", "--device", dev, "install", "--move"]) { rc in
+            guard rc == 0 else { self.checkDevice(); return }
             self.markInstalled()
+            self.checkDevice()
             if copyDisc && !self.iso.isEmpty {
                 self.run("Copying the disc image to the device",
                          ["/usr/bin/python3", "-u", "tools/ios_run.py", "--device", dev, "push-iso", self.iso])
@@ -727,7 +762,7 @@ struct InstallPage: View {
             Para("The app was signed with your Apple ID in Xcode; the launcher installs it over the cable.\n"
                  + "1. Connect the iPhone/iPad with a cable, unlock it, tap **Trust**.\n"
                  + "2. Developer Mode on: **Settings > Privacy & Security > Developer Mode** (restart, Turn On).\n"
-                 + "3. Click **Find devices**, pick yours, then **Install**. The first time also copy the disc image.\n"
+                 + "3. The device on the cable is picked by itself (**Find devices** looks again), then **Install**. The first time also copy the disc image.\n"
                  + "4. First start on the device: **Settings > General > VPN & Device Management** > your Apple ID > **Trust**.")
             HStack(spacing: 8) {
                 Btn(t: "Find devices", enabled: !m.busy) { m.scanDevices() }
@@ -735,6 +770,11 @@ struct InstallPage: View {
                     if m.devices.isEmpty { Text("no device found yet").tag("") }
                     ForEach(m.devices, id: \.id) { d in Text(d.name).tag(d.id) }
                 }.labelsHidden().frame(width: 220)
+            }
+            if !m.devStatus.isEmpty {
+                Text(m.devStatus).font(.system(size: 12))
+                    .foregroundColor(m.devStatus.hasPrefix("✓") ? kGreen : m.devStatus.hasPrefix("⚠") ? kYellow : kDim)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 8) {
                 Btn(t: "Install + copy disc image", enabled: !m.busy && !m.device.isEmpty && m.ipaDate != nil) { m.installFromMac(copyDisc: true) }
@@ -766,8 +806,7 @@ struct RenewPage: View {
                  + "build again: the same SonicRiders.ipa works.")
             Para(m.route == "mac"
                  ? "**You installed from this Mac.** Connect the device, go to **Install**, click **Find devices** and **Install only "
-                   + "(renewing)**. (With Sideloadly instead: untick Advanced Options > \"Use automatic bundle ID\", or you get a "
-                   + "second, empty Sonic Riders.)"
+                   + "(renewing)**. (Sideloadly works too: same Apple ID, settings left as they are.)"
                  : "**You installed with Sideloadly.** Connect the device, open Sideloadly, drag in the same SonicRiders.ipa with the "
                    + "**same Apple ID and settings** (\"Use automatic bundle ID\" left ticked) and click Start. A different way "
                    + "makes a second, empty Sonic Riders.")
@@ -943,7 +982,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         self.model.onTaskEnd = { rc in end?(rc); DispatchQueue.main.asyncAfter(deadline: .now() + 2) { take() } }
                     }
                 } else {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) { take() }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + (Double(e["SR_LAUNCHER_SHOT_DELAY"] ?? "") ?? 4)) { take() }
                 }
                 return
             }

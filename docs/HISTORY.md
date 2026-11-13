@@ -1189,3 +1189,21 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   PC and Switch modes], Linux and Mac setup print it at the end, Mac launcher About page [implemented, not built:
   needs a Mac]. Cold Sandbox PC + Android PASS (2 installs each) [confirmed]. Zips: PC, Switch, Android, Linux;
   no iOS zip (make_release --flavor ios builds the Mac launcher, only on a Mac).
+
+## 2026-11-13 (Mac): v0.8.1 iOS zip; one app ID per player on iOS
+
+- v0.8.1 had no iOS zip (needs a Mac). Built with `make_release.py --flavor ios --version v0.8.1 --ref v0.8.1`,
+  cold Mac unzip test PASS (unsigned, fresh tools dir, 7/7 steps) [confirmed]; launcher About page shows the Heroes
+  call [confirmed, shot]; uploaded to the release (user's OK). Bug found: an annotated tag as --ref stamped the tag
+  object's hash (04573a6b) in VERSION; fixed in e52dad9 (`ref^{commit}`), rebuilt zip differs only in VERSION.
+- Installing on the user's iPhone failed with "integrity could not be verified" (MIFreeProfileValidatedAppTracker):
+  the build's ID (`<base>.<team>`) was new there and the free account's 3 apps were taken. Every device had another
+  ID (`<base>` from unticked Sideloadly, `<base>.t<hash>` from pre-2026-11-09 Mac installs). User's plan: one ID
+  for everyone. The tools always build `<base>.<team>` (Sideloadly's default makes the same); `ios_run.py install`
+  moves an older-ID app (Documents copied to the Mac and checked, old app removed, new installed, copied back and
+  checked); `status` / `devices --tsv` feed the launcher's Install page (cable device first, full names: names were
+  cut at the first space before); `push-iso` skips a disc already there; About tab shows the App ID.
+- Tested on an iPad (A16) over the cable: move `.t<hash>` -> `.<team>`, 7 files incl. the 1.4 GB .iso, card_a.raw
+  MD5 equal, the game boots with the save card, About tab shows the ID [confirmed]; update path, push-iso skip,
+  signed setup_mac.py run, launcher Install page line [confirmed]. Unproven: the old-ID warning on screen, a move
+  at the 3-app limit, a Sideloadly renewal after a move [uncertain].

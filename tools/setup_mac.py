@@ -148,29 +148,6 @@ def pick_device(team, a):
     return devs[0] if devs else None
 
 
-def existing_app_id(team, d):
-    """the app ID to build with when Sonic Riders is already installed, so the install updates that app (saves and
-    disc image stay): the one on the device, else the last build's. '' = the default (ios_build.BASE_ID.<team>).
-    Unsigned builds always use the plain ID: Sideloadly adds the player's team ID itself."""
-    if not team:
-        return ""
-    import ios_run
-    if d:
-        try:
-            ids = ios_run.installed_ids(d["id"])
-        except Exception:
-            ids = []
-        if ids:
-            pick = next((i for i in ids if i.endswith("." + team)), ids[0])
-            log("Sonic Riders is already on %s (%s): building with that ID, so it is updated in place." % (d["name"], pick))
-            if len(ids) > 1:
-                log("Other Sonic Riders apps on it: %s (left alone)." % ", ".join(i for i in ids if i != pick), "yellow")
-            return pick
-    info = os.path.join(ROOT, "build", "ios", "xcode", "build", "Release-iphoneos", "SonicRiders.app", "Info.plist")
-    prev = out(["plutil", "-extract", "CFBundleIdentifier", "raw", info]) if os.path.isfile(info) else ""
-    return prev if prev.startswith("net.srnative.sonicriders") else ""
-
-
 def write_renew_notes(ipa_dir, ipa, bundle, team):
     """'How to renew (every 7 days).txt' next to the .ipa: both ways, with this build's app ID"""
     import ios_build
@@ -312,10 +289,10 @@ def main():
     # 6 -------------------------------------------------------------
     step(6, "Recompiling and building the app (10-20 minutes the first time)")
     d = pick_device(team, a)
-    bundle = existing_app_id(team, d)
+    # always the standard ID (net.srnative.sonicriders.<team>, what Sideloadly's default makes too); an app under an
+    # older ID is moved onto it at the install step (ios_run.py install)
     conf = [sys.executable, "configure.py", "--target", "ios", "--sdl-src", sdl, "--moltenvk", mvk, "--imgui", imgui,
-            "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else []) + \
-        (["--bundle-id", bundle] if bundle else [])
+            "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else [])
     run("configure", conf)
     run("build the app", ["ninja"])
     ipa = os.path.join(ipa_dir, "SonicRiders.ipa")
@@ -330,9 +307,21 @@ def main():
     installed = False
     if d and (a.install or ("yes" if ask("Install on %s? (y/n)" % d["name"], "y", a.yes).lower().startswith("y")
                             else "no")) == "yes":
-        run("install the app on %s" % d["name"], [sys.executable, "tools/ios_run.py", "--device", d["id"], "install"])
+        import ios_run
+        what, old = ios_run.plan(d["id"], bundle)
+        if what == "move":
+            log("%s has Sonic Riders under an older app ID (%s)." % (d["name"], old), "yellow")
+            log("Installing moves it to %s: saves, settings and the disc image come along, then the old" % bundle)
+            log("app is removed. From then on Sideloadly's default settings renew the same app.")
+            if not ask("Move it now? (y/n)", "y", a.yes).lower().startswith("y"):
+                fail("Not installed: the old app is still there.", "Run the installer again to move it.")
+        run("install the app on %s" % d["name"],
+            [sys.executable, "tools/ios_run.py", "--device", d["id"], "install", "--move"])
         installed = True
-        if ask("Copy your disc image to %s (1.4 GB, a few minutes; not needed again when you only renew)? (y/n)"
+        has_disc = any(r.lower().endswith(".iso") for r, _ in (ios_run.documents(d["id"], bundle) or []))
+        if has_disc:
+            log("The disc image is already on %s." % d["name"], "green")
+        elif ask("Copy your disc image to %s (1.4 GB, a few minutes; not needed again when you only renew)? (y/n)"
                % d["name"], "y", a.yes).lower().startswith("y"):
             run("copy the disc image to %s" % d["name"],
                 [sys.executable, "tools/ios_run.py", "--device", d["id"], "push-iso", iso])

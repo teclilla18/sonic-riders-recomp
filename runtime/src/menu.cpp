@@ -30,6 +30,9 @@ int mods_count(void);
 const char* mods_title(int i);
 int mods_enabled(int i);
 void mods_set_enabled(int i, int on);
+#ifdef SR_IOS
+const char* ios_bundle_id(void); /* ios_scene.m */
+#endif
 /* phones (Android, iOS): always full screen, touch controls, no PC picture options */
 #if defined(__ANDROID__) || defined(SR_IOS)
 #define SR_PHONE 1
@@ -683,6 +686,26 @@ void tab_about() {
     }
     help("Asks GitHub once at start-up whether a newer version of the port exists and says so at the top of the "
          "screen. Only the newest version number is downloaded.");
+#endif
+#ifdef SR_IOS
+    {
+        /* one app ID per player: net.srnative.sonicriders.<10-character team ID> (the Mac's builds and Sideloadly's
+         * default settings); older installs (no suffix, .t<hash>) renew into a second, empty app with Sideloadly's
+         * default, so say how to move (tools/ios_run.py install moves them, docs/notes/ios.md) */
+        const char* id = ios_bundle_id();
+        const char* base = "net.srnative.sonicriders.";
+        size_t n = strlen(base), len = strlen(id);
+        bool standard = len == n + 10 && strncmp(id, base, n) == 0;
+        for (size_t i = n; standard && i < len; i++)
+            standard = (id[i] >= 'A' && id[i] <= 'Z') || (id[i] >= '0' && id[i] <= '9');
+        ImGui::Text("App ID: %s", id);
+        help("The ID iOS knows this app by. Renewing every 7 days must reach the same ID, or the device gets a "
+             "second, empty Sonic Riders.");
+        if (!standard)
+            warn("Older app ID. To move to the standard one (saves and disc image come along): connect this device "
+                 "to your Mac, open the Sonic Riders launcher, Install. Until then, renew with Sideloadly's Advanced "
+                 "Options > \"Use automatic bundle ID\" unticked.");
+    }
 #endif
     note("A fan-made native port built from your own disc. Not affiliated with SEGA or Nintendo.");
     heading("Bug reports");

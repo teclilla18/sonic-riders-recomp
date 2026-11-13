@@ -1,4 +1,4 @@
-# State (2026-11-12)
+# State (2026-11-13)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -7,8 +7,10 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 
 ## Releases
 
-**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips; no iOS zip, v0.8.0's stays
-current for iPhone/iPad). Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Contents: call for Sonic
+**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips; iOS zip added 2026-11-13 from the
+Mac, `make_release --flavor ios --ref v0.8.1`). Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Cold
+Mac unzip test of the iOS zip (unsigned, fresh tools) PASS; Mac launcher About page shows the Heroes call
+[confirmed, launcher shot]; the v0.8.1 app boots to the title on an iPad (A16) [confirmed, SR_SCREENSHOT]. Contents: call for Sonic
 Heroes alpha testers (top of the notes, README line 1, launcher sidebar on PC/Switch/Android modes [confirmed,
 launcher screenshots], Linux/Mac setup end message), 999 ring limit, menu L/R tabs + wrap, update_check saved.
 v0.7.1 delisted (tag kept).
@@ -25,8 +27,8 @@ already updated don't see the replacement.
   <1 ms per step) [confirmed, logs]; one iPhone frame with options on had a big white haze [uncertain].
 - Bloom fix on PC (SR_BLOOM=100 route): Player Entry before and after a race without bloom, race and results with
   bloom [confirmed, frames]; on the iPad [confirmed, user].
-- Not tested: a cold Mac test from the iOS zip. The user's free iOS signatures run out ~2026-11-15 (renew; app IDs
-  per device in CLAUDE.local.md, untick Sideloadly's "automatic bundle ID").
+- The user's free iOS signatures run out ~2026-11-15. Devices with an older app ID (no suffix or `.t<hash>`) must
+  be moved once over the cable (launcher Install / ios_run.py install) before Sideloadly's default settings work.
 - GitHub lists the 5 newest releases; on each release delete the 6th (tag kept).
 
 ## Devices
@@ -55,10 +57,15 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-0. **v0.8.1 released 2026-11-12** (tag at 77620bb; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS).
-   Notes open with the call for Sonic Heroes alpha testers; README "Alpha testers needed:"; every launcher /
-   installer links to the Heroes repo. No iOS zip (Mac launcher needs a Mac; Swift change compile-unchecked).
-   Released but not played by the user: capsule +100, hit/fall -100; L/R tabs and menu wrap accepted ("it works").
+0. **iOS: one app ID per player** (2026-11-13, user's plan, unreleased): tools always build
+   `net.srnative.sonicriders.<team>` (= Sideloadly default); `ios_run.py install` moves an older-ID app (backup to
+   build/ios/moved, uninstall, install, copy back, size checks); launcher Install page picks the cable device and
+   says update/new/move; game About tab shows the App ID (+ warning for old IDs). Tested on the iPad (A16): move
+   `.t<hash>` -> `.<team>` with the 1.4 GB disc and save (MD5 equal), boot with the save card, About tab shows the
+   ID, update path, push-iso skip, signed setup_mac.py run [confirmed]. Not tested: the old-ID warning on screen,
+   a move on a device at the 3-app limit, Sideloadly renewal after a move. Not accepted by the user yet.
+0b. **v0.8.1 released** (all five zips now). Released but not played by the user: capsule +100, hit/fall -100;
+   L/R tabs and menu wrap accepted ("it works").
 1. **999 ring cap: released in v0.8.1, default on** (user's choice, 2026-11-12; Gameplay > "Ring Limit set to 999").
    Rings = u32 at racer + 0xB98; seven cap sites in patches.txt read `g_ring_cap`; recordings (flag 4) and the
    online welcome (byte 6) carry it. Tested PC 1P Metal City Free Race, rings poked to 250: 999 keeps counting

@@ -196,11 +196,19 @@ First-boot findings [confirmed on the iPhone]:
     on the Mac-installed app (2026-11-09, iPad Pro: devicectl install of `<base>.<team>`, then Sideloadly default
     with the `<base>` .ipa: still one test app [confirmed]). Any other ID goes into the .ipa unchanged (untick).
   - unsigned builds: `<base>`; the first Sideloadly install makes `<base>.<team>`.
-  - setup_mac.py asks for the device BEFORE building: `ios_run.installed_ids` (devicectl apps) -> an installed
-    net.srnative.sonicriders* app's ID is passed as --bundle-id (prefers `.<team>`); no device -> the last build's
-    ID. Older Mac installs (`<base>.t<sha1(team)[:8]>`, before 2026-11-09) keep their ID; renew notes then say
-    untick. setup_mac.py writes "How to renew (every 7 days).txt" next to the .ipa with the matching Sideloadly
-    wording; a re-run asks separately about copying the disc image.
+  - One ID per player since 2026-11-13: the tools always build `<base>.<team>` (setup_mac.py no longer builds with
+    an installed app's ID). `ios_run.py install` compares with `installed_ids`: same ID -> update; none -> new;
+    another (`<base>`, `<base>.t<sha1(team)[:8]>` from before 2026-11-09, anything else) -> MOVE (asks; `--move` =
+    yes; setup_mac.py asks itself, the launcher's Install button passes --move): `documents()` (devicectl info files,
+    sizes) -> copy every file to `build/ios/moved/<old>-<time>/` and check sizes (stops before removing anything) ->
+    `devicectl device uninstall app` -> install -> copy back, check sizes -> delete the backup's .iso (the player's
+    own file), keep the rest. A failure after the uninstall prints `ios_run.py restore <folder>`. Old first, new
+    second: a device at the 3-app limit still works. Tested 2026-11-13 on an iPad (A16), `.t<hash>` -> `.<team>`:
+    7 files incl. the 1.4 GB .iso, card_a.raw MD5 equal, the game boots with the save card [confirmed].
+  - `ios_run.py status` (app / installed / `status: update|new|move <old>` / disc) feeds the launcher's Install
+    page line (checked when the device changes; the page scans by itself, cable device first: `devices --tsv`).
+    `push-iso` skips when an .iso of the same size is already there. The game's About tab shows "App ID: ..."
+    and, for a non-standard ID, how to move (ios_scene.m `ios_bundle_id`).
   - Two apps already: INSTALL.md "Ended up with two Sonic Riders apps?" (Files app, copy saves/card_a.raw).
 - Cold test: extract the zip with `ditto -x -k` into a fresh folder, run the .command with `SR_NOPAUSE=1 --yes
   --unsigned --iso <img> --tools <fresh dir> --ipa-dir <scratch>` (never the Desktop folder). PASS 2026-11-08.
@@ -235,7 +243,8 @@ First-boot findings [confirmed on the iPhone]:
   from the whole folder (nothing else asks Gatekeeper).
 - Test variables: `SR_LAUNCHER_ROOT`, `SR_LAUNCHER_PAGE=0-4`, `SR_LAUNCHER_SHOT=<png>` (off-screen picture, quits),
   `SR_LAUNCHER_BUILD=1` (builds at once; with SHOT the picture is taken when the build ends), `SR_LAUNCHER_ISO`,
-  `SR_LAUNCHER_IPA_DIR` (never the Desktop folder in tests).
+  `SR_LAUNCHER_IPA_DIR` (never the Desktop folder in tests), `SR_LAUNCHER_ROUTE=mac|sideloadly`, `SR_LAUNCHER_SHOT_DELAY=<s>`
+  (the Install page check takes ~10 s; 25 works).
 - Gatekeeper on macOS 27.2 (strings read from CoreServicesUIAgent Quarantine*.loctable and SecurityPrivacyExtension
   Localizable.loctable, not from screenshots: this session had no screen-recording permission): first open ->
   "“X” Not Opened" / "Apple could not verify “X” is free of malware..." (X = "Sonic Riders Launcher.app"); the blue default button on
