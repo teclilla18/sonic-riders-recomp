@@ -1212,3 +1212,7 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   list the iOS zip. v0.8.2 tagged on 13b02c5 (user: "release v0.8.2 with the iOS app ID fix"); iOS zip cold Mac
   test PASS [confirmed]; draft release with the iOS zip, PC session asked to add the other zips, run the Sandbox
   test and publish. Note: macOS's python3 is 3.9; make_progress.py needs 3.10 (`write_text(newline=)`).
+- Then the user changed their mind ("i want this on the current release"): v0.8.2 draft and tag deleted (never
+  published), PC session told to stop; CHANGELOG entries folded into v0.8.1; v0.8.1's iOS zip rebuilt from
+  abedb6a (`--version v0.8.1 --ref HEAD`), cold Mac test PASS, launcher About "v0.8.1 (abedb6a0)" [confirmed],
+  uploaded with --clobber; release notes got an "iPhone / iPad" section on how the one app ID works.

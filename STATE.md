@@ -7,13 +7,9 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 
 ## Releases
 
-**v0.8.2 in progress 2026-11-13** (tag on 13b02c5; iOS one-app-ID change only). Mac part done: iOS zip, cold Mac
-unzip test PASS (unsigned, fresh tools; launcher About "v0.8.2 (13b02c5b)") [confirmed]; **DRAFT** release with
-notes + the iOS zip (invisible to update checks). Left for the PC session: PC/Switch/Android/Linux zips from the
-tag, cold Sandbox PC + Android, upload, publish (--draft=false --latest), delist the 6th release.
-
-**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips; iOS zip added 2026-11-13 from the
-Mac, `make_release --flavor ios --ref v0.8.1`). Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Cold
+**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips from the tag). **iOS zip replaced
+2026-11-13 from abedb6a** (user: the iOS app-ID fix goes into the current release, no v0.8.2; VERSION reads
+"v0.8.1 (abedb6a0)"); cold Mac test of that zip PASS, notes have an "iPhone / iPad" section [confirmed]. Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Cold
 Mac unzip test of the iOS zip (unsigned, fresh tools) PASS; Mac launcher About page shows the Heroes call
 [confirmed, launcher shot]; the v0.8.1 app boots to the title on an iPad (A16) [confirmed, SR_SCREENSHOT]. Contents: call for Sonic
 Heroes alpha testers (top of the notes, README line 1, launcher sidebar on PC/Switch/Android modes [confirmed,
@@ -63,7 +59,7 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-0. **iOS: one app ID per player** (2026-11-13, user's plan, in the v0.8.2 draft): tools always build
+0. **iOS: one app ID per player** (2026-11-13, user's plan, released in v0.8.1's iOS zip): tools always build
    `net.srnative.sonicriders.<team>` (= Sideloadly default); `ios_run.py install` moves an older-ID app (backup to
    build/ios/moved, uninstall, install, copy back, size checks); launcher Install page picks the cable device and
    says update/new/move; game About tab shows the App ID (+ warning for old IDs). Tested on the iPad (A16): move
