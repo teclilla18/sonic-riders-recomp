@@ -36,11 +36,12 @@ already updated don't see the replacement.
 ## Devices
 
 - S23 Ultra: v0.8.0-4-g4a24700a APK (installed over USB; wireless debugging was offline).
-- OLED (switch-remote): test NRO from 7bdce20 (gold capsule 25 s + Lv. 4/5 at 200/500), previous as
-  `sonicriders.pre-capsule.nro`; forwarder `SonicRiders.nsp` rebuilt 2026-11-13 with "Icon 3" in the game folder
-  (user installs it with DBI). The 31ff87b NRO (panels, Lv. 5 at 350, menu details) is built and staged in the
-  switch-remote work folder, not uploaded (console asleep). Clocks: handheld 1785 / 614 / 2133, docked
-  1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
+- OLED (switch-remote): `sonicriders.nro` = 9ce8fd5 content (1.25x, panels +25, shoes +80, Lv. 5 at 350), v0.8.0
+  kept as `sonicriders.v080.nro` (A/B build), settings 1.25x / Fit window (wide) / Auto. Forwarder `SonicRiders.nsp`
+  with "Icon 3" in the game folder (user installs it with DBI). Clocks: handheld 1785 / 614 / 2133 (sys-clk
+  overlay, never changed), docked 1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
+- **OLED fps dips (2026-11-14):** heavy views (4,000-5,900 draws) need GPU 15-17 ms + GP thread 12-24 ms at these
+  settings; v0.8.0 dips the same in Metal City [confirmed, A/B logs], so not the 999 changes. HISTORY 2026-11-14.
 
 ## Platforms
 

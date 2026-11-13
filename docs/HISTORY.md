@@ -1260,3 +1260,19 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   the next option (PC shots), so they are NoNav and Y / I toggle the highlighted option's details [confirmed, shots].
 - Build note: ninja did not rerun the recompiler after a patches.txt edit once; running gcrecomp.py by hand fixed it.
 - SwitchWakerHD v1.3.0 read for ideas (plans-2026-11.md end). Forwarder NSP rebuilt with "Icon 3" for the OLED.
+
+## 2026-11-14 (PC, Mike): OLED fps dips investigated; 1.25x resolution; panels +25 / Speed Shoes +80
+
+- User: fps "fluctuating HARD" on the OLED (handheld, overclock 1785 / 614.4 / 2133 per the sys-clk overlay, never
+  changed). Settings: Fit window (wide), FOV 100-120 %, 1.5x then 1.25x, Auto (keep speed), bloom 70, grading,
+  sharpness 50. Five logs (log-reader + own awk): dips to 30-45 fps happen in views with 4,000-5,900 draws/frame,
+  where the GPU needs 15-17 ms and the GP thread 12-24 ms; light views hold 60 [confirmed, logs].
+- A/B on the same settings, Metal City: v0.8.0 (sonicriders.v080.nro) dips the same way (14 of 48 race blocks under
+  55, lowest 30) [confirmed, log], so the 999-ring changes are not the cause. Runs differ by how long they spend in
+  heavy views. My guess at a lost sys-clk profile was wrong (the overlay showed 614.4 the whole time; sys-clk's
+  config.ini there may not be what that build uses) - do not chase clocks from that file again.
+- Added 1.25x (800x660) for Switch and phones (saved as resolution=3). Panels: max(panel, own + 25 km/h); Speed
+  Shoes max(200, own + 80 km/h), tested on the user's recording. The settings-menu details drop-downs were removed
+  (user does not like them).
+- Open: the heavy-view cost itself (GP thread draw processing + GPU) at these settings; ideas in plans-2026-11.md
+  (SwitchWakerHD list: PGO, tiled cache, core 3) and a steadier Auto (30 when busy) the user declined for now.
