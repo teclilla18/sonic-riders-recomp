@@ -87,7 +87,7 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    - **Dash panels keep a faster racer's speed** (31ff87b): max(current, panel). Replay of the user's run: 256 km/h
      stays 256 (was cut to 200), slow arrival still gets 200 [confirmed, replay logs]. Rule chosen overnight without
      the user: **ask whether to add a push** and whether kind 0x848 (dash ring?) should do the same.
-   - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user\'s request (tooltips only).
+   - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
 1d. **SwitchWakerHD v1.3.0 ideas, ranked** (plans-2026-11.md, end): PGO, on-console shader compiles, deko3d tiled
    cache / dual issue, core 3, 30 fps pacing, FXAA, anisotropic filtering, PC HDR. Nothing started; go through the list
    with the user first.
