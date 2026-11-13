@@ -4,8 +4,8 @@
 
 - **"Riders Plus"**: the settings option "Ring Limit set to 999" is now called "Riders Plus" (Gameplay tab), since it
   holds all of the custom gameplay below as well as the 999 rings. Your saved choice is kept. Off = the original game.
-- **Charging a jump keeps your speed for 1 second** (with "Riders Plus"): holding A to charge a jump made the game
-  slow you down right away. Now your speed holds for 1 second after you first press A, then the game's own
+- **Charging a jump keeps your speed for 0.75 seconds** (with "Riders Plus"): holding A to charge a jump made the game
+  slow you down right away. Now your speed holds for 0.75 seconds after you first press A, then the game's own
   slowdown starts as before (gently, then down to 80 km/h). The jump itself is unchanged. Every racer gets it.
 - **Gear Lv. 4 and Lv. 5** (with "Riders Plus", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
   gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.11 and boost x1.1, Lv. 5

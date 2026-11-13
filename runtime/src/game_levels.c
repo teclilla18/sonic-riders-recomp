@@ -228,13 +228,13 @@ void lv_texture_decoded(GxTexture* t) {
             make_cell(t, &k_kind[kind], 319 + 22 * e, 199, 22, 22, k_kind[kind].dx[e], k_kind[kind].dy);
 }
 
-/* Charge jump (also part of the option): holding A to charge a jump keeps the racer's speed for 1 s before
+/* Charge jump (also part of the option): holding A to charge a jump keeps the racer's speed for 0.75 s before
  * the game's slowdown starts. fn_1_6D5D4 (racer r30), while racer +0xA28 bit 0x1000 (charging) is set, counts
  * the charge t at racer +0x9F4 (+1 per step, at most 50) and each step takes 0.009259 x (t/50)^2 (up to 2 km/h)
  * off the speed (+0xAAC), down to 80 km/h, with the acceleration (+0xAA8) at 0. Here the slowdown's t/50 is
- * replaced by the same curve 1 s later; the jump's own charge (+0x9F4) is untouched. Counted in 60ths of a
+ * replaced by the same curve 0.75 s later; the jump's own charge (+0x9F4) is untouched. Counted in 60ths of a
  * second (the game's frame advance), so 30 fps mode holds as long. */
-#define JUMP_HOLD_60THS 60
+#define JUMP_HOLD_60THS 45
 #define GAME_FRAME_ADV  0x8021B8D4u  /* u32, as frame_pacing.c */
 static uint32_t g_jump_held[8];
 
@@ -258,8 +258,8 @@ double jump_charge_scale(uint32_t racer, double orig) {  /* t/50 for the slowdow
 
 /* Starting a charge also ends a boost (+0xA28 bit 0x400 cleared), and a racer above its top speed (+0xAB4) is
  * then eased back down by the game's general decay (fn at 818159F4.., racer r24: speed -= c + k x over^2,
- * stored at 81815ABC). During the same 1 s of a charge that decay waits too, so a jump charged right after a
- * boost keeps the boost speed for that second. */
+ * stored at 81815ABC). During the same 0.75 s of a charge that decay waits too, so a jump charged right after a
+ * boost keeps the boost speed for that time. */
 int jump_charge_grace(uint32_t racer) {
     int i = racer_index(racer);
     if (g_ring_cap == 100 || i < 0) return 0;

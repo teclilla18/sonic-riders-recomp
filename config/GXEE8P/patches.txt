@@ -112,13 +112,13 @@ decl uint32_t lv_hud_cell(uint32_t racer, uint32_t cell, int kind);
 81831148 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
 81831178 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
 # ---- Charge jump (game_levels.c; with the 999 ring cap, "Riders Plus"): the slowdown while A charges a jump
-# starts 1 s after the charge does. fn_1_6D5D4, racer r30: count at entry (after mr r30, r3), then the
+# starts 0.75 s after the charge does. fn_1_6D5D4, racer r30: count at entry (after mr r30, r3), then the
 # slowdown's t/50 in f0 just before it is squared (fmuls f0, f0, f0; then speed += -0.009259 * f0)
 decl void jump_charge_step(uint32_t racer);
 decl double jump_charge_scale(uint32_t racer, double orig);
 8186D6AC before jump_charge_step(c->r[30]);
 8186D750 before { double s_ = jump_charge_scale(c->r[30], c->f[0].ps0); c->f[0].ps0 = s_; c->f[0].ps1 = s_; }
 # a charge right after a boost: the decay above top speed (racer r24; f3 = speed, f0 = speed - decay, stored
-# by stfs f0, 0xaac(r24)) waits during the same second
+# by stfs f0, 0xaac(r24)) waits during the same 0.75 s
 decl int jump_charge_grace(uint32_t racer);
 81815ABC before { if (jump_charge_grace(c->r[24])) { c->f[0].ps0 = c->f[3].ps0; c->f[0].ps1 = c->f[3].ps0; } }

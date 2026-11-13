@@ -648,7 +648,7 @@ void tab_gameplay() {
               "Lv. 4 at 200 rings and Lv. 5 at 350, each with a higher top speed and boost. The gold 100-ring "
               "capsule comes back 25 seconds after it is taken (+100 each time), dash panels push you 25 km/h "
               "past your own speed instead of slowing you down, Speed Shoes add 80 km/h, and holding A to "
-              "charge a jump keeps your speed for 1 second before it starts slowing you. Turn off for the "
+              "charge a jump keeps your speed for 0.75 seconds before it starts slowing you. Turn off for the "
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
