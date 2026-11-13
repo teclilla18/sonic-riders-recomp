@@ -76,7 +76,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Switch performance | 65 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) |
 | Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
 | Online play | 30 % | Lockstep works on one PC; still to do: LAN and internet sessions, Switch-Switch, PC-Switch, a menu to join |
-| Features and polish | 60 % | Custom music, right-stick camera, ring cap option, in-game updates, code mods |
+| Features and polish | 62 % | Custom music, right-stick camera, in-game updates, code mods (done on main: Lv. 4/5, gold capsule respawn, dash panels keep speed, menu details) |
 
 </details>
 

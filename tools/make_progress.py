@@ -17,7 +17,7 @@ AREAS = [
     ("Switch performance",             15, 65),
     ("Platforms",                      15, 85),
     ("Online play",                    15, 30),
-    ("Features and polish",            15, 60),
+    ("Features and polish",            15, 62),
 ]
 
 W = 720

@@ -1238,3 +1238,25 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Release notes of v0.8.1: "Coming next" preview with 4 pictures (release assets). The GameFAQs guide is kept
   locally (docs/local/, ignored; its author forbids re-hosting); docs/notes/gear-stats.md has the numbers + credit.
 - Also: Mac session moved the iOS app-ID fix into v0.8.1 (v0.8.2 dropped by the user).
+
+## 2026-11-13 (PC, Mike, night): gold capsule respawn, dash panels, Lv. 5 at 350, menu details
+
+- Gold 100-ring capsule: the capsule update (REL fn_1_80380 = 8188043C, a task list node per capsule) reads its kind
+  from work +0x50 when a racer touches it: 0x10 goes to state 4 with a 3 s respawn timer, 0x11 (the gold one) to
+  state 0, gone for the race. Found from a pickup log hook + RAM dump scan (records with +0x1A item type 12) on a
+  PC Splash Canyon route [confirmed]. With the 999 cap the gold kind takes the 0x10 path with a 25 s timer (user's
+  value). The user played it on PC with SR_RECORD: 5 pickups, +100 each, >= 26 s apart [confirmed, log]. Recording
+  header flags are little-endian (bit 2 of byte 16 = 999 cap); a cap-100 replay took it once only [likely: the
+  replay drifts from the inputs once the code path differs].
+- Scripted steering to the capsule was slow: VI fields are not det steps (SR_DETCLOCK input runs on steps; the log's
+  vi_field_count drifts between runs). Asking the user to drive it with SR_RECORD was much cheaper.
+- Dash panels: replaying the user's recording with an object-kind log found kind 0x83E setting the racer speed to
+  the panel's work +0x3C (Splash Canyon 0.926 = 200 km/h; 256 -> 200 at Lv. 5) [confirmed]. Now max(current,
+  panel) with the 999 cap: 256 stays 256; a slow arrival (speed forced to 0.3) still gets 0.926 [confirmed, replay].
+  No extra push (chosen overnight, ask). 0x820 (ramp?) and 0x848 (dash ring?) also change speed, untouched.
+- Lv. 5 moved to 350 rings (user, after an OLED run of the 200/500 build: 500 near impossible), weaker multipliers
+  picked by us (Blue Star 205/288, 225/325); PC ring pokes: Lv. 4 at 210, Lv. 5 at 360, block values exact [confirmed].
+- Settings menu: every help text gets a details arrow; first version made the arrows pad stops and Down skipped
+  the next option (PC shots), so they are NoNav and Y / I toggle the highlighted option's details [confirmed, shots].
+- Build note: ninja did not rerun the recompiler after a patches.txt edit once; running gcrecomp.py by hand fixed it.
+- SwitchWakerHD v1.3.0 read for ideas (plans-2026-11.md end). Forwarder NSP rebuilt with "Icon 3" for the OLED.
