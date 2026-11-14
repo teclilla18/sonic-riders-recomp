@@ -7,7 +7,7 @@ what each area still needs; keep the two in step.
 """
 from pathlib import Path
 
-VERSION = "v0.8.2"
+VERSION = "v0.8.3"
 UPDATED = "2026-11-14"
 
 # (label, weight, percent done)
@@ -17,7 +17,7 @@ AREAS = [
     ("Switch performance",             15, 70),
     ("Platforms",                      15, 85),
     ("Online play",                    15, 45),
-    ("Features and polish",            15, 63),
+    ("Features and polish",            15, 66),
 ]
 
 W = 720

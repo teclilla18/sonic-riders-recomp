@@ -1430,3 +1430,16 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   v0.7.3 release removed (tag kept). README notice under the Heroes line; INSTALL.md update section rewritten
   (in-app update, hekate UMS: Tools > USB Tools > SD Card, zip way as fallback).
 
+## 2026-11-14 (PC, evening): easy-read update guide
+
+- User asked for update instructions in their artifact's format (per device: old/new version chooser, numbered
+  steps with a detail line, colour key, hekate SD card section, callouts, check it worked) with a font friendly for
+  neurodivergent readers. GitHub Markdown can't set fonts or colours, so the guide is an HTML page
+  (docs/update-guide.html, published as a claude.ai artifact, device tabs routed by #switch/#pc/...); the release
+  notes keep a plain-text copy in the same structure. Corrected from the example: the first update to v0.8.3
+  builds the whole game once (new kept build folder); PC check uses F1.
+- Anonymous curl only gets the artifact shell (client-rendered), so "public" can't be checked from here; the user
+  set Share to "anyone with the link" and opened it logged out [confirmed, user]. GitHub Pages was offered as the
+  host that can't be switched off by account settings; not done.
+- Progress card: v0.8.3, Features and polish 63 -> 66 % (one-press updates; download step untested).
+

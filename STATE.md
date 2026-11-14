@@ -1,4 +1,4 @@
-# State (2026-11-14, late night)
+# State (2026-11-14, evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -47,6 +47,10 @@ Contents: setup keeps its build in `<tools>/build` (tools/build_workdir.py), upd
 first real check is the update after v0.8.3]; hekate UMS steps in INSTALL.md; the online work below (lobby
 [tested by the user on two PCs], online rules, own view, two screen options). v0.8.2 = Riders Plus (HISTORY
 2026-11-13/14). Not accepted by the user yet: the update flow.
+Easy-read update guide (user's format: per device, version chooser, colour key, Atkinson Hyperlegible / Lexend):
+https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, shared "anyone with the link" [confirmed by the user, logged
+out]; source docs/update-guide.html (republish the same file each release with new version numbers); linked from
+the v0.8.3 notes, README notice and INSTALL.md.
 iOS test devices signed until **2026-11-21** (renew before then). GitHub lists the 5 newest releases.
 
 ## Devices
@@ -65,6 +69,9 @@ iOS test devices signed until **2026-11-21** (renew before then). GitHub lists t
 
 ## Open items, in priority order
 
+0. **Update flow, first real run** (needed before calling it done): when the next release is out, press UPDATE NOW
+   in a v0.8.3 PC launcher and Switch installer (SD via hekate UMS) and confirm download -> restart -> rebuild ->
+   install with no other press; run the Linux setup twice once (only the build-cache change is untested there).
 1. **Online: other modes** (user, next). Checked 2026-11-14 [confirmed, PC offline, `SR_ONLINE_RULES=1 SR_PADS=2`,
    scripted, frames]: Tag Mode (0x0F -> 0x13 -> 0x16 -> 0x18), Survival Race and Survival Battle (0x0F -> 0x14
    submenu -> 0x16 -> 0x18) use the same Player Entry 0x18: player 2 joins, the race starts; same character seen in
