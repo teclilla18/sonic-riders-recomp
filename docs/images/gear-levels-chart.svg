@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" font-family="Arial, Helvetica, sans-serif">
 <rect width="1200" height="560" rx="18" fill="#101830"/>
 <text x="40" y="62" font-size="38" font-weight="bold" font-style="italic" fill="#fff">Sonic + Blue Star: speed by level</text>
-<text x="40" y="96" font-size="20" fill="#aabee6">Lv. 1-3 as in the original game.  Lv. 4 at 200 rings, Lv. 5 at 500.</text>
+<text x="40" y="96" font-size="20" fill="#aabee6">Lv. 1-3 as in the original game.  Lv. 4 at 200 rings, Lv. 5 at 350.</text>
 <rect x="840" y="30" width="20" height="20" rx="4" fill="#5ac8ff"/><text x="870" y="47" font-size="20" fill="#fff">Top speed</text>
 <rect x="1000" y="30" width="20" height="20" rx="4" fill="#ff9628"/><text x="1030" y="47" font-size="20" fill="#fff">Boost</text>
 <rect x="88" y="352" width="74" height="148" rx="8" fill="#5ac8ff"/>
@@ -20,15 +20,15 @@
 <text x="639" y="261" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">250</text>
 <text x="596" y="538" font-size="24" font-weight="bold" font-style="italic" fill="#dce1f0" text-anchor="middle">Lv. 3</text>
 <rect x="716" y="140" width="192" height="408" rx="14" fill="none" stroke="#ffd246" stroke-width="3"/>
-<rect x="730" y="308" width="74" height="192" rx="8" fill="#78e6ff"/>
-<text x="767" y="298" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">210</text>
-<rect x="816" y="225" width="74" height="275" rx="8" fill="#ffcd3c"/>
-<text x="853" y="215" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">300</text>
+<rect x="730" y="317" width="74" height="183" rx="8" fill="#78e6ff"/>
+<text x="767" y="307" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">200</text>
+<rect x="816" y="249" width="74" height="251" rx="8" fill="#ffcd3c"/>
+<text x="853" y="239" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">275</text>
 <text x="810" y="538" font-size="24" font-weight="bold" font-style="italic" fill="#ffe65a" text-anchor="middle">Lv. 4</text>
 <rect x="930" y="140" width="192" height="408" rx="14" fill="none" stroke="#ffd246" stroke-width="3"/>
-<rect x="944" y="280" width="74" height="220" rx="8" fill="#78e6ff"/>
-<text x="981" y="270" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">240</text>
-<rect x="1030" y="179" width="74" height="321" rx="8" fill="#ffcd3c"/>
-<text x="1067" y="169" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">350</text>
+<rect x="944" y="304" width="74" height="196" rx="8" fill="#78e6ff"/>
+<text x="981" y="294" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">215</text>
+<rect x="1030" y="226" width="74" height="274" rx="8" fill="#ffcd3c"/>
+<text x="1067" y="216" font-size="22" font-weight="bold" font-style="italic" fill="#fff" text-anchor="middle">300</text>
 <text x="1024" y="538" font-size="24" font-weight="bold" font-style="italic" fill="#ffe65a" text-anchor="middle">Lv. 5</text>
 </svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" font-family="Segoe UI, Arial, sans-serif">
+<rect width="1200" height="560" rx="18" fill="#101830"/>
+<text x="40" y="62" font-size="38" font-weight="bold" font-style="italic" fill="#fff">Charging a jump: speed while holding A</text>
+<text x="40" y="96" font-size="20" fill="#aabee6">Measured in two PC races (Metal City). Riders Plus holds your speed for 0.75 s, then the original slowdown starts.</text>
+<line x1="110" y1="420" x2="1150" y2="420" stroke="#26345a" stroke-width="1"/>
+<text x="96" y="427" font-size="18" fill="#8fa6d9" text-anchor="end">80</text>
+<line x1="110" y1="360" x2="1150" y2="360" stroke="#26345a" stroke-width="1"/>
+<text x="96" y="367" font-size="18" fill="#8fa6d9" text-anchor="end">100</text>
+<line x1="110" y1="300" x2="1150" y2="300" stroke="#26345a" stroke-width="1"/>
+<text x="96" y="307" font-size="18" fill="#8fa6d9" text-anchor="end">120</text>
+<line x1="110" y1="240" x2="1150" y2="240" stroke="#26345a" stroke-width="1"/>
+<text x="96" y="247" font-size="18" fill="#8fa6d9" text-anchor="end">140</text>
+<line x1="110" y1="180" x2="1150" y2="180" stroke="#26345a" stroke-width="1"/>
+<text x="96" y="187" font-size="18" fill="#8fa6d9" text-anchor="end">160</text>
+<text x="110" y="512" font-size="18" fill="#8fa6d9" text-anchor="middle">0 s</text>
+<text x="370" y="512" font-size="18" fill="#8fa6d9" text-anchor="middle">0.5 s</text>
+<text x="630" y="512" font-size="18" fill="#8fa6d9" text-anchor="middle">1 s</text>
+<text x="890" y="512" font-size="18" fill="#8fa6d9" text-anchor="middle">1.5 s</text>
+<text x="1150" y="512" font-size="18" fill="#8fa6d9" text-anchor="middle">2 s</text>
+<text x="110" y="540" font-size="18" fill="#8fa6d9">time after pressing A · speed in km/h</text>
+<rect x="110" y="140" width="390" height="340" fill="#5ac8ff" fill-opacity="0.07"/>
+<line x1="500" y1="140" x2="500" y2="480" stroke="#ffd246" stroke-width="2" stroke-dasharray="6 6"/>
+<text x="510" y="158" font-size="20" font-weight="bold" fill="#ffe65a">0.75 s: slowdown starts</text>
+<path d="M110.0,285.9 L118.7,285.6 L127.3,285.3 L136.0,285.0 L144.7,284.7 L153.3,284.7 L162.0,284.4 L170.7,284.1 L179.3,284.1 L188.0,284.1 L196.7,284.1 L205.3,284.1 L214.0,284.1 L222.7,284.1 L231.3,284.1 L240.0,284.4 L248.7,284.7 L257.3,285.0 L266.0,285.3 L274.7,285.9 L283.3,286.5 L292.0,287.1 L300.7,288.0 L309.3,288.9 L318.0,289.8 L326.7,291.0 L335.3,292.2 L344.0,293.7 L352.7,295.2 L361.3,297.0 L370.0,298.5 L378.7,300.6 L387.3,302.4 L396.0,304.8 L404.7,306.9 L413.3,309.6 L422.0,312.3 L430.7,315.0 L439.3,318.3 L448.0,321.3 L456.7,324.9 L465.3,328.5 L474.0,332.1 L482.7,336.3 L491.3,340.5 L500.0,345.0 L508.7,349.5 L517.3,354.3 L526.0,359.4 L534.7,364.8 L543.3,370.2 L552.0,375.9 L560.7,381.3 L569.3,387.0 L578.0,392.4 L586.7,397.8 L595.3,403.5 L604.0,408.9 L612.7,414.6 L621.3,420.0 L630.0,420.0 L638.7,420.0 L647.3,420.0 L656.0,420.0 L664.7,420.0 L673.3,420.0 L682.0,420.0 L690.7,420.0 L699.3,420.0 L708.0,420.0 L716.7,420.0 L725.3,420.0 L734.0,419.4" fill="none" stroke="#8a93ad" stroke-width="5" stroke-linejoin="round"/>
+<path d="M110.0,213.0 L118.7,212.4 L127.3,212.1 L136.0,211.5 L144.7,210.9 L153.3,210.6 L162.0,210.0 L170.7,209.7 L179.3,209.1 L188.0,208.5 L196.7,208.2 L205.3,207.6 L214.0,207.0 L222.7,206.7 L231.3,206.1 L240.0,205.8 L248.7,205.2 L257.3,204.6 L266.0,204.3 L274.7,203.7 L283.3,203.4 L292.0,202.8 L300.7,202.2 L309.3,201.9 L318.0,201.3 L326.7,201.0 L335.3,200.4 L344.0,199.8 L352.7,199.5 L361.3,198.9 L370.0,198.6 L378.7,198.0 L387.3,197.7 L396.0,197.1 L404.7,196.8 L413.3,196.2 L422.0,195.6 L430.7,195.3 L439.3,194.7 L448.0,194.4 L456.7,193.8 L465.3,193.5 L474.0,192.9 L482.7,192.6 L491.3,192.3 L500.0,192.0 L508.7,191.7 L517.3,191.4 L526.0,191.1 L534.7,190.8 L543.3,190.5 L552.0,190.5 L560.7,190.2 L569.3,190.2 L578.0,190.2 L586.7,189.9 L595.3,190.2 L604.0,190.5 L612.7,190.8 L621.3,191.1 L630.0,191.7 L638.7,192.3 L647.3,192.9 L656.0,193.5 L664.7,194.4 L673.3,195.3 L682.0,196.2 L690.7,197.4 L699.3,198.6 L708.0,200.1 L716.7,201.6 L725.3,203.4 L734.0,205.2 L742.7,207.3 L751.3,209.4 L760.0,211.5 L768.7,214.2 L777.3,216.6 L786.0,219.6 L794.7,222.3 L803.3,225.6 L812.0,228.9 L820.7,232.2 L829.3,235.8 L838.0,239.7 L846.7,243.9 L855.3,248.1 L864.0,252.6 L872.7,257.1 L881.3,261.9 L890.0,267.0 L898.7,272.4 L907.3,277.8 L916.0,283.5 L924.7,289.5 L933.3,295.5 L942.0,301.5 L950.7,307.5 L959.3,313.5 L968.0,319.5 L976.7,325.5 L985.3,331.5 L994.0,337.5 L1002.7,343.5 L1011.3,349.5 L1020.0,355.5 L1028.7,361.5 L1037.3,367.5 L1046.0,373.5 L1054.7,379.5 L1063.3,385.5 L1072.0,391.5 L1080.7,397.5 L1089.3,403.5 L1098.0,409.5 L1106.7,415.5 L1115.3,420.0 L1124.0,420.0 L1132.7,420.0 L1141.3,420.0 L1150.0,420.0" fill="none" stroke="#5ac8ff" stroke-width="6" stroke-linejoin="round"/>
+<text x="746" y="447" font-size="20" font-weight="bold" fill="#b9c0d4">Original</text>
+<text x="880" y="200" font-size="22" font-weight="bold" font-style="italic" fill="#78e6ff">Riders Plus</text>
+<line x1="110" y1="420" x2="1150" y2="420" stroke="#ff9628" stroke-width="2" stroke-dasharray="3 6"/>
+<text x="1150" y="450" font-size="18" fill="#ffb460" text-anchor="end">80 km/h floor</text>
+</svg>
