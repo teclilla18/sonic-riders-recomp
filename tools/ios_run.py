@@ -19,9 +19,11 @@ installed under an older ID (net.srnative.sonicriders, .t<hash>) is MOVED by ins
 disc image) are copied to build/ios/moved/<old ID>-<time>/, checked, the old app is removed (a free Apple ID allows
 only 3 apps per device), the new one installed and the files copied back and checked. Asks first (--move: yes).
 """
+import datetime
 import json
 import os
 import re
+import plistlib
 import subprocess
 import sys
 import tempfile
@@ -54,7 +56,7 @@ def devices():
     for dev in data.get("result", {}).get("devices", []):
         props = dev.get("deviceProperties", {})
         hw = dev.get("hardwareProperties", {})
-        found.append({"id": dev.get("identifier", ""), "name": props.get("name", "?"),
+        found.append({"id": dev.get("identifier", ""), "name": props.get("name", "?"), "udid": hw.get("udid", ""),
                       "os": props.get("osVersionNumber", "?"), "model": hw.get("marketingName", "?"),
                       # the tunnel reads "disconnected" while idle; devicectl opens it on demand
                       "state": "%s, tunnel %s" % (dev.get("connectionProperties", {}).get("pairingState", "?"),
@@ -115,9 +117,36 @@ def copy_in(dev, bid, folder):
     return [rel for rel, size in want if have.get(rel) != size]
 
 
+def profile_problem(dev):
+    """why the built app cannot be installed on the device, or "" when its provisioning profile lists the device and
+    is still valid. A free Apple ID's profile names each device; Xcode reuses a cached one that may lack a device
+    registered later ("This provisioning profile cannot be installed on this device", 2026-11-13)."""
+    prof = os.path.join(APP, "embedded.mobileprovision")
+    if not os.path.isfile(prof):
+        return "the app has no provisioning profile (an unsigned build): install it with Sideloadly instead"
+    r = subprocess.run(["security", "cms", "-D", "-i", prof], capture_output=True)
+    try:
+        info = plistlib.loads(r.stdout)
+    except Exception:
+        return "could not read the app's provisioning profile"
+    udid = next((d["udid"] for d in devices() if d["id"] == dev), "")
+    listed = info.get("ProvisionedDevices")
+    if listed is not None and (not udid or udid.lower() not in (u.lower() for u in listed)):
+        return ("the app's provisioning profile does not list this device. Make Xcode create a new one: move the "
+                "file for this app ID out of ~/Library/Developer/Xcode/UserData/Provisioning Profiles, delete %s "
+                "and run ninja with the device connected" % os.path.relpath(APP, ROOT))
+    end = info.get("ExpirationDate")
+    if end is not None and end.replace(tzinfo=datetime.timezone.utc) <= datetime.datetime.now(datetime.timezone.utc):
+        return "the app's provisioning profile ran out on %s: move its file out of ~/Library/Developer/Xcode/UserData/Provisioning Profiles and rebuild" % end
+    return ""
+
+
 def move(dev, old, new):
     """old app -> backup on the Mac -> remove old -> install new -> copy back. Stops before removing anything when
     the backup is incomplete; after that the backup folder is kept until everything is back on the device."""
+    why = profile_problem(dev)  # checked first: once the old app is removed, a refused install leaves none
+    if why:
+        sys.exit("not moved, nothing was changed: " + why)
     files = documents(dev, old)
     if files is None:
         sys.exit("could not read the files of %s on the device (unlock it and try again); nothing was changed" % old)

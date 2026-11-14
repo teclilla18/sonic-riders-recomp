@@ -204,7 +204,9 @@ First-boot findings [confirmed on the iPhone]:
   - One ID per player since 2026-11-13: the tools always build `<base>.<team>` (setup_mac.py no longer builds with
     an installed app's ID). `ios_run.py install` compares with `installed_ids`: same ID -> update; none -> new;
     another (`<base>`, `<base>.t<sha1(team)[:8]>` from before 2026-11-09, anything else) -> MOVE (asks; `--move` =
-    yes; setup_mac.py asks itself, the launcher's Install button passes --move): `documents()` (devicectl info files,
+    yes; setup_mac.py asks itself, the launcher's Install button passes --move): `profile_problem()` first (the app's
+    embedded.mobileprovision must list the device's UDID and be unexpired, else it stops with nothing changed; 2026-11-13)
+    -> `documents()` (devicectl info files,
     sizes) -> copy every file to `build/ios/moved/<old>-<time>/` and check sizes (stops before removing anything) ->
     `devicectl device uninstall app` -> install -> copy back, check sizes -> delete the backup's .iso (the player's
     own file), keep the rest. A failure after the uninstall prints `ios_run.py restore <folder>`. Old first, new

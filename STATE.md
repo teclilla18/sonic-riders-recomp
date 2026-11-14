@@ -58,8 +58,8 @@ hole punching, relay). Next: Switch-Switch, PC-Switch, phones (Android needs the
 
 0. **iOS: one app ID per player** (released in v0.8.1's iOS zip; notes/ios.md "App IDs"): `<base>.<team>` always;
    `ios_run.py install` moves an older-ID app: A16 iPad, iPhone, iPad Pro (Wi-Fi) [confirmed]; the iPad (7th gen) (Wi-Fi)
-   failed after the uninstall (profile lacked the device), restored by hand, save MD5 equal [confirmed]. **To do:**
-   `move` should check the device is in the app's embedded.mobileprovision before uninstalling. Not tested: the
+   failed after the uninstall (profile lacked the device), restored by hand, save MD5 equal [confirmed]. `move` now
+   checks the app's profile lists the device (and is unexpired) before touching anything [confirmed, real + fake devices]. Not tested: the
    old-ID warning on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted yet.
 1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
    choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"

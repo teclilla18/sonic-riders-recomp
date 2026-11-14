@@ -1352,8 +1352,10 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   and settings back [confirmed]. Found on the way: the earlier "renewals" reused cached profiles ending 2026-11-17
   (standard) and 2026-11-14 (plain): a reinstall only renews when Xcode makes a new profile. All four devices
   reinstalled with the new one (ends 2026-11-21) [confirmed, profile date]. No device launched.
-- Open: `move` uninstalls before it knows the install will be accepted; it should check the device UDID against
-  the built app's embedded.mobileprovision first [to do].
+- Fix (same evening): `ios_run.py move` first runs `profile_problem()`: the built app's embedded.mobileprovision
+  must list the device's UDID (`devices()` now has it) and be unexpired, else "not moved, nothing was changed" with
+  how to force a new profile. Passes for all four devices; a fake UDID and a backdated expiry are refused and
+  `move` stops before any devicectl call [confirmed, monkeypatched run]. A real refused move not re-run [uncertain].
 
   186 at step 15): the racer was steering into walls, not checked further [uncertain]. Not played by hand.
 
