@@ -36,7 +36,7 @@ Each machine shows only its own racer's view, full screen (the game itself runs 
 | 2 | Input recording and replay (also gives replays and ghosts); two copies in lockstep on one PC | Done (`SR_RECORD`, `SR_REPLAY`, `SR_NET`): PC; a PC recording replays identically on the Switch; lockstep on one PC |
 | 3 | Online races PC-PC and Switch-Switch, direct connection, one player per machine, own view full screen | |
 | 4 | Cross-play PC-Switch | |
-| 5 | Lobby server with NAT hole punching and a relay fallback (no port forwarding), self-hostable | |
+| 5 | Lobby server with NAT hole punching and a relay fallback (no port forwarding), self-hostable |Researched: [notes/online-research.md](notes/online-research.md) |
 | 6 | Optional: rollback | |
 
 ## Determinism (phase 1)
