@@ -801,15 +801,15 @@ struct RenewPage: View {
             } else {
                 Para("No install date yet: click **I renewed / installed it today** after installing.", kDim)
             }
-            Para("With a free Apple ID, iOS stops opening the app 7 days after it was installed. Renewing puts the "
-                 + "same app back for 7 more days; **your saves and the disc image stay on the device**. You don't need to "
-                 + "build again: the same SonicRiders.ipa works.")
+            Para("With a free Apple account, the app stops opening about 7 days after it was put on the device. "
+                 + "Renewing gives it 7 more days; **your saves and the game file stay on the device**.")
             Para(m.route == "mac"
-                 ? "**You installed from this Mac.** Connect the device, go to **Install**, click **Find devices** and **Install only "
-                   + "(renewing)**. (Sideloadly works too: same Apple ID, settings left as they are.)"
-                 : "**You installed with Sideloadly.** Connect the device, open Sideloadly, drag in the same SonicRiders.ipa with the "
-                   + "**same Apple ID and settings** (\"Use automatic bundle ID\" left ticked) and click Start. A different way "
-                   + "makes a second, empty Sonic Riders.")
+                 ? "**Easiest:** plug the device into the Mac with a cable and unlock it, go to **Install**, click **Find devices**, "
+                   + "then **Install only (renewing)**. It gets a fresh 7 days first (about a minute).\n\n"
+                   + "**Or with Sideloadly:** plug in the device, open Sideloadly, drag in SonicRiders.ipa, don't change any settings, click Start."
+                 : "**With Sideloadly**, one device at a time: plug it into the Mac with a cable and unlock it, open Sideloadly, "
+                   + "pick the device at the top, drag in SonicRiders.ipa, type your Apple ID if it asks, **don't change any "
+                   + "settings** (\"Use automatic bundle ID\" stays ticked) and click **Start**. Wait for \"Done\".")
             HStack(spacing: 8) {
                 if m.route == "mac" { Btn(t: "Go to Install") { m.page = 2 } }
                 else {

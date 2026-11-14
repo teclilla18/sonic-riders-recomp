@@ -1367,3 +1367,16 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - PC-PC over the LAN with the gaming laptop (test folder with two .bat files, scripted 2P route, delay 4): 20,726
   frames, all checksums equal, recordings identical, no backstops, 59-60 fps on both; the joiner was told when the
   host closed [confirmed, logs]. Details: ONLINE.md "2026-11-14".
+
+## 2026-11-14 (Mac): renewing from the Mac gets a fresh signature; plain renew steps
+
+- Found while renewing the test devices: a reinstall reuses Xcode's cached profile, so the launcher's "Install only
+  (renewing)" and a rerun of the .command gave players no extra days [confirmed: profiles ending 11-17/11-14 after
+  "renewing"]. `ios_run.py install` now calls `refresh_profile()` (cached profiles for the ID moved aside, app
+  re-signed by ninja) when the profile has < 6.5 days left or lacks the device. Tested on the A16 iPad with the
+  threshold forced: new profile (expiry 01:12 instead of 00:52), app installed [confirmed]. Not tested: from the
+  launcher's button (same command line), on a player's Mac from the zip.
+- Plain renew steps (Sideloadly, one device at a time, settings unchanged; or the launcher button): setup_mac.py's
+  "How to renew" file, the launcher Renew page (both routes, launcher shots [confirmed]), INSTALL.md.
+- v0.8.2's iOS zip rebuilt from v0.8.2 + only these iOS files (ios_run.py with the move check and the refresh,
+  setup_mac.py, the launcher, INSTALL.md, CHANGELOG), not main (main has unreleased online work).

@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.8.2 (2026-11-14)
+## v0.8.2 (2026-11-14; iOS zip updated 2026-11-14)
 
 - **"Riders Plus"**: the settings option "Ring Limit set to 999" is now called "Riders Plus" (Gameplay tab), since it
   holds all of the custom gameplay below as well as the 999 rings. Your saved choice is kept. Off = the original game.
@@ -28,6 +28,11 @@
   handheld, 1.5x with bloom, grading and sharpness, Metal City's busiest views went from dips to 33-39 fps to 56-60.
 - **Switch and phones: 1.25x resolution** (800x660) between 1x and 1.5x, for sharper races that stay at 60 fps
   where 1.5x is too heavy (Display tab).
+- **iPhone / iPad: renewing from the Mac really renews** (iOS zip updated): "Install only (renewing)" in the Mac
+  launcher (or running the installer again) reinstalled the same build, whose 7 days were already counting down, so
+  it gave no extra days. Now it gets a fresh 7-day signature first (about a minute). Moving an older install to the
+  one app ID now checks first that the new app is allowed on that device, so it never removes the old app for
+  nothing. The renew steps (launcher Renew page, "How to renew" file, INSTALL.md) are rewritten in plain steps.
 
 ## v0.8.1 (2026-11-12; iOS zip 2026-11-13)
 

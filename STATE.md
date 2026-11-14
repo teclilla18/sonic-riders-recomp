@@ -8,7 +8,7 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 ## Releases
 
 **v0.8.2 released 2026-11-14** ("Sonic Riders Plus", tag on 81ee335): all five zips. iOS zip built on the Mac
-2026-11-13 from the tag (VERSION "v0.8.2 (81ee3358)"), cold Mac unzip test PASS (unsigned, fresh tools, 7/7)
+2026-11-13 from the tag, replaced 2026-11-14 with the iOS renew fix (tag + iOS files only); cold Mac unzip test PASS (unsigned, fresh tools, 7/7)
 [confirmed]; notes' last line points at it. Details: item 0c.
 
 **v0.8.1 released 2026-11-12** (tag on 77620bb; iOS zip replaced 2026-11-13 from abedb6a with the one-app-ID fix).
@@ -59,7 +59,9 @@ hole punching, relay). Next: Switch-Switch, PC-Switch, phones (Android needs the
 0. **iOS: one app ID per player** (released in v0.8.1's iOS zip; notes/ios.md "App IDs"): `<base>.<team>` always;
    `ios_run.py install` moves an older-ID app: A16 iPad, iPhone, iPad Pro (Wi-Fi) [confirmed]; the iPad (7th gen) (Wi-Fi)
    failed after the uninstall (profile lacked the device), restored by hand, save MD5 equal [confirmed]. `move` now
-   checks the app's profile lists the device (and is unexpired) before touching anything [confirmed, real + fake devices]. Not tested: the
+   checks the app's profile lists the device (and is unexpired) before touching anything [confirmed, real + fake devices].
+   Renewing from the Mac now gets a fresh 7-day signature first (`refresh_profile`, 2026-11-14) [confirmed, A16 iPad];
+   renew steps rewritten in plain words; both in v0.8.2's iOS zip (rebuilt from the tag + iOS files only). Not tested: the
    old-ID warning on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted yet.
 1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
    choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"

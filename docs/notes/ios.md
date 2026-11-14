@@ -192,6 +192,11 @@ First-boot findings [confirmed on the iPhone]:
   device"). Check `security cms -D -i <app>/embedded.mobileprovision` (ExpirationDate, ProvisionedDevices); to force
   a new one, move that ID's file out of `~/Library/Developer/Xcode/UserData/Provisioning Profiles` and rebuild the
   app (2026-11-13).
+- Since 2026-11-14 `ios_run.py install` does this itself (`refresh_profile`): when the built app's profile has
+  under 6.5 days left (`FRESH_DAYS`) or does not list the device, this app ID's cached profiles go to
+  `build/ios/old-profiles/`, the .app is deleted and ninja re-signs it (finds Homebrew's ninja when the launcher's
+  PATH lacks it). Tested on the A16 iPad with FRESH_DAYS forced: expiry 11-21 00:52 -> 01:12, installed [confirmed].
+  The launcher's "Install only (renewing)" and a rerun of the .command both go through it.
 - App IDs (a different ID = a second app with an empty Documents). Sideloadly's default ("Use automatic bundle ID"
   ticked) ALWAYS appends ".<team ID>" to the .ipa's ID, even when it already ends with it (2026-11-09, iPad Pro:
   `<base>.<team>` became `<base>.<team>.<team>` [confirmed]); unticked, it keeps the .ipa's ID (2026-11-08, iPad Pro
