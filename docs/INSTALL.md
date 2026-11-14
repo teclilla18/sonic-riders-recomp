@@ -56,8 +56,9 @@
 2. **Extract** the whole zip to a folder, for example `C:\SonicRiders`. Don't run it from inside the zip.
    The folder's path must use only English letters and digits: if your Windows user name has accents or
    other letters, don't use your Downloads or Desktop folder.
-3. **Put your Switch's SD card in the PC** (or connect the Switch over USB with a tool that shows the
-   SD card as a drive).
+3. **Put your Switch's SD card in the PC**, or leave it in the Switch and use hekate's USB mode (hekate →
+   **Tools** → **USB Tools** → **SD Card**, then plug the Switch into the PC; details in
+   [Switch: the fast way](#switch-the-fast-way)).
 4. **Double-click `Install Sonic Riders (Switch).exe`.** If Windows shows "Windows protected your PC",
    click *More info* → *Run anyway* (the program is not signed). In its window:
    - **Select disc...**: pick your disc image; the setup checks that it is the right one;
@@ -289,20 +290,29 @@ saves, settings and HOME-screen icon stay where they are.
 
 1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../../releases/latest).
 2. **Extract** it to a new folder, for example `C:\SonicRiders-<version>`.
-3. **Put the SD card in the PC.**
+3. **Connect the SD card to the PC without taking it out**, with hekate's USB mode:
+   - Restart the Switch into **hekate** (the way you normally start your custom firmware, or with a
+     "reboot to payload" app if hekate is your payload).
+   - In hekate: **Tools** → **USB Tools** → **SD Card**.
+   - Plug the Switch into the PC with a USB-C cable. The SD card shows up in Windows as a drive.
+     (If Windows offers to scan and fix it, choose *Continue without scanning*.)
+
+   Or take the SD card out and put it in the PC, as on the first install.
 4. **Double-click `Install Sonic Riders (Switch).exe`**, pick the same disc image, check that your SD card is
-   selected, and press **BUILD AND INSTALL**.
+   selected (it is found by itself), and press **BUILD AND INSTALL**.
    - Leave *Copy the disc image too* as it is: it is skipped by itself when the disc image is already on the card.
    - You don't need the HOME-screen icon again: the one you installed starts the new version.
 5. **Wait a few minutes** until it says "Done" (the tools are already downloaded, so no big download this time).
-6. **Eject the SD card**, put it back in the Switch and play as usual.
+6. **Eject the SD card in Windows** (right-click the drive → *Eject*) and wait until Windows says it is safe.
+7. **Back to the game:** in hekate press **Close** (or unplug the cable), then **Home** → **Launch** → your
+   Atmosphère entry. With a card reader instead: put the SD card back in the Switch. Play as usual.
 
 That's it. No reinstalling the icon, no copying saves, no copying the disc image again.
 
-**Without taking the SD card out** (optional): in step 4 pick *Don't copy (keep it in build\switch\)* as
-the SD card. When it's done, send `build\switch\sonicriders.nro` (in the new folder) to the Switch with any
-file-transfer homebrew you already use (for example DBI's *Run MTP responder* over USB, or an FTP app over
-Wi-Fi) and replace the old file in `switch/sonicriders/`. Replace only that file.
+**Without hekate** (optional): in step 4 pick *Don't copy (keep it in build\switch\)* as the SD card. When
+it's done, send `build\switch\sonicriders.nro` (in the new folder) to the Switch with any file-transfer
+homebrew you already use (for example DBI's *Run MTP responder* over USB, or an FTP app over Wi-Fi) and
+replace the old file in `switch/sonicriders/`. Replace only that file.
 
 **If something looks wrong after an update:** check the version in the settings menu (hold **−**, *About* tab). If it is
 still the old one, the new `sonicriders.nro` did not reach `switch/sonicriders/`.
