@@ -65,8 +65,8 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    a move on a device at the 3-app limit, Sideloadly renewal after a move. Not accepted by the user yet.
 0b. **v0.8.1 released** (all five zips). Capsule +100, hit/fall -100, L/R tabs, menu wrap **accepted**
    (2026-11-13). Release notes open with the Heroes alpha call and a Lv. 4/5 preview (assets `preview-lv-*`).
-1. **"Riders Plus" gameplay set** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
-   choice; key `ring_cap_999` kept), on main, unreleased (notes game-addresses.md "Capsule" / "Object collisions"
+1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
+   choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"
    / "Charge jump"). Recordings and online fix the option for the whole run ("ring cap fixed"), so the menu toggle
    does nothing during an SR_RECORD run (by design).
    - **Charge jump grace 0.75 s** (003acfe; user tried 1.5 and 1 s, picked 0.75): the charge slowdown (fn_1_6D5D4)
@@ -86,14 +86,13 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
      229 -> 255 [confirmed, log]; shoes forced by a test hook in its replay: 198 -> 278, 134 -> 214 [confirmed].
      Kind 0x848 (dash ring?) untouched.
    - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
-0c. **v0.8.2 ready for `/release v0.8.2`** (main 003acfe + this state commit): Riders Plus set (item 1, incl. the
-   charge jump), 1.25x, the Switch heavy-view fix. Checks done 2026-11-14: OLED (c840558) Splash Canyon Lv. 5 at
-   350, capsule after 25 s, dash panel +20-30 [accepted, user]; docked and 2P handheld/docked 60 fps [accepted,
-   user]; logs: 59.9 fps, dips to 55 only above 6k draws (GP thread 14-15 ms) [confirmed, log-reader]. Android
-   (S23, perf demo, 1x bloom 60 FSR 60): main 51.9-52.6 / 2P 55.2-57.4 vs v0.8.1 51.9-52.3 / 57.7 = no
-   regression; both below the 2026-11-10 record (57.9), phone-side [likely]. PC Metal City race on Auto:
-   213 windows, avg 59.9, none < 58.5 [confirmed]. Left for `/release`: cold Sandbox PC + Android. Then the Mac
-   session builds the iOS zip. Next focus after the release (user): **online play**, everything else after v1.
+0c. **v0.8.2 released 2026-11-14** ("v0.8.2: Sonic Riders Plus", tag on 81ee335; PC, Switch, Android, Linux zips;
+   cold Sandbox PC (2 installs, one with a space) + Android PASS [confirmed]; downloaded PC zip = built zip [confirmed,
+   hash]). iOS zip: the Mac session builds it with --ref v0.8.2 and uploads it (asked 2026-11-14). Notes: the user's
+   ChatGPT banners + our charts + a Lv. 5 PC screenshot pair, all in docs/images/v0.8.2/ (approved by hash in the
+   guard); user's rule: **only build zips as release assets**. v0.7.2 delisted (tag kept). Checks before it: OLED
+   Splash Canyon / docked / 2P [accepted]; S23 A/B vs v0.8.1 no regression; PC Auto race 59.9 [confirmed].
+   **Next focus (user): online play and crossplay**; everything else after v1.
 1d. **SwitchWakerHD v1.3.0 ideas** (plans-2026-11.md, end), measured 2026-11-14 on the OLED: tiled cache made frames
    0.6 ms slower (drop it); specialized vertex shaders could save at most ~2 ms (lighting 1.3 + texgen 0.8); PGO /
    core 3 are CPU and the CPU is not the limit at 1P. Left: on-console shader compiles, 30 fps pacing, FXAA,
