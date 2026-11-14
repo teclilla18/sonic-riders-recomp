@@ -745,7 +745,38 @@ std::wstring qpath(std::wstring p) {
     return L"\"" + p + L"\"";
 }
 
+/* the installer's last choices (build\launcher\last_install.txt, this PC only): the next start, and an update,
+ * use them, so updating is one press (the HOME-screen icon is not made again: the installed one keeps working) */
+void save_install_choices() {
+    std::string s = "disc=" + narrow(g_disc_choice) + "\nsd=" + narrow(g_ic.sd) + "\ncopy_iso=" + (g_ic.copy_iso ? "1" : "0") +
+                    "\nown_icon=" + (g_ic.own_icon ? "1" : "0") + "\nicon=" + narrow(g_ic.icon) +
+                    "\nphone_install=" + (g_ic.phone_install ? "1" : "0") + "\nlicense=" + (g_ic.license ? "1" : "0") + "\n";
+    CreateDirectoryW(path(L"build").c_str(), nullptr);
+    CreateDirectoryW(path(L"build\\launcher").c_str(), nullptr);
+    write_text(path(L"build\\launcher\\last_install.txt"), s);
+}
+bool g_had_sd_choice = false;  /* the last install copied to an SD card (an update waits for one) */
+void load_install_choices() {
+    std::string t = read_text(path(L"build\\launcher\\last_install.txt"));
+    if (t.empty()) return;
+    for (const std::string& l : split_lines(t)) {
+        size_t eq = l.find('=');
+        if (eq == std::string::npos) continue;
+        std::string k = l.substr(0, eq), v = l.substr(eq + 1);
+        while (!v.empty() && (v.back() == '\r' || v.back() == ' ')) v.pop_back();
+        if (k == "disc" && !v.empty() && exists(widen(v))) g_disc_choice = widen(v);
+        else if (k == "sd") g_had_sd_choice = !v.empty();
+        else if (k == "copy_iso") g_ic.copy_iso = v == "1";
+        else if (k == "own_icon") g_ic.own_icon = v == "1";
+        else if (k == "icon" && !v.empty() && exists(widen(v))) g_ic.icon = widen(v);
+        else if (k == "phone_install") g_ic.phone_install = v == "1";
+        else if (k == "license") g_ic.license = v == "1";
+    }
+    if (g_ic.own_icon && g_ic.icon.empty()) g_ic.own_icon = false;
+}
+
 void start_installer() {
+    save_install_choices();
     {
         std::lock_guard<std::mutex> lk(g_log_mx);
         g_log.clear();
@@ -772,6 +803,37 @@ void start_installer() {
         g_install = INST_FAILED;
         g_status = "Could not start the setup (PowerShell).";
     }
+}
+
+/* started by an update (--after-update): build the new version by itself with the last choices. Switch: when the
+ * last install went to an SD card, wait until one is connected (card reader or hekate's USB mode), then go. */
+bool g_after_update = false;
+void auto_build_after_update() {
+    if (!g_after_update || child_running(g_setup) || child_running(g_game)) return;
+    if (g_mode == M_LAUNCHER) {
+        g_after_update = false;
+        if (!g_ready.disc) return;  /* the Play page shows Rebuild once the disc image is back */
+        DeleteFileW(path(L"build\\launcher\\rebuild_after_update").c_str());
+        g_page = P_PLAY;
+        start_install(g_ready.disc_path);
+        return;
+    }
+    if (!installer_blocker().empty()) { g_after_update = false; return; }  /* the page says what is missing */
+    if (g_mode == M_SWITCH && g_had_sd_choice && g_ic.sd.empty()) {
+        static DWORD last;
+        if (GetTickCount() - last > 1500) {
+            last = GetTickCount();
+            find_sd_cards();
+        }
+        if (g_ic.sd.empty()) {
+            g_status = "Waiting for your SD card: connect it (card reader, or hekate: Tools > USB Tools > SD Card). "
+                       "The update installs by itself.";
+            return;
+        }
+    }
+    g_after_update = false;
+    g_status.clear();
+    start_installer();
 }
 
 /* the setup's steps and output (shared by the launcher's first install and the installer) */
@@ -1386,6 +1448,7 @@ void start_update_download() {
     }).detach();
 }
 
+void restart_self(bool after_update = false);
 /* every frame: the unpacking step's end */
 void poll_update() {
     if (g_upd_state != UPD_UNPACKING || !g_upd_child.proc || !g_upd_child.done) return;
@@ -1395,6 +1458,7 @@ void poll_update() {
             write_text(path(L"build\\launcher\\rebuild_after_update"), update_tag() + "\n");
         }
         g_upd_state = UPD_DONE;
+        if (!getenv("SR_LAUNCHER_UPDATE_TEST")) restart_self(true);  /* one press: download, restart, rebuild */
     } else {
         std::lock_guard<std::mutex> lk(g_log_mx);
         g_upd_error = "Unpacking the update failed";
@@ -1404,10 +1468,11 @@ void poll_update() {
     }
 }
 
-void restart_self() {
+void restart_self(bool after_update) {
     STARTUPINFOW si = {sizeof si};
     PROCESS_INFORMATION pi = {};
     std::wstring cl = L"\"" + self_exe() + L"\"";
+    if (after_update) cl += L" --after-update";
     if (CreateProcessW(nullptr, &cl[0], nullptr, nullptr, FALSE, 0, nullptr, g_root.c_str(), &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
@@ -1444,7 +1509,7 @@ void page_update(float w) {
     bool busy = child_running(g_setup) || child_running(g_game);
     if (st == UPD_IDLE || st == UPD_FAILED) {
         ImGui::BeginDisabled(url.empty() || busy);
-        if (big_button("DOWNLOAD AND INSTALL", ImVec2(260 * g_dpi, 40 * g_dpi), true, !url.empty() && !busy))
+        if (big_button("UPDATE NOW", ImVec2(260 * g_dpi, 40 * g_dpi), true, !url.empty() && !busy))
             start_update_download();
         ImGui::EndDisabled();
         ImGui::SameLine();
@@ -1452,8 +1517,12 @@ void page_update(float w) {
         if (st == UPD_FAILED) ImGui::TextColored(kRed, "%s", g_upd_error.c_str());
         else if (busy) note("Close the game (or wait for the build) first.");
         else if (url.empty()) note("This release has no download for this version; use the release page.");
-        else note("Downloads the new version (a few MB) and puts it over this folder. Your disc image, saves, mods "
-                  "and settings stay.");
+        else note(g_mode == M_SWITCH
+                      ? "One press: downloads the new version (a few MB), restarts and rebuilds the game (usually under a "
+                        "minute), then copies it to your SD card. Connect the SD card (card reader, or hekate: Tools > USB "
+                        "Tools > SD Card) now or when asked. Your saves, settings and disc image stay."
+                      : "One press: downloads the new version (a few MB), restarts and rebuilds the game (usually under a "
+                        "minute). Your disc image, saves, mods and settings stay.");
     } else if (st == UPD_DOWNLOADING) {
         long long got = g_upd_got, total = g_upd_total;
         char lbl[64];
@@ -1465,10 +1534,8 @@ void page_update(float w) {
         ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(w * 0.6f, 0), "Unpacking...");
     } else {  /* UPD_DONE */
         ImGui::TextColored(kGreen, "Updated to %s.", tag.c_str());
-        if (big_button("RESTART", ImVec2(200 * g_dpi, 40 * g_dpi), true, true)) restart_self();
-        note(g_mode == M_LAUNCHER ? "After the restart, press Rebuild on the Play page: the game is built again from your "
-                                    "disc image with the new version (usually under a minute: only what changed is rebuilt)."
-                                  : "After the restart, press BUILD AND INSTALL again to build the new version.");
+        if (big_button("RESTART", ImVec2(200 * g_dpi, 40 * g_dpi), true, true)) restart_self(true);
+        note("Restarting: the new version builds by itself (usually under a minute: only what changed is rebuilt).");
     }
 }
 void page_about(float w) {
@@ -2080,7 +2147,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         std::transform(name.begin(), name.end(), name.begin(), [](unsigned char ch) { return (char)tolower(ch); });
         if (name.find("switch") != std::string::npos) g_mode = M_SWITCH;
         else if (name.find("android") != std::string::npos) g_mode = M_ANDROID;
+        if (installer()) load_install_choices();
         if (g_mode == M_SWITCH) find_sd_cards();
+        if (wcsstr(GetCommandLineW(), L"--after-update")) g_after_update = true;
     }
     start_update_check();
     DeleteFileW((self_exe() + L".old").c_str());  /* left by an update (the exe that ran it) */
@@ -2145,10 +2214,12 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         if (IsIconic(hwnd)) {
             Sleep(50);
             poll_children();
+            auto_build_after_update();  /* also when minimized */
             continue;
         }
         poll_children();
         poll_update();
+        auto_build_after_update();
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();

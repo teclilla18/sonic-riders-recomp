@@ -9,7 +9,7 @@
 - [Install on Linux / Steam Deck](#install-on-linux--steam-deck)
 - [Install on iPhone / iPad](#install-on-iphone--ipad)
 - [Updating to a new version](#updating-to-a-new-version)
-  - [Switch: the fast way](#switch-the-fast-way)
+  - [Switch: connecting the SD card with hekate](#switch-connecting-the-sd-card-with-hekate-no-card-reader-needed)
 - [If something goes wrong](#if-something-goes-wrong)
 - [What the setup does](#what-the-setup-does)
 
@@ -58,7 +58,7 @@
    other letters, don't use your Downloads or Desktop folder.
 3. **Put your Switch's SD card in the PC**, or leave it in the Switch and use hekate's USB mode (hekate →
    **Tools** → **USB Tools** → **SD Card**, then plug the Switch into the PC; details in
-   [Switch: the fast way](#switch-the-fast-way)).
+   [Switch: connecting the SD card with hekate](#switch-connecting-the-sd-card-with-hekate-no-card-reader-needed)).
 4. **Double-click `Install Sonic Riders (Switch).exe`.** If Windows shows "Windows protected your PC",
    click *More info* → *Run anyway* (the program is not signed). In its window:
    - **Select disc...**: pick your disc image; the setup checks that it is the right one;
@@ -268,54 +268,60 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 
 ## Updating to a new version
 
-1. Download the new zip for your platform from the [latest release](../../../releases/latest) and
-   extract it to a **new** folder.
-2. Run its installer (`Install Sonic Riders (Switch).exe`, `Install Sonic Riders (PC).bat` or
-   `Install Sonic Riders (Android).exe`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc image (and, for the Switch, the same SD card;
-   for Android, the phone connected).
-3. **Only the parts that changed are rebuilt.** The first install converts the whole game once and keeps that
-   work in the setup's tools folder; an update reuses it, so it usually takes under a minute instead of the
-   first install's 10-30 minutes, with no big download. (A release that changes the code converter itself
-   converts the game again, which takes longer, but never re-downloads the tools.)
+**The quick way: update from the app itself** (Windows: the PC launcher, the Switch installer and the Android
+installer). No GitHub visit, no zip, no settings to pick again.
 
-Your saves and settings are kept: on the Switch they're on the SD card, which the update doesn't touch.
-On PC and Linux they're in the old install folder: copy its `saves` folder into the new one, then delete the old
-folder. On Android the update installs over the app and keeps its saves; it must be built **on the same PC**,
-because Android only accepts an update signed with the same key (the setup keeps it in
+1. Open the app you installed with (`Sonic Riders` on PC, `Install Sonic Riders (Switch).exe`, or
+   `Install Sonic Riders (Android).exe`). When a new version is out it shows **Update available** in gold.
+2. **Switch:** connect the SD card first: take it out and put it in the PC, or leave it in the Switch and use
+   hekate's USB mode (details below). **Android:** connect the phone as on the first install.
+3. Press **See what's new** → **UPDATE NOW**. That's all: it downloads the new version (a few MB), restarts,
+   rebuilds and installs it by itself with the same disc image, SD card or phone as last time. Usually under
+   a minute. (Switch: if the SD card isn't connected yet, it waits for it and goes on as soon as it appears.)
+4. **Switch:** eject the SD card in Windows and go back to the game (below). **PC:** press PLAY.
+
+Your saves, settings, mods and disc image stay. The Switch's HOME-screen icon keeps working (it starts the new
+version). This works for updates *from* the version after v0.8.2 on; to get to that version, use the zip way
+below once.
+
+**Why there is still a (short) build:** the finished game contains Sonic Riders' own code, converted, so we can
+never put it in a download; it has to be made on your PC from your disc. Only the first install does the big
+conversion (10-30 minutes). It is kept in the setup's tools folder, so an update only rebuilds the few parts of
+the port that changed: a few seconds on a fast PC, usually under a minute. (A release that changes the code
+converter itself redoes the conversion: longer, but still automatic and without new downloads.)
+
+### Switch: connecting the SD card with hekate (no card reader needed)
+
+1. Restart the Switch into **hekate** (the way you normally start your custom firmware, or with a "reboot to
+   payload" app if hekate is your payload).
+2. In hekate: **Tools** → **USB Tools** → **SD Card**.
+3. Plug the Switch into the PC with a USB-C cable. The SD card shows up in Windows as a drive. (If Windows
+   offers to scan and fix it, choose *Continue without scanning*.)
+4. Update (above). When it says "Done", **eject the drive in Windows** (right-click it → *Eject*) and wait
+   until Windows says it is safe.
+5. In hekate press **Close** (or unplug the cable), then **Home** → **Launch** → your Atmosphère entry, and
+   play as usual.
+
+**Without hekate or a card reader:** pick *Don't copy (keep it in build\switch\)* as the SD card, then send
+`build\switch\sonicriders.nro` to `switch/sonicriders/` on the Switch with a file-transfer homebrew you
+already use (DBI's *Run MTP responder* over USB, or an FTP app over Wi-Fi). Replace only that file.
+
+### The zip way (Linux, iPhone/iPad, or versions up to v0.8.2)
+
+1. Download the new zip for your platform from the [latest release](../../../releases/latest) and extract it
+   **over your old install folder** (replace the files when asked); a new folder works too.
+2. Run its installer (`Install Sonic Riders (Switch).exe`, `Install Sonic Riders (PC).bat`,
+   `Install Sonic Riders (Android).exe`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc
+   image (Switch: the SD card connected; Android: the phone connected). It finishes quickly for the same reason
+   as above (iPhone/iPad: the Mac still rebuilds everything, for now). Leave *Copy the disc image too* as it is (skipped when the card already has it); the HOME-screen
+   icon is not needed again.
+
+Saves: on the Switch they're on the SD card, which an update doesn't touch. On PC and Linux they're in the
+install folder: extracting over it keeps them; with a new folder, copy the old folder's `saves` into it. On
+Android the update installs over the app and keeps its saves; it must be built **on the same PC**, because
+Android only accepts an update signed with the same key (the setup keeps it in
 `%LOCALAPPDATA%\SonicRidersSetup\tools\android\`; don't delete it). From another PC you would have to
 uninstall first, which deletes the saves.
-
-### Switch: the fast way
-
-An update only replaces one file on the SD card, `switch/sonicriders/sonicriders.nro`. Your disc image,
-saves, settings and HOME-screen icon stay where they are.
-
-1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../../releases/latest).
-2. **Extract** it to a new folder, for example `C:\SonicRiders-<version>`.
-3. **Connect the SD card to the PC without taking it out**, with hekate's USB mode:
-   - Restart the Switch into **hekate** (the way you normally start your custom firmware, or with a
-     "reboot to payload" app if hekate is your payload).
-   - In hekate: **Tools** → **USB Tools** → **SD Card**.
-   - Plug the Switch into the PC with a USB-C cable. The SD card shows up in Windows as a drive.
-     (If Windows offers to scan and fix it, choose *Continue without scanning*.)
-
-   Or take the SD card out and put it in the PC, as on the first install.
-4. **Double-click `Install Sonic Riders (Switch).exe`**, pick the same disc image, check that your SD card is
-   selected (it is found by itself), and press **BUILD AND INSTALL**.
-   - Leave *Copy the disc image too* as it is: it is skipped by itself when the disc image is already on the card.
-   - You don't need the HOME-screen icon again: the one you installed starts the new version.
-5. **Wait** until it says "Done", usually under a minute: the game is not converted again, only the parts of
-   the port that changed are rebuilt.
-6. **Eject the SD card in Windows** (right-click the drive → *Eject*) and wait until Windows says it is safe.
-7. **Back to the game:** in hekate press **Close** (or unplug the cable), then **Home** → **Launch** → your
-   Atmosphère entry. With a card reader instead: put the SD card back in the Switch. Play as usual.
-
-That's it. No reinstalling the icon, no copying saves, no copying the disc image again.
-
-**Without hekate** (optional): in step 4 pick *Don't copy (keep it in build\switch\)* as the SD card. When
-it's done, send `build\switch\sonicriders.nro` (in the new folder) to the Switch with any file-transfer
-homebrew you already use (for example DBI's *Run MTP responder* over USB, or an FTP app over Wi-Fi) and
-replace the old file in `switch/sonicriders/`. Replace only that file.
 
 **If something looks wrong after an update:** check the version in the settings menu (hold **−**, *About* tab). If it is
 still the old one, the new `sonicriders.nro` did not reach `switch/sonicriders/`.
