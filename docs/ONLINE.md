@@ -260,9 +260,15 @@ memory, identical everywhere at that point; recordings carry header flag 8 and r
 `SR_ONLINE_RULES=1` applies them offline (tests). Checked [confirmed, PC, offline 2P route]: player 2's A on
 Track Select and B at Player Entry ignored, the race starts with both. The no-pause rule is not proven: a scripted
 START in a Free Race did not pause even without the rules (user to check by hand).
-- start: the session opens at Track Select by itself: until Track Select is first reached the game presses for
-  player 1 (START every 20 frames before the menus, then A: the online save's NEW GAME screens, title, Normal
-  Race, Free Race), the same presses on every machine; ~frame 940 (16 s) instead of ~3000.
+- start: the session opens at the main menu (Mode Select, screen 0x0F: Normal Race, Story, Tag, Survival, Shop) by
+  itself: until it is first reached the game presses for player 1 (START every 20 frames before the menus, then A:
+  the online save's NEW GAME screens and the title), the same presses on every machine; frame ~780 (13 s). (First
+  version stopped at Track Select; the user asked for the main menu so the other 2-4 player modes are reachable.)
+- at Player Entry only player 1's START starts the race; after the race is finished (results, end-of-race menu) only
+  player 1 is heard.
+- not yet: the other modes' character selects (Tag, Survival) may be other screens than 0x18, where a joiner is not
+  heard yet; picking the same character as another player (the game refuses it); each player hearing only their
+  own racer.
 - HUD: whenever the session's (host's) camera is wide, every machine puts the race HUD at the screen edges, whatever
   its own screen setting (a joiner set to 4:3 kept it in the middle).
 Checked [confirmed, two machines, 2026-11-14]: PC host + laptop joiner (scripted by the laptop's Claude session over

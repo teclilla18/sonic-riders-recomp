@@ -623,7 +623,8 @@ void netplay_frame_start(void) {
  * identical (and a recording made with them replays with them, header flag 8).
  *  - In the menus only player 1 (the host) is heard, except at Player Entry (character select), where every player
  *    picks their own character and board; there a player who has not joined (state 0) cannot press B, which would
- *    take everyone back to Track Select (un-picking a character or board with B still works).
+ *    take everyone back to Track Select (un-picking a character or board with B still works), and only player 1's
+ *    START starts the race.
  *  - No pause in a race: START is ignored from the race start until the race is finished.
  * The menu screen: the menu task (update function 819130B8) in the game's task list (head pointer at 8021C30C,
  * linked through +0x08); its state byte +0x14 is the screen (0x0D save/title, 0x10 Normal Race, 0x16 Track Select,
@@ -644,18 +645,19 @@ static int menu_screen(uint32_t* work) {
     }
     return -1;
 }
-#define SCREEN_TRACK_SELECT 0x16
-static int g_reached_tracks;  /* the session's start has reached Track Select (the start-up presses stop) */
+#define SCREEN_MAIN_MENU 0x0F  /* Normal Race, Story, Tag, Survival, ... (0x0E is the step between it and the title) */
+static int g_reached_tracks;  /* the session's start has reached the main menu (the start-up presses stop) */
 static void online_rules(GcPad* pads) {
     static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     uint32_t work = 0;
     int screen = menu_screen(&work);
-    /* the session opens at Track Select: until it is first reached the game itself presses for player 1 (START
-     * every 20 frames while there are no menus: logos, the intro movie; then A: the online save's NEW GAME
-     * screens, the title, Normal Race, Free Race), every machine the same presses, nobody else heard */
-    if (!g_reached_tracks && screen == SCREEN_TRACK_SELECT) {
+    /* the session opens at the game's main menu (every mode: races, Tag, Survival...; user, 2026-11-14): until it
+     * is first reached the game itself presses for player 1 (START every 20 frames while there are no menus: logos,
+     * the intro movie; then A: the online save's NEW GAME screens and the title), every machine the same presses,
+     * nobody else heard */
+    if (!g_reached_tracks && screen == SCREEN_MAIN_MENU) {
         g_reached_tracks = 1;
-        rt_log("[net] frame %u: Track Select reached, the host has the menus", g_frame + 1);
+        rt_log("[net] frame %u: main menu reached, the host has the menus", g_frame + 1);
     }
     if (!g_reached_tracks && ld32(GAME_TOP_MODE) != GAME_TOP_MODE_RACE) {
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p] = neutral;
@@ -667,11 +669,14 @@ static void online_rules(GcPad* pads) {
             if (screen != SCREEN_PLAYER_ENTRY) { pads[p] = neutral; continue; }
             uint8_t st = work >= 0x80000000u && work < 0x81C00000u ? (uint8_t)(ld32(work + 0xB8 + (uint32_t)p) >> 24) : 0;
             if (st == 0) pads[p].buttons &= (uint16_t)~0x0200u;  /* B */
+            pads[p].buttons &= (uint16_t)~0x1000u;  /* START ("Are you ready?"): player 1 starts the race */
         }
         return;
     }
     if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
+    else if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE)  /* finished: the results and the end-of-race menu are player 1's */
+        for (int p = 1; p < g_ports && p < MAXP; p++) pads[p] = neutral;
 }
 
 /* si.c, at each frame end under SR_DETCLOCK: the controllers for the next frame */

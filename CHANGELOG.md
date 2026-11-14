@@ -5,9 +5,9 @@
 - **Online lobby in the PC launcher** (new "Online" page): type your name, host a lobby or join one from the list of
   lobbies on your network (or with the host's join code), see who is in it, and the host starts the race on both
   PCs. Two players, same network for now; the game shows the other player's name while waiting.
-- **Online rules, like Mario Kart**: only the host moves through the menus; the other player takes over at
-  character select (picking and un-picking their character and board, but not backing out of the screen); no
-  pausing during an online race.
+- **Online rules, like Mario Kart**: online games open straight at the main menu; only the host moves through the
+  menus, starts the race and handles the end-of-race menu; the other player takes over at character select (picking
+  and un-picking their character and board, but not backing out of the screen); no pausing during an online race.
 - **Online races show your own racer full screen**: no more black bars and half picture. Each machine shows only its
   own player, with more sky and track above and below, the HUD in the corners like a one-player race, the whole track
   map, and the race timer for both players. Only the picture changes, so both games stay in step.
