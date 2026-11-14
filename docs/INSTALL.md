@@ -9,6 +9,7 @@
 - [Install on Linux / Steam Deck](#install-on-linux--steam-deck)
 - [Install on iPhone / iPad](#install-on-iphone--ipad)
 - [Updating to a new version](#updating-to-a-new-version)
+  - [Switch: the fast way](#switch-the-fast-way)
 - [If something goes wrong](#if-something-goes-wrong)
 - [What the setup does](#what-the-setup-does)
 
@@ -280,6 +281,31 @@ folder. On Android the update installs over the app and keeps its saves; it must
 because Android only accepts an update signed with the same key (the setup keeps it in
 `%LOCALAPPDATA%\SonicRidersSetup\tools\android\`; don't delete it). From another PC you would have to
 uninstall first, which deletes the saves.
+
+### Switch: the fast way
+
+An update only replaces one file on the SD card, `switch/sonicriders/sonicriders.nro`. Your disc image,
+saves, settings and HOME-screen icon stay where they are.
+
+1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../../releases/latest).
+2. **Extract** it to a new folder, for example `C:\SonicRiders-<version>`.
+3. **Put the SD card in the PC.**
+4. **Double-click `Install Sonic Riders (Switch).exe`**, pick the same disc image, check that your SD card is
+   selected, and press **BUILD AND INSTALL**.
+   - Leave *Copy the disc image too* as it is: it is skipped by itself when the disc image is already on the card.
+   - You don't need the HOME-screen icon again: the one you installed starts the new version.
+5. **Wait a few minutes** until it says "Done" (the tools are already downloaded, so no big download this time).
+6. **Eject the SD card**, put it back in the Switch and play as usual.
+
+That's it. No reinstalling the icon, no copying saves, no copying the disc image again.
+
+**Without taking the SD card out** (optional): in step 4 pick *Don't copy (keep it in build\switch\)* as
+the SD card. When it's done, send `build\switch\sonicriders.nro` (in the new folder) to the Switch with any
+file-transfer homebrew you already use (for example DBI's *Run MTP responder* over USB, or an FTP app over
+Wi-Fi) and replace the old file in `switch/sonicriders/`. Replace only that file.
+
+**If something looks wrong after an update:** check the version in the settings menu (hold **−**, *About* tab). If it is
+still the old one, the new `sonicriders.nro` did not reach `switch/sonicriders/`.
 
 To get a notification when a new version comes out, click **Watch** at the top of the GitHub page,
 then **Custom** → **Releases**. What changed in each version is in the [CHANGELOG](../CHANGELOG.md).
