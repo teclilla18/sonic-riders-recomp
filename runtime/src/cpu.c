@@ -37,7 +37,12 @@ void ppc_trap(Cpu* c, uint32_t addr) { rt_fatal("trap at %08X (lr %08X)", addr, 
 #define TRACE_RING 4096
 static volatile uint32_t g_trace_ring[TRACE_RING];
 static volatile unsigned g_trace_pos;
-void ppc_trace_enter(uint32_t addr) { g_trace_ring[g_trace_pos++ % TRACE_RING] = addr; }
+/* SR_TRACE_MIN=<hex>: record only functions at or above that address (e.g. 81800000: the game's REL code, without
+ * the SDK's per-frame drawing loop), and dump the whole ring */
+uint32_t g_trace_min;
+void ppc_trace_enter(uint32_t addr) {
+    if (addr >= g_trace_min) g_trace_ring[g_trace_pos++ % TRACE_RING] = addr;
+}
 
 void ppc_float_report(uint32_t addr, double ref, double got) {
     static int n;
@@ -51,7 +56,7 @@ void ppc_sum_report(uint32_t site, int reg) {
 }
 void cpu_dump_trace(void) {
     unsigned p = g_trace_pos;
-    enum { SHOW = 256 };
+    unsigned SHOW = g_trace_min ? TRACE_RING : 256;
     rt_log("[trace] last %u function entries (oldest first):", SHOW);
     for (unsigned i = TRACE_RING - SHOW; i < TRACE_RING; i++) {
         uint32_t a = g_trace_ring[(p + i) % TRACE_RING];

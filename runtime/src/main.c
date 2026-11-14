@@ -19,6 +19,7 @@ static Cpu g_main_cpu;
 
 extern int g_ppc_trace;
 void cpu_dump_trace(void);
+extern uint32_t g_trace_min;
 void mmio_dump(void);
 void sched_dump(void);
 
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
     { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine first */
     vi_init();
     const char* wd = getenv("SR_WATCHDOG");
+    if (getenv("SR_TRACE_MIN")) g_trace_min = (uint32_t)strtoul(getenv("SR_TRACE_MIN"), NULL, 16);
     if (wd && atoi(wd) > 0) {
         g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
         rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));

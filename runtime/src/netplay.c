@@ -664,6 +664,13 @@ static void online_rules(GcPad* pads) {
         if ((g_frame + 1) % 20 < 2) pads[0].buttons = screen >= 0 ? 0x0100u /* A */ : 0x1000u /* START */;
         return;
     }
+    if (screen == SCREEN_PLAYER_ENTRY && work >= 0x80000000u && work < 0x81C00000u) {
+        /* the same character for several players (user, 2026-11-14): Player Entry's own task (update fn 8193D3AC,
+         * work = the menu work + 0x80) marks a picked character in a byte table at its work + 0x20 + character
+         * (8193DF8C), and its cursor skips marked characters (8193DE9C); cleared every frame, nothing is ever taken */
+        uint32_t taken = work + 0x80u + 0x20u;
+        for (uint32_t i = 0; i < 0x10u; i += 4) st32(taken + i, 0);
+    }
     if (screen >= 0) {
         for (int p = 1; p < g_ports && p < MAXP; p++) {
             if (screen != SCREEN_PLAYER_ENTRY) { pads[p] = neutral; continue; }

@@ -44,6 +44,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_WATCHDOG=<s>`: function trace + device accesses + guest threads dumped when time runs out. `SR_WATCHDOG_NOTRACE=1`: dump without the trace. On the Switch its exit ends in a system error screen.
 - `SR_LOGSYNC=1`: flush every log line. `SR_DVDLOG=1`: every disc read by file name, completions, ARAM DMAs.
 - `SR_DVD_ATEND=1`: old disc model (data only at completion; test). `SR_DVD_MBPS=<n>`: modelled disc speed.
+- `SR_TRACE_MIN=<hex>` (PC, with `SR_WATCHDOG`): record only functions at or above that address (81800000 = the game's REL code) and dump the whole 4096-entry trace.
 - `SR_WATCH=ADDR,VALUE` / `ADDR,~VALUE` / `ADDR,*[,A2,A3,A4]` (PC): watch guest memory, sample host threads.
 - `SR_PEEK`, `SR_POKE` (per present, one byte), `SR_POKEAT=<frame>:<addr>:<hex>[,...]` (deterministic), `SR_DUMPRAM` (PC).
 - `SR_GPTL=<field>`: timeline of game idle / PE finish / tokens / retraces. `SR_GPSLOW=<factor>`: slower GP thread (imitates the Switch).

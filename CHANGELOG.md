@@ -7,7 +7,8 @@
   PCs. Two players, same network for now; the game shows the other player's name while waiting.
 - **Online rules, like Mario Kart**: online games open straight at the main menu; only the host moves through the
   menus, starts the race and handles the end-of-race menu; the other player takes over at character select (picking
-  and un-picking their character and board, but not backing out of the screen); no pausing during an online race.
+  and un-picking their character and board, but not backing out of the screen); no pausing during an online race;
+  several players can pick the same character.
 - **Online races show your own racer full screen**: no more black bars and half picture. Each machine shows only its
   own player, with more sky and track above and below, the HUD in the corners like a one-player race, the whole track
   map, and the race timer for both players. Only the picture changes, so both games stay in step.

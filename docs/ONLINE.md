@@ -266,9 +266,12 @@ START in a Free Race did not pause even without the rules (user to check by hand
   version stopped at Track Select; the user asked for the main menu so the other 2-4 player modes are reachable.)
 - at Player Entry only player 1's START starts the race; after the race is finished (results, end-of-race menu) only
   player 1 is heard.
+- the same character for several players: Player Entry's task (update fn 8193D3AC, work = menu work + 0x80) marks a
+  picked character in a byte table at its work + 0x20 + character (store 8193DF8C) and its cursor skips marked ones
+  (8193DE9C); online_rules clears the table every frame. Checked [confirmed, PC offline 2P route]: both Sonic on the
+  Blue Star, the race runs (same model file for both), 1P/2P labels as usual.
 - not yet: the other modes' character selects (Tag, Survival) may be other screens than 0x18, where a joiner is not
-  heard yet; picking the same character as another player (the game refuses it); each player hearing only their
-  own racer.
+  heard yet; each player hearing only their own racer.
 - HUD: whenever the session's (host's) camera is wide, every machine puts the race HUD at the screen edges, whatever
   its own screen setting (a joiner set to 4:3 kept it in the middle).
 Checked [confirmed, two machines, 2026-11-14]: PC host + laptop joiner (scripted by the laptop's Claude session over
