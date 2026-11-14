@@ -45,6 +45,17 @@ Limits: 2 players, direct IP only (port forwarding over the internet), started f
 - Not Steam (Steam Datagram Relay needs Steam; no Switch, Android or iOS). Not Tailscale/ZeroTier (no Switch
   client), though PC players can already use them with today's direct IP.
 
+## The Sonic Riders netplay community (sonicriders.org/netplay, read 2026-11-14)
+
+The Tournament Edition (SRTE) community plays the SRTE mod on a Riders Dolphin fork (v2.0.2) with Dolphin netplay:
+the better-connected, lower-ping player hosts; ping under 30 ms good, 50+ poor, some play at 100-200 ms; "pad buffer"
+(input delay in frames) about 3 on strong connections and up to 15 on decent ones (over 15 poor, over 20
+unplayable); "host input authority" never on (it favours the host); tournaments need steady 60 fps and a buffer
+under 15. For us: the same delay-based model works for this community, but the delay must be adjustable (about
+3-15, ours is fixed at 4: `SR_NET_DELAY` only) and the lobby should show the ping and suggest a delay. A session
+with Dolphin players is not possible (different engine); SRTE itself is a separate mod (porting it would need its
+makers' consent, as with DX).
+
 ## Facts from our tree that the plan depends on
 
 - The Android manifest has **no INTERNET permission** (only VIBRATE), so sockets fail on Android today.
