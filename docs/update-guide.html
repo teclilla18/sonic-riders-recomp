@@ -1,0 +1,343 @@
+<title>Updating Sonic Riders</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one calm reading column; device tabs on top; per version a coloured block of big numbered steps.
+     Type: Atkinson Hyperlegible (made for low-vision / dyslexic readers) for text, Lexend for headings.
+     Colour code: blue = older version, green = newer version, purple = SD card / hekate,
+     pink = a button, teal = a file or program, gold = what you see on screen. */
+  :root{
+    --bg:#FBF8F1; --card:#FFFFFF; --ink:#1F2430; --muted:#4A5160; --line:#E4DED0;
+    --old:#2F6FD6; --old-bg:#EAF1FD;
+    --new:#1E8A5A; --new-bg:#E6F5EC;
+    --sd:#7A4FC9;  --sd-bg:#F1EBFB;
+    --btn:#B4235A; --btn-bg:#FCE8F0;
+    --file:#0E7C86; --file-bg:#E3F4F5;
+    --gold:#8A6100; --gold-bg:#FFF2C9;
+    --warn:#9A5B00; --warn-bg:#FFF4E0;
+    --num-ink:#FFFFFF;
+    --body:"Atkinson Hyperlegible", Verdana, Tahoma, sans-serif;
+    --head:"Lexend", "Atkinson Hyperlegible", Verdana, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1B1D22; --card:#24272E; --ink:#ECE8DF; --muted:#B9B4A9; --line:#3A3E47;
+      --old:#8DB5FF; --old-bg:#22304A; --new:#7FD6A7; --new-bg:#1E3A2C; --sd:#C7A9FF; --sd-bg:#33284A;
+      --btn:#FF9CC2; --btn-bg:#4A2333; --file:#7FD8DF; --file-bg:#1D3A3D; --gold:#FFD465; --gold-bg:#43360F;
+      --warn:#FFC371; --warn-bg:#40300F; --num-ink:#1B1D22; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1B1D22; --card:#24272E; --ink:#ECE8DF; --muted:#B9B4A9; --line:#3A3E47;
+    --old:#8DB5FF; --old-bg:#22304A; --new:#7FD6A7; --new-bg:#1E3A2C; --sd:#C7A9FF; --sd-bg:#33284A;
+    --btn:#FF9CC2; --btn-bg:#4A2333; --file:#7FD8DF; --file-bg:#1D3A3D; --gold:#FFD465; --gold-bg:#43360F;
+    --warn:#FFC371; --warn-bg:#40300F; --num-ink:#1B1D22; color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); font-size:19px; line-height:1.7; letter-spacing:.012em; word-spacing:.06em;
+  }
+  main{
+    max-width:720px; margin:0 auto; padding-block:32px 64px;
+    padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1,h2,h3{font-family:var(--head); line-height:1.3; margin:0; text-wrap:balance}
+  h1{font-size:1.75rem; margin-bottom:6px}
+  .sub{color:var(--muted); margin:0 0 20px}
+  h2{font-size:1.3rem; display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px}
+  .tag{font-family:var(--head); font-size:.78rem; font-weight:500; padding:2px 10px; border-radius:999px; white-space:nowrap}
+
+  /* device tabs */
+  .devices{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px; padding:0; list-style:none}
+  .devices button{
+    font:inherit; font-family:var(--head); font-weight:500; font-size:1rem; color:var(--ink);
+    background:var(--card); border:2px solid var(--line); border-radius:12px; padding:8px 16px; cursor:pointer;
+  }
+  .devices button[aria-selected="true"]{border-color:var(--ink); background:var(--ink); color:var(--bg)}
+  .devices button:focus-visible, .chooser a:focus-visible, ol.steps li:focus-visible{outline:3px solid var(--btn); outline-offset:3px}
+
+  .legend{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 18px; margin-bottom:24px}
+  .legend strong{display:block; margin-bottom:6px; font-family:var(--head); font-weight:500}
+  .legend ul{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px 16px}
+
+  .chooser{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px}
+  .chooser a{display:block; text-decoration:none; color:var(--ink); border-radius:14px; padding:14px 16px; border:2px solid}
+  .chooser a b{display:block; font-family:var(--head)}
+  .chooser .c-old{border-color:var(--old); background:var(--old-bg)}
+  .chooser .c-new{border-color:var(--new); background:var(--new-bg)}
+  @media (max-width:560px){ .chooser{grid-template-columns:1fr} }
+
+  section{background:var(--card); border:1px solid var(--line); border-left:8px solid; border-radius:14px; padding:20px 22px; margin-bottom:24px}
+  section.old{border-left-color:var(--old)} section.old h2{color:var(--old)} section.old .tag{background:var(--old-bg); color:var(--old)}
+  section.new{border-left-color:var(--new)} section.new h2{color:var(--new)} section.new .tag{background:var(--new-bg); color:var(--new)}
+  section.sd{border-left-color:var(--sd)}   section.sd h2{color:var(--sd)}   section.sd .tag{background:var(--sd-bg); color:var(--sd)}
+  section.all{border-left-color:var(--new)} section.all h2{color:var(--new)} section.all .tag{background:var(--new-bg); color:var(--new)}
+
+  ol.steps{list-style:none; counter-reset:s; margin:16px 0 0; padding:0}
+  ol.steps li{counter-increment:s; position:relative; padding:10px 12px 10px 56px; margin-bottom:8px; border-radius:10px; cursor:pointer; user-select:none}
+  ol.steps li:hover{background:color-mix(in srgb, var(--line) 45%, transparent)}
+  ol.steps li::before{
+    content:counter(s); position:absolute; left:10px; top:10px; width:32px; height:32px; border-radius:50%;
+    display:grid; place-items:center; font-family:var(--head); font-weight:700; font-size:.95rem; color:var(--num-ink);
+  }
+  .old ol.steps li::before{background:var(--old)} .new ol.steps li::before, .all ol.steps li::before{background:var(--new)} .sd ol.steps li::before{background:var(--sd)}
+  ol.steps li.done{opacity:.5}
+  ol.steps li.done::before{content:"✓"}
+  ol.steps li.done > .txt{text-decoration:line-through; text-decoration-thickness:2px}
+  .detail{display:block; color:var(--muted); font-size:.95rem; margin-top:4px}
+
+  .btn,.file,.gold,.path{font-weight:700; padding:1px 8px; border-radius:6px; white-space:nowrap}
+  .btn{color:var(--btn); background:var(--btn-bg)}
+  .file{color:var(--file); background:var(--file-bg); white-space:normal; overflow-wrap:anywhere}
+  .gold{color:var(--gold); background:var(--gold-bg)}
+  .path{color:var(--sd); background:var(--sd-bg); white-space:normal}
+  .sdref{color:var(--sd); font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+
+  .callout{border-radius:12px; padding:14px 16px; margin-top:16px; display:flex; gap:12px; align-items:flex-start}
+  .callout > div{min-width:0}
+  .callout .ic{font-size:1.3rem; line-height:1.4}
+  .callout.warn{background:var(--warn-bg); border:1px solid color-mix(in srgb, var(--warn) 40%, transparent)} .callout.warn b{color:var(--warn)}
+  .callout.good{background:var(--new-bg); border:1px solid color-mix(in srgb, var(--new) 40%, transparent)} .callout.good b{color:var(--new)}
+  .callout.info{background:var(--sd-bg); border:1px solid color-mix(in srgb, var(--sd) 40%, transparent)} .callout.info b{color:var(--sd)}
+
+  .final{background:var(--card); border:2px dashed var(--line); border-radius:14px; padding:18px 20px; margin-top:24px}
+  .final h2{color:var(--ink); margin-bottom:8px}
+  .final p{margin:0 0 10px}
+  .key{display:inline-block; min-width:1.6em; text-align:center; font-weight:700; border:2px solid var(--ink); border-radius:6px; padding:0 6px; line-height:1.4}
+  .why{color:var(--muted); font-size:.95rem; margin-top:32px}
+  .why a{color:var(--old)}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<main>
+  <h1>Updating Sonic Riders</h1>
+  <p class="sub">Pick your device, then your version, and follow only that part. Tap a step to tick it off.</p>
+
+  <ul class="devices" role="tablist" aria-label="Device">
+    <li><button role="tab" id="t-switch" data-dev="switch">🎮 Switch</button></li>
+    <li><button role="tab" id="t-pc" data-dev="pc">💻 PC</button></li>
+    <li><button role="tab" id="t-android" data-dev="android">📱 Android</button></li>
+    <li><button role="tab" id="t-linux" data-dev="linux">🐧 Linux / Steam Deck</button></li>
+    <li><button role="tab" id="t-ios" data-dev="ios">🍎 iPhone / iPad</button></li>
+  </ul>
+
+  <div class="legend">
+    <strong>Colour key</strong>
+    <ul>
+      <li><span class="btn">Pink</span> = a button to press</li>
+      <li><span class="file">Teal</span> = a file or program</li>
+      <li><span class="path">Purple</span> = SD card / hekate</li>
+      <li><span class="gold">Gold</span> = what you'll see on screen</li>
+    </ul>
+  </div>
+
+  <!-- ============================== SWITCH ============================== -->
+  <div class="device" id="d-switch" role="tabpanel" aria-labelledby="t-switch">
+    <div class="chooser">
+      <a class="c-old" href="#switch" data-go="switch-old"><b>🔵 I'm on v0.8.2 or older</b>One-time setup, then you're done</a>
+      <a class="c-new" href="#switch" data-go="switch-new"><b>🟢 I'm on v0.8.3 or newer</b>One-press update</a>
+    </div>
+
+    <section class="old" id="switch-old">
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.8.3.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span>
+          <span class="detail">A new folder works too.</span></li>
+        <li tabindex="0"><span class="txt">Connect your SD card to the PC.</span>
+          <span class="detail">How: see <a class="sdref" href="#switch" data-go="switch-sd">Connecting the SD card</a> below.</span></li>
+        <li tabindex="0"><span class="txt">Open <span class="file">Install Sonic Riders (Switch).exe</span>.</span>
+          <span class="detail">Pick the same disc image → check your SD card is selected → press <span class="btn">BUILD AND INSTALL</span>.</span></li>
+        <li tabindex="0"><span class="txt">When it says <span class="gold">Done</span>, eject the SD card and play.</span>
+          <span class="detail">This one time it builds the whole game (a few minutes, up to 30 on a slow PC). Later updates take seconds.</span></li>
+      </ol>
+    </section>
+
+    <section class="new" id="switch-new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Open <span class="file">Install Sonic Riders (Switch).exe</span>.</span>
+          <span class="detail">When a new version is out, it shows <span class="gold">Update available</span> in gold.</span></li>
+        <li tabindex="0"><span class="txt">Connect your SD card.</span>
+          <span class="detail">How: see <a class="sdref" href="#switch" data-go="switch-sd">Connecting the SD card</a> below.</span></li>
+        <li tabindex="0"><span class="txt">Press <span class="btn">See what's new</span>, then <span class="btn">UPDATE NOW</span>.</span>
+          <span class="detail">That's all. It downloads, restarts, rebuilds and copies to your SD card by itself, usually in under a minute.</span></li>
+        <li tabindex="0"><span class="txt">Eject the SD card and play.</span></li>
+      </ol>
+      <div class="callout info"><span class="ic">💡</span><div><b>SD card not connected yet?</b> No problem. The updater waits for it and carries on as soon as it shows up.</div></div>
+    </section>
+
+    <section class="sd" id="switch-sd">
+      <h2>Connecting the SD card <span class="tag">no need to take it out</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Restart the Switch into <span class="path">hekate</span>.</span>
+          <span class="detail">The way you normally start your custom firmware.</span></li>
+        <li tabindex="0"><span class="txt">Go to <span class="path">Tools → USB Tools → SD Card</span>.</span></li>
+        <li tabindex="0"><span class="txt">Plug the Switch into the PC with a USB-C cable.</span>
+          <span class="detail">The SD card shows up as a drive.</span></li>
+        <li tabindex="0"><span class="txt">When the update says <span class="gold">Done</span>, right-click the drive in Windows and choose <span class="btn">Eject</span>.</span>
+          <span class="detail">Wait until Windows says it's safe to remove.</span></li>
+        <li tabindex="0"><span class="txt">In hekate press <span class="btn">Close</span>, then <span class="path">Home → Launch → your Atmosphère entry</span>.</span></li>
+      </ol>
+      <div class="callout warn"><span class="ic">⚠️</span><div><b>Windows offers to scan and fix the drive?</b> Choose <span class="btn">Continue without scanning</span>.</div></div>
+      <div class="callout info"><span class="ic">💳</span><div><b>Have a card reader?</b> That works too. Just take the SD card out and put it in the PC.</div></div>
+    </section>
+
+    <div class="callout good"><span class="ic">✅</span><div><b>Nothing else to do.</b> Your saves, settings, disc image and HOME-screen icon stay as they are. You don't need to reinstall or copy anything else.</div></div>
+
+    <div class="final">
+      <h2>🔍 Check it worked</h2>
+      <p>In the game, hold <span class="key">−</span> to open the settings menu.</p>
+      <p>Look at the version number in the <span class="gold">About</span> tab.</p>
+    </div>
+  </div>
+
+  <!-- ============================== PC ============================== -->
+  <div class="device" id="d-pc" role="tabpanel" aria-labelledby="t-pc" hidden>
+    <div class="chooser">
+      <a class="c-old" href="#pc" data-go="pc-old"><b>🔵 I'm on v0.8.2 or older</b>A few presses, one time</a>
+      <a class="c-new" href="#pc" data-go="pc-new"><b>🟢 I'm on v0.8.3 or newer</b>One-press update</a>
+    </div>
+
+    <section class="old" id="pc-old">
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Open the <span class="file">Sonic Riders</span> launcher.</span>
+          <span class="detail">It shows <span class="gold">Update available</span> in gold.</span></li>
+        <li tabindex="0"><span class="txt">Press <span class="btn">See what's new</span>, then <span class="btn">DOWNLOAD AND INSTALL</span>.</span></li>
+        <li tabindex="0"><span class="txt">When it says <span class="gold">Updated</span>, press <span class="btn">RESTART</span>.</span></li>
+        <li tabindex="0"><span class="txt">On the Play page, press <span class="btn">Rebuild now</span>.</span>
+          <span class="detail">This one time it builds the whole game (a few minutes). Later updates take seconds.</span></li>
+        <li tabindex="0"><span class="txt">When it's done, press <span class="btn">PLAY</span>.</span></li>
+      </ol>
+      <div class="callout info"><span class="ic">📦</span><div><b>Prefer the zip?</b> Download <span class="file">SonicRiders-PC-Setup-v0.8.3.zip</span>, extract it over your old Sonic Riders folder (<span class="btn">Replace</span>), and run <span class="file">Install Sonic Riders (PC).bat</span> with the same disc image.</div></div>
+    </section>
+
+    <section class="new" id="pc-new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Open the <span class="file">Sonic Riders</span> launcher.</span>
+          <span class="detail">When a new version is out, it shows <span class="gold">Update available</span> in gold.</span></li>
+        <li tabindex="0"><span class="txt">Press <span class="btn">See what's new</span>, then <span class="btn">UPDATE NOW</span>.</span>
+          <span class="detail">It downloads, restarts and rebuilds by itself, usually in under a minute.</span></li>
+        <li tabindex="0"><span class="txt">Press <span class="btn">PLAY</span>.</span></li>
+      </ol>
+    </section>
+
+    <div class="callout good"><span class="ic">✅</span><div><b>Nothing else to do.</b> Your saves, settings, mods and disc image stay in the same folder.</div></div>
+
+    <div class="final">
+      <h2>🔍 Check it worked</h2>
+      <p>In the game, hold <span class="key">F1</span> to open the settings menu.</p>
+      <p>Look at the version number in the <span class="gold">About</span> tab.</p>
+    </div>
+  </div>
+
+  <!-- ============================== ANDROID ============================== -->
+  <div class="device" id="d-android" role="tabpanel" aria-labelledby="t-android" hidden>
+    <div class="chooser">
+      <a class="c-old" href="#android" data-go="android-old"><b>🔵 I'm on v0.8.2 or older</b>One-time setup, then you're done</a>
+      <a class="c-new" href="#android" data-go="android-new"><b>🟢 I'm on v0.8.3 or newer</b>One-press update</a>
+    </div>
+
+    <section class="old" id="android-old">
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.8.3.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span></li>
+        <li tabindex="0"><span class="txt">Connect your phone with USB debugging on.</span>
+          <span class="detail">Use the same PC as before: Android only accepts an update signed by that PC.</span></li>
+        <li tabindex="0"><span class="txt">Open <span class="file">Install Sonic Riders (Android).exe</span>.</span>
+          <span class="detail">Pick the same disc image → press <span class="btn">BUILD AND INSTALL</span>.</span></li>
+        <li tabindex="0"><span class="txt">When it says <span class="gold">Done</span>, open the app on your phone.</span>
+          <span class="detail">It installs over the old app and keeps your saves. This one time the build takes a few minutes.</span></li>
+      </ol>
+    </section>
+
+    <section class="new" id="android-new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Connect your phone and open <span class="file">Install Sonic Riders (Android).exe</span>.</span>
+          <span class="detail">When a new version is out, it shows <span class="gold">Update available</span> in gold.</span></li>
+        <li tabindex="0"><span class="txt">Press <span class="btn">See what's new</span>, then <span class="btn">UPDATE NOW</span>.</span>
+          <span class="detail">It downloads, restarts, rebuilds and installs on the phone by itself.</span></li>
+        <li tabindex="0"><span class="txt">Open the app on your phone.</span></li>
+      </ol>
+    </section>
+
+    <div class="callout warn"><span class="ic">⚠️</span><div><b>Never uninstall the app to update.</b> Uninstalling deletes your saves.</div></div>
+
+    <div class="final">
+      <h2>🔍 Check it worked</h2>
+      <p>In the game, open the settings menu.</p>
+      <p>Look at the version number in the <span class="gold">About</span> tab.</p>
+    </div>
+  </div>
+
+  <!-- ============================== LINUX ============================== -->
+  <div class="device" id="d-linux" role="tabpanel" aria-labelledby="t-linux" hidden>
+    <section class="all" id="linux-all">
+      <h2>Every version <span class="tag">no one-press button on Linux yet</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.8.3.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span>
+          <span class="detail">On the Steam Deck, do this in Desktop Mode.</span></li>
+        <li tabindex="0"><span class="txt">Run <span class="file">Install Sonic Riders (Linux).sh</span> with the same disc image.</span>
+          <span class="detail">The first time on v0.8.3 builds the whole game once. After that, only the parts that changed are rebuilt.</span></li>
+        <li tabindex="0"><span class="txt">When it says <span class="gold">Done</span>, play as usual.</span></li>
+      </ol>
+    </section>
+
+    <div class="callout good"><span class="ic">✅</span><div><b>Nothing else to do.</b> Your saves stay in the same folder, and your Steam shortcut keeps working.</div></div>
+  </div>
+
+  <!-- ============================== iOS ============================== -->
+  <div class="device" id="d-ios" role="tabpanel" aria-labelledby="t-ios" hidden>
+    <div class="callout info"><span class="ic">💡</span><div><b>Nothing new for iPhone and iPad in v0.8.3.</b> Keep using v0.8.2: <span class="file">SonicRiders-iOS-Setup-v0.8.2.zip</span> on the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.2">v0.8.2 release</a>.</div></div>
+  </div>
+
+  <p class="why"><b>Why is there still a short build?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. It's always made on your PC from your own disc. The big conversion happens only on the first install; updates only rebuild the parts that changed. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md#updating-to-a-new-version">INSTALL.md</a>.</p>
+</main>
+
+<script>
+  (function(){
+    var devs = ["switch","pc","android","linux","ios"];
+    function show(dev){
+      if (devs.indexOf(dev) < 0) dev = "switch";
+      devs.forEach(function(d){
+        document.getElementById("d-" + d).hidden = d !== dev;
+        document.getElementById("t-" + d).setAttribute("aria-selected", d === dev ? "true" : "false");
+      });
+    }
+    document.querySelectorAll(".devices button").forEach(function(b){
+      b.addEventListener("click", function(){
+        var d = b.getAttribute("data-dev");
+        if (location.hash !== "#" + d) location.hash = d; else show(d);
+      });
+    });
+    window.addEventListener("hashchange", function(){ show(location.hash.slice(1)); });
+    show(location.hash.slice(1));
+
+    /* links to a section inside the current device (the hash stays the device name) */
+    document.querySelectorAll("[data-go]").forEach(function(a){
+      a.addEventListener("click", function(e){
+        e.preventDefault();
+        var t = document.getElementById(a.getAttribute("data-go"));
+        if (t) t.scrollIntoView({block:"start"});
+      });
+    });
+
+    /* tap (or Enter / Space) a step to tick it off */
+    document.querySelectorAll("ol.steps li").forEach(function(li){
+      function toggle(){ li.classList.toggle("done"); }
+      li.addEventListener("click", function(e){ if (!e.target.closest("a")) toggle(); });
+      li.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); }
+      });
+    });
+  })();
+</script>

@@ -268,6 +268,8 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 
 ## Updating to a new version
 
+> 👉 **[Easy-read update guide](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN)**: the same steps, colour coded, in a reading-friendly font, with a tab for each device.
+
 **The quick way: update from the app itself** (Windows: the PC launcher, the Switch installer and the Android
 installer). No GitHub visit, no zip, no settings to pick again.
 
