@@ -16,8 +16,8 @@ Heroes alpha call, 999 ring limit, menu L/R tabs + wrap. Cold Sandbox PC + Andro
 
 **v0.8.0 released 2026-11-11** (all five zips; replaced in place from be45877, bloom fix + fan icon; cold
 Sandbox PC + Android PASS). Picture options on Switch/Android/iOS, fan icon everywhere. iOS: iPad Pro M1 max
-settings "flawless" [accepted]; one iPhone frame with a white haze [uncertain]. Free iOS signatures run out
-~2026-11-15; iPhone + A16 iPad on the standard ID, the iPad Pro and one more iPad still need a cable move.
+settings "flawless" [accepted]; one iPhone frame with a white haze [uncertain]. All four iOS devices on the
+standard ID and re-signed 2026-11-13 (profile ends **2026-11-21**: renew before then).
 - GitHub lists the 5 newest releases; on each release delete the 6th (tag kept).
 
 ## Devices
@@ -55,8 +55,10 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 ## Open items, in priority order
 
 0. **iOS: one app ID per player** (released in v0.8.1's iOS zip; notes/ios.md "App IDs"): `<base>.<team>` always;
-   `ios_run.py install` moves an older-ID app (tested on the A16 iPad [confirmed]). Not tested: the old-ID warning
-   on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted by the user yet.
+   `ios_run.py install` moves an older-ID app: A16 iPad, iPhone, iPad Pro (Wi-Fi) [confirmed]; the iPad (7th gen) (Wi-Fi)
+   failed after the uninstall (profile lacked the device), restored by hand, save MD5 equal [confirmed]. **To do:**
+   `move` should check the device is in the app's embedded.mobileprovision before uninstalling. Not tested: the
+   old-ID warning on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted yet.
 1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
    choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"
    / "Charge jump"). Recordings and online fix the option for the whole run ("ring cap fixed"), so the menu toggle

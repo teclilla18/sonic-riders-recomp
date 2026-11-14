@@ -187,6 +187,11 @@ First-boot findings [confirmed on the iPhone]:
   (8/16-bit, grey/RGB/palette). `ios_build.py icon <in> <out.png>` = the same conversion (the launcher's preview).
   setup_mac.py copies the picture to build/ios/custom_icon.<ext> (never git; a path without spaces for ninja).
 - A free Apple ID: 3 sideloaded apps per device (MIInstallerErrorDomain 13), 7-day signatures.
+- Renewing = a new provisioning profile, not just a reinstall: Xcode reuses a cached profile until it runs out,
+  and a cached profile may lack a device registered later ("This provisioning profile cannot be installed on this
+  device"). Check `security cms -D -i <app>/embedded.mobileprovision` (ExpirationDate, ProvisionedDevices); to force
+  a new one, move that ID's file out of `~/Library/Developer/Xcode/UserData/Provisioning Profiles` and rebuild the
+  app (2026-11-13).
 - App IDs (a different ID = a second app with an empty Documents). Sideloadly's default ("Use automatic bundle ID"
   ticked) ALWAYS appends ".<team ID>" to the .ipa's ID, even when it already ends with it (2026-11-09, iPad Pro:
   `<base>.<team>` became `<base>.<team>.<team>` [confirmed]); unticked, it keeps the .ipa's ID (2026-11-08, iPad Pro

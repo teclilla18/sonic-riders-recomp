@@ -1339,3 +1339,18 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   cruise holds flat 45 steps then 130 -> 122 km/h over 30 steps (the old curve, shifted); after a boost 229 km/h
   held 45 steps, then the decay [confirmed]. Two of the boost holds lost speed earlier (193 from step ~35; 200 ->
   186 at step 15): the racer was steering into walls, not checked further [uncertain]. Not played by hand.
+
+## 2026-11-13 (Mac, later): signatures renewed, the two older iPads moved to the standard ID
+
+- Renewed by reinstalling (no launch): iPhone and A16 iPad (standard ID), the iPad (7th gen) and the iPad Pro (plain ID,
+  a `--bundle-id net.srnative.sonicriders` build). Then the user asked to move the two iPads: iPad Pro moved over
+  Wi-Fi (`install --move`) [confirmed]. the iPad (7th gen): old app uninstalled, then the install was refused ("This
+  provisioning profile cannot be installed on this device", MIInstallerErrorDomain 13): Xcode's cached profile for
+  `<base>.<team>` listed 4 devices, not that iPad, although the team had it registered (the plain-ID profile had 5).
+- Fix: cached profile moved aside (`~/Library/Developer/Xcode/UserData/Provisioning Profiles`), app rebuilt, new
+  profile with all 5 devices; installed, `ios_run.py restore` from the move's backup, card_a.raw MD5 equal, disc
+  and settings back [confirmed]. Found on the way: the earlier "renewals" reused cached profiles ending 2026-11-17
+  (standard) and 2026-11-14 (plain): a reinstall only renews when Xcode makes a new profile. All four devices
+  reinstalled with the new one (ends 2026-11-21) [confirmed, profile date]. No device launched.
+- Open: `move` uninstalls before it knows the install will be accepted; it should check the device UDID against
+  the built app's embedded.mobileprovision first [to do].
