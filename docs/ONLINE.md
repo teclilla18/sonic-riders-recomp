@@ -250,6 +250,18 @@ the host first ended the session on the laptop with "the other player left". Nex
 phones (notes/online-research.md steps 2-3).
 
 
+## Online rules (2026-11-14, user: "similar rules to Mario Kart")
+
+netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game
+memory, identical everywhere at that point; recordings carry header flag 8 and replay as recorded):
+- menus: only player 1 (the host) is heard, except at Player Entry, where each player picks; a player who has not
+  joined there cannot press B (it would take everyone back to Track Select); un-picking with B still works;
+- races: START is ignored until the race is finished (no pause).
+`SR_ONLINE_RULES=1` applies them offline (tests). Checked [confirmed, PC, offline 2P route]: player 2's A on
+Track Select and B at Player Entry ignored, the race starts with both. The no-pause rule is not proven: a scripted
+START in a Free Race did not pause even without the rules (user to check by hand).
+Planned (user): sessions open straight at Track Select; each player hears only their own racer in races.
+
 ## Lobby in the Windows launcher (2026-11-14)
 
 The launcher's **Online** page (launcher/lobby.cpp, page_online in launcher.cpp): the player types a name (kept in

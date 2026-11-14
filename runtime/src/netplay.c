@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "game_addrs.h"
 #include "overlay.h"
 #include "settings.h"
 #include "runtime.h"
@@ -81,10 +82,12 @@ static uint32_t get32(const uint8_t* b) { return (uint32_t)b[0] | (uint32_t)b[1]
 
 /* ------------------------------------------------------------------ recording and replay */
 /* File: a 64-byte header ("SRINPUT1", u32 version 1, u32 ports, u32 flags (1: an online session,
- * 2: the generated online save, 4: the 999 ring cap; without it 100, as before the setting), f32 the run's camera aspect as the EFB width factor k (settings.h
+ * 2: the generated online save, 4: the 999 ring cap; without it 100, as before the setting, 8: the online rules
+ * (online_rules: menus by the host, no pause in races)), f32 the run's camera aspect as the EFB width factor k (settings.h
  * settings_fix_wide_k; 0 in older recordings), the build version, 40 bytes), then per frame: u32 game step, u32 state checksum,
  * ports x 8 bytes (buttons u16, stick x/y, C x/y, L/R). Little-endian. */
 #define REC_HEADER 64
+static int g_online_rules;  /* online_rules applies (a session, SR_ONLINE_RULES=1, or a recording made with them) */
 static FILE* g_rec;
 static FILE* g_rep;
 static int g_rep_ended;
@@ -98,7 +101,7 @@ static void rec_open(const char* path, int flags) {
     memcpy(h, "SRINPUT1", 8);
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
-    put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u));
+    put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u));
     float k = settings_wide_k();
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -129,6 +132,7 @@ static int rep_open(const char* path) {
     memcpy(build, h + 24, 40);
     build[40] = 0;
     if (get32(h + 16) & 2) g_online_save = 1;  /* recorded on the generated online save: replayed on it too */
+    if (get32(h + 16) & 8) g_online_rules = 1;  /* the online rules changed the controllers: replayed with them */
     settings_fix_ring_cap(get32(h + 16) & 4 ? 999 : 100);  /* the recorded ring cap: game state */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
@@ -544,6 +548,8 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
     const char* net = getenv("SR_NET");
     const char* os = getenv("SR_ONLINE_SAVE");
     if (net || (os && atoi(os))) g_online_save = 1;
+    const char* orl = getenv("SR_ONLINE_RULES");
+    if (net || (orl && atoi(orl))) g_online_rules = 1;
     if (!rec && !rep && !net && !g_online_save) return;
     if (rep && net) rt_fatal("SR_REPLAY and SR_NET cannot be used together");
     ppc_detclock_force();
@@ -612,6 +618,48 @@ void netplay_frame_start(void) {
     g_sum_next = ram_block_hash((g_frame + 1) % NBLOCKS);
 }
 
+/* Online rules (user, 2026-11-14: "similar rules to Mario Kart"), applied to the controllers of the next frame on
+ * every machine alike: they read only game memory, which is the same everywhere at this point, so the games stay
+ * identical (and a recording made with them replays with them, header flag 8).
+ *  - In the menus only player 1 (the host) is heard, except at Player Entry (character select), where every player
+ *    picks their own character and board; there a player who has not joined (state 0) cannot press B, which would
+ *    take everyone back to Track Select (un-picking a character or board with B still works).
+ *  - No pause in a race: START is ignored from the race start until the race is finished.
+ * The menu screen: the menu task (update function 819130B8) in the game's task list (head pointer at 8021C30C,
+ * linked through +0x08); its state byte +0x14 is the screen (0x0D save/title, 0x10 Normal Race, 0x16 Track Select,
+ * 0x18 Player Entry), its work (+0x10) holds each player's Player Entry state at +0xB8 + player (0 not joined,
+ * 1 character, 2 board, 4 done, 5 everyone ready). Found 2026-11-14 from RAM dumps of the 2P route
+ * (docs/notes/game-addresses.md). */
+#define MENU_TASK_FN 0x819130B8u
+#define TASK_LIST_HEAD 0x8021C30Cu
+#define SCREEN_PLAYER_ENTRY 0x18
+static int menu_screen(uint32_t* work) {
+    uint32_t head = ld32(TASK_LIST_HEAD);
+    if (head < 0x80000000u || head >= 0x81C00000u) return -1;
+    uint32_t n = ld32(head + 8);
+    for (int i = 0; i < 2048 && n != head && n >= 0x80000000u && n < 0x81C00000u; i++, n = ld32(n + 8)) {
+        if (ld32(n) != MENU_TASK_FN) continue;
+        if (work) *work = ld32(n + 0x10);
+        return (int)(ld32(n + 0x14) >> 24);
+    }
+    return -1;
+}
+static void online_rules(GcPad* pads) {
+    static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
+    uint32_t work = 0;
+    int screen = menu_screen(&work);
+    if (screen >= 0) {
+        for (int p = 1; p < g_ports && p < MAXP; p++) {
+            if (screen != SCREEN_PLAYER_ENTRY) { pads[p] = neutral; continue; }
+            uint8_t st = work >= 0x80000000u && work < 0x81C00000u ? (uint8_t)(ld32(work + 0xB8 + (uint32_t)p) >> 24) : 0;
+            if (st == 0) pads[p].buttons &= (uint16_t)~0x0200u;  /* B */
+        }
+        return;
+    }
+    if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
+        for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
+}
+
 /* si.c, at each frame end under SR_DETCLOCK: the controllers for the next frame */
 void netplay_latch(GcPad* pads) {
     for (int ch = 0; ch < MAXP; ch++) pads[ch] = k_neutral;
@@ -644,6 +692,7 @@ void netplay_latch(GcPad* pads) {
     } else {
         for (int ch = 0; ch < g_ports; ch++) input_get_pad(ch, &pads[ch]);
     }
+    if (g_online_rules && !g_rep) online_rules(pads);  /* a replay reads them as recorded (already applied) */
     if (g_rec) {
         uint8_t r[8 + MAXP * 8];
         put32(r, ppc_detclock_steps());

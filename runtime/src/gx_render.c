@@ -1169,13 +1169,18 @@ static void efb_copy(uint32_t v) {
             c->copy[11] = (uint32_t)(p * 240) << 16 | 240;
         own = own && ownview_mode() > 0;  /* the whole frame re-laid for this player (ownview_frame) */
         g_split_seen = 0;
-        /* SR_DUMPRAM=FRAME: guest RAM to build/ram.bin at that presented frame (debugging, desktop) */
+        /* SR_DUMPRAM=FRAME[,FRAME...]: guest RAM to build/ram.bin (one frame) or build/ram_<frame>.bin (a list) at
+         * those presented frames (debugging, desktop) */
         {
-            static int dump_at = -1;
-            if (dump_at < 0) dump_at = getenv("SR_DUMPRAM") ? atoi(getenv("SR_DUMPRAM")) : 0;
-            if (dump_at && g_frames + 1 == (unsigned)dump_at) {
-                FILE* df = fopen("build/ram.bin", "wb");
-                if (df) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, df); fclose(df); rt_log("[gx] guest RAM dumped to build/ram.bin"); }
+            static const char* dl = (const char*)-1;
+            if (dl == (const char*)-1) dl = getenv("SR_DUMPRAM");
+            for (const char* q = dl; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : NULL) {
+                if (g_frames + 1 != (unsigned)atoi(q)) continue;
+                char fn[64];
+                if (strchr(dl, ',')) snprintf(fn, sizeof fn, "build/ram_%u.bin", (unsigned)atoi(q));
+                else snprintf(fn, sizeof fn, "build/ram.bin");
+                FILE* df = fopen(fn, "wb");
+                if (df) { fwrite(mem_phys(0), 1, GUEST_RAM_SIZE, df); fclose(df); rt_log("[gx] guest RAM dumped to %s", fn); }
             }
         }
         game_mods_frame();

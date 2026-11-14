@@ -36,6 +36,7 @@ Guest addresses as the port sees them (REL linked at 0x81800000; original GameCu
 | PSMTX/PSVEC routines | 8004C58C-8004D09C | e.g. 8004CF6C PSVECNormalize |
 | Projection (widescreen) | `fn_800645DC`, REL text 0x14115C | patches.txt |
 | r13 set / GQR clear | 80003334 / 8000A33C | |
+| Menu task / screen | task list head pointer 8021C30C (nodes linked through +0x08); the menu task has update fn 819130B8 at +0x00, work pointer +0x10, screen = byte at +0x14 | 0x0D save screens + title, 0x10 Normal Race, 0x16 Track Select, 0x18 Player Entry; no menu task in loading/races. Work +0xB8 + player = Player Entry state (0 not joined, 1 character, 2 board, 4 done, 5 all ready). Player 2's B at state 0 goes back to Track Select. RAM dumps of the 2P route, 2026-11-14 (netplay.c online_rules) |
 | Player count | 8021B8C8 | stage suffix table REL rodata 0x2DA8+8 = "VMM" |
 | Scene counter | 8021BB64 | resets per scene (perf test) |
 | OS controller type | 80122014 | |

@@ -1512,7 +1512,9 @@ void page_about(float w) {
 /* the player's name, kept in saves\online.ini (the game rewrites settings.ini without keys it doesn't know) */
 char g_online_name[lobby::kNameMax + 1];
 char g_online_code[16];
-bool g_online_started;      /* the game was started from the lobby; the lobby resets when it closes */
+/* 0 no lobby race, 1 the game was started from the lobby, 2 it closed: waiting until the lobby has left the
+ * "starting" state (before, the next frame saw "starting" again and started the game a second time) */
+int g_online_phase;
 std::string g_online_peer;  /* the other player's name in that race */
 void online_load() {
     std::string n;
@@ -1540,7 +1542,7 @@ void play_online(const lobby::View& v) {
         {L"SR_NET_PEER", widen(g_online_peer)}};
     if (start_child(g_game, cmd, env, false, false, nullptr)) g_status = "Online race with " + g_online_peer;
     else g_status = "Could not start the game.";
-    g_online_started = true;
+    g_online_phase = 1;
 }
 void player_list(const lobby::View& v) {
     for (size_t i = 0; i < v.players.size(); i++) {
@@ -1557,12 +1559,14 @@ void online_poll() {
     if (!g_online_inited) return;
     lobby::View v = lobby::view();
     bool game_on = child_running(g_game);
-    if (v.state == lobby::STARTING && !g_online_started && !game_on) {
+    if (g_online_phase == 2) {
+        if (v.state != lobby::STARTING) g_online_phase = 0;
+    } else if (g_online_phase == 0 && v.state == lobby::STARTING && !game_on) {
         play_online(v);
         g_page = P_ONLINE;
-    } else if (g_online_started && !game_on && v.state == lobby::STARTING) {
+    } else if (g_online_phase == 1 && !game_on) {  /* the race is over: back to the lobby page */
         lobby::leave();
-        g_online_started = false;
+        g_online_phase = 2;
     }
 }
 void page_online(float w) {
@@ -1828,6 +1832,12 @@ void draw_ui(float W, float H) {
     } else if (!g_ready.built) {
         if (big_button("INSTALL AND PLAY", ImVec2(playw, bh), true, !setup_on && !g_disc_choice.empty() && g_ready.setup))
             start_install(g_disc_choice);
+    } else if (g_online_inited && lobby::view().state != lobby::IDLE) {
+        /* in a lobby the big button is the lobby's (PLAY would start a game on this PC only) */
+        lobby::View v = lobby::view();
+        bool host = v.state == lobby::HOSTING;
+        const char* t = host ? "START RACE" : v.state == lobby::STARTING ? "RACING" : "WAITING FOR HOST";
+        if (big_button(t, ImVec2(playw, bh), true, host && v.players.size() >= 2 && !game_on)) lobby::start_race();
     } else if (big_button("PLAY", ImVec2(playw, bh), true, !game_on && !setup_on && g_ready.disc)) {
         play();
     }

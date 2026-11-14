@@ -25,7 +25,9 @@ def steer(t0, port):
     return s
 
 # player 2's menu presses: (frame, button); tuned by PC screenshots 2026-11-07 (the 2nd argument overrides: "3500:A,3600:RIGHT")
-P2_MENU = [(3500, "A"), (3600, "RIGHT"), (3700, "RIGHT"), (3850, "A"), (4100, "A")]
+# player 2 joins at Player Entry (opened by player 1's A at 3700) and picks Knuckles and a board; it never presses
+# on Track Select: the online rules (netplay.c online_rules, 2026-11-14) leave the menus to player 1
+P2_MENU = [(3850, "A"), (3950, "RIGHT"), (4050, "RIGHT"), (4150, "A"), (4350, "A")]
 
 def p2(menu=None, port="2."):
     """port "2." offline (SR_PADS=2); "" for the joining copy in a session (its own pad is port 1)"""
