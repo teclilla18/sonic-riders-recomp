@@ -644,10 +644,24 @@ static int menu_screen(uint32_t* work) {
     }
     return -1;
 }
+#define SCREEN_TRACK_SELECT 0x16
+static int g_reached_tracks;  /* the session's start has reached Track Select (the start-up presses stop) */
 static void online_rules(GcPad* pads) {
     static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     uint32_t work = 0;
     int screen = menu_screen(&work);
+    /* the session opens at Track Select: until it is first reached the game itself presses for player 1 (START
+     * every 20 frames while there are no menus: logos, the intro movie; then A: the online save's NEW GAME
+     * screens, the title, Normal Race, Free Race), every machine the same presses, nobody else heard */
+    if (!g_reached_tracks && screen == SCREEN_TRACK_SELECT) {
+        g_reached_tracks = 1;
+        rt_log("[net] frame %u: Track Select reached, the host has the menus", g_frame + 1);
+    }
+    if (!g_reached_tracks && ld32(GAME_TOP_MODE) != GAME_TOP_MODE_RACE) {
+        for (int p = 0; p < g_ports && p < MAXP; p++) pads[p] = neutral;
+        if ((g_frame + 1) % 20 < 2) pads[0].buttons = screen >= 0 ? 0x0100u /* A */ : 0x1000u /* START */;
+        return;
+    }
     if (screen >= 0) {
         for (int p = 1; p < g_ports && p < MAXP; p++) {
             if (screen != SCREEN_PLAYER_ENTRY) { pads[p] = neutral; continue; }

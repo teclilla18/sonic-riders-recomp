@@ -260,7 +260,15 @@ memory, identical everywhere at that point; recordings carry header flag 8 and r
 `SR_ONLINE_RULES=1` applies them offline (tests). Checked [confirmed, PC, offline 2P route]: player 2's A on
 Track Select and B at Player Entry ignored, the race starts with both. The no-pause rule is not proven: a scripted
 START in a Free Race did not pause even without the rules (user to check by hand).
-Planned (user): sessions open straight at Track Select; each player hears only their own racer in races.
+- start: the session opens at Track Select by itself: until Track Select is first reached the game presses for
+  player 1 (START every 20 frames before the menus, then A: the online save's NEW GAME screens, title, Normal
+  Race, Free Race), the same presses on every machine; ~frame 940 (16 s) instead of ~3000.
+- HUD: whenever the session's (host's) camera is wide, every machine puts the race HUD at the screen edges, whatever
+  its own screen setting (a joiner set to 4:3 kept it in the middle).
+Checked [confirmed, two machines, 2026-11-14]: PC host + laptop joiner (scripted by the laptop's Claude session over
+the LAN, `tools/net_route_2p.py online-p1` / `online-p2local`): Track Select at frame 941 on both, the 2P race,
+8,966 checksums all equal, the joiner's recording byte-identical to the host's first 214,624 bytes, 60 fps.
+Planned (user): each player hears only their own racer in races.
 
 ## Lobby in the Windows launcher (2026-11-14)
 

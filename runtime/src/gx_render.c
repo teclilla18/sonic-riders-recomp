@@ -77,9 +77,11 @@ static GxFrame* frame(void) {
         static unsigned bloom_menu_frames;
         bloom_menu_frames = ld32(GAME_MENU_FLAG) ? bloom_menu_frames + 1 : 0;
         g_frame->in_race = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && bloom_menu_frames < 8;
+        /* the HUD goes to the edges whenever the picture is wide: Fit to screen, or an online session or recording
+         * whose (host's) camera is wide on a machine set to 4:3 (the joiner's HUD stayed in the middle, 2026-11-14) */
+        int fit = g_settings.screen == SCREEN_FIT || (settings_wide_k_fixed() && k > 1.0f);
         g_gx.xf_reg[GX_XR_WIDE_FLAGS] =
-            g_settings.screen == SCREEN_FIT ? GX_WIDE_HUD_43 | (racing ? GX_WIDE_HUD_EDGES : 0u)
-            : g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
+            fit ? GX_WIDE_HUD_43 | (racing ? GX_WIDE_HUD_EDGES : 0u) : g_settings.hud_stretch ? 0u : GX_WIDE_HUD_43;
         {
             static uint32_t last_fl = ~0u;
             if (g_gx.xf_reg[GX_XR_WIDE_FLAGS] != last_fl && k > 1.0f)
