@@ -1,4 +1,8 @@
 > **Alpha testers needed:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
+>
+> **Updating got revamped in v0.8.3.** Once you're on v0.8.3, every future update is one press: **UPDATE NOW** in
+> the app downloads, rebuilds and installs it by itself, usually in under a minute. Switch players can update
+> without taking the SD card out (hekate's USB mode). [How to update](docs/INSTALL.md#updating-to-a-new-version)
 
 <p align="center">
   <img src="docs/images/banner.jpg" alt="Sonic, Tails, Knuckles, Jet, Wave and Storm racing on Extreme Gear through a neon city" width="100%">

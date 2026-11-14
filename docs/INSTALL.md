@@ -281,8 +281,7 @@ installer). No GitHub visit, no zip, no settings to pick again.
 4. **Switch:** eject the SD card in Windows and go back to the game (below). **PC:** press PLAY.
 
 Your saves, settings, mods and disc image stay. The Switch's HOME-screen icon keeps working (it starts the new
-version). This works for updates *from* the version after v0.8.2 on; to get to that version, use the zip way
-below once.
+version). This works for updates *from* v0.8.3 on; to get to v0.8.3, use the zip way below once.
 
 **Why there is still a (short) build:** the finished game contains Sonic Riders' own code, converted, so we can
 never put it in a download; it has to be made on your PC from your disc. Only the first install does the big
@@ -306,7 +305,7 @@ converter itself redoes the conversion: longer, but still automatic and without 
 `build\switch\sonicriders.nro` to `switch/sonicriders/` on the Switch with a file-transfer homebrew you
 already use (DBI's *Run MTP responder* over USB, or an FTP app over Wi-Fi). Replace only that file.
 
-### The zip way (Linux, iPhone/iPad, or versions up to v0.8.2)
+### The zip way (Linux, iPhone/iPad, or coming from v0.8.2 or older)
 
 1. Download the new zip for your platform from the [latest release](../../../releases/latest) and extract it
    **over your old install folder** (replace the files when asked); a new folder works too.

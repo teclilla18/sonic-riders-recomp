@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.3 (2026-11-14)
 
 - **Faster updates**: the setup keeps its build between versions (in its tools folder), so an update rebuilds only
   what changed instead of converting the whole game again: usually under a minute instead of 10-30 minutes (3-5 seconds on a fast PC)
@@ -8,7 +8,7 @@
 - **One-press updates** (PC launcher, Switch and Android installers): *Update available* → **UPDATE NOW** downloads
   the new version, restarts and rebuilds/installs it by itself with the same disc image, SD card or phone as last
   time (the installers now remember your choices). Switch: if the SD card is not connected yet, it waits for it
-  (card reader, or hekate's USB mode) and goes on as soon as it appears. Works for updates from the next version on.
+  (card reader, or hekate's USB mode) and goes on as soon as it appears. Works for updates from v0.8.3 on.
 - **Online lobby in the PC launcher** (new "Online" page): type your name, host a lobby or join one from the list of
   lobbies on your network (or with the host's join code), see who is in it, and the host starts the race on both
   PCs. Two players, same network for now; the game shows the other player's name while waiting.
