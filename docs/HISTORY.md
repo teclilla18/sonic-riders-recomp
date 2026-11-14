@@ -1412,3 +1412,21 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   (struct 81AAD000 +0x002, +0x004 x16, +0x3A0 x17, gear +0x348 |= 1 for 1-24/40-49/70-75) at the main menu, enter
   and leave the Shop: the game autosaves with a valid checksum [confirmed: flags in the written file; loading it
   in a fresh start not checked].
+
+## 2026-11-14 (PC, afternoon): updates without rebuilding the game; v0.8.3 released
+
+- Cause of slow updates: make_release dates every zip entry the same, so ninja rebuilt everything after an update
+  (and a new folder had no build at all). Fix: the setup builds in `<tools>/build`; `tools/build_workdir.py sync`
+  copies only files whose contents changed (dated now) and removes dropped ones; `dtk` is skipped by a stamp
+  (config.yml + main.dol + _Main.rel + dtk.exe hash); extract_iso keeps identical files. Outputs are copied back to
+  the install folder (build/switch, build/host-mingw + SDL2.dll, build/android, Linux build/host-linux).
+- Measured (this PC, 20 threads): first Switch build 104 s, update with one changed file 5 s; PC first 28 s,
+  downgrade 3 s; installed PC build 60 fps with the right version [confirmed].
+- Launcher: UPDATE NOW -> download -> restart `--after-update` -> build/install with `build/launcher/last_install.txt`
+  (disc, SD or not, copy-ISO, icon, phone, licence; no HOME icon again); Switch waits for any SD card (1.5 s polls,
+  also minimized). Tested: auto-build from `--after-update` with no SD [confirmed]; download step untested.
+- v0.8.2a was renamed v0.8.3 (user's choice after asking): update_parse_version reads "0.8.2a" as 0.8.2, so v0.8.2
+  users would not see it. Cold Sandbox PC + Android PASS (second install 0 min, build reused). Published with 4 zips;
+  v0.7.3 release removed (tag kept). README notice under the Heroes line; INSTALL.md update section rewritten
+  (in-app update, hekate UMS: Tools > USB Tools > SD Card, zip way as fallback).
+

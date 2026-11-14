@@ -38,10 +38,15 @@ host; adjustable delay 3-15 frames from the measured ping, as the SRTE community
 
 ## Releases
 
-**v0.8.2 released 2026-11-14** ("Sonic Riders Plus", tag on 81ee335; all five zips; iOS zip rebuilt from the tag +
-iOS renew fix; cold Sandbox PC + Android and cold Mac PASS). Riders Plus details: HISTORY 2026-11-13/14 and
-notes/game-addresses.md (charge-jump grace 0.75 s [accepted, PC]; Lv. 4/5 at 200/350; gold capsule respawn; dash
-panels / Speed Shoes). The online work (everything above) is on `main`, unreleased (CHANGELOG "Unreleased").
+**v0.8.3 released 2026-11-14** ("updating, revamped"; tag on 76da890; PC, Switch, Android, Linux zips; no iOS zip:
+iOS users stay on v0.8.2's; cold Sandbox PC + Android PASS, both second installs reused the kept build in 0 min).
+Contents: setup keeps its build in `<tools>/build` (tools/build_workdir.py), updates rebuild only what changed
+[tested: PC + Switch, 3-5 s on this PC; Linux changed, not run]; one-press UPDATE NOW in the launcher/installers
+(download, restart `--after-update`, rebuild + install with remembered choices; Switch waits for an SD card)
+[tested: auto-build from `--after-update` (Switch installer, no SD); the download step needs a newer release:
+first real check is the update after v0.8.3]; hekate UMS steps in INSTALL.md; the online work below (lobby
+[tested by the user on two PCs], online rules, own view, two screen options). v0.8.2 = Riders Plus (HISTORY
+2026-11-13/14). Not accepted by the user yet: the update flow.
 iOS test devices signed until **2026-11-21** (renew before then). GitHub lists the 5 newest releases.
 
 ## Devices
