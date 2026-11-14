@@ -36,7 +36,7 @@ Guest addresses as the port sees them (REL linked at 0x81800000; original GameCu
 | PSMTX/PSVEC routines | 8004C58C-8004D09C | e.g. 8004CF6C PSVECNormalize |
 | Projection (widescreen) | `fn_800645DC`, REL text 0x14115C | patches.txt |
 | r13 set / GQR clear | 80003334 / 8000A33C | |
-| Menu task / screen | task list head pointer 8021C30C (nodes linked through +0x08); the menu task has update fn 819130B8 at +0x00, work pointer +0x10, screen = byte at +0x14 | 0x0D save screens + title, 0x10 Normal Race, 0x16 Track Select, 0x18 Player Entry; no menu task in loading/races. Work +0xB8 + player = Player Entry state (0 not joined, 1 character, 2 board, 4 done, 5 all ready). Player 2's B at state 0 goes back to Track Select. RAM dumps of the 2P route, 2026-11-14 (netplay.c online_rules) |
+| Menu task / screen | task list head pointer 8021C30C (nodes linked through +0x08); the menu task has update fn 819130B8 at +0x00, work pointer +0x10, screen = byte at +0x14 | 0x0D save screens + title, 0x10 Normal Race, 0x0F Mode Select, 0x13 Tag step, 0x14 Survival submenu, 0x15/0x19/0x24 Shop, 0x16 Track Select, 0x18 Player Entry (all modes); no menu task in loading/races. Work +0xB8 + player = Player Entry state (0 not joined, 1 character, 2 board, 4 done, 5 all ready). Player 2's B at state 0 goes back to Track Select. RAM dumps of the 2P route, 2026-11-14 (netplay.c online_rules) |
 | Player Entry task | update fn 8193D3AC, work = menu work + 0x80 (803E2958 in the menus seen) | work +0x20 + character: "taken" bytes (set when picked, 8193DF8C; the cursor skips taken ones, 8193DE9C; character unlock read at 81AAD3A0 + character); +0x38 + player: entry state; +0x3C + player: character under the cursor |
 | Player count | 8021B8C8 | stage suffix table REL rodata 0x2DA8+8 = "VMM" |
 | Scene counter | 8021BB64 | resets per scene (perf test) |
@@ -44,7 +44,7 @@ Guest addresses as the port sees them (REL linked at 0x81800000; original GameCu
 | Gear table | 0x819EA240 | 41 records × 0x1D0; +0x00 character mask, +0x10 top speed mod; level blocks 0x68/0x84/0xA0 (the older "+0x64" is off by 4); gear 18 = Chaos Emerald; speeds × 216 = km/h |
 | Player array | 0x81A0D740 | 8 × 0x1080; +0x1034 gear id [uncertain, see Super Sonic notes], +0x1E4 position, level stats +0x8DC/+0x914/+0x94C |
 | Camera | 0x81A05D74 | 0x38 per viewport; eye +0x14, target +0x20; view matrix 0x81A0583C; writer not found |
-| Save data struct | 81AAD000 (0x6F0 bytes = card file offset 0x1460) | tracks +0x004..+0x013; +0x002 course flag [likely]; gear +0x348+i (bit 0 owned; Chaos Emerald byte 0x81AAD348+18); characters +0x3A0+c (== 1); time records +0x3BA [likely]; +0x6B8 ring total? [uncertain] |
+| Save data struct | 81AAD000 (0x6F0 bytes = card file offset 0x1460) | tracks +0x004..+0x013; +0x002 course flag [likely]; gear +0x348+i (bit 0 owned; Chaos Emerald byte 0x81AAD348+18); characters +0x3A0+c (== 1); time records +0x3BA [likely]; card checksum u16 at file 0x1440 (formula unknown: make a save by SR_POKEAT + the Shop autosave, HISTORY 2026-11-14 late night); +0x6B8 ring total? [uncertain] |
 | Gear selector / table | 81999080 / 819D55F8 | 54 × (u16 flag index, s16 character) |
 | Super Sonic voice | `f_8188BE1C` | transformation = character Sonic+14 |
 | CRI streaming loader | `f_819594F4` | loader thread 81A93B68, consumer 81A93E80 (prio 31), pump 81A93850, "available" counter 81A8FBAC |

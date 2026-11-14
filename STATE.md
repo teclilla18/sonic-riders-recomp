@@ -1,4 +1,4 @@
-# State (2026-11-14, night)
+# State (2026-11-14, late night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -60,11 +60,13 @@ iOS test devices signed until **2026-11-21** (renew before then). GitHub lists t
 
 ## Open items, in priority order
 
-1. **Online: other modes' character selects** (user, next): Tag Mode and Survival Mode character selects may be other
-   menu screens than 0x18 (a joiner is ignored there) and may need their own "taken" table; World Grand Prix is 2
-   players only and consecutive races (the screens between races must not wait for player 2). Find the screen ids
-   (menu task state, notes/game-addresses.md "Menu task") with `SR_WATCH=803D905C,*` and scripted routes; extend
-   online_rules; test offline with `SR_ONLINE_RULES=1 SR_PADS=2`, then two machines.
+1. **Online: other modes** (user, next). Checked 2026-11-14 [confirmed, PC offline, `SR_ONLINE_RULES=1 SR_PADS=2`,
+   scripted, frames]: Tag Mode (0x0F -> 0x13 -> 0x16 -> 0x18), Survival Race and Survival Battle (0x0F -> 0x14
+   submenu -> 0x16 -> 0x18) use the same Player Entry 0x18: player 2 joins, the race starts; same character seen in
+   Survival Battle (both Sonic). Not yet: World Grand Prix (Normal Race submenu 0x10; screens between races must
+   not wait on player 2), whether GAME_TOP_MODE is 8 in those modes' races (no-pause rule), their results screens,
+   two machines (laptop session). Offline helper scripts were in the session scratchpad (lost): rebuild from
+   tools/net_route_2p.py.
 2. Online, for the user's next hand test: no pause in races, HUD at the edges for a 4:3 joiner, same character,
    main-menu start, only P1 starts the race / runs the results.
 3. Online next steps (notes/online-research.md "Steps"): Switch-Switch and PC-Switch sessions; phones (INTERNET

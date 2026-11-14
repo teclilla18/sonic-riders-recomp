@@ -1398,3 +1398,17 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   over a LAN HTTP server serving only exe files).
 - Per-player sound, dropped by the user: sound requests (80089120, ids like A9010200; 80088D7C voices) carry no
   player; muting must happen in our mixer from a racer-update -> request -> AX voice tag (not built) [uncertain].
+
+## 2026-11-14 (late night): online rules in Tag and Survival; a full save for the user's video
+
+- Menu screens found with `SR_WATCH=803D905C,*` on offline 2P runs (`SR_DETCLOCK=1 SR_ONLINE_SAVE=1
+  SR_ONLINE_RULES=1 SR_PADS=2`, scripted presses, screenshots): Tag Mode goes 0x0F -> 0x13 -> 0x16 -> 0x18;
+  Survival 0x0F -> 0x14 (Race Stage / Battle Stage) -> 0x16 -> 0x18; Shop 0x15 -> 0x19 -> 0x24. Player 2 joined
+  and the race started in Tag, Survival Race and Survival Battle with no code change [confirmed, PC frames];
+  same character in Survival Battle (both Sonic) [confirmed]. World Grand Prix and the no-pause rule in these
+  modes not checked yet.
+- Save data: the card file's game data has a 16-bit checksum at file offset 0x1440 (sums, CRC-16/32 tried: no
+  match) [uncertain formula]. Working route instead: load a card copy (`SR_CARD`), `SR_POKEAT` the unlock flags
+  (struct 81AAD000 +0x002, +0x004 x16, +0x3A0 x17, gear +0x348 |= 1 for 1-24/40-49/70-75) at the main menu, enter
+  and leave the Shop: the game autosaves with a valid checksum [confirmed: flags in the written file; loading it
+  in a fresh start not checked].
