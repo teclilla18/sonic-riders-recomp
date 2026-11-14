@@ -20,6 +20,16 @@ FILES = {  # name on disc -> SHA-1 of the extracted file
 DOL_SHA1 = "e90a13504974b917a675d59f07014e0e817c5e5d"
 
 
+def write_if_changed(path, data):
+    """an unchanged file keeps its date, so an update's build does not redo the game code (tools/build_workdir.py)"""
+    if os.path.isfile(path) and os.path.getsize(path) == len(data):
+        with open(path, "rb") as r:
+            if r.read() == data:
+                return
+    with open(path, "wb") as w:
+        w.write(data)
+
+
 def fail(msg):
     print("extract_iso: " + msg, file=sys.stderr)
     sys.exit(1)
@@ -67,8 +77,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     if hashlib.sha1(dol).hexdigest() != DOL_SHA1:
         fail("main.dol does not match (SHA-1 %s)" % hashlib.sha1(dol).hexdigest())
-    with open(os.path.join(out, "main.dol"), "wb") as w:
-        w.write(dol)
+    write_if_changed(os.path.join(out, "main.dol"), dol)
     n = struct.unpack(">I", fst[8:12])[0]
     names = fst[n * 12:]
     found = {}
@@ -88,8 +97,7 @@ def main():
             data = f.read(b)
             if hashlib.sha1(data).hexdigest() != want:
                 fail("%s does not match (SHA-1 %s)" % (name, hashlib.sha1(data).hexdigest()))
-            with open(os.path.join(out, name), "wb") as w:
-                w.write(data)
+            write_if_changed(os.path.join(out, name), data)
     print("extract_iso: wrote main.dol, _Main.rel, SonicR.str to %s (all verified)" % out)
 
 

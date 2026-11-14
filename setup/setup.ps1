@@ -86,6 +86,7 @@ function Ask([string]$question, [string]$default) {
 }
 
 # Run a program, show and log its output, stop on failure
+$RunDir = $null  # where Run starts commands (the build folder for the build steps; else this folder)
 function Run([string]$what, [string]$exe, [string[]]$arguments, [hashtable]$envVars = @{}) {
     Log "> $what"
     Write-LogFile ("  " + $exe + " " + ($arguments -join " "))
@@ -94,7 +95,7 @@ function Run([string]$what, [string]$exe, [string[]]$arguments, [hashtable]$envV
     $old = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        Push-Location $Root
+        Push-Location $(if ($RunDir) { $RunDir } else { $Root })
         & $exe @arguments 2>&1 | ForEach-Object {
             $l = "$_"
             Write-LogFile ("  " + $l)
@@ -467,22 +468,35 @@ if ($doAndroid) {
 $needGame = $doSwitch -or $doPc -or $doAndroid
 if ($needGame) {
 Step "4/7  Extracting the game code from your disc image"
-$baserom = Join-Path $Root "baserom"
-New-Item -ItemType Directory -Force -Path $baserom | Out-Null
+# the build happens in one folder kept in the tools folder for every version (tools\build_workdir.py): an
+# update copies in only the changed files and rebuilds only what they touch, not the whole game again
+$Work = Join-Path $ToolsDir "build"
+Log "Build folder (kept for updates): $Work"
+Run "copy this version's changed files to the build folder" $python @("-I", "tools\build_workdir.py", "sync", $Root, $Work)
+$RunDir = $Work
+New-Item -ItemType Directory -Force -Path (Join-Path $Work "baserom") | Out-Null
 Run "extract main.dol and _Main.rel" $python @("-I", "tools\extract_iso.py", $Iso, "baserom", "--no-verify-iso")
 
 Step "5/7  Analysing the game code"
-Run "decomp-toolkit analysis" $dtk @("dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P")
+Run "decomp-toolkit analysis" $python @("-I", "tools\build_workdir.py", "dtk", $Work, $dtk)
 }
 # the build recompiles the code to C (configure.py the first time, ninja when its inputs change)
+function Copy-Built([string]$rel) {
+    # a finished file from the build folder to the same place in this folder (shortcuts, launcher and SD copy use it)
+    $src = Join-Path $Work $rel; $dst = Join-Path $Root $rel
+    if (-not (Test-Path -LiteralPath $src)) { return $null }
+    New-Item -ItemType Directory -Force -Path (Split-Path $dst) | Out-Null
+    Copy-Item -LiteralPath $src $dst -Force
+    return $dst
+}
 
 Step "6/7  Recompiling and building (a few minutes)"
 $builtNro = $null; $builtExe = $null  # (set when built)
 if ($doSwitch) {
     Run "configure (Switch)" $python @("configure.py", "--target", "switch", "--devkitpro", $dkp, "--imgui", $imgui) @{ DEVKITPRO = $dkp }
-    Run "build the Switch homebrew (this takes a while)" $ninja @() @{ DEVKITPRO = $dkp }
-    $builtNro = Join-Path $Root "build\switch\sonicriders.nro"
-    if (-not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
+    Run "build the Switch homebrew (the first time takes a while; updates only rebuild what changed)" $ninja @() @{ DEVKITPRO = $dkp }
+    $builtNro = Copy-Built "build\switch\sonicriders.nro"
+    if (-not $builtNro -or -not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
 }
 $builtNsp = $null
@@ -490,7 +504,9 @@ if ($doSwitch -and $HomeIcon -eq "yes") {
     $builtNsp = Join-Path $Root "build\nsp\SonicRiders-HOME-icon.nsp"
     $fwArgs = @("tools\nsp\make_forwarder.py", "--devkitpro", $dkp, "--cc", (Join-Path $llvm "bin\x86_64-w64-mingw32-clang.exe"), "--keys", $Keys, "--out", $builtNsp)
     if ($Icon) { $fwArgs += @("--icon", $Icon) }
+    $RunDir = $null
     Run "make the HOME-screen icon (forwarder .nsp)" $python $fwArgs
+    $RunDir = $Work
     if (-not (Test-Path $builtNsp)) { Fail "The HOME-screen icon was not made (see setup.log)." }
     Log "HOME-screen icon: $builtNsp (yours only: it is packed with your keys, never share it)" "Green"
 }
@@ -498,10 +514,13 @@ if ($doPc) {
     $pcArgs = @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
     if ($IconIco) { $pcArgs += @("--icon", $IconIco) }
     Run "configure (PC)" $python $pcArgs
-    Run "build the PC test build" $ninja @()
-    $builtExe = Join-Path $Root "build\host-mingw\sonicriders.exe"
-    if (-not (Test-Path $builtExe)) { Fail "The build finished but build\host-mingw\sonicriders.exe is missing." }
-    # the PC build reads the first *.iso in baserom\: link (same drive) or copy the image there
+    Run "build the PC version (the first time takes a while; updates only rebuild what changed)" $ninja @()
+    $builtExe = Copy-Built "build\host-mingw\sonicriders.exe"
+    Copy-Built "build\host-mingw\SDL2.dll" | Out-Null
+    if (-not $builtExe -or -not (Test-Path $builtExe)) { Fail "The build finished but build\host-mingw\sonicriders.exe is missing." }
+    # the PC build reads the first *.iso in baserom\ (of this folder): link (same drive) or copy the image there
+    $baserom = Join-Path $Root "baserom"
+    New-Item -ItemType Directory -Force -Path $baserom | Out-Null
     $isoDest = Join-Path $baserom ([IO.Path]::GetFileName($Iso))
     if (-not (Get-ChildItem $baserom -Filter *.iso | Where-Object { $_.Length -eq $isoSize })) {
         try { New-Item -ItemType HardLink -Path $isoDest -Target $Iso | Out-Null; Log "Linked the disc image into baserom\." }
@@ -516,14 +535,16 @@ if ($doAndroid) {
         $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore, "--imgui", $imgui)
         if ($Icon) { $andArgs += @("--icon", $Icon) }  # setup\icon.png unless you picked your own
         Run "configure (Android, $a)" $python $andArgs
-        Run "build the Android APK ($a; this takes a while)" $ninja @()
-        $apk = Join-Path $Root "build\android\sonicriders-$a.apk"
-        if (-not (Test-Path $apk)) { Fail "The build finished but build\android\sonicriders-$a.apk is missing." }
+        Run "build the Android APK ($a; the first time takes a while)" $ninja @()
+        $apk = Copy-Built "build\android\sonicriders-$a.apk"
+        if (-not $apk -or -not (Test-Path $apk)) { Fail "The build finished but build\android\sonicriders-$a.apk is missing." }
         $builtApks += $apk
         Log ("Android build: {0} ({1:N0} bytes)" -f $apk, (Get-Item $apk).Length) "Green"
     }
     Log "Your signing key is ${keystore}: keep it. An update signed with another key cannot replace the installed app." "Yellow"
 }
+
+$RunDir = $null
 
 # ---------------------------------------------------------------- install
 Step "7/7  Installing"

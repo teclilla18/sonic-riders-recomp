@@ -379,9 +379,16 @@ def main():
 
     # 3 -------------------------------------------------------------
     step(3, "Extracting the game code from your disc image")
-    baserom = os.path.join(ROOT, "baserom")
+    # the build happens in one folder kept in the tools folder for every version (tools/build_workdir.py): an
+    # update copies in only the changed files and rebuilds only what they touch, not the whole game again
+    work = os.path.join(tools, "build")
+    log("Build folder (kept for updates): %s" % work)
+    run("copy this version's changed files to the build folder",
+        [sys.executable, "-I", os.path.join(ROOT, "tools", "build_workdir.py"), "sync", ROOT, work])
+    os.makedirs(os.path.join(work, "baserom"), exist_ok=True)
+    run("extract main.dol and _Main.rel", [sys.executable, "-I", "tools/extract_iso.py", iso, "baserom", "--no-verify-iso"], cwd=work)
+    baserom = os.path.join(ROOT, "baserom")  # the game reads the disc image from this folder's baserom/
     os.makedirs(baserom, exist_ok=True)
-    run("extract main.dol and _Main.rel", [sys.executable, "-I", "tools/extract_iso.py", iso, "baserom", "--no-verify-iso"])
     if not any(n.endswith(".iso") and os.path.getsize(os.path.join(baserom, n)) == iso_size
                for n in os.listdir(baserom) if os.path.exists(os.path.join(baserom, n))):
         dest = os.path.join(baserom, os.path.basename(iso) if iso.endswith(".iso") else "SonicRiders.iso")
@@ -401,15 +408,18 @@ def main():
 
     # 4 -------------------------------------------------------------
     step(4, "Analysing the game code")
-    run("decomp-toolkit analysis", [dtk, "dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P"])
+    run("decomp-toolkit analysis", [sys.executable, "-I", "tools/build_workdir.py", "dtk", work, dtk], cwd=work)
 
     # 5 -------------------------------------------------------------
-    step(5, "Recompiling and building (a few minutes; longer the first time with zig)")
-    run("configure", [sys.executable, "configure.py", "--target", "host", "--toolchain", "linux"] + conf_args)
-    run("build the PC version", [ninja])
+    step(5, "Recompiling and building (the first time takes a while; updates only rebuild what changed)")
+    run("configure", [sys.executable, "configure.py", "--target", "host", "--toolchain", "linux"] + conf_args, cwd=work)
+    run("build the PC version", [ninja], cwd=work)
+    built = os.path.join(work, "build", "host-linux", "sonicriders")
+    if not os.path.isfile(built):
+        fail("The build finished but %s is missing." % built)
     exe = os.path.join(ROOT, "build", "host-linux", "sonicriders")
-    if not os.path.isfile(exe):
-        fail("The build finished but %s is missing." % exe)
+    os.makedirs(os.path.dirname(exe), exist_ok=True)
+    shutil.copy2(built, exe)
     log("Built %s" % os.path.relpath(exe, ROOT), "green")
 
     # 6 -------------------------------------------------------------

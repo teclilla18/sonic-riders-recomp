@@ -949,7 +949,7 @@ void page_play(float w) {
     } else {
         if (exists(path(L"build\\launcher\\rebuild_after_update"))) {
             section("UPDATED");
-            ImGui::TextColored(kGoldV, "The port was updated: build the game again from your disc image (a few minutes).");
+            ImGui::TextColored(kGoldV, "The port was updated: update the game (usually under a minute; only what changed is rebuilt).");
             if (ImGui::Button("Rebuild now") && g_ready.disc && !child_running(g_setup) && !child_running(g_game)) {
                 DeleteFileW(path(L"build\\launcher\\rebuild_after_update").c_str());
                 start_install(g_ready.disc_path);
@@ -1467,7 +1467,7 @@ void page_update(float w) {
         ImGui::TextColored(kGreen, "Updated to %s.", tag.c_str());
         if (big_button("RESTART", ImVec2(200 * g_dpi, 40 * g_dpi), true, true)) restart_self();
         note(g_mode == M_LAUNCHER ? "After the restart, press Rebuild on the Play page: the game is built again from your "
-                                    "disc image with the new version (a few minutes)."
+                                    "disc image with the new version (usually under a minute: only what changed is rebuilt)."
                                   : "After the restart, press BUILD AND INSTALL again to build the new version.");
     }
 }

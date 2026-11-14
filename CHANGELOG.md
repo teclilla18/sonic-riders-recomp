@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Faster updates**: the setup keeps its build between versions (in its tools folder), so an update rebuilds only
+  what changed instead of converting the whole game again: usually under a minute instead of 10-30 minutes (3-5 seconds on a fast PC)
+  (Windows: Switch, PC, Android; Linux). The first install after this change still does one full build.
 - **Online lobby in the PC launcher** (new "Online" page): type your name, host a lobby or join one from the list of
   lobbies on your network (or with the host's join code), see who is in it, and the host starts the race on both
   PCs. Two players, same network for now; the game shows the other player's name while waiting.

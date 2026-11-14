@@ -273,8 +273,10 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 2. Run its installer (`Install Sonic Riders (Switch).exe`, `Install Sonic Riders (PC).bat` or
    `Install Sonic Riders (Android).exe`, or on Linux `Install Sonic Riders (Linux).sh`) with the same disc image (and, for the Switch, the same SD card;
    for Android, the phone connected).
-3. It reuses the build tools it downloaded last time, so it's quicker than the first install (a few
-   minutes).
+3. **Only the parts that changed are rebuilt.** The first install converts the whole game once and keeps that
+   work in the setup's tools folder; an update reuses it, so it usually takes under a minute instead of the
+   first install's 10-30 minutes, with no big download. (A release that changes the code converter itself
+   converts the game again, which takes longer, but never re-downloads the tools.)
 
 Your saves and settings are kept: on the Switch they're on the SD card, which the update doesn't touch.
 On PC and Linux they're in the old install folder: copy its `saves` folder into the new one, then delete the old
@@ -302,7 +304,8 @@ saves, settings and HOME-screen icon stay where they are.
    selected (it is found by itself), and press **BUILD AND INSTALL**.
    - Leave *Copy the disc image too* as it is: it is skipped by itself when the disc image is already on the card.
    - You don't need the HOME-screen icon again: the one you installed starts the new version.
-5. **Wait a few minutes** until it says "Done" (the tools are already downloaded, so no big download this time).
+5. **Wait** until it says "Done", usually under a minute: the game is not converted again, only the parts of
+   the port that changed are rebuilt.
 6. **Eject the SD card in Windows** (right-click the drive → *Eject*) and wait until Windows says it is safe.
 7. **Back to the game:** in hekate press **Close** (or unplug the cable), then **Home** → **Launch** → your
    Atmosphère entry. With a card reader instead: put the SD card back in the Switch. Play as usual.
@@ -348,6 +351,11 @@ devkitPro's devkitA64/libnx/deko3d for the Switch or llvm-mingw + SDL2 for the P
 checked against a SHA-256 in `setup/toolchain.json`) into `%LOCALAPPDATA%\SonicRidersSetup\tools`;
 extracts `main.dol` and `_Main.rel` from your image; analyses and recompiles them into C; builds; and
 (Switch) copies the result to the SD card. No administrator rights are needed.
+
+The build itself happens in `build\` inside that tools folder (Linux: `~/.local/share/SonicRidersSetup/tools/build`),
+which is kept for every version: an update copies in only the files that changed and rebuilds only what they
+touch, then copies the finished game into the install folder. It holds the converted game code, so like the
+game it stays on your computer: never share it. Deleting it is safe; the next run converts the game again.
 
 The SD card ends up with:
 
