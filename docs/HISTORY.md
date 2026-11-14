@@ -1380,3 +1380,21 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   "How to renew" file, the launcher Renew page (both routes, launcher shots [confirmed]), INSTALL.md.
 - v0.8.2's iOS zip rebuilt from v0.8.2 + only these iOS files (ios_run.py with the move check and the refresh,
   setup_mac.py, the launcher, INSTALL.md, CHANGELOG), not main (main has unreleased online work).
+
+## 2026-11-14 (PC, night): lobby, own view, online rules, same character; per-player sound dropped
+
+- User's hand tests on two PCs through the new launcher lobby (Online page, launcher/lobby.cpp): 61,811 and 22,477
+  frames, all checksums equal [confirmed, both logs]. Reported: black bars/half map (-> own view full screen,
+  ownview_frame; user picked "more above/below"), window not closable while the host waits (render thread exited only
+  after a frame; fixed), the game started again after a race (lobby still "starting"; fixed), PLAY pressed instead
+  of the lobby's start (bottom button follows the lobby), joiner's HUD in the middle of a wide picture (fixed: edges
+  follow the session camera), both machines hearing both racers.
+- Online rules (netplay.c online_rules), from RAM dumps of the 2P route: menu task (fn 819130B8 in the task list from
+  8021C30C) state = screen; Player Entry states at work +0xB8 + player; Player Entry task 8193D3AC marks picked
+  characters at its work +0x20 (found with the new SR_TRACE_MIN function trace). Main-menu start (screen 0x0F,
+  frame ~780), host-only menus, no pause [unproven], P1-only results, same character [confirmed offline].
+  Two machines scripted with the laptop's Claude session: 8,966 frames equal, recordings identical [confirmed].
+- Screen options cut to 4:3 and Fit to screen (user). Laptop helper session set up (PowerShell + Python, builds
+  over a LAN HTTP server serving only exe files).
+- Per-player sound, dropped by the user: sound requests (80089120, ids like A9010200; 80088D7C voices) carry no
+  player; muting must happen in our mixer from a racer-update -> request -> AX voice tag (not built) [uncertain].

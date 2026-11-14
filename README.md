@@ -75,7 +75,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
-| Online play | 30 % | Lockstep works on one PC; still to do: LAN and internet sessions, Switch-Switch, PC-Switch, a menu to join |
+| Online play | 45 % | Two PCs race over a home network through the launcher's lobby (own view full screen, online rules); still to do: internet play (lobby server), Switch and phones, 3-4 players, ping and delay settings |
 | Features and polish | 63 % | Custom music, right-stick camera, in-game updates, code mods (done on main: the "Riders Plus" set: Lv. 4/5, gold capsule respawn, dash panels, Speed Shoes, charge-jump grace) |
 
 </details>

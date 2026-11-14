@@ -1,132 +1,91 @@
-# State (2026-11-14, evening)
+# State (2026-11-14, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
-Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
+Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. A third Claude session runs on the
+user's gaming laptop (online tests, below).
+
+## Current focus: online play and cross-play until v1 (user's decision, 2026-11-14)
+
+Plan and research: docs/notes/online-research.md (lobby codes, hole punching, relay server; 3-4 players through the
+host; adjustable delay 3-15 frames from the measured ping, as the SRTE community plays). Mechanics: docs/ONLINE.md.
+
+- **Two PCs over the LAN** [confirmed]: scripted 20,726 frames (desktop + laptop, .bat files); the user played two
+  hand sessions through the launcher lobby: 61,811 and 22,477 frames, every checksum equal, no desync. A scripted
+  run with the online rules: 8,966 frames equal, recordings byte-identical.
+- **Launcher lobby** (Online page, launcher/lobby.cpp) [tested by the user on two PCs]: name (no default), Host
+  (join code = the host's LAN IPv4 in 7 characters), list of LAN lobbies, join by code, players' names, START RACE
+  starts the game on both. Two players. Fixed after the user's test: the game started again by itself after a
+  race (black fullscreen), the bottom PLAY button in a lobby.
+- **Own view full screen** (gx_render.c ownview_frame) [confirmed PC frames; user played it]: this player's half,
+  3D with more above/below (user picked it over zoom), HUD to the corners, whole map, timer for both, speed blur.
+  The HUD goes to the screen edges whenever the session picture is wide (joiner set to 4:3 kept it in the middle,
+  fixed 2026-11-14, not seen by the user yet).
+- **Online rules** (netplay.c online_rules; header flag 8; `SR_ONLINE_RULES=1` offline) [confirmed offline + two
+  machines scripted; partly played]: sessions open at the main menu (frame ~780) by themselves; menus by player 1
+  only, except Player Entry (characters/boards; an unjoined player cannot back out; only P1's START); no pause in
+  races [not proven: a scripted START never paused even without the rule]; after the finish only P1 is heard;
+  several players may pick the same character (taken table cleared) [confirmed offline: two Sonics race].
+- **Screen options**: only "4:3 (original)" and "Fit to screen" (game menu + launcher); old 16:9 settings read as Fit.
+- **Dropped by the user (2026-11-14)**: each player hearing only their own racer (sounds carry no player; would need
+  a tag from racer update to AX voice in our mixer; findings in HISTORY 2026-11-14).
+- **Laptop helper session** (Remote Control peer, name changes; ListAgents): fetches builds from the PC over the LAN
+  (`python -m http.server 8099 --bind 10.0.0.32` serving ONLY exe files from a scratch folder, SHA-256 checked),
+  installs into its Desktop\SR Online Test (launcher layout + baserom copy), runs scripted joiners, reports `[net]`
+  lines. PC test folder: Desktop\SR Online Test (same layout). A game started from another path is blocked by the
+  PC firewall: run hosts from the test folder's exe. With stderr redirected the game writes no sonicriders.log.
 
 ## Releases
 
-**v0.8.2 released 2026-11-14** ("Sonic Riders Plus", tag on 81ee335): all five zips. iOS zip built on the Mac
-2026-11-13 from the tag, replaced 2026-11-14 with the iOS renew fix (tag + iOS files only); cold Mac unzip test PASS (unsigned, fresh tools, 7/7)
-[confirmed]; notes' last line points at it. Details: item 0c.
-
-**v0.8.1 released 2026-11-12** (tag on 77620bb; iOS zip replaced 2026-11-13 from abedb6a with the one-app-ID fix).
-Heroes alpha call, 999 ring limit, menu L/R tabs + wrap. Cold Sandbox PC + Android and cold Mac PASS [confirmed].
-
-**v0.8.0 released 2026-11-11** (all five zips; replaced in place from be45877, bloom fix + fan icon; cold
-Sandbox PC + Android PASS). Picture options on Switch/Android/iOS, fan icon everywhere. iOS: iPad Pro M1 max
-settings "flawless" [accepted]; one iPhone frame with a white haze [uncertain]. All four iOS devices on the
-standard ID and re-signed 2026-11-13 (profile ends **2026-11-21**: renew before then).
-- GitHub lists the 5 newest releases; on each release delete the 6th (tag kept).
+**v0.8.2 released 2026-11-14** ("Sonic Riders Plus", tag on 81ee335; all five zips; iOS zip rebuilt from the tag +
+iOS renew fix; cold Sandbox PC + Android and cold Mac PASS). Riders Plus details: HISTORY 2026-11-13/14 and
+notes/game-addresses.md (charge-jump grace 0.75 s [accepted, PC]; Lv. 4/5 at 200/350; gold capsule respawn; dash
+panels / Speed Shoes). The online work (everything above) is on `main`, unreleased (CHANGELOG "Unreleased").
+iOS test devices signed until **2026-11-21** (renew before then). GitHub lists the 5 newest releases.
 
 ## Devices
 
-- S23 Ultra: main APK v0.8.1-25 (5ec23cd), wireless adb at 10.0.0.140 (`adb connect` the mDNS port first).
-- OLED (switch-remote): `sonicriders.nro` = c840558 (three swapchain images, cheaper bloom, all 999 gameplay), env.txt
-  empty; the user's previous build kept as `sonicriders.user-20261113.nro`, v0.8.0 as `sonicriders.v080.nro`;
-  settings 1.5x / Fit window (wide) / Auto / bloom 70 / grading / sharpness 50. Forwarder `SonicRiders.nsp`
-  with "Icon 3" in the game folder (user installs it with DBI). Clocks: handheld 1785 / 614 / 2133 (sys-clk
-  overlay, never changed), docked 1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
-- **OLED heavy-view dips fixed on main (2026-11-14, c840558):** three swapchain images; Metal City 1P at the user's
-  settings (handheld 1785/614/2133, 1.5x, bloom/grading/sharpness): 4-5k draws 59.9 fps (low 59.9), 5k+ 58.9 (low
-  56.2) vs two images 57.3 (low 39.3) / 52.9 (low 33.4) [confirmed, A/B runs]; user: "best run yet", controls the
-  same [accepted, that track and settings only]. "GP thread busy" had been mostly waiting for the GPU (real work
-  6-8 ms); bloom/grading -1 ms GPU (same picture). HISTORY "2026-11-14 (PC, Mike, later)".
+- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. **The Android APK lacks the INTERNET permission** (online).
+- OLED (switch-remote): c840558 build (three swapchain images), settings 1.5x / Fit / Auto / bloom 70; clocks
+  handheld 1785 / 614 / 2133, docked 1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
+- Gaming laptop (GTX 1650 Max-Q, 10.0.0.89): online partner; Python 3.12 installed (user-approved).
 
 ## Platforms
 
-- **Windows** (the fast test loop): whole game incl. story, 1-4P at 60 fps, sound; launcher with updates, remapping
-  (accepted), picture options (1x-4x, MSAA, FSR, bloom, colour, smooth lighting), frame-rate presets with in-between
-  pictures (render_gl.c pc_fps). Mods layer 1 + stat mods (race effect of gear stats unverified). Launcher icon:
-  the user's Super Sonic art (settled); banner (public fan art) still has an open artist check (don't ask the user).
-- **Switch**: Homebrew Menu or forwarder NSP; overclocked docked 1P ~60, 3P 55-60 (dips ~48), 4P steady 30; stock
-  handheld 30 fps steady, 60 mode drops to 30 in 5,000-7,000-draw views.
-- **Android**: S23 Ultra 1P 59.3 / 2P 59.8 fps; touch + pads; 2P local, 3-4P only online. #14 (Adreno 810 stalls):
-  fast-core threads + ADPF on main [untested there].
-- **iOS**: built on the player's Mac (Mac launcher app, START HERE page); details notes/ios.md.
-- **Linux / Steam Deck**: setup_linux.py; gamescope defaults; untested on a real Deck.
-
-## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
-
-Lockstep with desync check (`SR_NET`) proven PC-PC on localhost (35,400 frames), PC recording replayed on the
-Switch (23847 frames equal), and **PC-PC over the LAN, desktop + laptop, 2026-11-14: 20,726 frames, no desync**
-[confirmed, logs + recordings; scripted route, not played by hand]. Plan: notes/online-research.md (lobby codes,
-hole punching, relay). Next: Switch-Switch, PC-Switch, phones (Android needs the INTERNET permission).
+- **Windows**: whole game, 1-4P 60 fps, sound, launcher (updates, remapping, Online lobby), picture options.
+- **Switch**: 1P ~60 overclocked; 4P steady 30; stock handheld 30 steady. Online: sockets work (2026-10-30 LAN
+  session); the lobby is PC-only so far (Switch needs SR_NET in env.txt).
+- **Android / iOS / Linux**: notes/android.md, notes/ios.md; online not tried there.
 
 ## Open items, in priority order
 
-0. **iOS: one app ID per player** (released in v0.8.1's iOS zip; notes/ios.md "App IDs"): `<base>.<team>` always;
-   `ios_run.py install` moves an older-ID app: A16 iPad, iPhone, iPad Pro (Wi-Fi) [confirmed]; the iPad (7th gen) (Wi-Fi)
-   failed after the uninstall (profile lacked the device), restored by hand, save MD5 equal [confirmed]. `move` now
-   checks the app's profile lists the device (and is unexpired) before touching anything [confirmed, real + fake devices].
-   Renewing from the Mac now gets a fresh 7-day signature first (`refresh_profile`, 2026-11-14) [confirmed, A16 iPad];
-   renew steps rewritten in plain words; both in v0.8.2's iOS zip (rebuilt from the tag + iOS files only). Not tested: the
-   old-ID warning on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted yet.
-1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
-   choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"
-   / "Charge jump"). Recordings and online fix the option for the whole run ("ring cap fixed"), so the menu toggle
-   does nothing during an SR_RECORD run (by design).
-   - **Charge jump grace 0.75 s** (003acfe; user tried 1.5 and 1 s, picked 0.75): the charge slowdown (fn_1_6D5D4)
-     and, after a boost, the decay above top speed (store 81815ABC) wait 0.75 s; every racer. PC, the user's
-     recorded runs: speed holds/creeps up 0.73 s then the old curve [confirmed, SR_RAMSAMPLE]; user played the
-     1 s version ("Perfect") and saw the 0.75 replay ("Perfect amount of hold time") [accepted, PC]. iPad (A16)
-     scripted race: same [confirmed]. Not played on Switch/phones by the user; CPU racers not checked.
-   - **Gear Lv. 4 / 5** (game_levels.c): Lv. 4 at 200, Lv. 5 at **350** (user: 500 "near impossible"), slowed twice by request
-     (2026-11-14: Blue Star 200/275 and 215/300 top/boost; x(200/180, 1.1, 1.1) and x(215/180, 1.2, 1.25)). PC: Lv. 4 at 210, Lv. 5 at 360 rings,
-     block values exact [confirmed, log + RAM]. Old 200/500 build played by the user on the OLED [tested, user].
-     Not checked: sound, split-screen HUD digit, CPU racers' levels.
-   - **Gold 100-ring capsule respawns after 25 s** (7bdce20; user's value): user took it 5 times in one PC race,
-     +100 each, >= 26 s apart [confirmed, log]; cap 100 replay: taken once only [likely]. On the OLED, not played.
-     Max-air capsule (type 13) takes the same path if it is kind 0x11 [uncertain, no stage checked].
-   - **Dash panels**: max(panel speed, own + 25 km/h); **Speed Shoes** (item 6): max(200, own + 80 km/h) (values
-     picked by us, user said "you pick"; 2026-11-14). User's PC run (test2.rec): panel 173 -> 200 (original),
-     229 -> 255 [confirmed, log]; shoes forced by a test hook in its replay: 198 -> 278, 134 -> 214 [confirmed].
-     Kind 0x848 (dash ring?) untouched.
-   - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
-0c. **v0.8.2 released 2026-11-14** ("v0.8.2: Sonic Riders Plus", tag on 81ee335; PC, Switch, Android, Linux zips;
-   cold Sandbox PC (2 installs, one with a space) + Android PASS [confirmed]; downloaded PC zip = built zip [confirmed,
-   hash]). iOS zip: built and uploaded by the Mac session (cold Mac PASS). iPad (A16), build 3ed95db (= tag code):
-   Gameplay tab shows "Riders Plus" ticked by default [confirmed, SR_SCREENSHOT]; scripted Metal City Free Race
-   (SR_INPUT + SR_RAMSAMPLE, racer 0): A held at cruise keeps the speed flat 45 steps (0.75 s at 60) then the old
-   curve (130 -> 122 km/h in 30 steps); held right after a boost, 229 km/h for 45 steps then the decay [confirmed]. Notes: the user's
-   ChatGPT banners + our charts + a Lv. 5 PC screenshot pair, all in docs/images/v0.8.2/ (approved by hash in the
-   guard); user's rule: **only build zips as release assets**. v0.7.2 delisted (tag kept). Checks before it: OLED
-   Splash Canyon / docked / 2P [accepted]; S23 A/B vs v0.8.1 no regression; PC Auto race 59.9 [confirmed].
-   **Next focus (user): online play and crossplay**; everything else after v1.
-1d. **SwitchWakerHD v1.3.0 ideas** (plans-2026-11.md, end), measured 2026-11-14 on the OLED: tiled cache made frames
-   0.6 ms slower (drop it); specialized vertex shaders could save at most ~2 ms (lighting 1.3 + texgen 0.8); PGO /
-   core 3 are CPU and the CPU is not the limit at 1P. Left: on-console shader compiles, 30 fps pacing, FXAA,
-   anisotropic filtering, PC HDR. Remaining picture-option cost in heavy views: bright pass ~1.5 ms, FSR sharpen ~1.0
-   (FSR at 1.5x could sharpen straight from the EFB: saves ~0.3 ms, moves the picture by a pixel; user's call).
-2. **Higher frame rates on iOS and Android** (user): port the PC in-between pictures (render_gl.c pc_fps,
-   settings_pc_fps_presets) to render_vk.c; iOS 120 Hz ProMotion (Info.plist CADisableMinimumFrameDuration),
-   Android: follow the display refresh rate; phone menu 120 etc. next to 60 / Auto / 30, off by default.
-3. MSAA and smooth character lighting on Switch / Android / iOS (notes/picture-options-port.md).
-4. In-game update popup (plan first, ask the user).
-5. Custom music folder (MP3/OGG/WAV/FLAC -> ADX, per-track toggle; Discussion #17).
-6. Online play (above); right-stick camera / look back (notes/plans-2026-11.md); boost camera effect (#16).
-7. PC freeze with NVIDIA ShadowPlay recording (2026-11-08): not reproduced [uncertain]; workaround OBS.
-8. Open checks: F1 sharpness/pad change survives a restart (2207c58, compile-checked only); Optimus on the gaming
-   laptop; bug-report zip with five logs; a real pad with another window focused.
-9. Older issues: #1 stock-clock perf, #2 3-4P at 30 fps, #3 speed blur, #4 story monitor, #6 rare loading hang,
-   #7 lens flare, #12, #14 (ask the user before posting on #14).
+1. **Online: other modes' character selects** (user, next): Tag Mode and Survival Mode character selects may be other
+   menu screens than 0x18 (a joiner is ignored there) and may need their own "taken" table; World Grand Prix is 2
+   players only and consecutive races (the screens between races must not wait for player 2). Find the screen ids
+   (menu task state, notes/game-addresses.md "Menu task") with `SR_WATCH=803D905C,*` and scripted routes; extend
+   online_rules; test offline with `SR_ONLINE_RULES=1 SR_PADS=2`, then two machines.
+2. Online, for the user's next hand test: no pause in races, HUD at the edges for a 4:3 joiner, same character,
+   main-menu start, only P1 starts the race / runs the results.
+3. Online next steps (notes/online-research.md "Steps"): Switch-Switch and PC-Switch sessions; phones (INTERNET
+   permission); lobby server with codes + punch + relay (ask the user who hosts it); 3-4 players; ping + delay
+   setting in the lobby.
+4. Higher frame rates on iOS/Android (render_vk.c pc_fps); MSAA / smooth lighting on Switch/Android/iOS.
+5. In-game update popup (plan first, ask the user); custom music folder (#17); right-stick camera; boost effect (#16).
+6. Open checks: F1 sharpness/pad change survives a restart; Optimus on the gaming laptop; bug-report zip; a real
+   pad with another window focused. Older issues #1 #2 #3 #4 #6 #7 #12 #14 (ask before posting on #14).
 
 ## Wish list / paused
 
-Edge-anchored HUD for ultrawide; HD textures; PS4/PS5 on hold; Vita paused (branch `vita`, notes/vita-research.md).
+HD textures; PS4/PS5 on hold; Vita paused (branch `vita`); per-player race sound online (dropped for now).
 
 ## Next hardware-test checklist
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] Riders Plus charge jump on the Switch: hold A at cruise and right after a boost (0.75 s hold, then slowdown).
+- [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, online-p1 / online-p2local routes): no desync.
+- [ ] PC-Switch session (cross-play): PC host from the test folder, Switch joins.
+- [ ] Riders Plus charge jump on the Switch: hold A at cruise and right after a boost.
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
-- [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9.
-- [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
-- [ ] `SR_PERFTEST=1` at stock clocks, handheld: save a stock record in `perf/results/`.
-- [ ] 4-player Metal City race with `SR_PROFILE=1`: fps, "GP thread busy", game-core idle share vs hw25.
-- [ ] Auto mode at stock clocks in a race: listen for crackle; log "mixes started late" and the AX list rate.
-- [ ] Story mode: watch one cutscene through and skip one with START; check the monitor (#4).
-- [ ] A single sideways Joy-Con as player 1 and as player 2.
-- [ ] Copy back `sonicriders.log`, `perftest.json`, `shader_keys.txt` (add new keys to the local key set).
+- [ ] `SR_PERFTEST=1` at stock clocks, handheld; 4-player Metal City with `SR_PROFILE=1`.
+- [ ] Copy back `sonicriders.log`, `perftest.json`, `shader_keys.txt`.
