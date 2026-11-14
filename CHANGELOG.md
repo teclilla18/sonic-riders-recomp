@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Online races show your own racer full screen**: no more black bars and half picture. Each machine shows only its
+  own player, with more sky and track above and below, the HUD in the corners like a one-player race, the whole track
+  map, and the race timer for both players. Only the picture changes, so both games stay in step.
+- **Two screen options**: "4:3 (original)" and "Fit to screen" (your window's or screen's shape, HUD at the edges).
+  The old "16:9 widescreen" and "stretch the HUD" options are gone; if you had them, you get Fit to screen.
 ## v0.8.2 (2026-11-14; iOS zip updated 2026-11-14)
 
 - **"Riders Plus"**: the settings option "Ring Limit set to 999" is now called "Riders Plus" (Gameplay tab), since it

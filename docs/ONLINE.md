@@ -167,6 +167,20 @@ screen with the widescreen setting, a 32:9 picture). Menus and other screens are
 one player's view, also offline. Limits: the track map, drawn across the split line, is cut in half; the picture
 has the split view's resolution; the other player's view still costs its drawing time.
 
+**Own view, full screen (2026-11-14, replaces the half picture; user picked "more above/below").** gx_render.c
+`ownview_frame` re-lays each finished split-screen frame before it is drawn (never game memory, so no desync risk):
+this player's half viewports become the whole screen and the 3D sees twice as much height (projection y halved:
+more sky and track above and below, same width); the other player's 3D and HUD draw nothing (empty scissor); the HUD
+pieces of this player's half keep their size and move whole to the top or bottom of the screen (inner part of the
+half to the other edge; a tall gauge and its column move together), the map (draws across the middle and the marks
+on it) stays, player 1's timer is shown to both; the speed blur (one copy of the whole EFB, each player's overlay
+showing its half) covers the screen with its picture coordinates stretched (texture matrix copy); copies of one half
+take the whole screen. Works with both screen options (4:3, Fit to screen: the edge HUD moves sideways on top).
+`SR_OWNVIEW=0` old half picture, `2` zoomed with the sides cut (not used), `SR_OVLOG=<frame>` logs the 2D draws'
+moves. Checked [confirmed, PC frames, offline `SR_VIEW`]: Metal City 2P route frames 6500-8000, both players, 4:3
+and Fit 16:9. Not checked: other tracks, 3-4P, Switch/phones, a played session; far objects at the new top and
+bottom edges may be missing (the game culls to its own view; none seen).
+
 **Two-player race route** (test scripts, not in the repository): from boot on the online save, both players pick
 characters at Player Entry (player 2 presses A on its box), START, and both steer (main stick held forward, left and
 right, A) through Metal City. In lockstep each copy gets its own player's part of the script.

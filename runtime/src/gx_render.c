@@ -849,6 +849,296 @@ void gx_draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_
     g_draw_total += rt_ticks() - t;
 }
 
+/* Online play, each player's own view, full screen (docs/ONLINE.md "Own view"). A two-player race is a split
+ * screen: player 1's 3D in the top half (a 640x240 viewport), player 2's in the bottom half, then one
+ * full-screen 2D pass with both HUDs and the track map across the middle. Every machine must still compute
+ * both views (the game state), so only the finished frame's states are changed before it is drawn, never
+ * game memory:
+ *  - this player's half viewports become the full screen; the 3D sees more above and below
+ *    (SR_OWNVIEW=1, default) or is zoomed in with the sides cut (SR_OWNVIEW=2); 0 = the old half picture;
+ *  - the other player's half draws nothing (empty scissor), and its EFB copies clear nothing;
+ *  - EFB copies of this player's half (screen effects) take the whole screen;
+ *  - the HUD: each 2D draw of this player's half keeps its size and moves whole to the top or bottom of the
+ *    screen (by which part of the half it is in); the other player's HUD is hidden; the map (draws across the
+ *    middle and everything inside them) stays; player 1's timer (top middle) is shown to player 2 too.
+ * Per-draw moves are new copies of the draw's register block with the orthographic projection changed
+ * (clip' = s * clip + o), so the shaders and backends need nothing new. */
+static int ownview_mode(void) {
+    static int m = -1;
+    if (m < 0) m = getenv("SR_OWNVIEW") ? atoi(getenv("SR_OWNVIEW")) : 1;
+    return m;
+}
+static float fbits(uint32_t u) { float f; memcpy(&f, &u, 4); return f; }
+static uint32_t ubits(float f) { uint32_t u; memcpy(&u, &f, 4); return u; }
+/* the viewport of a register block: 0 top half, 1 bottom half, 2 full screen, -1 other */
+static int ov_viewport(const GxUniforms* u) {
+    float xs = fabsf(fbits(u->xfr[0x1A])), ys = fabsf(fbits(u->xfr[0x1B])), yo = fbits(u->xfr[0x1E]);
+    float vy = yo - ys - (float)(((u->bp[0x59] >> 10) & 0x3FF) * 2);
+    if (xs != 320.0f) return -1;
+    if (ys == 120.0f) return vy > -1.0f && vy < 1.0f ? 0 : vy > 239.0f && vy < 241.0f ? 1 : -1;
+    return ys == 240.0f && vy > -1.0f && vy < 1.0f ? 2 : -1;
+}
+/* clip' = s * clip + o; hide: nothing drawn; tm >= 0: the texture matrix at that XF word address gets its t row
+ * as ts * t + to (the speed blur's picture coordinates) */
+typedef struct { float sx, ox, sy, oy; int hide, tm; float ts, to; } OvXform;
+#define OV_NONE ((OvXform){1.0f, 0.0f, 1.0f, 0.0f, 0, -1, 1.0f, 0.0f})
+typedef struct { int src, xt, idx, xidx; OvXform t; } OvCached;
+static int ov_identity(const OvXform* t) {
+    return !t->hide && t->tm < 0 && t->sx == 1.0f && t->ox == 0.0f && t->sy == 1.0f && t->oy == 0.0f;
+}
+static void ov_no_scissor(GxUniforms* u) { u->bp[0x21] = (u->bp[0x21] & ~0x7FFu) | ((u->bp[0x20] & 0x7FFu) - 1u); }
+/* a draw's extent in clip space (orthographic register block u, XF chunk table t): x0 x1 y0 y1, +y = up */
+static void ov_bbox(const GxFrame* f, const GxCmd* d, const GxUniforms* u, const GxXTab* t, float b[4]) {
+    float P0 = fbits(u->xfr[0x20]), P1 = fbits(u->xfr[0x21]), P2 = fbits(u->xfr[0x22]), P3 = fbits(u->xfr[0x23]);
+    b[0] = b[2] = 1e30f;
+    b[1] = b[3] = -1e30f;
+    for (uint32_t i = 0; i < d->b; i++) {
+        const GxVertex* v = &f->verts[f->idx[d->a + i]];
+        uint32_t pm = ((uint32_t)v->pos[3] * 4) & 0xFFC;
+        float r[8];
+        for (uint32_t k = 0; k < 8; k++) {
+            uint32_t w = pm + k;
+            r[k] = w / GX_XFM_CHUNK < GX_XFM_CHUNKS
+                       ? fbits(f->xchunks[(size_t)t->xtab[w / GX_XFM_CHUNK] * GX_XFM_CHUNK + w % GX_XFM_CHUNK]) : 0.0f;
+        }
+        float x = P0 * (r[0] * v->pos[0] + r[1] * v->pos[1] + r[2] * v->pos[2] + r[3]) + P1;
+        float y = P2 * (r[4] * v->pos[0] + r[5] * v->pos[1] + r[6] * v->pos[2] + r[7]) + P3;
+        if (fbits(u->xfr[0x1A]) < 0.0f) x = -x;
+        if (x < b[0]) b[0] = x;
+        if (x > b[1]) b[1] = x;
+        if (y < b[2]) b[2] = y;
+        if (y > b[3]) b[3] = y;
+    }
+}
+static void ownview_frame(GxFrame* f, int me) {
+    int mode = ownview_mode();
+    uint32_t nu0 = f->nunis, nd = 0;
+    for (uint32_t i = 0; i < f->ncmds; i++) nd += f->cmds[i].type == GXC_DRAW;
+    int8_t* vp = malloc(nu0 + 1);
+    OvXform* tx = calloc(nd + 1, sizeof *tx);
+    float(*bb)[4] = calloc(nd + 1, sizeof *bb);
+    GxCmd* out = malloc(sizeof(GxCmd) * (2 * (size_t)f->ncmds + 1));
+    if (!vp || !tx || !bb || !out) { free(vp); free(tx); free(bb); free(out); return; }
+    for (uint32_t i = 0; i < nu0; i++) vp[i] = (int8_t)ov_viewport(&f->unis[i]);
+    /* 1: the 2D draws' extents (original registers) and the map's (draws across the middle, not the width) */
+    float map[4] = {1e30f, -1e30f, 1e30f, -1e30f};
+    int cu = -1, ct = -1;
+    uint32_t di = 0;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        const GxCmd* c = &f->cmds[i];
+        if (c->type == GXC_STATE) { cu = (int)c->a; ct = (int)c->b; continue; }
+        if (c->type != GXC_DRAW) continue;
+        float* b = bb[di];
+        tx[di++] = OV_NONE;
+        if (cu < 0 || ct < 0 || f->unis[cu].xfr[0x26] == 0 || (vp[cu] != 2 && vp[cu] != me)) continue;
+        ov_bbox(f, c, &f->unis[cu], &f->xtabs[ct], b);
+        if (vp[cu] == 2 && b[2] < -0.02f && b[3] > 0.02f && b[1] - b[0] < 1.0f) {
+            if (b[0] < map[0]) map[0] = b[0];
+            if (b[1] > map[1]) map[1] = b[1];
+            if (b[2] < map[2]) map[2] = b[2];
+            if (b[3] > map[3]) map[3] = b[3];
+        }
+    }
+    /* 2: each 2D draw's move */
+    cu = ct = -1;
+    di = 0;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        const GxCmd* c = &f->cmds[i];
+        if (c->type == GXC_STATE) { cu = (int)c->a; ct = (int)c->b; continue; }
+        if (c->type != GXC_DRAW) continue;
+        OvXform* t = &tx[di];
+        const float* b = bb[di++];
+        if (cu < 0 || f->unis[cu].xfr[0x26] == 0) continue;  /* 3D: its register block changes in step 3 */
+        float cx = 0.5f * (b[0] + b[1]), cy = 0.5f * (b[2] + b[3]);
+        if (vp[cu] == me) {  /* 2D in this player's half viewport (made the whole screen): follows the 3D */
+            if (b[2] <= -0.99f && b[3] >= 0.99f) continue;  /* covers the view (a screen effect): stays covering */
+            t->sy = 0.5f;
+            if (mode == 2) t->ox = cx, t->oy = 0.5f * cy;
+            continue;
+        }
+        if (vp[cu] != 2) continue;
+        /* a screen effect over one half (the speed blur: copies of the view, some a little enlarged, so they reach
+         * past the middle): full width, about a half high, centred on a half; this view's covers the whole screen */
+        if (b[0] <= -0.99f && b[1] >= 0.99f && b[3] - b[2] > 0.95f && b[3] - b[2] < 1.6f && fabsf(fabsf(cy) - 0.5f) < 0.15f) {
+            if ((cy >= 0.0f ? 0 : 1) != me) { t->hide = 1; continue; }
+            t->sy = 2.0f, t->oy = me == 0 ? -1.0f : 1.0f;
+            /* its picture is a copy of the whole screen (now all this player's), of which it shows its half: the
+             * picture coordinates (t, through texture matrix 0) are stretched to the whole copy too, the half's
+             * outer edge kept (player 1: t0 stays, t1 -> 2 t1 - t0; player 2 the other way) */
+            const GxVertex* v0 = &f->verts[f->idx[c->a]];
+            uint32_t a = ((uint32_t)v0->tmtx[0] * 4u) & 0xFFC;
+            uint32_t info = f->unis[cu].xfr[0x40];
+            if (ct < 0 || ((info >> 4) & 7) != 0 || a + 8 > GX_XFM_CHUNKS * GX_XFM_CHUNK || (a + 4) / GX_XFM_CHUNK != (a + 7) / GX_XFM_CHUNK)
+                continue;
+            float r[4], lo = 1e30f, hi = -1e30f;
+            for (uint32_t k = 0; k < 4; k++) {
+                uint32_t w = a + 4 + k;
+                r[k] = fbits(f->xchunks[(size_t)f->xtabs[ct].xtab[w / GX_XFM_CHUNK] * GX_XFM_CHUNK + w % GX_XFM_CHUNK]);
+            }
+            for (uint32_t k = 0; k < c->b; k++) {
+                const GxVertex* v = &f->verts[f->idx[c->a + k]];
+                float tt = r[0] * v->tex[0][0] + r[1] * v->tex[0][1] + r[2] + r[3];
+                if (tt < lo) lo = tt;
+                if (tt > hi) hi = tt;
+            }
+            if (!(hi > lo)) continue;
+            t->tm = (int)a;
+            t->ts = 2.0f;
+            t->to = me == 0 ? -lo : -hi;
+            continue;
+        }
+        if (b[2] < -0.02f && b[3] > 0.02f) continue;  /* across the middle: the map, fades, backgrounds */
+        if (b[0] >= map[0] - 0.02f && b[1] <= map[1] + 0.02f && b[2] >= map[2] - 0.02f && b[3] <= map[3] + 0.02f)
+            continue;  /* on the map: the racers' marks */
+        int half = cy >= 0.0f ? 0 : 1;
+        if (half != me) {
+            if (!(me == 1 && cy > 0.5f && fabsf(cx) < 0.3f)) t->hide = 1;  /* player 1's timer: shown to both */
+            continue;
+        }
+        if (me == 0 && cy < 0.5f) t->oy = -1.0f;  /* the half's inner part goes to the other screen edge */
+        if (me == 1 && cy >= -0.5f) t->oy = 1.0f;
+    }
+    /* a tall HUD piece (the speed gauge, most of the half high) and every piece in its column move together,
+     * to the bottom of the screen; split by the rule above, its top stayed up while the rest moved down */
+    {
+        cu = -1;
+        di = 0;
+        uint8_t* own = calloc(nd + 1, 1);
+        if (own) {
+            for (uint32_t i = 0; i < f->ncmds; i++) {
+                const GxCmd* c = &f->cmds[i];
+                if (c->type == GXC_STATE) { cu = (int)c->a; continue; }
+                if (c->type != GXC_DRAW) continue;
+                const float* b = bb[di];
+                own[di] = cu >= 0 && f->unis[cu].xfr[0x26] != 0 && vp[cu] == 2 && !tx[di].hide && tx[di].sy == 1.0f && b[3] - b[2] < 1.0f && b[1] - b[0] < 1.0f &&
+                          (me == 0 ? b[2] >= -0.02f : b[3] <= 0.02f) &&
+                          !(b[0] >= map[0] - 0.02f && b[1] <= map[1] + 0.02f && b[2] >= map[2] - 0.02f && b[3] <= map[3] + 0.02f);
+                di++;
+            }
+            for (uint32_t a = 0; a < nd; a++) {
+                if (!own[a] || bb[a][3] - bb[a][2] < 0.4f || bb[a][1] - bb[a][0] > 0.5f) continue;  /* tall and narrow: over 40% of the half */
+                for (uint32_t j = 0; j < nd; j++) {
+                    if (!own[j]) continue;
+                    float ov = (bb[a][1] < bb[j][1] ? bb[a][1] : bb[j][1]) - (bb[a][0] > bb[j][0] ? bb[a][0] : bb[j][0]);
+                    if (ov < 0.5f * (bb[j][1] - bb[j][0])) continue;
+                    if (bb[j][2] < bb[a][2] - 0.15f || bb[j][3] > bb[a][3] + 0.15f) continue;
+                    tx[j].oy = me == 0 ? -1.0f : 0.0f;
+                }
+            }
+            free(own);
+        }
+    }
+    {   /* SR_OVLOG=<frame>: that frame's 2D draws, their extents and moves (frames counted as SR_GXDEBUG) */
+        static int at = -1;
+        if (at < 0) at = getenv("SR_OVLOG") ? atoi(getenv("SR_OVLOG")) : 0;
+        if (at && g_frames + 1 == (unsigned)at) {
+            cu = -1;
+            di = 0;
+            for (uint32_t i = 0; i < f->ncmds; i++) {
+                const GxCmd* c = &f->cmds[i];
+                if (c->type == GXC_STATE) { cu = (int)c->a; continue; }
+                if (c->type != GXC_DRAW) continue;
+                const float* b = bb[di];
+                const OvXform* t = &tx[di++];
+                if (cu < 0 || f->unis[cu].xfr[0x26] == 0) continue;
+                rt_log("[ownview] draw %u vp %d tex %d x %.3f..%.3f y %.3f..%.3f -> s %.2f %.2f o %.2f %.2f hide %d", di - 1,
+                       vp[cu], c->tex[0], b[0], b[1], b[2], b[3], t->sx, t->sy, t->ox, t->oy, t->hide);
+            }
+        }
+    }
+    /* 3: the half viewports' register blocks, in place (each is used by its own view only) */
+    for (uint32_t i = 0; i < nu0; i++) {
+        GxUniforms* u = &f->unis[i];
+        if (vp[i] != 0 && vp[i] != 1) continue;
+        if (vp[i] != me) { ov_no_scissor(u); continue; }  /* the other player's view: nothing drawn */
+        uint32_t off = ((u->bp[0x59] >> 10) & 0x3FF) * 2;
+        u->xfr[0x1B] = ubits(2.0f * fbits(u->xfr[0x1B]));
+        u->xfr[0x1E] = ubits((float)off + 240.0f);
+        u->bp[0x20] = (u->bp[0x20] & ~0x7FFu) | off;
+        u->bp[0x21] = (u->bp[0x21] & ~0x7FFu) | (off + 479u);
+        if (u->xfr[0x26] != 0) continue;
+        if (mode == 2) {  /* zoomed in: twice as wide, the sides cut */
+            u->xfr[0x20] = ubits(2.0f * fbits(u->xfr[0x20]));
+            u->xfr[0x21] = ubits(2.0f * fbits(u->xfr[0x21]));
+        } else {  /* twice as tall: more above and below */
+            u->xfr[0x22] = ubits(0.5f * fbits(u->xfr[0x22]));
+            u->xfr[0x23] = ubits(0.5f * fbits(u->xfr[0x23]));
+        }
+    }
+    /* 4: the command list again, a moved copy of the register block before each moved draw */
+    OvCached cache[64];
+    int ncache = 0, emitted_u = -1, emitted_t = -1;
+    uint32_t no = 0;
+    cu = ct = -1;
+    di = 0;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        const GxCmd* c = &f->cmds[i];
+        if (c->type == GXC_STATE) {
+            cu = (int)c->a; ct = (int)c->b;
+            out[no++] = *c;
+            emitted_u = cu; emitted_t = ct;
+            continue;
+        }
+        if (c->type == GXC_COPY && !c->copy[4] && c->copy[0] == 0 && c->copy[2] == 640 && c->copy[3] == 240 &&
+            (c->copy[1] == 0 || c->copy[1] == 240)) {
+            GxCmd cc = *c;
+            if (c->copy[1] == (uint32_t)me * 240) cc.copy[1] = 0, cc.copy[3] = 480;  /* this view: the whole screen */
+            else cc.copy[5] = 0;  /* the other view's: no clear (it would clear this player's picture) */
+            out[no++] = cc;
+            continue;
+        }
+        if (c->type != GXC_DRAW) { out[no++] = *c; continue; }
+        OvXform t = tx[di++];
+        if (cu < 0 || ct < 0) { out[no++] = *c; continue; }
+        int want = cu, want_t = ct;
+        if (!ov_identity(&t)) {
+            int k = 0;
+            while (k < ncache && !(cache[k].src == cu && cache[k].xt == ct && !memcmp(&cache[k].t, &t, sizeof t))) k++;
+            if (k < ncache) want = cache[k].idx, want_t = cache[k].xidx;
+            else {
+                if (t.tm >= 0) {  /* a copy of the chunk holding the texture matrix's t row, in a new chunk table */
+                    uint32_t ch = ((uint32_t)t.tm + 4) / GX_XFM_CHUNK;
+                    f->xchunks = grow(f->xchunks, &f->cap_xchunks, (f->nxchunks + 1) * GX_XFM_CHUNK, sizeof(uint32_t));
+                    uint32_t* nc = f->xchunks + (size_t)f->nxchunks * GX_XFM_CHUNK;
+                    memcpy(nc, f->xchunks + (size_t)f->xtabs[ct].xtab[ch] * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
+                    uint32_t o = ((uint32_t)t.tm + 4) % GX_XFM_CHUNK;
+                    for (int q = 0; q < 4; q++) nc[o + q] = ubits(t.ts * fbits(nc[o + q]));
+                    nc[o + 3] = ubits(fbits(nc[o + 3]) + t.to);
+                    f->xtabs = grow(f->xtabs, &f->cap_xtabs, f->nxtabs + 1, sizeof(GxXTab));
+                    f->xtabs[f->nxtabs] = f->xtabs[ct];
+                    f->xtabs[f->nxtabs].xtab[ch] = f->nxchunks++;
+                    want_t = (int)f->nxtabs++;
+                }
+                f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof(GxUniforms));
+                GxUniforms* u = &f->unis[f->nunis];
+                *u = f->unis[cu];
+                if (t.hide) ov_no_scissor(u);
+                u->xfr[0x20] = ubits(t.sx * fbits(u->xfr[0x20]));
+                u->xfr[0x21] = ubits(t.sx * fbits(u->xfr[0x21]) + t.ox);
+                u->xfr[0x22] = ubits(t.sy * fbits(u->xfr[0x22]));
+                u->xfr[0x23] = ubits(t.sy * fbits(u->xfr[0x23]) + t.oy);
+                want = (int)f->nunis++;
+                if (ncache < 64) cache[ncache++] = (OvCached){cu, ct, want, want_t, t};
+            }
+        }
+        if (want != emitted_u || want_t != emitted_t) {
+            GxCmd s;
+            memset(&s, 0, sizeof s);
+            s.type = GXC_STATE;
+            s.a = (uint32_t)want;
+            s.b = (uint32_t)want_t;
+            out[no++] = s;
+            emitted_u = want;
+            emitted_t = want_t;
+        }
+        out[no++] = *c;
+    }
+    f->cmds = grow(f->cmds, &f->cap_cmds, no, sizeof(GxCmd));
+    memcpy(f->cmds, out, sizeof(GxCmd) * no);
+    f->ncmds = no;
+    free(vp); free(tx); free(bb); free(out);
+}
+
 static void efb_copy(uint32_t v) {
     uint32_t tl = g_gx.bp[0x49], wh = g_gx.bp[0x4A];
     uint32_t x = tl & 0x3FF, y = (tl >> 10) & 0x3FF, w = (wh & 0x3FF) + 1, h = ((wh >> 10) & 0x3FF) + 1;
@@ -874,8 +1164,10 @@ static void efb_copy(uint32_t v) {
          * rows shown: first << 16 | count; the backend scales the picture uniformly) */
         int netplay_view_player(void);
         int p = netplay_view_player();
-        if (p >= 0 && p < 2 && g_split_seen == 3 && x == 0 && y == 0 && w == 640 && h == 480)
+        int own = p >= 0 && p < 2 && g_split_seen == 3 && x == 0 && y == 0 && w == 640 && h == 480;
+        if (own && ownview_mode() <= 0)
             c->copy[11] = (uint32_t)(p * 240) << 16 | 240;
+        own = own && ownview_mode() > 0;  /* the whole frame re-laid for this player (ownview_frame) */
         g_split_seen = 0;
         /* SR_DUMPRAM=FRAME: guest RAM to build/ram.bin at that presented frame (debugging, desktop) */
         {
@@ -889,6 +1181,7 @@ static void efb_copy(uint32_t v) {
         game_mods_frame();
         push_cmd(GXC_PRESENT);
         gx_decode_sync();
+        if (own) ownview_frame(g_frame, p);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         uint64_t ts = rt_ticks();

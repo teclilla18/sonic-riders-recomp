@@ -19,7 +19,7 @@ static volatile float g_wide_k = 1.0f;
 static float g_fixed_k;  /* settings_fix_wide_k */
 
 const char* settings_screen_name(int mode) {
-    static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched (removed)", "Fit window (wide)"};
+    static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched (removed)", "Fit to screen"};
     return mode >= 0 && mode < SCREEN_MODES ? names[mode] : "?";
 }
 
@@ -154,13 +154,15 @@ void settings_load(void) {
                &g_settings.grade_warm);
     const char* rs = getenv("SR_RES");
     if (rs && atoi(rs) >= 0 && atoi(rs) < RES_MODES) g_settings.resolution = atoi(rs);
-    /* testing, not saved unless changed in the menu: SR_SCREEN=0-3 (SCREEN_*), SR_FOV=80-130, SR_HUDSTRETCH=0/1 */
+    /* testing, not saved unless changed in the menu: SR_SCREEN=0 or 3 (SCREEN_*), SR_FOV=80-130 */
     const char* sc = getenv("SR_SCREEN");
     if (sc && atoi(sc) >= 0 && atoi(sc) < SCREEN_MODES) g_settings.screen = atoi(sc);
-    if (g_settings.screen == SCREEN_REMOVED_2) g_settings.screen = SCREEN_WIDE;  /* the old 16:9 stretched */
+    /* two screen options only (user, 2026-11-14): 4:3 and Fit to screen (HUD at the edges). The old "16:9
+     * widescreen" (1) and "16:9 stretched" (2) read as Fit; the HUD is never stretched */
+    if (g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_REMOVED_2) g_settings.screen = SCREEN_FIT;
+    g_settings.hud_stretch = 0;
     const char* fv = getenv("SR_FOV");
     if (fv && atoi(fv) >= FOV_MIN && atoi(fv) <= FOV_MAX) g_settings.fov = atoi(fv);
-    if (getenv("SR_HUDSTRETCH")) g_settings.hud_stretch = atoi(getenv("SR_HUDSTRETCH")) != 0;
     apply();
     settings_log("");
 }

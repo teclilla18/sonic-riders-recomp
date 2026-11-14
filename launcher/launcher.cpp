@@ -146,7 +146,8 @@ void settings_load() {
         if (int* p = setting_ptr(k)) *p = atoi(v.c_str());
         else g_set.other.push_back({k, v});
     }
-    if (g_set.screen == 2) g_set.screen = 1;
+    if (g_set.screen == 1 || g_set.screen == 2) g_set.screen = 3;
+    g_set.hud_stretch = 0;
     g_set.fov = std::clamp(g_set.fov, 80, 130);
     g_set.sharpness = std::clamp(g_set.sharpness, 0, 100);
 }
@@ -589,9 +590,10 @@ enum Page { P_PLAY, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_UPDATE, P
 const char* kPages[P_COUNT] = {"Play", "Graphics", "Game", "Mods", "Controls", "About", "Update"};
 int g_page = P_PLAY;
 
-const char* kScreens[] = {"4:3 (original)", "16:9 widescreen", "Fit window (wide)"};
-int screen_to_idx(int s) { return s == 3 ? 2 : s == 1 ? 1 : 0; }
-int idx_to_screen(int i) { return i == 2 ? 3 : i; }
+/* two screen options only (user, 2026-11-14): 4:3 and Fit to screen; the old 16:9 modes (1, 2) read as Fit */
+const char* kScreens[] = {"4:3 (original)", "Fit to screen"};
+int screen_to_idx(int s) { return s == 0 ? 0 : 1; }
+int idx_to_screen(int i) { return i ? 3 : 0; }
 /* frame rate presets (runtime/src/settings.c settings_pc_fps_presets): 30 = the game's 30 fps mode, 60 = its own
  * pacing, the others in-between pictures (pc_fps) */
 const char* kFramerates[] = {"30 FPS", "45 FPS", "60 FPS", "120 FPS", "144 FPS", "180 FPS", "240 FPS", "Unlimited"};
@@ -641,7 +643,7 @@ void quick_settings(float w) {
     section("QUICK SETTINGS");
     label("Screen");
     int si = screen_to_idx(g_set.screen);
-    if (selector("screen", &si, kScreens, 3, w)) { g_set.screen = idx_to_screen(si); g_set_dirty = true; }
+    if (selector("screen", &si, kScreens, 2, w)) { g_set.screen = idx_to_screen(si); g_set_dirty = true; }
     label("Window mode");
     if (selector("window", &g_set.fullscreen, kWindow, 2, w)) g_set_dirty = true;
     label("Frame rate");
@@ -975,13 +977,9 @@ void page_graphics(float w) {
     float cw = std::min(w, 520.0f);
     section("SCREEN");
     int si = screen_to_idx(g_set.screen);
-    if (selector("screen2", &si, kScreens, 3, cw)) { g_set.screen = idx_to_screen(si); g_set_dirty = true; }
-    note("16:9 shows more of the track at the sides. Fit window uses your window's or monitor's shape (up to 32:9, "
-         "ultrawide) and moves the race HUD to the edges.");
-    if (g_set.screen == 1) {
-        bool st = g_set.hud_stretch != 0;
-        if (ImGui::Checkbox("Stretch the HUD and menus to 16:9", &st)) { g_set.hud_stretch = st; g_set_dirty = true; }
-    }
+    if (selector("screen2", &si, kScreens, 2, cw)) { g_set.screen = idx_to_screen(si); g_set_dirty = true; }
+    note("Fit to screen uses your window's or monitor's shape (16:9, 16:10, up to 32:9 ultrawide), shows more of "
+         "the track at the sides and moves the race HUD to the edges.");
     ImGui::Spacing();
     section("FIELD OF VIEW");
     ImGui::SetNextItemWidth(cw);

@@ -358,13 +358,12 @@ static void touch_scroll() {
 /* ---- tabs ---- */
 void tab_display() {
     heading("Screen");
-    static const int modes[3] = {SCREEN_4_3, SCREEN_WIDE, SCREEN_FIT};
-    static const char* const tips[3] = {
+    static const int modes[2] = {SCREEN_4_3, SCREEN_FIT};
+    static const char* const tips[2] = {
         "The original 4:3 picture with black bars at the sides.",
-        "The cameras see a wider 16:9 view; the picture is drawn wider, not stretched.",
-        "The cameras see as wide as your window or screen (from 4:3 up to 32:9: 16:10, 21:9 ultrawide, 32:9), "
+        "The cameras see as wide as your window or screen (from 4:3 up to 32:9: 16:9, 16:10, 21:9 ultrawide, 32:9), "
         "drawn wider, not stretched. The HUD moves to the edges of the screen."};
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         if (i) ImGui::SameLine();
         if (radio(settings_screen_name(modes[i]), g_settings.screen == modes[i], tips[i])) {
             g_settings.screen = modes[i];
@@ -374,12 +373,6 @@ void tab_display() {
     if (settings_wide_k_fixed())
         note("Online (or a recording): the picture's shape is fixed for this session so every player's game "
              "matches; changes here apply to how it is shown, and fully after the session.");
-    if (g_settings.screen == SCREEN_WIDE) {
-        if (check("Stretch the HUD and menus to the width", &g_settings.hud_stretch,
-                  "Off: the HUD and menus keep their original 4:3 shape in the middle of the screen. On: they are "
-                  "stretched across the whole width like the 16:9 mode of older versions."))
-            settings_apply();
-    }
     heading("Field of view");
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
     ImGui::SliderInt("##fov", &g_settings.fov, FOV_MIN, FOV_MAX, "%d%%");
