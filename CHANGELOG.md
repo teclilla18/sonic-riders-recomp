@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.2 (2026-11-14)
 
 - **"Riders Plus"**: the settings option "Ring Limit set to 999" is now called "Riders Plus" (Gameplay tab), since it
   holds all of the custom gameplay below as well as the 999 rings. Your saved choice is kept. Off = the original game.
