@@ -250,6 +250,25 @@ the host first ended the session on the laptop with "the other player left". Nex
 phones (notes/online-research.md steps 2-3).
 
 
+## Lobby in the Windows launcher (2026-11-14)
+
+The launcher's **Online** page (launcher/lobby.cpp, page_online in launcher.cpp): the player types a name (kept in
+saves\online.ini; no default, the Windows account name is often a real name); **Host a lobby** shows a join code;
+other launchers on the network list the lobby (or type the code) and **Join**; everyone sees the players' names;
+the host's **Start race** makes every launcher start the game with `SR_NET` (host:7777 / join:<host>:7777),
+`SR_NET_NAME` and `SR_NET_PEER` (the other player's name, shown in the game's waiting banners and logged).
+
+- UDP, a thread: the host's lobby socket 7778, announcements broadcast to 7779 every second (every adapter's
+  broadcast address, 255.255.255.255 and 127.0.0.1); JOIN / LIST / REFUSE / PING / LEAVE / START messages (lobby.cpp
+  header). Players are dropped after 6 s without a word. Two players (the game's sessions); a third is refused ("The
+  lobby is full"), another game build too (fingerprint = hash of sonicriders.exe); names are made unique ("Name (2)").
+- Join code: the host's local IPv4 in 7 characters (`ABC-DEFG`, no 0 O 1 I), so it works on the same network; over
+  the internet only with UDP 7777-7778 forwarded. The lobby server with real codes (notes/online-research.md) replaces
+  this later.
+- Tested [confirmed, PC]: a console driver of lobby.cpp, two copies on one PC: found on the network list, joined by
+  list and by code, duplicate name "(2)", third player refused, START reaches the player with the host's address.
+  Launcher pictures of the page. Not tested yet: two launchers on two PCs starting a race (user's LAN test).
+
 ## Save data for online races (decided, 2026-10-30)
 
 The game reads its memory card at boot (settings, unlocks, records), so every machine must start from the same

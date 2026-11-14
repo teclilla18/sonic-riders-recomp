@@ -168,6 +168,15 @@ static int rep_read(GcPad* pads, uint32_t* sum) {
 }
 
 /* ------------------------------------------------------------------ lockstep */
+/* the other player's name, from the launcher's lobby (SR_NET_PEER; display only, never part of the game) */
+static const char* peer_name(void) {
+    static char n[40];
+    if (!n[0]) {
+        const char* e = getenv("SR_NET_PEER");
+        snprintf(n, sizeof n, "%s", e && *e ? e : "the other player");
+    }
+    return n;
+}
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
 #define PROTO 3  /* 2: no save check (everyone uses the generated online save); 3: the host's camera aspect */
 static sock_t g_sock = SOCK_BAD;
@@ -338,7 +347,9 @@ static void net_frame(GcPad* pads) {
         if (!waited && now - t0 > 1000000000ull) {
             waited = 1;
             rt_log("[net] frame %u: waiting for the other player", f);
-            overlay_set_banner("Waiting for the other player...");
+            char wb[96];
+            snprintf(wb, sizeof wb, "Waiting for %s...", peer_name());
+            overlay_set_banner(wb);
         }
         if ((double)(now - g_last_recv_ns) > timeout_s * 1e9)
             net_end(BYE_LOST, f, "connection lost: nothing from the other player for the timeout (SR_NET_TIMEOUT)",
@@ -433,7 +444,12 @@ static void net_connect(const char* spec) {
         if (g_delay < 1) g_delay = 1;
         if (g_delay > 60) g_delay = 60;
         rt_log("[net] hosting on UDP port %d (input delay %d frames): waiting for a player to join", port, g_delay);
-        overlay_set_banner("Online: waiting for a player to join...");
+        {
+            char wb[96];
+            snprintf(wb, sizeof wb, "Online: waiting for %s to join...",
+                     getenv("SR_NET_PEER") ? peer_name() : "a player");
+            overlay_set_banner(wb);
+        }
         for (;;) {
             uint8_t m[1500];
             struct sockaddr_in from;
@@ -464,7 +480,11 @@ static void net_connect(const char* spec) {
         rt_log("[net] player 2 joined from %s:%u", ip, ntohs(g_peer.sin_port));
     } else {
         rt_log("[net] joining %s:%d", host, port);
-        overlay_set_banner("Online: joining...");
+        {
+            char wb[96];
+            snprintf(wb, sizeof wb, "Online: joining %s...", peer_name());
+            overlay_set_banner(wb);
+        }
         uint8_t hello[72] = {'S', 'R', M_HELLO, PROTO};
         snprintf((char*)hello + 8, 64, "%s", g_build_version);
         uint64_t t0 = platform_now_ns(), last = 0;
@@ -503,6 +523,10 @@ static void net_connect(const char* spec) {
             }
         }
         rt_log("[net] joined as player %d of %d (input delay %d frames)", g_me + 1, g_players, g_delay);
+    }
+    if (getenv("SR_NET_NAME") || getenv("SR_NET_PEER")) {
+        const char* me = getenv("SR_NET_NAME");
+        rt_log("[net] lobby names: this player \"%s\", the other \"%s\"", me ? me : "", peer_name());
     }
     if (g_players != 2 || g_me >= g_players) net_fail("only two-player sessions are supported so far");
     g_ports = g_players;

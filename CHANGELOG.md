@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Online lobby in the PC launcher** (new "Online" page): type your name, host a lobby or join one from the list of
+  lobbies on your network (or with the host's join code), see who is in it, and the host starts the race on both
+  PCs. Two players, same network for now; the game shows the other player's name while waiting.
 - **Online races show your own racer full screen**: no more black bars and half picture. Each machine shows only its
   own player, with more sky and track above and below, the HUD in the corners like a one-player race, the whole track
   map, and the race timer for both players. Only the picture changes, so both games stay in step.

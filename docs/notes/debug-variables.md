@@ -75,6 +75,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_DETCLOCK=1`: deterministic mode. `SR_DETTRACE=1`: log every interrupt/disc command with frame and location.
 - `SR_RAMHASH`, `SR_RAMHASH_BLOCKS=<from>-<to>|none`, `SR_RAMHASH_SUB=<block>`, `SR_RAMHASH_REF=<log>` (+ `SR_RAMHASH_REF_DUMPS`), `SR_RAMHASH_KEY=<addr>` (adds e.g. the scene frame 8021BB64), `SR_RAMDUMPAT`, `SR_RAMDUMPKEY[_AFTER]`.
 - `SR_RAMSAMPLE=<file>` (needs `SR_RAMHASH=<steps>`): hex addresses, one per line (up to 4096); logs `[ramsample] step N addr old new` on every change. Use it to keep only the candidates of a RAM-dump diff that never flip (found `GAME_RACE_PHASE`, 2026-11-07).
+- `SR_NET_NAME=<name>`, `SR_NET_PEER=<name>` (set by the launcher's lobby: this and the other player's names, for the banners and the log).
 - `SR_OWNVIEW=0|1|2` (online own view: half picture / full screen with more above and below, default / zoomed), `SR_OVLOG=<frame>` (that frame's own-view 2D moves); docs/ONLINE.md "Own view".
 - `SR_RECORD=<file>`, `SR_REPLAY=<file>`, `SR_NET=host:[<addr>:]<port>` / `join:<addr>:<port>`, `SR_NET_DELAY`, `SR_NET_TIMEOUT`, `SR_NET_TEST_DESYNC=<frame>`, `SR_ONLINE_SAVE=1`, `SR_VIEW=<1|2>`.
 

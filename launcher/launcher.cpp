@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "../runtime/src/update_core.h"  /* newest release on GitHub (WinHTTP) */
+#include "lobby.h"                        /* the Online page (UDP, its own thread) */
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
@@ -586,8 +587,8 @@ bool big_button(const char* t, ImVec2 size, bool primary, bool enabled) {
 
 /* ---------------------------------------------------------------- pages */
 
-enum Page { P_PLAY, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_UPDATE, P_COUNT };  /* Update: only with one */
-const char* kPages[P_COUNT] = {"Play", "Graphics", "Game", "Mods", "Controls", "About", "Update"};
+enum Page { P_PLAY, P_ONLINE, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_UPDATE, P_COUNT };  /* Update: only with one */
+const char* kPages[P_COUNT] = {"Play", "Online", "Graphics", "Game", "Mods", "Controls", "About", "Update"};
 int g_page = P_PLAY;
 
 /* two screen options only (user, 2026-11-14): 4:3 and Fit to screen; the old 16:9 modes (1, 2) read as Fit */
@@ -1506,6 +1507,174 @@ void page_about(float w) {
     note("Launcher: Dear ImGui (MIT). Fonts: Windows' Segoe UI.");
 }
 
+/* ---------------------------------------------------------------- Online (lobby.cpp) */
+
+/* the player's name, kept in saves\online.ini (the game rewrites settings.ini without keys it doesn't know) */
+char g_online_name[lobby::kNameMax + 1];
+char g_online_code[16];
+bool g_online_started;      /* the game was started from the lobby; the lobby resets when it closes */
+std::string g_online_peer;  /* the other player's name in that race */
+void online_load() {
+    std::string n;
+    for (const std::string& l : split_lines(read_text(path(L"saves\\online.ini"))))
+        if (l.rfind("name=", 0) == 0) n = lobby::clean_name(l.substr(5));
+    /* no default: the Windows account name is often a real name, which other players would see */
+    snprintf(g_online_name, sizeof g_online_name, "%s", n.c_str());
+}
+void online_save() {
+    CreateDirectoryW(path(L"saves").c_str(), nullptr);
+    write_text(path(L"saves\\online.ini"), std::string("name=") + lobby::clean_name(g_online_name) + "\n");
+}
+void play_online(const lobby::View& v) {
+    if (g_set_dirty) settings_save();
+    if (g_mods_dirty) mods_save();
+    if (g_ctl_dirty) controls_save();
+    bool host = v.me == 0;
+    g_online_peer = v.players.size() > 1 ? v.players[host ? 1 : 0] : std::string("the other player");
+    std::wstring cmd = L"\"" + path(L"build\\host-mingw\\sonicriders.exe") + L"\"";
+    std::vector<std::pair<std::wstring, std::wstring>> env = {
+        {L"SR_NET", host ? L"host:" + std::to_wstring(lobby::kGamePort)
+                         : L"join:" + widen(v.host_ip) + L":" + std::to_wstring(lobby::kGamePort)},
+        {L"SR_NET_TIMEOUT", L"30"},
+        {L"SR_NET_NAME", widen(v.players.size() > (size_t)v.me ? v.players[v.me] : std::string())},
+        {L"SR_NET_PEER", widen(g_online_peer)}};
+    if (start_child(g_game, cmd, env, false, false, nullptr)) g_status = "Online race with " + g_online_peer;
+    else g_status = "Could not start the game.";
+    g_online_started = true;
+}
+void player_list(const lobby::View& v) {
+    for (size_t i = 0; i < v.players.size(); i++) {
+        std::string line = "  " + v.players[i];
+        if (i == 0) line += "   (host)";
+        if ((int)i == v.me) line += "   - you";
+        ImGui::TextColored(i == 0 ? kGoldV : ImVec4(0.86f, 0.89f, 0.95f, 1), "%s", line.c_str());
+    }
+    for (size_t i = v.players.size(); i < (size_t)lobby::kMaxPlayers; i++) ImGui::TextColored(kDim, "  (open)");
+}
+bool g_online_inited;  /* the lobby thread runs once the Online page was opened */
+/* every frame, on any page: start the game when the host starts the race; back to the lobby when it closes */
+void online_poll() {
+    if (!g_online_inited) return;
+    lobby::View v = lobby::view();
+    bool game_on = child_running(g_game);
+    if (v.state == lobby::STARTING && !g_online_started && !game_on) {
+        play_online(v);
+        g_page = P_ONLINE;
+    } else if (g_online_started && !game_on && v.state == lobby::STARTING) {
+        lobby::leave();
+        g_online_started = false;
+    }
+}
+void page_online(float w) {
+    if (!g_online_inited) {
+        g_online_inited = true;
+        online_load();
+        lobby::init(path(L"build\\host-mingw\\sonicriders.exe"));
+    }
+    lobby::View v = lobby::view();
+    bool game_on = child_running(g_game);
+    float cw = std::min(w, 620.0f);
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + cw);
+    if (!g_ready.built || !g_ready.disc) {
+        section("ONLINE");
+        ImGui::TextWrapped("Install the game first (Play page).");
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    section("YOUR NAME");
+    ImGui::BeginDisabled(v.state != lobby::IDLE);
+    ImGui::SetNextItemWidth(cw * 0.6f);
+    ImGui::InputTextWithHint("##name", "Type a name", g_online_name, sizeof g_online_name);
+    if (ImGui::IsItemDeactivatedAfterEdit()) online_save();
+    ImGui::EndDisabled();
+    note("Other players see this name in the lobby and in the race.");
+    std::string name = lobby::clean_name(g_online_name);
+    ImGui::Spacing();
+    if (!v.error.empty()) {
+        ImGui::TextColored(kRed, "%s", v.error.c_str());
+        ImGui::Spacing();
+    }
+    switch (v.state) {
+    case lobby::IDLE: {
+        section("HOST A RACE");
+        ImGui::BeginDisabled(name.empty() || game_on || !v.ready);
+        if (ImGui::Button("Host a lobby")) { lobby::clear_error(); online_save(); lobby::host(name); }
+        ImGui::EndDisabled();
+        if (name.empty()) ImGui::TextColored(kDim, "Type a name first.");
+        ImGui::Spacing();
+        section("JOIN A RACE");
+        label("Lobbies on your network");
+        if (v.found.empty()) ImGui::TextColored(kDim, "  Searching... (none found yet)");
+        for (size_t i = 0; i < v.found.size(); i++) {
+            const lobby::Found& f = v.found[i];
+            ImGui::PushID((int)i);
+            ImGui::Text("  %s's lobby   %d/%d", f.host_name.c_str(), f.players, f.max_players);
+            ImGui::SameLine();
+            bool can = f.open && f.same_game && !name.empty() && !game_on;
+            ImGui::BeginDisabled(!can);
+            if (ImGui::SmallButton("Join")) { lobby::clear_error(); online_save(); lobby::join(f.ip, name); }
+            ImGui::EndDisabled();
+            if (!f.same_game) { ImGui::SameLine(); ImGui::TextColored(kRed, "different game version"); }
+            else if (!f.open) { ImGui::SameLine(); ImGui::TextColored(kDim, "full"); }
+            ImGui::PopID();
+        }
+        ImGui::Spacing();
+        label("Or type a join code");
+        ImGui::SetNextItemWidth(cw * 0.35f);
+        ImGui::InputTextWithHint("##code", "ABC-DEFG", g_online_code, sizeof g_online_code, ImGuiInputTextFlags_CharsUppercase);
+        ImGui::SameLine();
+        std::string ip;
+        bool ok = lobby::code_to_ip(g_online_code, ip);
+        ImGui::BeginDisabled(!ok || name.empty() || game_on || !v.ready);
+        if (ImGui::Button("Join with code")) { lobby::clear_error(); online_save(); lobby::join(ip, name); }
+        ImGui::EndDisabled();
+        ImGui::Spacing();
+        note("Both computers must be on the same network for now (playing over the internet comes later). The first "
+             "time, Windows may ask to let the launcher and the game through the firewall: allow it (Private networks). "
+             "Online races are two players, one per computer, each on their own screen; everyone races with every "
+             "character and board unlocked, and your own saves are not used or changed.");
+        break;
+    }
+    case lobby::HOSTING:
+        section("YOUR LOBBY");
+        ImGui::Text("Join code:");
+        ImGui::SameLine();
+        ImGui::PushFont(g_font_bold, 28 * g_dpi);
+        ImGui::TextColored(kGoldV, "%s", v.code.empty() ? "-" : v.code.c_str());
+        ImGui::PopFont();
+        note("Players on your network also see your lobby in their list, so they can join without the code.");
+        ImGui::Spacing();
+        label("Players");
+        player_list(v);
+        ImGui::Spacing();
+        if (big_button("Start race", ImVec2(180 * g_dpi, 40 * g_dpi), true, v.players.size() >= 2 && !game_on)) lobby::start_race();
+        ImGui::SameLine();
+        if (ImGui::Button("Close lobby")) lobby::leave();
+        if (v.players.size() < 2) ImGui::TextColored(kDim, "Waiting for a player to join...");
+        break;
+    case lobby::JOINING:
+        section("JOINING");
+        ImGui::TextWrapped("Looking for the lobby at %s...", v.host_ip.c_str());
+        if (ImGui::Button("Cancel")) lobby::leave();
+        break;
+    case lobby::JOINED:
+        section("LOBBY");
+        ImGui::Text("%s's lobby", v.players.empty() ? "?" : v.players[0].c_str());
+        ImGui::Spacing();
+        label("Players");
+        player_list(v);
+        ImGui::Spacing();
+        ImGui::TextColored(kDim, "Waiting for %s to start the race...", v.players.empty() ? "the host" : v.players[0].c_str());
+        if (ImGui::Button("Leave lobby")) lobby::leave();
+        break;
+    case lobby::STARTING:
+        section("RACING");
+        ImGui::TextWrapped("The game is running: racing %s. Close the game to come back here.", g_online_peer.c_str());
+        break;
+    }
+    ImGui::PopTextWrapPos();
+}
+
 /* ---------------------------------------------------------------- the frame */
 
 void play() {
@@ -1620,6 +1789,7 @@ void draw_ui(float W, float H) {
     float pw = ImGui::GetContentRegionAvail().x;
     switch (g_page) {
     case P_PLAY: installer() ? page_installer(pw) : page_play(pw); break;
+    case P_ONLINE: page_online(pw); break;
     case P_GRAPHICS: page_graphics(pw); break;
     case P_GAME: page_game(pw); break;
     case P_MODS: page_mods(pw); break;
@@ -1770,6 +1940,7 @@ bool install_test_step(int frame) {
 
 /* the install's next steps, checked every frame */
 void poll_children() {
+    online_poll();  /* the Online lobby: start the game when the race starts (any page, minimized too) */
     static bool game_was;
     bool game_on = child_running(g_game);
     if (game_was && !game_on) {  /* the game closed: it may have changed its settings (F1 menu) */
@@ -2026,6 +2197,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     if (g_set_dirty) settings_save();
     if (g_mods_dirty) mods_save();
     if (g_ctl_dirty) controls_save();
+    lobby::shutdown();
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();

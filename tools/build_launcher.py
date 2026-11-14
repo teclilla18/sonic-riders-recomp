@@ -53,7 +53,7 @@ def main():
     if not os.path.isfile(cxx):
         sys.exit("build_launcher: no compiler at %s (--llvm-mingw)" % cxx)
     im = a.imgui
-    srcs = [os.path.join(ROOT, "launcher", "launcher.cpp")]
+    srcs = [os.path.join(ROOT, "launcher", f) for f in ("launcher.cpp", "lobby.cpp")]
     srcs += [os.path.join(im, f) for f in ("imgui.cpp", "imgui_draw.cpp", "imgui_tables.cpp", "imgui_widgets.cpp")]
     srcs += [os.path.join(im, "backends", f) for f in ("imgui_impl_win32.cpp", "imgui_impl_dx11.cpp")]
     out_dir = os.path.join(ROOT, "build", "launcher")
@@ -85,7 +85,7 @@ def main():
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [
            "-o", out, "-ld3d11", "-ldxgi", "-ld3dcompiler", "-ldwmapi", "-lole32", "-lwindowscodecs",
-           "-lcomdlg32", "-lshell32", "-lgdi32", "-luuid", "-lwinhttp"]
+           "-lcomdlg32", "-lshell32", "-lgdi32", "-luuid", "-lwinhttp", "-lws2_32", "-liphlpapi"]
     print("build_launcher: compiling (about a minute)...")
     r = subprocess.run(cmd)
     if r.returncode:

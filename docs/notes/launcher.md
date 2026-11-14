@@ -8,7 +8,7 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
   build\, baserom\, saves\, mods\): `--root-copy` puts it there (the root copy is ignored by git). Started from a subfolder (build\launcher\) it
   uses the nearest parent folder with setup\setup.ps1 as the root.
 - Pages: Play (ready check: game built, disc image in baserom\, saves\card_a.raw, graphics card; quick settings),
-  Graphics (screen mode, HUD stretch, FOV 80-130, window mode, frame rate, frame counter), Game (Chaos Emerald,
+  Online (lobby: name, host / join, docs/ONLINE.md "Lobby"), Graphics (screen: 4:3 or Fit to screen, FOV 80-130, window mode, frame rate, frame counter), Game (Chaos Emerald,
   saves folder), Mods (on/off + order, writes mods\mods.ini), Controls (button map, below), About
   (version from VERSION, links, Rebuild).
 - Settings: reads and writes `saves\settings.ini` (the in-game menu's file; unknown keys kept), saved 0.5 s after a
@@ -19,7 +19,7 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
 - Banner: `launcher\banner.jpg`, public fan art chosen by the user (1800x520 crop of a 1920x1080 picture; not from
   the game). Committed with the user's OK (2026-11-07); the guard allows exactly this file by SHA-1
   (OWN_ART in tools/check_no_game_data.py), so a changed banner needs a new hash there. Without it the banner is a blue gradient.
-- Testing: `SR_LAUNCHER_SHOT=<file.png>` (+ `SR_LAUNCHER_PAGE=0-5`) draws off-screen, saves the picture after
+- Testing: `SR_LAUNCHER_SHOT=<file.png>` (+ `SR_LAUNCHER_PAGE=0-6`, 1 = Online) draws off-screen, saves the picture after
   20 frames and quits (look at the launcher this way, not with desktop screenshots).
   `SR_LAUNCHER_TEST="<s>[;key=value,...]"` (off-screen): sets settings (`fov=111`) and buttons (`key.A=Space`,
   `pad.Z=leftshoulder`) as the pages would, presses PLAY, Stop after <s> seconds, writes build\launcher\test.txt
