@@ -1325,3 +1325,17 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Option renamed "Riders Plus" (user's choice). Not done: Switch/phone play of the charge jump, CPU racers.
 - Tooling notes: ninja missed a patches.txt change once (run gcrecomp.py directly after editing patches); sed -i in
   Git Bash turns CRLF files into LF (restore with sed 's/$/\r/' for files git lists as i/crlf).
+
+## 2026-11-13 (Mac): v0.8.2 iOS zip; Riders Plus on an iPad (A16)
+
+- iOS zip built with `make_release.py --version v0.8.2 --flavor ios --ref v0.8.2` (VERSION "v0.8.2 (81ee3358)",
+  211 files); cold Mac unzip test PASS (ditto into a fresh folder, unsigned, fresh tools dir, 7/7 steps, .ipa
+  built) [confirmed]; uploaded to the v0.8.2 release, the notes' last line now points at it.
+- iPad (A16) over the cable, build 3ed95db (the tag only changes CHANGELOG.md), no settings file = defaults:
+  `SR_TEST_MENU=3` frame shows the Gameplay tab with "Riders Plus" ticked [confirmed, SR_SCREENSHOT].
+- Scripted Metal City Free Race (the PC menu route with a new card `SR_CARD=saves/test_v082.raw`, then SY=100,
+  SX +-60 every 120 fields; A held 90 fields at cruise and 30 fields after a B+X boost; `SR_RAMHASH=30000
+  SR_RAMHASH_BLOCKS=none SR_RAMSAMPLE=ramsample.txt` on racer 0 speed 81A0E1EC, flags 81A0E168, charge 81A0E134):
+  cruise holds flat 45 steps then 130 -> 122 km/h over 30 steps (the old curve, shifted); after a boost 229 km/h
+  held 45 steps, then the decay [confirmed]. Two of the boost holds lost speed earlier (193 from step ~35; 200 ->
+  186 at step 15): the racer was steering into walls, not checked further [uncertain]. Not played by hand.

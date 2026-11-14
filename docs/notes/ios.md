@@ -213,6 +213,10 @@ First-boot findings [confirmed on the iPhone]:
 - Cold test: extract the zip with `ditto -x -k` into a fresh folder, run the .command with `SR_NOPAUSE=1 --yes
   --unsigned --iso <img> --tools <fresh dir> --ipa-dir <scratch>` (never the Desktop folder). PASS 2026-11-08.
   Not covered: a Mac without Homebrew or Xcode; the signed install route from the zip.
+- Gameplay check without touching the screen (2026-11-13, v0.8.2): `ios_run.py run "SR_INPUT=<PC menu route>"
+  SR_CARD=saves/<new>.raw ...` reaches a Metal City Free Race as on PC (build-and-test.md routes); a file for
+  `SR_RAMSAMPLE` goes in with `devicectl device copy to ... --destination Documents/<name>` (paths are relative
+  to Documents). `SR_TEST_MENU=3` opens the Gameplay tab.
 
 ## Pause, clock and touch (2026-11-08)
 

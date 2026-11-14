@@ -7,14 +7,12 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push.
 
 ## Releases
 
-**v0.8.1 released 2026-11-12** (tag on 77620bb; PC, Switch, Android, Linux zips from the tag). **iOS zip replaced
-2026-11-13 from abedb6a** (user: the iOS app-ID fix goes into the current release, no v0.8.2; VERSION reads
-"v0.8.1 (abedb6a0)"); cold Mac test of that zip PASS, notes have an "iPhone / iPad" section [confirmed]. Cold Sandbox PC + Android PASS, 2 installs each [confirmed]. Cold
-Mac unzip test of the iOS zip (unsigned, fresh tools) PASS; Mac launcher About page shows the Heroes call
-[confirmed, launcher shot]; the v0.8.1 app boots to the title on an iPad (A16) [confirmed, SR_SCREENSHOT]. Contents: call for Sonic
-Heroes alpha testers (top of the notes, README line 1, launcher sidebar on PC/Switch/Android modes [confirmed,
-launcher screenshots], Linux/Mac setup end message), 999 ring limit, menu L/R tabs + wrap, update_check saved.
-v0.7.1 delisted (tag kept).
+**v0.8.2 released 2026-11-14** ("Sonic Riders Plus", tag on 81ee335): all five zips. iOS zip built on the Mac
+2026-11-13 from the tag (VERSION "v0.8.2 (81ee3358)"), cold Mac unzip test PASS (unsigned, fresh tools, 7/7)
+[confirmed]; notes' last line points at it. Details: item 0c.
+
+**v0.8.1 released 2026-11-12** (tag on 77620bb; iOS zip replaced 2026-11-13 from abedb6a with the one-app-ID fix).
+Heroes alpha call, 999 ring limit, menu L/R tabs + wrap. Cold Sandbox PC + Android and cold Mac PASS [confirmed].
 
 **v0.8.0 released 2026-11-11** (all five zips; replaced in place from be45877, bloom fix + fan icon; cold
 Sandbox PC + Android PASS). Picture options on Switch/Android/iOS, fan icon everywhere. iOS: iPad Pro M1 max
@@ -56,15 +54,9 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
 
 ## Open items, in priority order
 
-0. **iOS: one app ID per player** (2026-11-13, user's plan, released in v0.8.1's iOS zip): tools always build
-   `net.srnative.sonicriders.<team>` (= Sideloadly default); `ios_run.py install` moves an older-ID app (backup to
-   build/ios/moved, uninstall, install, copy back, size checks); launcher Install page picks the cable device and
-   says update/new/move; game About tab shows the App ID (+ warning for old IDs). Tested on the iPad (A16): move
-   `.t<hash>` -> `.<team>` with the 1.4 GB disc and save (MD5 equal), boot with the save card, About tab shows the
-   ID, update path, push-iso skip, signed setup_mac.py run [confirmed]. Not tested: the old-ID warning on screen,
-   a move on a device at the 3-app limit, Sideloadly renewal after a move. Not accepted by the user yet.
-0b. **v0.8.1 released** (all five zips). Capsule +100, hit/fall -100, L/R tabs, menu wrap **accepted**
-   (2026-11-13). Release notes open with the Heroes alpha call and a Lv. 4/5 preview (assets `preview-lv-*`).
+0. **iOS: one app ID per player** (released in v0.8.1's iOS zip; notes/ios.md "App IDs"): `<base>.<team>` always;
+   `ios_run.py install` moves an older-ID app (tested on the A16 iPad [confirmed]). Not tested: the old-ID warning
+   on screen, a move at the 3-app limit, a Sideloadly renewal after a move. Not accepted by the user yet.
 1. **"Riders Plus" gameplay set, released in v0.8.2** (the option formerly "Ring Limit set to 999", renamed 2026-11-14 by the user's
    choice; key `ring_cap_999` kept) (notes game-addresses.md "Capsule" / "Object collisions"
    / "Charge jump"). Recordings and online fix the option for the whole run ("ring cap fixed"), so the menu toggle
@@ -72,8 +64,8 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    - **Charge jump grace 0.75 s** (003acfe; user tried 1.5 and 1 s, picked 0.75): the charge slowdown (fn_1_6D5D4)
      and, after a boost, the decay above top speed (store 81815ABC) wait 0.75 s; every racer. PC, the user's
      recorded runs: speed holds/creeps up 0.73 s then the old curve [confirmed, SR_RAMSAMPLE]; user played the
-     1 s version ("Perfect") and saw the 0.75 replay ("Perfect amount of hold time") [accepted, PC]. Not
-     played on Switch/phones; CPU racers not checked.
+     1 s version ("Perfect") and saw the 0.75 replay ("Perfect amount of hold time") [accepted, PC]. iPad (A16)
+     scripted race: same [confirmed]. Not played on Switch/phones by the user; CPU racers not checked.
    - **Gear Lv. 4 / 5** (game_levels.c): Lv. 4 at 200, Lv. 5 at **350** (user: 500 "near impossible"), slowed twice by request
      (2026-11-14: Blue Star 200/275 and 215/300 top/boost; x(200/180, 1.1, 1.1) and x(215/180, 1.2, 1.25)). PC: Lv. 4 at 210, Lv. 5 at 360 rings,
      block values exact [confirmed, log + RAM]. Old 200/500 build played by the user on the OLED [tested, user].
@@ -88,7 +80,10 @@ Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch;
    - Settings-menu details drop-downs: built, then removed 2026-11-14 at the user's request (tooltips only).
 0c. **v0.8.2 released 2026-11-14** ("v0.8.2: Sonic Riders Plus", tag on 81ee335; PC, Switch, Android, Linux zips;
    cold Sandbox PC (2 installs, one with a space) + Android PASS [confirmed]; downloaded PC zip = built zip [confirmed,
-   hash]). iOS zip: the Mac session builds it with --ref v0.8.2 and uploads it (asked 2026-11-14). Notes: the user's
+   hash]). iOS zip: built and uploaded by the Mac session (cold Mac PASS). iPad (A16), build 3ed95db (= tag code):
+   Gameplay tab shows "Riders Plus" ticked by default [confirmed, SR_SCREENSHOT]; scripted Metal City Free Race
+   (SR_INPUT + SR_RAMSAMPLE, racer 0): A held at cruise keeps the speed flat 45 steps (0.75 s at 60) then the old
+   curve (130 -> 122 km/h in 30 steps); held right after a boost, 229 km/h for 45 steps then the decay [confirmed]. Notes: the user's
    ChatGPT banners + our charts + a Lv. 5 PC screenshot pair, all in docs/images/v0.8.2/ (approved by hash in the
    guard); user's rule: **only build zips as release assets**. v0.7.2 delisted (tag kept). Checks before it: OLED
    Splash Canyon / docked / 2P [accepted]; S23 A/B vs v0.8.1 no regression; PC Auto race 59.9 [confirmed].
