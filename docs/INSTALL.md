@@ -226,21 +226,24 @@ iPhone/iPad on **iOS / iPadOS 16 or newer**. A free Apple ID is enough.
 
 ### Renewing every 7 days
 
-With a free Apple ID, iOS stops opening the app 7 days after it was installed. Renewing puts it back for 7 more
-days; your saves and the disc image stay on the device. The app file is always on your Mac at
-**`~/Desktop/Sonic Riders iOS/SonicRiders.ipa`** (Finder: Desktop → *Sonic Riders iOS*; the build before it is
-`SonicRiders-prev.ipa`), and **`How to renew (every 7 days).txt`** in the same folder has these steps with your
-own app ID filled in.
+With a free Apple account, the app stops opening about 7 days after it was put on the device. Renewing gives it 7
+more days. Your saves and the game file stay on the device.
 
-**One rule: renew with Sideloadly and never change its settings.** Every Sonic Riders install should have the
-app ID `net.srnative.sonicriders.<your team ID>`: the Mac installer gives it, and so does Sideloadly with its
-default settings. The game shows its ID in *Settings → About*.
+**With Sideloadly**, one device at a time:
 
-- **From the Mac:** connect the device. In the launcher's *Install* page the device on the cable is picked by
-  itself; click **Install only (renewing)** (or run `Install Sonic Riders (iOS).command` again). Or use
-  Sideloadly, below: both reach the same app.
-- **With Sideloadly (or AltStore):** connect the device, drag the same `.ipa` into Sideloadly with the same Apple
-  ID, leave the settings as they are ("Use automatic bundle ID" ticked) and *Start*.
+1. Plug the iPhone or iPad into the Mac with a cable and unlock it.
+2. Open **Sideloadly** and make sure your device is picked in the box at the top.
+3. Drag in **`SonicRiders.ipa`** from your Desktop (folder *Sonic Riders iOS*).
+4. Type your Apple ID email if it asks.
+5. **Don't change any settings** ("Use automatic bundle ID" stays ticked, as it is by default).
+6. Click **Start**, type your Apple ID password if it asks, and wait for "Done".
+
+**Or from the Mac:** in the Sonic Riders launcher go to **Install**, pick the device and click **Install only
+(renewing)** (or run `Install Sonic Riders (iOS).command` again). It gets a fresh 7 days first (about a minute).
+
+The same steps are in **`How to renew (every 7 days).txt`** in the *Sonic Riders iOS* folder on your Desktop. If
+you ever see **two** Sonic Riders apps on a device, a setting was changed: delete the empty one (the one that asks
+for the disc image).
 
 **An older install** (installed before 2026-11-13, ID `net.srnative.sonicriders` or `net.srnative.sonicriders.t…`;
 *Settings → About* says "Older app ID"): connect it to the Mac and click **Install** in the launcher (or run the

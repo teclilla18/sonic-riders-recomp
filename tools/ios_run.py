@@ -19,9 +19,12 @@ installed under an older ID (net.srnative.sonicriders, .t<hash>) is MOVED by ins
 disc image) are copied to build/ios/moved/<old ID>-<time>/, checked, the old app is removed (a free Apple ID allows
 only 3 apps per device), the new one installed and the files copied back and checked. Asks first (--move: yes).
 """
+import datetime
 import json
 import os
 import re
+import shutil
+import plistlib
 import subprocess
 import sys
 import tempfile
@@ -54,7 +57,7 @@ def devices():
     for dev in data.get("result", {}).get("devices", []):
         props = dev.get("deviceProperties", {})
         hw = dev.get("hardwareProperties", {})
-        found.append({"id": dev.get("identifier", ""), "name": props.get("name", "?"),
+        found.append({"id": dev.get("identifier", ""), "name": props.get("name", "?"), "udid": hw.get("udid", ""),
                       "os": props.get("osVersionNumber", "?"), "model": hw.get("marketingName", "?"),
                       # the tunnel reads "disconnected" while idle; devicectl opens it on demand
                       "state": "%s, tunnel %s" % (dev.get("connectionProperties", {}).get("pairingState", "?"),
@@ -115,9 +118,85 @@ def copy_in(dev, bid, folder):
     return [rel for rel, size in want if have.get(rel) != size]
 
 
+def profile_problem(dev):
+    """why the built app cannot be installed on the device, or "" when its provisioning profile lists the device and
+    is still valid. A free Apple ID's profile names each device; Xcode reuses a cached one that may lack a device
+    registered later ("This provisioning profile cannot be installed on this device", 2026-11-13)."""
+    prof = os.path.join(APP, "embedded.mobileprovision")
+    if not os.path.isfile(prof):
+        return "the app has no provisioning profile (an unsigned build): install it with Sideloadly instead"
+    info = profile_info(prof)
+    if info is None:
+        return "could not read the app's provisioning profile"
+    udid = next((d["udid"] for d in devices() if d["id"] == dev), "")
+    listed = info.get("ProvisionedDevices")
+    if listed is not None and (not udid or udid.lower() not in (u.lower() for u in listed)):
+        return ("the app's provisioning profile does not list this device. Make Xcode create a new one: move the "
+                "file for this app ID out of ~/Library/Developer/Xcode/UserData/Provisioning Profiles, delete %s "
+                "and run ninja with the device connected" % os.path.relpath(APP, ROOT))
+    end = info.get("ExpirationDate")
+    if end is not None and end.replace(tzinfo=datetime.timezone.utc) <= datetime.datetime.now(datetime.timezone.utc):
+        return "the app's provisioning profile ran out on %s: move its file out of ~/Library/Developer/Xcode/UserData/Provisioning Profiles and rebuild" % end
+    return ""
+
+
+PROFILES = os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles")
+FRESH_DAYS = 6.5  # a free Apple ID's profile lasts 7 days from when Xcode makes it
+
+
+def profile_info(path):
+    r = subprocess.run(["security", "cms", "-D", "-i", path], capture_output=True)
+    try:
+        return plistlib.loads(r.stdout)
+    except Exception:
+        return None
+
+
+def days_left():
+    """days until the built app's provisioning profile runs out (None: unsigned build or unreadable)"""
+    info = profile_info(os.path.join(APP, "embedded.mobileprovision"))
+    end = info and info.get("ExpirationDate")
+    if not end:
+        return None
+    return (end.replace(tzinfo=datetime.timezone.utc) - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 86400
+
+
+def refresh_profile(dev):
+    """Renewing = a NEW profile: Xcode reuses its cached one until it runs out, so reinstalling the same build gives
+    no extra days, and a cached profile can lack a device registered later (2026-11-13). When the built app's profile
+    is not fresh or does not list the device, move this app ID's cached profiles to build/ios/old-profiles/, delete
+    the app and rebuild it (only the signing step; Xcode then makes a new profile with every registered device)."""
+    left = days_left()
+    if left is None:
+        return  # unsigned build: Sideloadly / AltStore sign it
+    if left >= FRESH_DAYS and not profile_problem(dev):
+        return
+    print("== getting a fresh 7-day signature (%.1f days left on this build's)" % max(left, 0), flush=True)
+    bid = bundle_id()
+    keep = os.path.join(ROOT, "build", "ios", "old-profiles")
+    if os.path.isdir(PROFILES):
+        for name in os.listdir(PROFILES):
+            path = os.path.join(PROFILES, name)
+            info = profile_info(path) or {}
+            appid = info.get("Entitlements", {}).get("application-identifier", "")
+            if appid.split(".", 1)[-1] == bid:
+                os.makedirs(keep, exist_ok=True)
+                shutil.move(path, os.path.join(keep, name))
+    shutil.rmtree(APP, ignore_errors=True)
+    ninja = shutil.which("ninja") or next((p for p in ("/opt/homebrew/bin/ninja", "/usr/local/bin/ninja")
+                                           if os.path.isfile(p)), "ninja")
+    if subprocess.run([ninja], cwd=ROOT).returncode or not os.path.isdir(APP):
+        sys.exit("could not rebuild the app for a fresh signature (run ninja in %s and look at the error)" % ROOT)
+    left = days_left()
+    print("== signature good for %.1f days" % (left or 0), flush=True)
+
+
 def move(dev, old, new):
     """old app -> backup on the Mac -> remove old -> install new -> copy back. Stops before removing anything when
     the backup is incomplete; after that the backup folder is kept until everything is back on the device."""
+    why = profile_problem(dev)  # checked first: once the old app is removed, a refused install leaves none
+    if why:
+        sys.exit("not moved, nothing was changed: " + why)
     files = documents(dev, old)
     if files is None:
         sys.exit("could not read the files of %s on the device (unlock it and try again); nothing was changed" % old)
@@ -155,6 +234,7 @@ def ask_yes(question):
 
 
 def install(dev, allow_move):
+    refresh_profile(dev)
     new = bundle_id()
     what, old = plan(dev, new)
     if what != "move":

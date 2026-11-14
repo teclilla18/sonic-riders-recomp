@@ -149,48 +149,43 @@ def pick_device(team, a):
 
 
 def write_renew_notes(ipa_dir, ipa, bundle, team):
-    """'How to renew (every 7 days).txt' next to the .ipa: both ways, with this build's app ID"""
+    """'How to renew (every 7 days).txt' next to the .ipa: plain steps (Sideloadly, or the Mac launcher)"""
     import ios_build
-    signed = bool(team)
-    default_ok = ios_build.ipa_bundle_id(bundle, team) != bundle  # Sideloadly's default appends .<team>
+    default_ok = not team or ios_build.ipa_bundle_id(bundle, team) != bundle  # Sideloadly's default appends .<team>
     lines = [
-        "Sonic Riders on iPhone / iPad: renewing every 7 days",
+        "Sonic Riders on iPhone / iPad: how to renew it (every 7 days)",
         "",
-        "With a free Apple ID, iOS stops opening the app 7 days after it was installed. Renewing puts the same",
-        "app back for 7 more days; your saves and the disc image stay on the device. Renew it THE SAME WAY you",
-        "installed it, or the device gets a second, empty Sonic Riders (no disc image, no saves).",
+        "With a free Apple account, the app stops opening about 7 days after it was put on the device.",
+        "Renewing gives it 7 more days. Your saves and the game file stay on the device.",
         "",
-        "The app file (the build before it: SonicRiders-prev.ipa, in the same folder):",
-        "    " + ipa,
+        "Do this for ONE device at a time:",
         "",
+        "  1. Plug the iPhone or iPad into the Mac with a cable and unlock it.",
+        "  2. Open Sideloadly (it's in Applications).",
+        "  3. Make sure your device's name is picked in the device box at the top.",
+        "  4. Drag this file into the Sideloadly window:",
+        "         " + ipa,
+        "  5. Type your Apple ID email if it asks.",
     ]
-    if signed:
-        lines += [
-            "YOU INSTALLED IT FROM THE MAC (the installer copied it to the device)",
-            "  Either: connect the device, unlock it, and run \"Install Sonic Riders (iOS).command\" again; answer y",
-            "          to installing and n to copying the disc image.",
-        ]
-        if default_ok:
-            lines += [
-                "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above with the same",
-                "          Apple ID, leave the settings as they are (\"Use automatic bundle ID\" ticked) and Start.",
-                "          Sideloadly adds your team ID and reaches the same app: " + bundle,
-                "",
-            ]
-        else:
-            lines += [
-                "  Or with Sideloadly: connect the device, open Sideloadly, drag in the .ipa above, open Advanced",
-                "          Options and UNTICK \"Use automatic bundle ID\" (ticked, Sideloadly makes a second app), then",
-                "          Start. The app keeps its ID: " + bundle,
-                "",
-            ]
+    if default_ok:
+        lines += ["  6. Don't change any settings. \"Use automatic bundle ID\" should stay ticked, as it is by default."]
+    else:
+        lines += ["  6. Open Advanced Options and UNTICK \"Use automatic bundle ID\" (this app's ID is " + bundle + ")."]
     lines += [
-        "YOU INSTALLED IT WITH SIDELOADLY (or AltStore)",
-        "  Connect the device, open Sideloadly, drag in the .ipa above with the same Apple ID and the same",
-        "  settings as the first time (\"Use automatic bundle ID\" left ticked, as it is by default), and Start.",
-        "  (The first Sideloadly install made the app's ID; later ones keep it.)",
+        "  7. Click Start. Type your Apple ID password if it asks, and wait for \"Done\".",
         "",
-        "Never share the .ipa: it contains the game.",
+        "Then unplug and do the next device.",
+        "",
+        "Or from the Mac: open the Sonic Riders launcher, go to Install, pick the device and click",
+        "\"Install only (renewing)\". It gets a fresh 7 days first (about a minute).",
+        "",
+        "Good to know",
+        "  - Renewing updates the same app; it doesn't make a second one.",
+        "  - If you ever see TWO Sonic Riders apps on a device, a setting was changed. Delete the empty one",
+        "    (the one that asks for the disc image).",
+        "  - If the newest file doesn't work, try SonicRiders-prev.ipa (the version before it, same folder).",
+        "",
+        "Never share the .ipa file: it contains the game.",
     ]
     os.makedirs(ipa_dir, exist_ok=True)
     path = os.path.join(ipa_dir, "How to renew (every 7 days).txt")
