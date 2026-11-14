@@ -1536,6 +1536,13 @@ static int render_thread(void* arg) {
                 while (SDL_PollEvent(&e)) handle_event(&e);
                 sync_fullscreen();
                 input_pump();
+                /* closing while no picture comes (online: the host waiting for a player to join): the close
+                 * used to wait for the next frame, so the window could not be closed */
+                if (overlay_take_quit_request()) g_quit = 1;
+                if (g_quit) {
+                    rt_log("[gl] window closed (no frame pending)");
+                    exit(0);
+                }
             }
             mtx_lock(&g_lock);
             if (!g_pending) {
