@@ -227,6 +227,14 @@ right, A) through Metal City. In lockstep each copy gets its own player's part o
 - Next: PC-PC on two PCs over the LAN (laptop), Switch-Switch, PC-Switch with this build; player docs (how to
   host/join, UDP port 7777, firewall).
 
+**2026-11-14 [measured]: PC-PC over the LAN** (desktop host, wired; gaming laptop joining; build 719394c with Riders
+Plus on; the 2P race route `tools/net_route_2p.py` p1 / p2local, delay 4): 20,726 frames (menus, Metal City race,
+results), every rolling checksum equal on both (20,725 compared; whole RAM covered every 28 frames), the
+recordings byte-identical up to where the host closed, no backstop used, both 59-60 fps. Waiting for the other
+machine: host 1.3-1.5 ms a frame (14 ms in the first 600 frames while the laptop booted), laptop ~0.01 ms. Closing
+the host first ended the session on the laptop with "the other player left". Next: Switch-Switch, PC-Switch,
+phones (notes/online-research.md steps 2-3).
+
 
 ## Save data for online races (decided, 2026-10-30)
 

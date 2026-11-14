@@ -1354,3 +1354,14 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   reinstalled with the new one (ends 2026-11-21) [confirmed, profile date]. No device launched.
 - Open: `move` uninstalls before it knows the install will be accepted; it should check the device UDID against
   the built app's embedded.mobileprovision first [to do].
+
+  186 at step 15): the racer was steering into walls, not checked further [uncertain]. Not played by hand.
+
+## 2026-11-14 (PC, late evening): online research; first PC-PC LAN session
+
+- Online play is the focus until v1 (user). Research of how Dolphin, Slippi, Anchor, CoopNet, Ryujinx and
+  switch-lan-play connect players: docs/notes/online-research.md (recommendation: lobby codes, hole punching,
+  relay fallback, direct IP kept). Found: the Android manifest has no INTERNET permission.
+- PC-PC over the LAN with the gaming laptop (test folder with two .bat files, scripted 2P route, delay 4): 20,726
+  frames, all checksums equal, recordings identical, no backstops, 59-60 fps on both; the joiner was told when the
+  host closed [confirmed, logs]. Details: ONLINE.md "2026-11-14".

@@ -49,8 +49,10 @@ standard ID and re-signed 2026-11-13 (profile ends **2026-11-21**: renew before 
 
 ## Online play (paused 2026-11-07 at a clean point; docs/ONLINE.md "2026-11-07")
 
-Lockstep with desync check (`SR_NET`) proven PC-PC on localhost (35,400 frames) and PC recording replayed on the
-Switch (23847 frames equal). Next: PC-PC over the LAN, Switch-Switch, PC-Switch; player docs.
+Lockstep with desync check (`SR_NET`) proven PC-PC on localhost (35,400 frames), PC recording replayed on the
+Switch (23847 frames equal), and **PC-PC over the LAN, desktop + laptop, 2026-11-14: 20,726 frames, no desync**
+[confirmed, logs + recordings; scripted route, not played by hand]. Plan: notes/online-research.md (lobby codes,
+hole punching, relay). Next: Switch-Switch, PC-Switch, phones (Android needs the INTERNET permission).
 
 ## Open items, in priority order
 
@@ -120,7 +122,6 @@ Console: overclocked unless the test is about stock clocks (say which). Build fr
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
 - [ ] 16:9 wide mode (HUD 4:3) and FOV 120 % in a race: picture, fps vs normal 16:9.
 - [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, 2P race route): no desync for a whole race.
-- [ ] PC-PC session on two PCs (laptop + desktop) over the LAN.
 - [ ] `SR_PERFTEST=1` at stock clocks, handheld: save a stock record in `perf/results/`.
 - [ ] 4-player Metal City race with `SR_PROFILE=1`: fps, "GP thread busy", game-core idle share vs hw25.
 - [ ] Auto mode at stock clocks in a race: listen for crackle; log "mixes started late" and the AX list rate.
