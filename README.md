@@ -10,6 +10,9 @@
 
 # Sonic Riders Recomp: native port for PC, Switch, Android & iOS
 
+[![Listed on Decomp Buddy](https://decompbuddy.com/badge.svg)](https://decompbuddy.com/games/sonic-riders-gamecube)
+[![Install With Decomp Buddy](https://decompbuddy.com/install-button.svg)](https://decompbuddy.com/games/sonic-riders-gamecube?install)
+
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
