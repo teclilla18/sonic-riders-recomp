@@ -16,7 +16,7 @@ AREAS = [
     ("Graphics match the GameCube",    15, 80),
     ("Switch performance",             15, 70),
     ("Platforms",                      15, 85),
-    ("Online play",                    15, 45),
+    ("Online play",                    15, 55),
     ("Features and polish",            15, 67),
 ]
 

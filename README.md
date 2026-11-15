@@ -101,7 +101,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
-| Online play | 45 % | Two PCs race over a home network through the launcher's lobby (own view full screen, online rules); still to do: internet play (lobby server), Switch and phones, 3-4 players, ping and delay settings |
+| Online play | 55 % | PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings |
 | Features and polish | 67 % | Custom music, right-stick camera, code mods, new characters from mods (done: the "Riders Plus" set in v0.8.2; one-press in-app updates in v0.8.3, its download step not yet run for real; Dolphin-format texture packs and easier stat mods on main, tested on PC) |
 
 </details>

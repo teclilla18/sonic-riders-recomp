@@ -295,6 +295,25 @@ checksums equal, the joiner's 4:3 picture matches an offline 4:3 run of the same
 4:3 picture (bars at the sides of its 16:9 screen), the host 16:9, same race moment. A first try failed only because
 the joiner was started before the host was listening long enough ("the host did not answer within 60 s").
 
+## Lobby design (agreed with the user 2026-11-15; not implemented)
+
+Research (lobbies of Slippi, Fightcade, RetroArch, Dolphin, sm64coopdx, Mario Kart 8 Deluxe / Wiimmfi, Smash
+Ultimate's arenas): room codes are the most helpful single feature, a public room list works only with enough
+players (Discord as the meeting place), host-set rules shown before joining beat preference matchmaking, a relay
+fallback makes it "just work", no accounts. Agreed design: 6-character room codes, a short public room list, the
+host's rules on the room card, hole punching first + relay fallback (notes/online-research.md), no accounts.
+- Where: an **Online** tab in the in-game overlay on every platform (Switch / phone system keyboard for codes,
+  typed names, never the console or phone account name) and in the PC launcher.
+- Joining: no save states are possible (every guest thread is a host thread, sched.c), so a joiner's game restarts
+  into the room (Switch: the NRO relaunches itself; Android: the activity; PC: the exe), replays the room's input
+  history at full speed with no picture or sound ("catch-up"), then its controller plugs in at an agreed frame
+  (deterministic hot-plug through the lockstep stream).
+- Join windows: while the host is on stage / character select of a new room (seconds of catch-up); late join into
+  an open slot at character select between races (catch-up of the whole session: fine on PC, slow on Switch/phones:
+  the room then restarts at the next stage select so the history is short; standings reset, so no late join in
+  WGP); no joining during a race (waiting players could watch through the same catch-up).
+- Catch-up can not skip drawing (the 30 fps mode is game state, entry above).
+
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
 netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game

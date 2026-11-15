@@ -1564,3 +1564,20 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   decoding both: 0 differing pixels against the source capture [confirmed on host]. Not built with devkitA64 and not
   run on a Switch; PNG encoding time on the capture thread is unmeasured [uncertain].
 
+## 2026-11-15 (PC, evening): launcher notes view, online cross-play tests, own screen shape online
+
+- Launcher "See what's new": emoji showed as "?" (Segoe UI has none; ImGui's 16-bit characters; surrogate pairs not
+  decoded) and pictures did not load. Now Segoe UI Emoji merged with `IMGUI_USE_WCHAR32`, surrogate pairs decoded,
+  the notes drawn from markdown (headings, bullets, links), pictures downloaded in parallel and decoded (WIC; SVG via
+  Direct2D + DirectWrite for `<text>`, which D2D skips). Found on the way: `update_download` used one static buffer,
+  so parallel downloads garbled each other. Tested by launcher screenshots (`SR_LAUNCHER_NOTES`) [confirmed, PC].
+- Online, real networks [confirmed]: PC-Switch (OLED host, PC joins) and Switch-Switch (OLED + a second console set
+  up today: sys-botbase, ftpsrv, MCP `switch-remote-2`, IP 10.0.0.18), 15,000 frames each, all checksums equal. A
+  host refuses a joiner one commit apart (the build string).
+- The game's 30 fps mode is game state [confirmed, PC, RAM dumps with `SR_DET_SKIP=1`]: per-player frame rate is
+  impossible; a room-wide switch is the plan (approved).
+- Own screen shape per player (protocol 4): room camera = the wider screen, gx.vert narrows per machine
+  [confirmed: PC both ways, Switch-Switch 16:9 + 4:3, 12,000 frames]. Not played by the user [uncertain how it
+  feels]; a narrower screen than 4:3 or a third player not covered.
+- #23: Kiri235's zipped data folder held three logs; log-reader: GPU-bound on the Thor's wide 1x EFB (3416x1056)
+  [likely]; reply posted asking for a race in 4:3. Android INTERNET permission added (not run on a phone).

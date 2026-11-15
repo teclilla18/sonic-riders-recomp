@@ -1,4 +1,4 @@
-# State (2026-11-15, night)
+# State (2026-11-15, late evening)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -7,112 +7,86 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. 
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
 
-## Community poll decides the next focus (2026-11-15)
+## Current focus: online play (user, 2026-11-15; poll #26 ended 1-0 for online, user said "work on online")
 
-**Poll [Discussion #26](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)** (pinned, linked at the top
-of the README, 8fc6a28): "Online play" vs "Custom characters and stages". Posted estimates: online ~45 % (3-4 weeks
-for 2P over the internet on PC + Switch, then 1-2 for 3-4P); characters/stages ~15 % (4-6 weeks for characters in
-races, stages maybe 6-10 more, not researched). User (2026-11-15): pause and let the results decide the focus.
-Read the poll result at the start of the next session before choosing roster or online work.
+User's choices today: (1) slow consoles + **players keep their own settings online** first; (2) lobby: the
+recommended design (agreed): room codes (6 chars), a short public room list, host's rules on the room card,
+punch first + relay fallback, no accounts, Discord as the meeting place (Kiri235 offered to moderate); (3) phones later.
+User's lobby wish: an **Online tab in the in-game overlay** (all platforms) listing internet lobbies; join while the
+host is on stage/character select; late join into an open slot at character select. Design answer given (written up
+in docs/ONLINE.md "Lobby design"): no save states exist (every guest thread is a host thread), so joining = restart
+into the room + replay its input history at full speed ("catch-up"), then the new controller plugs in at an agreed
+frame. Long sessions on Switch/phones: the room restarts at the next stage select when someone waits (standings
+reset; WGP no late join). Nothing of this is implemented.
 
-## Expanded character roster + modding (focus since 2026-11-14 late; waits for the poll)
+- **Tested today [confirmed]** (docs/ONLINE.md, 2026-11-15 entries), 2P race route, 15,000 frames each, all
+  checksums equal: **PC-Switch** (OLED host, PC joins; PC 60 fps), **Switch-Switch** over Wi-Fi (OLED host, second
+  console joins; 42-60 fps, the second console's sys-clk profile is near stock: 1224/460/1600 handheld).
+- **Own screen shape per player** (protocol 4, 4873a73) [implemented, tested]: the room's camera = the wider screen
+  (joiner sends its shape in the hello), each machine draws its own shape (gx.vert `GX_XR_ASPECT` narrows the view).
+  PC both ways (9,000 / 6,600 frames, joiner's 4:3 picture = offline 4:3 frame) and Switch-Switch (16:9 host, 4:3
+  joiner, 12,000 frames). Not played by the user. Older builds can not join this one.
+- **The game's 30 fps mode is game state** [confirmed, PC, `SR_DET_SKIP=1`]: drawing at 30 vs 60 with the same inputs
+  diverges (racer speed differs by step 10000). So no per-player frame rate and no draw-skipping catch-up. Caveat:
+  tested with the mode on from boot, not switched mid-race.
+- **Next (approved by the user): the room-wide 30 fps switch** for slow consoles: every machine enters/leaves the
+  game's 30 fps mode at the same agreed frame (decided by the host from both machines' lateness, carried in the
+  lockstep stream). Then: host rules on the room card; gear-stat mods must be turned off for a session (today a joiner
+  with stat mods would desync); the lobby server (notes/online-research.md step 4).
+- Kept from before: two PCs over the LAN [confirmed]; launcher lobby (launcher/lobby.cpp) [tested by the user on two
+  PCs]; own view full screen [user played it]; online rules (`SR_ONLINE_RULES=1`); Android has the INTERNET
+  permission now (2a522a4; APK builds, not run on the phone). Not yet: WGP with the online rules, 3-4 players.
 
-Goal: new characters on their own Player Entry tiles next to the 16 originals (Smash-style, no L/R alternates),
-added by community character mods ("anyone can add any character"); a generic mod manager (install, uninstall,
-enable, disable; later other mod types). Stages on hold. **Steps 1-2 (research) done; Step 3 design approved by the
-user (2026-11-14 night)**: [docs/notes/roster.md](docs/notes/roster.md) "Recommended design" (points 1-5, 2 x 8
-pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod format, manager) follow Step 3.
+## Launcher release notes (57dc4b7) [implemented, tested PC]
 
-- **Research [confirmed, PC]** (docs/notes/roster.md): character ids 0-16; character info table 0x819C4CC0
-  (17 x 0x20: type, letter, camera height, stars); racer + 0xBA = character id, and Player Entry edits it directly;
-  every file open goes through `fn_80012EA8` (DVDConvertPathToEntrynum); 27 functions read the id in a 1P race;
-  id 17 on vanilla = empty panel, no crash. Tournament Edition (rebuilt binary + C++, public GPL source
-  RidersBoulevard/sonicriderste: study only) uses ids 17-22, a 3 x 8 grid, and maps each new character to a base
-  character's animation set; its gear mask caps it below 32 characters.
-- **Injection tests [confirmed, PC, local test mods]**: a new file letter + the mod's files loads and races with no
-  code; another character's model on an id crashes in `fn_1_45508` (animation slots are per id) -> each custom
-  character must name a base character with the same skeleton.
-- **Approved design**: unlimited roster, 8 race slots (ids 17..24 filled per race from the mod data), inherit
-  from a base character, files by letter, original 2 x 8 page untouched plus extra 2 x 8 pages of custom
-  characters, portraits via texture injection, saves untouched. Not implemented yet.
-- **Load tracer** (debug builds: `configure.py --trace-loads`, `SR_TRACE_LOADS*`; notes/debug-variables.md)
-  [implemented, used all session]. Character selection in tests: `SR_POKEAT=3520:803E2994:<id>,3520:81A0D7FA:<id>`
-  on the 1P route (scripted D-pad/stick for player 1 does not move that cursor; cause unknown).
-- **Mods, from SR-Source's ideas** [implemented, tested PC]: `km/h` on any speed, `+=` / `*=`, `[gear.*]`,
-  `game = GXEE8P` (other games' mods left out); **Dolphin-format texture packs** (`textures/` in a mod, texpack.c,
-  `SR_DUMPTEX_DOLPHIN`): names identical to Dolphin 2609a dumps for 1,507 textures, a 2x test pack replaced the
-  boot logos. `_m` (mipmap) names not matched against Dolphin yet (its run saw none). Switch: syntax-checked only.
-- README: Decomp Buddy + shields.io badges (Riders and Heroes).
+Emoji (Segoe UI Emoji merged, one colour, `IMGUI_USE_WCHAR32`), pictures (JPEG/PNG via WIC, SVG via Direct2D +
+DirectWrite text), headings, bullets, clickable links on the Update page; the game's F1 notes drop emoji/pictures.
+Screenshots of v0.8.2 notes, the gear chart and live v0.8.4 notes (`SR_LAUNCHER_NOTES=<md>`). Not in a release yet.
+Side effect: launcher.cpp, update_core.h, launcher.md, AndroidManifest.xml.in are now LF in the index (were CRLF).
 
-## Online play (paused for the roster, 2026-11-14 late; docs/ONLINE.md, notes/online-research.md)
+## Roster expansion (paused for online)
 
-- Two PCs over the LAN [confirmed: scripted 20,726 frames; user hand sessions 61,811 + 22,477 frames, no desync].
-- Launcher lobby (launcher/lobby.cpp) [tested by the user on two PCs]; own view full screen [user played it];
-  online rules (netplay.c online_rules, `SR_ONLINE_RULES=1`) [confirmed offline + scripted two machines]: menus by
-  P1 only except Player Entry, no pause [not proven], same character allowed.
-- Other modes checked offline [confirmed]: Tag, Survival Race/Battle use Player Entry 0x18, P2 joins. Not yet:
-  World Grand Prix (Normal Race submenu 0x10), GAME_TOP_MODE in those races, results screens, two machines.
-- Laptop helper: serve only exe files over `http://10.0.0.32:8099`, SHA-256; hosts run from Desktop\SR Online Test.
+Design approved 2026-11-14 night, not started: docs/notes/roster.md "Recommended design" (8 race slots ids 17-24,
+base character per custom character, extra 2 x 8 Player Entry pages, portraits via texpack.c). Research and tools
+(load tracer `configure.py --trace-loads`) are in notes/roster.md.
 
 ## Releases
 
-**v0.8.4 released 2026-11-15** (tag on branch release/v0.8.4, 4d9b942 = release/v0.8.3-fixes + one commit; all five
-zips, iOS from the Mac; #27 closed by the user). Contents: **RVZ/WIA -> ISO** in every setup (tools/rvz2iso.py, pure
-Python) and **Eject SD card** in the Switch installer. Tested: 5 DolphinTool RVZ/WIA variants -> Redump SHA-1 (PC);
-cold Sandbox PC (launcher) + Android PASS from an RVZ; eject on a card reader (lock + dismount + eject); Mac Python 3.9:
-4 variants OK, zstd RVZ stopped cleanly [all confirmed]. Not tested: eject over hekate UMS, an .rvz picked in the Mac
-launcher, a device install of v0.8.4. **Unreleased on main**: zstd RVZ on Mac (9f417f6) and Linux (157ccf2, pinned
-zstandard wheels cp39-cp314 x86_64/aarch64, fetched only for an RVZ; tested WSL 3.12), plus the mods syntax, texture
-packs, load tracer (CHANGELOG "Unreleased").
-**Easy-read guides** (every release links both; CLAUDE.md): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN,
-install https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (docs/install-guide.html, README top; **the user still has
-to share it publicly**). v0.8.3 (2026-11-14): setup keeps its build, one-press UPDATE NOW (download step first runs
-with v0.8.4). iOS test devices signed until **2026-11-21**.
+**v0.8.4 released 2026-11-15** (RVZ/WIA -> ISO, Eject SD card). **Unreleased on main**: zstd RVZ on Mac/Linux, mods
+syntax, texture packs, load tracer, Switch PNG screenshots (#10, contributor PR #28: not built for or run on a Switch),
+launcher notes view, online protocol 4 (own screen shape), Android INTERNET permission (CHANGELOG "Unreleased").
+**Easy-read guides** (every release links both): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install
+https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (asked the user whether it is public: no answer yet).
+iOS test devices signed until **2026-11-21**.
 
 ## Devices
 
-- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. The Android APK lacks the INTERNET permission (online).
-- OLED (switch-remote): c840558 build; clocks handheld 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
-- Gaming laptop (GTX 1650 Max-Q, 10.0.0.89): online partner.
-
-## Platforms
-
-- **Windows**: whole game, 1-4P 60 fps, sound, launcher (updates, remapping, Online lobby), picture options, mods.
-- **Switch**: 1P ~60 overclocked; 4P steady 30; stock handheld 30 steady.
-- **Android / iOS / Linux**: notes/android.md, notes/ios.md.
+- OLED (switch-remote, 10.0.0.44): build 4873a73 as `sonicriders.nro` (the user's earlier one:
+  `sonicriders.user-20261115.nro`); env.txt = the user's; `env.online.txt` = host test env. Clocks handheld
+  1785 / 614 / 2133, docked 1785 / 1152 / 2133.
+- **Second Switch** (10.0.0.18, MCP `switch-remote-2`, sys-botbase + ftpsrv installed today, HOME tile installed by
+  the user): build 4873a73; previous `sonicriders.prev-20261115.nro`; `env.online.txt` = joiner test env. sys-clk
+  profile for this title: handheld 1224 / 460 / 1600.
+- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. Gaming laptop (10.0.0.89): online partner.
 
 ## Open items, in priority order
 
-**Must be in the NEXT release (user, 2026-11-15), with whatever else it holds:** an **auto stick-spin** option in the
-in-game settings menu (off by default): in the spin-the-stick scenes it refills air and speeds up as if the stick were
-spun at maximum efficiency (saves players' sticks; #23). Plan: notes/plans-2026-11.md "Auto air refill". Not started. Keep it simple for players (memory).
+**Must be in the NEXT release (user, 2026-11-15):** the **auto stick-spin** option (off by default, Gameplay tab;
+#23; notes/plans-2026-11.md "Auto air refill"). Not started.
 
-0. **Poll #26 result** decides roster vs online first. **Roster Step 3** (approved, not started; research begun 2026-11-15: cursor `fn_1_141720` read, notes/roster.md): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
-   First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)
-   with the load tracer; the select-screen draw code; gear compatibility (`useFlags`, gear selector).
-0b. **Ayn Thor slowdown (#23, Kiri235)**: drops when boosting / racers near. Asked for model, version, frame
-   rate mode, 60 vs 30, `sonicriders.log` (waiting). Suspect speed-blur EFB copies on the tiler; plan in
-   notes/android.md "Ayn Thor". Worth adding: Android bug-report button, render passes per frame in `[vk]`.
-0c. **#24 Linux setup on Nobara** (`cannot find -lstdc++`, no libstdc++-static): fallback to the shared runtime
-   (13c7f42) **released** in the v0.8.3 Linux zip (replaced 2026-11-14, from release/v0.8.3-fixes e8456d1). Tested: zip
-   setup in WSL with a clang++ that refuses -static-libstdc++ (fallback taken, built, boots 59.9 fps). Not on Fedora;
-   Chamlotte confirmed the static-package workaround works (2026-11-15) [confirmed, user report]; fixed zip not reported on yet.
-1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
-2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
-3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.
-4. Higher frame rates on iOS/Android; in-game update popup (ask first); custom music (#17); right-stick camera; #16.
-5. Open checks: F1 sharpness/pad survives a restart; Optimus laptop; bug-report zip; pad with another window focused.
-
-## Wish list / paused
-
-PS4/PS5 on hold; Vita paused (branch `vita`); per-player race sound online (dropped); custom stages (on hold).
+1. **Online**: room-wide 30 fps switch (next), then the items in "Current focus".
+2. **#23 Ayn Thor slowdown** (Kiri235, logs read 2026-11-15 by log-reader): GPU-bound (Adreno 740 10-14 ms/frame,
+   spikes 22) above ~4,000 draws; on "Fit" the 1x EFB is 3416x1056; frame rate was Auto in all runs. Reply posted
+   asking for a race in 4:3. If 4:3 helps: cheaper wide EFB on phones; also count speed-blur EFB passes. Two
+   0.5-3 s "render wait" hitches (likely the app going to the background) [uncertain].
+3. Texture packs on Switch / Android / iOS (memory); update flow first real run at the next release.
+4. #18 WGP freeze, #12, #24 (Fedora not confirmed), custom music (#17), right-stick camera, #16.
 
 ## Next hardware-test checklist
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
+- [ ] Room-wide 30 fps switch: OLED + second console (its near-stock profile triggers it), no desync, both switch together.
 - [ ] A Dolphin-format texture pack in `mods/<Mod>/textures/` on the SD card: replaced, memory OK, no hitches.
-- [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt): no desync.
-- [ ] PC-Switch session (cross-play): PC host from the test folder, Switch joins.
+- [ ] Switch PNG screenshots (#10): menu "Save screenshot" writes a PNG that opens.
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
-- [ ] Copy back `sonicriders.log`, `perftest.json`, `shader_keys.txt`.
