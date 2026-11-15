@@ -1,3 +1,5 @@
+> **Vote: what comes next?** Online play or custom characters and stages: [cast your vote in the poll](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)
+>
 > **Alpha testers needed:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
 >
 > **Updating got revamped in v0.8.3.** Once you're on v0.8.3, every future update is one press: **UPDATE NOW** in
