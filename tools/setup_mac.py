@@ -273,23 +273,45 @@ def main():
 
     # 4 -------------------------------------------------------------
     step(4, "Extracting the game code from your disc image")
-    baserom = os.path.join(ROOT, "baserom")
-    os.makedirs(baserom, exist_ok=True)
-    run("extract main.dol and _Main.rel", [sys.executable, "-I", "tools/extract_iso.py", iso, "baserom", "--no-verify-iso"])
+    # the build happens in one folder kept in the tools folder for every version (tools/build_workdir.py): an
+    # update copies in only the changed files and rebuilds only what they touch, not the whole game again
+    work = os.path.join(tools, "build")
+    log("Build folder (kept for updates): %s" % work)
+    run("copy this version's changed files to the build folder",
+        [sys.executable, "-I", os.path.join(ROOT, "tools", "build_workdir.py"), "sync", ROOT, work])
+    os.makedirs(os.path.join(work, "baserom"), exist_ok=True)
+    run("extract main.dol and _Main.rel", [sys.executable, "-I", "tools/extract_iso.py", iso, "baserom", "--no-verify-iso"],
+        cwd=work)
 
     # 5 -------------------------------------------------------------
     step(5, "Analysing the game code")
-    run("decomp-toolkit analysis", [dtk, "dol", "split", "config/GXEE8P/config.yml", "build/GXEE8P"])
+    run("decomp-toolkit analysis", [sys.executable, "-I", "tools/build_workdir.py", "dtk", work, dtk], cwd=work)
 
     # 6 -------------------------------------------------------------
-    step(6, "Recompiling and building the app (10-20 minutes the first time)")
+    step(6, "Recompiling and building the app (10-20 minutes the first time; updates only rebuild what changed)")
     d = pick_device(team, a)
     # always the standard ID (net.srnative.sonicriders.<team>, what Sideloadly's default makes too); an app under an
     # older ID is moved onto it at the install step (ios_run.py install)
     conf = [sys.executable, "configure.py", "--target", "ios", "--sdl-src", sdl, "--moltenvk", mvk, "--imgui", imgui,
             "--ipa-dir", ipa_dir, "--team", team or "none"] + (["--icon", icon] if icon else [])
-    run("configure", conf)
-    run("build the app", ["ninja"])
+    run("configure", conf, cwd=work)
+    run("build the app", ["ninja"], cwd=work)
+    # the finished app (and build/ios/SonicRiders.ipa) go back to this folder, where tools/ios_run.py install and the
+    # Mac launcher look for them
+    for rel in (os.path.join("build", "ios", "xcode", "build", "Release-iphoneos", "SonicRiders.app"),
+                os.path.join("build", "ios", "SonicRiders.ipa")):
+        src, dst = os.path.join(work, rel), os.path.join(ROOT, rel)
+        if not os.path.exists(src):
+            continue
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        if os.path.isdir(dst) and not os.path.islink(dst):
+            shutil.rmtree(dst)
+        elif os.path.lexists(dst):
+            os.remove(dst)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, symlinks=True)
+        else:
+            shutil.copy2(src, dst)
     ipa = os.path.join(ipa_dir, "SonicRiders.ipa")
     if not os.path.isfile(ipa):
         fail("The build finished but %s is missing." % ipa)
