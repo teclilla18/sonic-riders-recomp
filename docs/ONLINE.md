@@ -261,6 +261,16 @@ the whole game slows with the slower machine, the PC waited instead of desyncing
 commit apart ("a different game build"): both sides must be the same build. Closing the PC left the Switch at
 "waiting for the other player". Next: Switch-Switch (two consoles), phones (INTERNET permission added 2a522a4).
 
+**2026-11-15 [measured]: Switch-Switch over Wi-Fi** (build 2a522a4 on both; OLED hosting, the second console
+(10.0.0.18, switch-remote-2) joining with `online-p2local` in env.txt; both started from their HOME tiles; delay 4):
+15,000 frames (menus, Metal City race into lap 2), **every rolling checksum equal on both**; at 2'59" in the race
+both screens showed the same race time, each its own racer (own view full screen). Speed: the session runs at the
+slower console's pace; the second console's sys-clk profile for this title is handheld CPU 1224 / GPU 460 / MEM
+1600 (near stock; mode handheld per its screenshot), the OLED waited 2-5 ms a frame for it: both logs 42-60 fps,
+about 45 % of samples at 59-60, 29 % below 55 (lowest 42.4). Wi-Fi itself was not the limit (the joiner waited
+under 1 ms). So online: proven PC-PC, PC-Switch, Switch-Switch on today's build. Next: phones, the lobby server,
+and a frame-rate answer for slow consoles in a session (e.g. both machines in the game's 30 fps mode).
+
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
 netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game
