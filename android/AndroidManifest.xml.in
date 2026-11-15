@@ -16,6 +16,8 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- online play (netplay.c: UDP lockstep with another copy of the game); nothing else uses the network -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application android:label="@LABEL@" @ICON@
         android:allowBackup="false"
