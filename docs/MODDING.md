@@ -193,6 +193,34 @@ with a note in the log.
 **Did it work?** The log shows `[mods] MyMod: 3 data changes, 1 Gecko codes`, and names any unknown
 gear, field or section.
 
+## Texture packs
+
+A mod can change how the game looks without touching its files: put PNG pictures in a `textures` folder
+(any subfolders), named the way **Dolphin** dumps and loads custom textures:
+
+```
+mods/
+  MyHDPack/
+    mod.ini                                   [mod] name = ..., game = GXEE8P
+    textures/
+      menus/tex1_256x64_be3eb62522e980b0_0364f2a3151a0a6a_9.png
+      tex1_128x128_5fad17344111e760_14.png
+```
+
+- **Packs made for Dolphin work as they are**: copy the files from Dolphin's `Load/Textures/GXEE8P` folder into
+  the mod's `textures` folder. A pack made here works in Dolphin too.
+- A picture can be any size (e.g. 4x the original for an HD pack); it is drawn in place of the original.
+- `$` in place of the palette part of a name (`..._<hash>_$_9.png`) matches any palette, as in Dolphin.
+- When two packs have the same texture, the lower one in `mods.ini` wins. The log says how many were found
+  (`[texpack] 60 custom textures from 1 mod(s)`) and replaced.
+- **Making a pack (PC):** start the game with the variable `SR_DUMPTEX_DOLPHIN=<folder>` to write every texture the
+  game uses into that folder with its pack name, edit the pictures, put them in a mod's `textures` folder.
+- PNG only for now (no DDS). Custom mipmap files (`_mip1` …) are ignored. Water ripples and other effects that
+  distort a texture may look slightly off with a picture of a different size.
+
+The names were checked against Dolphin's own dumps (1,507 textures of the intro, menus and the demo race named
+identically).
+
 ## What's on the disc
 
 All 1,669 files sit in the disc's root folder. What is known so far; corrections and additions are
@@ -200,13 +228,14 @@ very welcome (open an issue or a pull request that edits this page):
 
 | Files | What they are |
 |---|---|
-| `P` + letter + two digits (`PS00`–`PS34`), each with an `…M` file | Per-character data, one set per character letter. **[confirmed]** that the letter is the character for S = Sonic, T = Tails (swapping them swaps the model). [likely] K = Knuckles; the others still need mapping. The two-digit number probably matches the Extreme Gear. |
-| `P000`… (digit after `P`) | [uncertain] Shared or generic racer data. |
+| `P` + letter + two digits (`PS00`–`PS49`), each with an `…M` file | One model pack per character **per Extreme Gear** (character + gear). **[confirmed]** letters, by character: S Sonic, T Tails, K Knuckles, A Amy, J Jet, M Storm, W Wave, E Eggman, C Cream, R Rouge, D Shadow, P Super Sonic, 0 NiGHTS, 1 AiAi, 2 Ulala, Z E-10000R, O E-10000G. The `…M` file is a lighter version used for CPU racers and multiplayer. |
+| `P` + letter + `B` / `O` / `P` / `S` | [likely] The character's animation sets (B bike, O board, P Opa-Opa, S skates; `PSO` is loaded with a board). |
+| `P000`… (digit after `P`) | NiGHTS (`0`), AiAi (`1`), Ulala (`2`) packs, as above. |
 | A number (`1`, `10`, …) with `M`, `V`, `TE`, `TJ` variants | [likely] Stage data: geometry, models, visuals and English/Japanese text per stage. |
 | `S##S#F`, `S##S#J` | [uncertain] |
 | `*.ADX` | Music (CRI ADX audio). `E##E.ADX`: [likely] event/cutscene audio. |
 | `*.AFS` | CRI sound archives (voices: `VOICE_E.AFS`). |
-| `10SONIC.DAT`, `10TAILS.DAT`, … | [uncertain] Per-character data for one mode or stage. |
+| `10SONIC.DAT`, `10TAILS.DAT`, … (`10J…` Japanese) | **[confirmed]** Each character's voice bank, loaded for every racer in a race. |
 
 A good way to find out what a file does: replace it with another file of the same kind (as in the
 character-swap example) and see what changes in game.
@@ -228,3 +257,5 @@ character-swap example) and see what changes in game.
 | 4 | **Tracks**: replacing a track's files works with step 1; adding *new* track slots needs research into how the game lists its tracks | Research |
 | 5 | **Code mods**: C hooks or a modified `main.dol` / `_Main.rel`, applied when the installer translates the game | Later |
 | 6 | Switch: the same `mods` folder on the SD card, tested on hardware | After step 2 |
+| 7 | **Texture packs** in Dolphin's format (`textures/` in a mod) | Works on PC (next release); other platforms built, not tested |
+| 8 | **New characters on their own select-screen tiles**, from character mods | Research done (docs/notes/roster.md); design waiting for approval |

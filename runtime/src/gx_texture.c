@@ -161,6 +161,13 @@ static inline uint16_t be16(const uint8_t* p) { return (uint16_t)(p[0] << 8 | p[
 
 void gx_frame_retire(int id);
 void lv_texture_decoded(GxTexture* t);
+/* texpack.c */
+int texpack_active(void);
+void texpack_name(char* out, size_t n, const uint8_t* src, uint32_t size, int fmt, uint32_t w, uint32_t h, int mip,
+                  const uint8_t* tlut, uint32_t tlut_bytes, int* has_tlut);
+uint8_t* texpack_load(const char* name, int has_tlut, uint32_t* w, uint32_t* h);
+void texpack_free(uint8_t* px);
+void texpack_dump(const char* name, const uint8_t* rgba, uint32_t w, uint32_t h);
 
 /* SR_DUMPTEX: every decoded texture to build/tex/<id>_f<format>_t<tlut format>_<address>_<w>x<h>.tga
  * (debugging decode problems, desktop) */
@@ -405,13 +412,31 @@ int gx_texture_lookup(int map) {
     /* contents changed: a new texture (the render thread may still be uploading the old one from the
      * frame in flight); the old one is retired with this frame and freed by the backend after it */
     if (e->valid) gx_frame_retire(e->id);  /* changed, or another texture in this slot */
-    GxTexture* t = new_texture(w, h, 0);
-    g_decoded++;
-    g_decoded_bytes += (unsigned long long)w * h * 4;
-    decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
+    GxTexture* t = NULL;
+    char pack_name[96];
+    int pack = texpack_active();  /* texpack.c: Dolphin-format texture packs in mods, SR_DUMPTEX_DOLPHIN */
+    if (pack) {
+        uint32_t mode0 = g_gx.bp[(hi ? 0xA0 : 0x80) + i];
+        int has_tlut, mip = ((mode0 >> 5) & 3) != 0;  /* TexMode0 mipmap filter: Dolphin's "_m" */
+        texpack_name(pack_name, sizeof pack_name, src, size, (int)fmt, w, h, mip, tlut, tlut_bytes, &has_tlut);
+        uint32_t pw, ph;
+        uint8_t* px = texpack_load(pack_name, has_tlut, &pw, &ph);
+        if (px) {
+            t = new_texture(pw, ph, 0);
+            memcpy(t->rgba, px, (size_t)pw * ph * 4);
+            texpack_free(px);
+        }
+    }
+    if (!t) {
+        t = new_texture(w, h, 0);
+        g_decoded++;
+        g_decoded_bytes += (unsigned long long)w * h * 4;
+        decode(t->rgba, src, (int)fmt, w, h, tlut, tfmt);
+        lv_texture_decoded(t);  /* game_levels.c: the HUD's Lv. 4 / Lv. 5 digits */
+        dump_texture(t, (int)fmt, tfmt, addr);
+        if (pack) texpack_dump(pack_name, t->rgba, w, h);
+    }
     t->gen++;
-    lv_texture_decoded(t);  /* game_levels.c: the HUD's Lv. 4 / Lv. 5 digits */
-    dump_texture(t, (int)fmt, tfmt, addr);
     e->key = key;
     e->hash = hsh;
     e->full = hash_bytes(src, size) ^ th;
