@@ -19,6 +19,7 @@
 #include <dxgi.h>
 #include <shellapi.h>
 #include <shobjidl.h>
+#include <winioctl.h>
 #include <wincodec.h>
 
 #include <algorithm>
@@ -309,7 +310,7 @@ std::wstring pick_disc(HWND owner) {
     wchar_t file[MAX_PATH] = L"";
     OPENFILENAMEW ofn = {sizeof ofn};
     ofn.hwndOwner = owner;
-    ofn.lpstrFilter = L"GameCube disc image (*.iso;*.gcm)\0*.iso;*.gcm\0All files (*.*)\0*.*\0";
+    ofn.lpstrFilter = L"GameCube disc image (*.iso;*.gcm;*.rvz;*.wia)\0*.iso;*.gcm;*.rvz;*.wia\0All files (*.*)\0*.*\0";
     ofn.lpstrFile = file;
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = L"Select your Sonic Riders (USA) disc image (GXEE8P)";
@@ -858,6 +859,56 @@ void install_progress(float col, const char* title_running) {
     ImGui::EndChild();
 }
 
+/* "Eject SD card": the safe-removal sequence for the card's volume (lock, dismount, allow removal, eject media;
+ * Microsoft KB165721), on a worker thread because the lock waits for open files. Works for card readers and
+ * hekate's USB mode. */
+std::atomic<int> g_eject{0};  /* 0 idle, 1 running, 2 done, 3 failed */
+std::string g_eject_msg;
+
+void eject_sd(std::wstring sd) {
+    if (sd.size() < 2 || sd[1] != L':') { g_eject_msg = "Not a drive letter: eject it from Windows instead."; g_eject = 3; return; }
+    std::wstring vol = L"\\\\.\\" + sd.substr(0, 2);
+    HANDLE h = CreateFileW(vol.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                           OPEN_EXISTING, 0, nullptr);
+    if (h == INVALID_HANDLE_VALUE) { g_eject_msg = "Could not open the SD card's drive."; g_eject = 3; return; }
+    DWORD n = 0;
+    bool locked = false;
+    for (int i = 0; i < 20 && !locked; i++) {  /* up to 10 s while Explorer or an antivirus lets go */
+        locked = DeviceIoControl(h, FSCTL_LOCK_VOLUME, nullptr, 0, nullptr, 0, &n, nullptr);
+        if (!locked) Sleep(500);
+    }
+    if (!locked) {
+        CloseHandle(h);
+        g_eject_msg = "The SD card is still in use (an Explorer window or another program on it?). Close it and try again.";
+        g_eject = 3;
+        return;
+    }
+    FlushFileBuffers(h);
+    DeviceIoControl(h, FSCTL_DISMOUNT_VOLUME, nullptr, 0, nullptr, 0, &n, nullptr);
+    PREVENT_MEDIA_REMOVAL pmr = {FALSE};
+    DeviceIoControl(h, IOCTL_STORAGE_MEDIA_REMOVAL, &pmr, sizeof pmr, nullptr, 0, &n, nullptr);
+    DeviceIoControl(h, IOCTL_STORAGE_EJECT_MEDIA, nullptr, 0, nullptr, 0, &n, nullptr);
+    CloseHandle(h);
+    /* dismounted = every write is on the card, whether or not the reader supports the eject command */
+    g_eject_msg = "Safe to remove the SD card now.";
+    g_eject = 2;
+}
+
+void eject_button() {
+    if (g_ic.sd.empty()) return;
+    int st = g_eject;
+    ImGui::BeginDisabled(st == 1);
+    if (ImGui::Button(st == 1 ? "Ejecting..." : "Eject SD card")) {
+        g_eject = 1;
+        std::thread(eject_sd, g_ic.sd).detach();
+    }
+    ImGui::EndDisabled();
+    if (st >= 2) {
+        ImGui::SameLine();
+        ImGui::TextColored(st == 2 ? kGreen : kRed, "%s", g_eject_msg.c_str());
+    }
+}
+
 void installer_next_steps() {
     section("NEXT");
     if (g_mode == M_SWITCH) {
@@ -865,6 +916,7 @@ void installer_next_steps() {
             ImGui::TextWrapped("Copy build\\switch\\sonicriders.nro and your disc image to /switch/sonicriders/ on the "
                                "SD card.");
         ImGui::TextWrapped("1. Eject the SD card and put it in the Switch.");
+        eject_button();
         ImGui::TextWrapped("2. Hold R while starting any game to open the Homebrew Menu, then start Sonic Riders.");
         if (g_ic.home_icon)
             ImGui::TextWrapped("3. HOME-screen icon: install NSP\\SonicRiders-HOME-icon.nsp with DBI or Goldleaf.");
@@ -887,7 +939,7 @@ void page_installer(float w) {
         install_progress(col, "BUILDING");
     } else {
         section("1. YOUR DISC IMAGE");
-        ImGui::TextWrapped("Sonic Riders (USA), GXEE8P (.iso). The game is built on this PC from it: 10-40 minutes the "
+        ImGui::TextWrapped("Sonic Riders (USA), GXEE8P (.iso, or Dolphin's .rvz: converted to .iso first). The game is built on this PC from it: 10-40 minutes the "
                            "first time.");
         if (ImGui::Button("Select disc...")) {
             std::wstring d = pick_disc(GetActiveWindow());
