@@ -75,7 +75,9 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
    rate mode, 60 vs 30, `sonicriders.log` (waiting). Suspect speed-blur EFB copies on the tiler; plan in
    notes/android.md "Ayn Thor". Worth adding: Android bug-report button, render passes per frame in `[vk]`.
 0c. **#24 Linux setup on Nobara** (`cannot find -lstdc++`, no libstdc++-static): fallback to the shared runtime
-   implemented (13c7f42), checked in WSL only; user told to `dnf install libstdc++-static`. Unreleased; wait for their reply.
+   (13c7f42) **released** in the v0.8.3 Linux zip (replaced 2026-11-14, from release/v0.8.3-fixes e8456d1). Tested: zip
+   setup in WSL with a clang++ that refuses -static-libstdc++ (fallback taken, built, boots 59.9 fps). Not on Fedora;
+   Chamlotte told (workaround + new zip); wait for their reply.
 1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
 2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
 3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.

@@ -17,6 +17,9 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 4. No personal details in tracked files (home paths, SD drive letters, console setup, emails): write `<repo>`,
    `<home>`, `<sd>`. Machine-specific notes go in `NOTES.local.md` (gitignored; read it if present).
 5. Never modify the user's original disc image. Work on copies.
+6. **Check GitHub issues and discussions at the start and at the wrap-up of every session** (user, 2026-11-14):
+   `python tools/gh_inbox.py` (newest issues, issue comments, discussions). Tell the user what is new; reply
+   only when the user asks (or has already asked for replies to that thread), in a short, human tone.
 
 ## Hard-won lessons
 
