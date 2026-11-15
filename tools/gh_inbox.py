@@ -22,8 +22,22 @@ def gh():
     sys.exit("gh_inbox: the GitHub CLI (gh) was not found")
 
 
+def gh_env():
+    """devkitPro's MSYS python (the first `python` on PATH in Git Bash) starts with almost no Windows
+    environment; without APPDATA gh cannot find its config and says "not logged in". Put the folders back."""
+    env = dict(os.environ)
+    if "APPDATA" not in env and sys.platform in ("msys", "cygwin"):
+        user = env.get("USERNAME") or os.path.basename(env.get("HOME", "").rstrip("/"))
+        if user:
+            home = env.get("USERPROFILE") or "C:\\Users\\" + user
+            env.setdefault("USERPROFILE", home)
+            env["APPDATA"] = home + "\\AppData\\Roaming"
+            env.setdefault("LOCALAPPDATA", home + "\\AppData\\Local")
+    return env
+
+
 def run(*args):
-    r = subprocess.run([gh(), *args], capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run([gh(), *args], capture_output=True, text=True, encoding="utf-8", env=gh_env())
     if r.returncode:
         sys.exit("gh_inbox: gh %s failed: %s" % (args[0], r.stderr.strip()[:300]))
     return json.loads(r.stdout)
