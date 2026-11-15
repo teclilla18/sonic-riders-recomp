@@ -33,6 +33,9 @@ ap.add_argument("--target", choices=["host", "switch", "android", "ios"], defaul
 ap.add_argument("--toolchain", choices=["msvc", "mingw", "linux"],
                 default="linux" if sys.platform.startswith("linux") else "msvc", help="host compiler setup")
 ap.add_argument("--cc", default="", help="C compiler command (host, --toolchain linux), e.g. clang or \"zig cc\"")
+ap.add_argument("--shared-cxx-runtime", action="store_true",
+                help="host, --toolchain linux: link the system's shared libstdc++ (when libstdc++.a, e.g. Fedora's "
+                     "libstdc++-static, is not installed)")
 ap.add_argument("--cxx", default="", help="C++ compiler command (host, --toolchain linux), e.g. clang++ or \"zig c++\"")
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
@@ -231,8 +234,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
             # so a Steam Deck needs nothing besides SDL2 and OpenGL, which SteamOS has
             # zig's linker takes no -Map (and links its own libc++ statically anyway)
             is_zig = "zig" in os.path.basename(cxx.split()[0]) or cxx.split()[0] == "zig"
+            static_rt = "" if args.shared_cxx_runtime else "-static-libstdc++ -static-libgcc "
             n.variable("ldflags", "-g -pthread %s -ldl -lm -Wl,-rpath,'$$ORIGIN' %s" % (sdl_lib, "" if is_zig else
-                       "-static-libstdc++ -static-libgcc -Wl,-Map=%s/sonicriders.map" % OUT))
+                       "%s-Wl,-Map=%s/sonicriders.map" % (static_rt, OUT)))
             sdl_dll = ""
         elif args.toolchain == "mingw":
             lm = args.llvm_mingw.replace("\\", "/")

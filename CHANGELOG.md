@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Linux setup on Fedora-family systems** (Nobara, Bazzite, Fedora; #24): the build no longer stops with
+  `cannot find -lstdc++` when the `libstdc++-static` package is missing; setup then links the system's shared
+  C++ library instead.
 - **Mods: easier stat changes** (PC; ideas from SR-Source's mod format): speeds in km/h on any speed field
   (`level1.boost_speed = 300 km/h`), `+=` / `*=` to add to or multiply what the game (and earlier mods) set,
   `[gear.*]` for every gear at once, and `game = GXEE8P` in `mod.ini` so a mod made for another game is left out.
