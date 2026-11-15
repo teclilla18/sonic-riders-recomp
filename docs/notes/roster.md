@@ -134,6 +134,11 @@ Open research for Step 3's first tasks: the remaining per-character tables in ot
 survival, WGP, results, gear shop) via the load tracer; the select-screen draw code (where tile textures and
 positions come from, for pages); gear compatibility (`useFlags` in the gear table, gear selector).
 
+- **Cursor `fn_1_141720(racer, dir, avail)`** (2026-11-15, disassembly): a leaf, no calls. dir 2 toggles the row
+  (+7 / -7 around the skipped 11), 0 = right, other = left; wraps inside the row (row 0 ids 0-7, row 1 8-16);
+  repeats the step while `avail[id]` (r5, a byte per id) is 0 or the id is 11. A native replacement (hle.txt) can
+  add pages without touching the screen code.
+
 ## Tools (debug only)
 
 - **Load tracer:** `python configure.py ... --trace-loads` (separate `build/<target>-trace`; move the written

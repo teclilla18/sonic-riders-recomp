@@ -1479,3 +1479,17 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   linked dynamically, so it passed. Fix 13c7f42: setup probes the static link and passes configure's new
   `--shared-cxx-runtime` when it fails. Tested in WSL (probes + ldflags) only; no full build with it, not on Fedora.
   Replied with the `dnf install libstdc++-static` workaround.
+
+## 2026-11-15, early morning: community poll for the next focus
+
+- Posted a poll in Discussions (Polls category, #26), pinned, linked from the README (8fc6a28): online play vs custom
+  characters and stages, with progress (online ~45 %, characters/stages ~15 %) and rough times at one session a
+  day. Pictures: the README banner, the v0.8.2 online art, and two new drawings (progress card, a concept mock-up
+  of extra 2 x 8 character pages) uploaded as GitHub attachments, not committed. An earlier reaction-vote
+  version (#25, made through the API, which cannot create polls) was deleted at the user's request.
+- Roster Step 3 research begun, then paused for the poll: the Player Entry cursor `fn_1_141720` is a leaf
+  (racer + 0xBA; dir 2 toggles row, 0 / else = right / left; row 0 ids 0-7, row 1 8-16 with 11 skipped; r5 =
+  per-id availability bytes) [confirmed, disassembly], so a native replacement for pages is simple.
+- #24: Chamlotte confirmed the libstdc++-static workaround [confirmed, user]. #23: no log from Kiri235 yet.
+- `tools/gh_inbox.py` fails on this PC (its gh subprocess is not logged in although `gh` in the shell is) [uncertain
+  why]; issues were read with gh directly.

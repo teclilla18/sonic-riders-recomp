@@ -1,4 +1,4 @@
-# State (2026-11-14, night)
+# State (2026-11-15, early morning)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -7,7 +7,15 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. 
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
 
-## Current focus: expanded character roster + modding (user's decision, 2026-11-14 late)
+## Community poll decides the next focus (2026-11-15)
+
+**Poll [Discussion #26](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)** (pinned, linked at the top
+of the README, 8fc6a28): "Online play" vs "Custom characters and stages". Posted estimates: online ~45 % (3-4 weeks
+for 2P over the internet on PC + Switch, then 1-2 for 3-4P); characters/stages ~15 % (4-6 weeks for characters in
+races, stages maybe 6-10 more, not researched). User (2026-11-15): pause and let the results decide the focus.
+Read the poll result at the start of the next session before choosing roster or online work.
+
+## Expanded character roster + modding (focus since 2026-11-14 late; waits for the poll)
 
 Goal: new characters on their own Player Entry tiles next to the 16 originals (Smash-style, no L/R alternates),
 added by community character mods ("anyone can add any character"); a generic mod manager (install, uninstall,
@@ -68,7 +76,7 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 
 ## Open items, in priority order
 
-0. **Roster Step 3** (approved, not started): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
+0. **Poll #26 result** decides roster vs online first. **Roster Step 3** (approved, not started; research begun 2026-11-15: cursor `fn_1_141720` read, notes/roster.md): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
    First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)
    with the load tracer; the select-screen draw code; gear compatibility (`useFlags`, gear selector).
 0b. **Ayn Thor slowdown (#23, Kiri235)**: drops when boosting / racers near. Asked for model, version, frame
@@ -77,7 +85,7 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 0c. **#24 Linux setup on Nobara** (`cannot find -lstdc++`, no libstdc++-static): fallback to the shared runtime
    (13c7f42) **released** in the v0.8.3 Linux zip (replaced 2026-11-14, from release/v0.8.3-fixes e8456d1). Tested: zip
    setup in WSL with a clang++ that refuses -static-libstdc++ (fallback taken, built, boots 59.9 fps). Not on Fedora;
-   Chamlotte told (workaround + new zip); wait for their reply.
+   Chamlotte confirmed the static-package workaround works (2026-11-15) [confirmed, user report]; fixed zip not reported on yet.
 1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
 2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
 3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.
