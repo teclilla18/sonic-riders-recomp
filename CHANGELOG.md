@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Mods: easier stat changes** (PC; ideas from SR-Source's mod format): speeds in km/h on any speed field
+  (`level1.boost_speed = 300 km/h`), `+=` / `*=` to add to or multiply what the game (and earlier mods) set,
+  `[gear.*]` for every gear at once, and `game = GXEE8P` in `mod.ini` so a mod made for another game is left out.
+  See docs/MODDING.md "Changing stats".
+
 ## v0.8.3 (2026-11-14)
 
 - **Faster updates**: the setup keeps its build between versions (in its tools folder), so an update rebuilds only

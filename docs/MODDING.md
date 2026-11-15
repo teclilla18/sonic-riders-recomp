@@ -79,6 +79,7 @@ name = My first mod
 author = your name
 version = 1.0
 description = What it changes.
+game = GXEE8P    ; optional: the game it is made for (a mod for another game is left out)
 ```
 
 Rules:
@@ -152,6 +153,19 @@ Grinder, AdvantageS, AdvantageF, AdvantageP, Cannonball.
 | `stat_dash`, `stat_limit`, `stat_power`, `stat_cornering` | −128..127 | the bars on the select screen |
 | `levelN_max_air`, `levelN_passive_air_drain`, `levelN_drift_air_cost`, `levelN_boost_cost`, `levelN_tornado_cost` | number | N = 1, 2, 3 |
 | `levelN_drift_dash_speed` / `…_kmh`, `levelN_boost_speed` / `…_kmh` | decimal | |
+
+More ways to write a change:
+
+```ini
+[gear.Default]
+level1.boost_speed = 300 km/h  ; "km/h" works on any speed field; level1. is the same as level1_
+
+[gear.*]                       ; every gear at once (also [gear.all])
+additive_speed += 10 km/h      ; += adds to the value, *= multiplies it
+level2_max_air *= 1.5
+```
+
+`+=` and `*=` work on the value as the mods above in `mods.ini` left it, so several mods can be combined.
 
 The field names and layout come from the Sonic Riders PC modding community's research
 ([Sewer56.SonicRiders](https://github.com/Sewer56/Sewer56.SonicRiders)); the GameCube table has the

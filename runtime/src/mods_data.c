@@ -58,7 +58,9 @@ static const Field k_level_fields[] = {
     {"boost_speed", 0x18, 'f'}, {"boost_speed_kmh", 0x18, 'k'},
 };
 
-typedef struct { uint32_t addr; uint8_t size; uint32_t value; } Poke;
+/* op: '=' set, '+' add (key +=), '*' multiply (key *=); applied in load order on the value the earlier mods
+ * left, so mods combine. kind: 'f' float value, 'i' integer value (for '*', value holds a float factor) */
+typedef struct { uint32_t addr; uint8_t size; uint32_t value; char op, kind; } Poke;
 static Poke* g_pokes;
 static size_t g_npokes, g_cappokes;
 typedef struct { uint32_t a, b; } Gecko;
@@ -74,25 +76,34 @@ static uint32_t relocate(uint32_t a) {
     return a;
 }
 
-static void add_poke(uint32_t addr, uint8_t size, uint32_t value) {
+static void add_poke(uint32_t addr, uint8_t size, uint32_t value, char op, char kind) {
     if (g_npokes == g_cappokes) {
         g_cappokes = g_cappokes * 2 + 32;
         g_pokes = realloc(g_pokes, g_cappokes * sizeof *g_pokes);
         if (!g_pokes) rt_fatal("out of memory (mods)");
     }
-    g_pokes[g_npokes++] = (Poke){addr, size, value};
+    g_pokes[g_npokes++] = (Poke){addr, size, value, op, kind};
 }
 
-static uint32_t parse_value(const Field* f, const char* v, int* ok) {
+static uint32_t f32_bits(float x) { uint32_t u; memcpy(&u, &x, 4); return u; }
+static float bits_f32(uint32_t u) { float x; memcpy(&x, &u, 4); return x; }
+
+/* a value for field f; "300 km/h" works on any float field (the game keeps speeds as km/h / 216).
+ * With op '*' the value is a factor (kept as float bits, also for integer fields) */
+static uint32_t parse_value(const Field* f, const char* v, char op, int* ok) {
     char* end;
     *ok = 1;
-    if (f->type == 'f' || f->type == 'k') {
+    if (f->type == 'f' || f->type == 'k' || op == '*') {
         float x = strtof(v, &end);
         if (end == v) { *ok = 0; return 0; }
-        if (f->type == 'k') x /= 216.0f;
-        uint32_t u;
-        memcpy(&u, &x, 4);
-        return u;
+        while (*end == ' ' || *end == '\t') end++;
+        int kmh = f->type == 'k' || ieq(end, "km/h") || ieq(end, "kmh");
+        if (*end && !kmh) { *ok = 0; return 0; }
+        if (kmh && op != '*') {
+            if (f->type != 'f' && f->type != 'k') { *ok = 0; return 0; }
+            x /= 216.0f;
+        }
+        return f32_bits(x);
     }
     long long x = strtoll(v, &end, 0);
     if (end == v) *ok = 0;
@@ -108,24 +119,30 @@ static int gear_index(const char* name) {
     return -1;
 }
 
-static void data_entry(const char* mod, const char* section, const char* key, const char* val) {
+static void data_entry(const char* mod, const char* section, const char* key, const char* val, char op) {
     if (!strncmp(section, "gear.", 5) || !strncmp(section, "Gear.", 5)) {
-        int g = gear_index(section + 5);
+        /* [gear.*] (or [gear.all]): every gear */
+        int all = !strcmp(section + 5, "*") || ieq(section + 5, "all");
+        int g = all ? 0 : gear_index(section + 5);
         if (g < 0) { rt_log("[mods] %s: unknown gear \"%s\"", mod, section + 5); return; }
         const Field* f = NULL;
-        uint32_t base = GAME_GEAR_TABLE + (uint32_t)g * 0x1D0;
+        uint32_t off = 0;
         for (size_t i = 0; i < sizeof k_fields / sizeof k_fields[0] && !f; i++)
             if (ieq(k_fields[i].key, key)) f = &k_fields[i];
-        if (!f && !strncmp(key, "level", 5) && key[5] >= '1' && key[5] <= '3' && key[6] == '_') {
+        /* level1_boost_speed, or level1.boost_speed */
+        if (!f && !strncmp(key, "level", 5) && key[5] >= '1' && key[5] <= '3' && (key[6] == '_' || key[6] == '.')) {
             for (size_t i = 0; i < sizeof k_level_fields / sizeof k_level_fields[0] && !f; i++)
                 if (ieq(k_level_fields[i].key, key + 7)) f = &k_level_fields[i];
-            if (f) base += 0x68 + (uint32_t)(key[5] - '1') * 0x1C;
+            if (f) off = 0x68 + (uint32_t)(key[5] - '1') * 0x1C;
         }
         if (!f) { rt_log("[mods] %s: [%s] unknown field \"%s\"", mod, section, key); return; }
         int ok;
-        uint32_t v = parse_value(f, val, &ok);
-        if (!ok) { rt_log("[mods] %s: [%s] %s: \"%s\" is not a number", mod, section, key, val); return; }
-        add_poke(base + f->off, f->type == 'b' || f->type == 's' ? 1 : 4, v);
+        uint32_t v = parse_value(f, val, op, &ok);
+        if (!ok) { rt_log("[mods] %s: [%s] %s: \"%s\" is not a number (or km/h on a field that is not a speed)", mod, section, key, val); return; }
+        uint8_t size = f->type == 'b' || f->type == 's' ? 1 : 4;
+        char kind = f->type == 'f' || f->type == 'k' ? 'f' : 'i';
+        for (int i = all ? 0 : g; i <= (all ? 40 : g); i++)
+            add_poke(GAME_GEAR_TABLE + (uint32_t)i * 0x1D0 + off + f->off, size, v, op, kind);
         return;
     }
     if (ieq(section, "memory")) {  /* ADDRESS = VALUE in hex; 2, 4 or 8 digits: byte, halfword, word */
@@ -136,7 +153,8 @@ static void data_entry(const char* mod, const char* section, const char* key, co
             rt_log("[mods] %s: [memory] %s: write the value as 2, 4 or 8 hex digits", mod, key);
             return;
         }
-        add_poke((uint32_t)strtoul(key, NULL, 16), (uint8_t)(digits / 2), (uint32_t)strtoul(v, NULL, 16));
+        if (op != '=') { rt_log("[mods] %s: [memory] %s: only = is supported here", mod, key); return; }
+        add_poke((uint32_t)strtoul(key, NULL, 16), (uint8_t)(digits / 2), (uint32_t)strtoul(v, NULL, 16), '=', 'i');
         return;
     }
     rt_log("[mods] %s: unknown section [%s]", mod, section);
@@ -186,11 +204,13 @@ static void read_data_mods(void) {
             if (!eq) continue;
             *eq = 0;
             char *k = p, *v = eq + 1;
-            for (char* t = eq - 1; t >= k && (*t == ' ' || *t == '\t'); t--) *t = 0;
+            char op = '=';
+            if (eq > k && (eq[-1] == '+' || eq[-1] == '*')) { op = eq[-1]; eq[-1] = 0; }  /* key += v, key *= v */
+            for (char* t = eq - 1; t >= k && (*t == ' ' || *t == '\t' || *t == 0); t--) *t = 0;
             while (*v == ' ' || *v == '\t') v++;
             size_t vl = strlen(v);
             while (vl && (v[vl - 1] == ' ' || v[vl - 1] == '\t')) v[--vl] = 0;
-            data_entry(mod, section, k, v);
+            data_entry(mod, section, k, v, op);
         }
         fclose(f);
         if (g_npokes > p0 || g_ngecko > g0)
@@ -211,7 +231,24 @@ void mods_apply_link(void) {
     static int done;
     if (done++ || !mods_count()) return;
     read_data_mods();
-    for (size_t i = 0; i < g_npokes; i++) poke(g_pokes[i].addr, g_pokes[i].size, g_pokes[i].value);
+    for (size_t i = 0; i < g_npokes; i++) {
+        const Poke* q = &g_pokes[i];
+        uint32_t v = q->value;
+        if (q->op != '=') {
+            uint32_t a = relocate(q->addr);
+            uint32_t cur = q->size == 1 ? ld8(a) : q->size == 2 ? ld16(a) : ld32(a);
+            if (q->kind == 'f')
+                v = f32_bits(q->op == '+' ? bits_f32(cur) + bits_f32(v) : bits_f32(cur) * bits_f32(v));
+            else if (q->op == '+')
+                v = cur + v;
+            else {  /* integer field times a float factor, rounded */
+                int32_t c = q->size == 1 ? (int32_t)(int8_t)cur : (int32_t)cur;
+                float r = (float)c * bits_f32(v);
+                v = (uint32_t)(int32_t)(r < 0 ? r - 0.5f : r + 0.5f);
+            }
+        }
+        poke(q->addr, q->size, v);
+    }
     if (g_npokes) rt_log("[mods] %zu data changes applied", g_npokes);
 }
 

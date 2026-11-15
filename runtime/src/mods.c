@@ -3,7 +3,8 @@
  *   <mods dir>/mods.ini             load order, one mod folder per line, top to bottom: a later mod
  *                                   wins when two replace the same file; "#" in front turns one off.
  *                                   Mod folders not listed yet are added at the end (on).
- *   <mods dir>/<Mod>/mod.ini        [mod] name, author, version, description (shown in the log)
+ *   <mods dir>/<Mod>/mod.ini        [mod] name, author, version, description (shown in the log);
+ *                                   game = <disc id> (optional: a mod for another game is left out)
  *   <mods dir>/<Mod>/files/<path>   replaces the disc file <path> (any size), or adds a new one
  *
  * The disc's file system table (FST) is rebuilt: replaced and added files get offsets past the end of
@@ -283,12 +284,18 @@ void mods_build_fst(uint8_t** fst_io, uint32_t* size_io) {
     snprintf(g_base, sizeof g_base, "%s", base);
     read_order(base);
     for (int m = 0; m < g_nmods; m++) {
-        char p[512], name[128], author[128], version[64];
+        char p[512], name[128], author[128], version[64], game[16];
         snprintf(p, sizeof p, "%s/%s/mod.ini", base, g_names[m]);
         ini_value(p, "name", name, sizeof name);
         ini_value(p, "author", author, sizeof author);
         ini_value(p, "version", version, sizeof version);
+        ini_value(p, "game", game, sizeof game);
         snprintf(g_titles[m], sizeof g_titles[m], "%s", name);
+        /* game = <6-character disc id>: a mod made for another game (e.g. one sharing this runtime) is left out */
+        if (g_on[m] && *game && strncmp(game, (const char*)disc_header(), 6) != 0) {
+            rt_log("[mods] %s is made for %s, not %.6s: left out", g_names[m], game, (const char*)disc_header());
+            g_on[m] = 0;
+        }
         size_t before = g_nrepl;
         if (g_on[m]) {
             snprintf(p, sizeof p, "%s/%s/files", base, g_names[m]);
