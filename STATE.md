@@ -59,8 +59,10 @@ pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod form
 **v0.8.4 released 2026-11-15** (tag on branch release/v0.8.4, 4d9b942 = release/v0.8.3-fixes + RVZ/WIA -> ISO in the
 setups (tools/rvz2iso.py) + Eject SD card in the Switch installer). PC/Switch/Android/Linux zips; iOS zip from the Mac
 (cold Mac route, ISO). Tested: 5 DolphinTool RVZ/WIA variants -> Redump SHA-1; cold Sandbox PC + Android PASS from an
-RVZ; eject on a card reader. Not tested: eject over hekate UMS, RVZ on Linux/Mac (Mac Python 3.9 has no zstd: needs
-the zstandard package, plan to bundle it). Easy-read install guide https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W
+RVZ; eject on a card reader. Mac (v0.8.4 zip, Python 3.9.6): RVZ lzma2/none + WIA lzma/bzip2 -> Redump SHA-1, zstd
+RVZ fails cleanly [confirmed]. Unreleased on main: zstd RVZ on Mac (9f417f6, pinned cp39 arm64 wheel, fetched only
+for an RVZ/WIA; tested Mac setup 7/7 from an empty tools folder) and Linux (157ccf2). Not tested: eject over hekate
+UMS, an .rvz picked in the Mac launcher, a device install of v0.8.4. Easy-read install guide https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W
 (docs/install-guide.html; the user must share it publicly). Every release links both guides (CLAUDE.md).
 
 **v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS zip added 2026-11-14, replaced the same day from release/v0.8.3-fixes

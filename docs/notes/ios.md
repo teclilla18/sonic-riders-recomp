@@ -174,6 +174,11 @@ First-boot findings [confirmed on the iPhone]:
   SonicRiders.app and build/ios/SonicRiders.ipa back to the release folder (ios_run.py install reads APP there).
   Mac test (unsigned, --install no): first build 81 s / 93 steps; update with ppc.h changed 40 s / 85 steps (every
   gen file includes it, as it must); one runtime .cpp changed 11 s / 6 steps, dtk + recomp skipped [confirmed].
+- RVZ/WIA (2026-11-15): the setup runs Apple's /usr/bin/python3 3.9.6 (no zstd). setup_mac.convert_image() fetches
+  the pinned zstandard cp39 arm64 wheel (toolchain.json "mac", dir zstandard-mac) only for a compressed image; other
+  Pythons get the plain "convert it to ISO in Dolphin" message. Test images: dolphin-tool built from Dolphin's source
+  (the Mac .app has no DolphinTool): `cmake -G Ninja -DENABLE_QT=OFF -DENABLE_NOGUI=OFF -DENABLE_TESTS=OFF
+  -DMACOS_CODE_SIGNING=OFF`, `ninja dolphin-tool`; RVZ "none" needs `-c none`.
 - Signing: `ios_build.find_team()` = the Apple Development certificate, else `defaults read com.apple.dt.Xcode
   IDEProvisioningTeamByIdentifier` (an Apple ID added in Xcode, no manual project step). No team or `--team none`:
   an unsigned app/.ipa (CODE_SIGNING_ALLOWED=NO) that Sideloadly / AltStore sign. Bundle ID: see "App IDs" below.

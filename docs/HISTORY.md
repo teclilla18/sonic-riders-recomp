@@ -1513,3 +1513,19 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - README Downloads badge read "invalid" after the iOS zip replacement (`gh release upload --clobber` deletes, then
   uploads): GitHub's camo cache kept that render; shields itself showed 1.9k (= API sum 1,937). Camo PURGE sent
   [likely cause: the half-uploaded asset; not proven]. Next replacement: upload under a new name first.
+
+## 2026-11-15 (Mac): v0.8.4 iOS zip, RVZ on the Mac, zstd fix
+
+- v0.8.4 iOS zip (PC session's request, upload approved by the user): `make_release --flavor ios --ref v0.8.4`
+  (220 files, 4d9b9421; runtime/ unchanged from v0.8.3's iOS zip). Cold Mac route from the zip: empty tools folder,
+  signed, ISO, 7/7 in 80 s, the app reports v0.8.4 [confirmed]. No device on the cable: no install [uncertain].
+- RVZ on the Mac: Homebrew's Dolphin.app (2609b) has no DolphinTool; built `dolphin-tool` from the 2609b source
+  (CMake, ENABLE_QT=OFF) in the scratch folder. From a copy of the ISO, under Apple's /usr/bin/python3 3.9.6 (what the
+  launcher and .command run): RVZ lzma2 / none, WIA lzma / bzip2 -> Redump SHA-1; RVZ zstd (Dolphin's default) ->
+  clean error, also in setup_mac.py step 1 [confirmed].
+- Fix on main (9f417f6, next release; v0.8.4 unchanged): setup/toolchain.json "mac"."zstandard" (zstandard 0.25.0
+  cp39 macOS arm64 wheel, PyPI hash), downloaded by setup_mac.convert_image() only for an RVZ/WIA on Python 3.9
+  arm64; rvz2iso raises NeedZstd; setup_linux.convert_if_compressed(iso, zstd_dir, zstd_help) shows a plain-words
+  "convert it to ISO in Dolphin" message (user: no module names for players). Tested from a zip of the commit: zstd
+  RVZ, empty tools folder -> wheel, 5 s, SHA-1 OK, 7/7; ISO -> nothing extra downloaded; standalone rvz2iso OK; the
+  message via convert_if_compressed without the wheel [confirmed]. Linux side: PC session, 157ccf2.
