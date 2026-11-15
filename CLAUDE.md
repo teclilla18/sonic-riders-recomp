@@ -74,6 +74,10 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
   <tools>\devkitpro`), `--imgui <tools>\imgui` once, and `ninja`. Variables: docs/notes/debug-variables.md.
 - **Before every release: the cold Windows Sandbox test, PC and Android** (`tools/sandbox_test.py`, from the
   release zips, no download cache; ask the user before launching). Procedure: docs/notes/build-and-test.md.
+- **Every release links both easy-read guides** (user, 2026-11-15): the update guide (`docs/update-guide.html`,
+  https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) and the first-time install guide (`docs/install-guide.html`,
+  https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W). Bump the versions and zip names inside both, republish each
+  to its same URL, and put both links in the release notes; the README's top links to them too.
 
 ## End of every session
 
