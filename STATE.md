@@ -56,6 +56,13 @@ pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod form
 
 ## Releases
 
+**v0.8.4 released 2026-11-15** (tag on branch release/v0.8.4, 4d9b942 = release/v0.8.3-fixes + RVZ/WIA -> ISO in the
+setups (tools/rvz2iso.py) + Eject SD card in the Switch installer). PC/Switch/Android/Linux zips; iOS zip from the Mac
+(cold Mac route, ISO). Tested: 5 DolphinTool RVZ/WIA variants -> Redump SHA-1; cold Sandbox PC + Android PASS from an
+RVZ; eject on a card reader. Not tested: eject over hekate UMS, RVZ on Linux/Mac (Mac Python 3.9 has no zstd: needs
+the zstandard package, plan to bundle it). Easy-read install guide https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W
+(docs/install-guide.html; the user must share it publicly). Every release links both guides (CLAUDE.md).
+
 **v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS zip added 2026-11-14, replaced the same day from release/v0.8.3-fixes
 4cced8a: the Mac setup keeps its build too, an update with one changed file 11 s [tested Mac, no device install yet]). Setup keeps its
 build (updates rebuild only what changed) [tested PC + Switch]; one-press UPDATE NOW [auto-build tested; the
@@ -76,6 +83,10 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 - **Android / iOS / Linux**: notes/android.md, notes/ios.md.
 
 ## Open items, in priority order
+
+**Must be in the NEXT release (user, 2026-11-15), with whatever else it holds:** an **auto stick-spin** option in the
+in-game settings menu (off by default): in the spin-the-stick scenes it refills air and speeds up as if the stick were
+spun at maximum efficiency (saves players' sticks; #23). Plan: notes/plans-2026-11.md "Auto air refill". Not started.
 
 0. **Poll #26 result** decides roster vs online first. **Roster Step 3** (approved, not started; research begun 2026-11-15: cursor `fn_1_141720` read, notes/roster.md): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
    First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)
