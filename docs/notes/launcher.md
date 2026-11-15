@@ -65,6 +65,15 @@ progress bar), then `build\update\apply.ps1` (written by the launcher): Expand-A
 robocopy skips same-size, same-time files; /IM because newer Windows files them as "modified"; release zips carry the commit
 time for the same reason, so older launchers copy everything too: bug fixed in v0.7.3), then RESTART. A PC update leaves
 `build\launcher\rebuild_after_update`: the Play page offers "Rebuild now". The game's F1 > About shows the notes.
+Notes view (2026-11-15): the launcher asks for the markdown (`update_fetch_info_ex(..., 1)`) and draws it itself
+(`parse_notes` / `render_notes`): headings in bold gold, bullets, quotes, clickable links, pictures (`![alt](url)` and
+`<img src alt>`) downloaded in parallel to %TEMP% (`update_download`, own buffer per call) and decoded on a helper
+thread: WIC for JPEG/PNG, Direct2D's SVG renderer for SVG plus DirectWrite for its `<text>` (D2D skips text).
+Emoji: Segoe UI Emoji merged after Segoe UI Symbol, `IMGUI_USE_WCHAR32` (emoji are above U+FFFF), drawn in one
+colour (stb_truetype has no colour glyphs); variation selectors, ZWJ and skin tones are dropped (they showed as "?").
+The game's F1 notes (`update_plain_text`) drop emoji, pictures, HTML tags and heading marks. Test notes from a file:
+`SR_LAUNCHER_NOTES=<file.md>` with `SR_LAUNCHER_FAKE_VERSION` + `SR_LAUNCHER_PAGE=7` + `SR_LAUNCHER_SHOT` (the shot
+waits for the pictures). Tested 2026-11-15: v0.8.2 notes (banner JPEG), gear chart SVG, v0.8.4 notes live.
 Tests: `SR_LAUNCHER_FAKE_VERSION=v0.7.0` (pretend to be older), `SR_LAUNCHER_UPDATE_TEST=1` (press the button,
 write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpacked v0.7.1 PC zip and Switch zip
 (as v0.7.0): real download from GitHub, exe swapped, saves kept, marker written.

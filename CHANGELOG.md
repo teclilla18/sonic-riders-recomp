@@ -5,6 +5,10 @@
 - **Switch screenshots are PNG** (#10): the settings-menu "Save screenshot" and `SR_SHOTS` captures are now
   `shot_<frame>.png`, so they can be dragged straight into a bug report (GitHub refuses `.bmp`). Built and checked
   on a PC host only; not run on a Switch yet.
+- **Launcher "See what's new" shows the release notes properly** (PC, Switch and Android installers): emoji no
+  longer turn into question marks, pictures and charts in the notes are shown, headings and bullets are formatted,
+  and links open in your browser when clicked. The game's own F1 > About notes leave emoji and pictures out
+  instead of showing "?".
 - **RVZ on Mac and Linux, no extra steps**: Dolphin's default RVZ (zstd) now converts there too. The setup fetches
   the small piece it needs by itself, only when you pick an `.rvz` (Mac: Apple's Python; Linux: Python 3.9-3.14,
   x86_64 and ARM). Tested: Mac (zstd RVZ, cold tools folder, build 7/7) and Linux in WSL (Python 3.12).

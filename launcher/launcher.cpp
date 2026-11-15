@@ -21,6 +21,10 @@
 #include <shobjidl.h>
 #include <winioctl.h>
 #include <wincodec.h>
+#include <d2d1_3.h>
+#include <dwrite.h>
+#include <map>
+#include <memory>
 
 #include <algorithm>
 #include <atomic>
@@ -387,47 +391,207 @@ bool create_device(HWND hwnd) {
 struct Tex { ID3D11ShaderResourceView* srv = nullptr; int w = 0, h = 0; };
 Tex g_banner;
 
-/* any picture Windows can read (PNG here) through WIC, into a texture */
-Tex load_texture(const std::wstring& file) {
-    Tex t;
+/* RGBA pixels (straight alpha) of a picture */
+struct Pixels { std::vector<uint8_t> px; int w = 0, h = 0; };
+
+/* any picture Windows can read (PNG, JPEG, GIF, BMP, ...) through WIC; the calling thread has COM */
+bool decode_picture(const std::wstring& file, Pixels& out) {
     IWICImagingFactory* wic = nullptr;
-    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wic)))) return t;
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wic)))) return false;
     IWICBitmapDecoder* dec = nullptr;
     IWICBitmapFrameDecode* fr = nullptr;
     IWICFormatConverter* conv = nullptr;
+    bool ok = false;
     if (SUCCEEDED(wic->CreateDecoderFromFilename(file.c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &dec)) &&
         SUCCEEDED(dec->GetFrame(0, &fr)) && SUCCEEDED(wic->CreateFormatConverter(&conv)) &&
         SUCCEEDED(conv->Initialize(fr, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0,
                                    WICBitmapPaletteTypeCustom))) {
         UINT w, h;
         conv->GetSize(&w, &h);
-        std::vector<uint8_t> px((size_t)w * h * 4);
-        if (SUCCEEDED(conv->CopyPixels(nullptr, w * 4, (UINT)px.size(), px.data()))) {
-            D3D11_TEXTURE2D_DESC d = {};
-            d.Width = w;
-            d.Height = h;
-            d.MipLevels = 1;
-            d.ArraySize = 1;
-            d.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            d.SampleDesc.Count = 1;
-            d.Usage = D3D11_USAGE_DEFAULT;
-            d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            D3D11_SUBRESOURCE_DATA init = {px.data(), w * 4, 0};
-            ID3D11Texture2D* tex = nullptr;
-            if (SUCCEEDED(g_dev->CreateTexture2D(&d, &init, &tex))) {
-                g_dev->CreateShaderResourceView(tex, nullptr, &t.srv);
-                tex->Release();
-                t.w = (int)w;
-                t.h = (int)h;
-            }
-        }
+        out.px.resize((size_t)w * h * 4);
+        out.w = (int)w;
+        out.h = (int)h;
+        ok = w && h && SUCCEEDED(conv->CopyPixels(nullptr, w * 4, (UINT)out.px.size(), out.px.data()));
     }
     if (conv) conv->Release();
     if (fr) fr->Release();
     if (dec) dec->Release();
     wic->Release();
+    return ok;
+}
+
+/* pixels into a texture (main thread) */
+Tex make_texture(const Pixels& p) {
+    Tex t;
+    if (!p.w || !p.h) return t;
+    D3D11_TEXTURE2D_DESC d = {};
+    d.Width = (UINT)p.w;
+    d.Height = (UINT)p.h;
+    d.MipLevels = 1;
+    d.ArraySize = 1;
+    d.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    d.SampleDesc.Count = 1;
+    d.Usage = D3D11_USAGE_DEFAULT;
+    d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    D3D11_SUBRESOURCE_DATA init = {p.px.data(), (UINT)p.w * 4, 0};
+    ID3D11Texture2D* tex = nullptr;
+    if (SUCCEEDED(g_dev->CreateTexture2D(&d, &init, &tex))) {
+        g_dev->CreateShaderResourceView(tex, nullptr, &t.srv);
+        tex->Release();
+        t.w = p.w;
+        t.h = p.h;
+    }
     return t;
 }
+
+Tex load_texture(const std::wstring& file) {
+    Pixels p;
+    return decode_picture(file, p) ? make_texture(p) : Tex();
+}
+
+/* an SVG (the release notes' charts) through Direct2D. D2D's SVG support draws shapes but skips <text>, so the
+ * texts (x, y, font-size, font-weight, font-style, fill, text-anchor: what our charts use) are drawn with
+ * DirectWrite on top. The calling thread has COM. */
+std::string svg_attr(const std::string& tag, const char* name) {
+    std::string pat = std::string(" ") + name + "=\"";
+    size_t a = tag.find(pat);
+    if (a == std::string::npos) return "";
+    a += pat.size();
+    size_t b = tag.find('"', a);
+    return b == std::string::npos ? "" : tag.substr(a, b - a);
+}
+std::wstring utf8_to_wide(const std::string& t) {
+    int n = MultiByteToWideChar(CP_UTF8, 0, t.c_str(), (int)t.size(), nullptr, 0);
+    std::wstring w(n, L'\0');
+    if (n) MultiByteToWideChar(CP_UTF8, 0, t.c_str(), (int)t.size(), &w[0], n);
+    return w;
+}
+std::wstring svg_text(std::string t) {
+    static const char* ent[][2] = {{"&amp;", "&"}, {"&lt;", "<"}, {"&gt;", ">"}, {"&quot;", "\""}, {"&#39;", "'"},
+                                   {"&apos;", "'"}};
+    for (size_t k; (k = t.find('<')) != std::string::npos;) {  /* <tspan> and the like: their text only */
+        size_t e = t.find('>', k);
+        if (e == std::string::npos) break;
+        t.erase(k, e - k + 1);
+    }
+    for (auto& e : ent)
+        for (size_t k; (k = t.find(e[0])) != std::string::npos;) t.replace(k, strlen(e[0]), e[1]);
+    return utf8_to_wide(t);
+}
+bool decode_svg(const std::wstring& file, Pixels& out) {
+    std::string xml = read_text(file);
+    size_t r0 = xml.find("<svg");
+    if (r0 == std::string::npos) return false;
+    std::string root = xml.substr(r0, xml.find('>', r0) - r0);
+    float W = (float)atof(svg_attr(root, "width").c_str()), H = (float)atof(svg_attr(root, "height").c_str());
+    if (W <= 0 || H <= 0) {  /* viewBox="0 0 W H" */
+        float x, y;
+        if (sscanf(svg_attr(root, "viewBox").c_str(), "%f %f %f %f", &x, &y, &W, &H) != 4) return false;
+    }
+    if (W <= 0 || H <= 0 || W > 4096 || H > 4096) return false;
+    std::string family = svg_attr(root, "font-family");
+    family = family.substr(0, family.find(','));
+    if (family.empty()) family = "Segoe UI";
+    std::wstring wfamily = utf8_to_wide(family);
+
+    bool ok = false;
+    IWICImagingFactory* wic = nullptr;
+    ID2D1Factory* d2d = nullptr;
+    IDWriteFactory* dw = nullptr;
+    IWICBitmap* bmp = nullptr;
+    ID2D1RenderTarget* rt = nullptr;
+    ID2D1DeviceContext5* dc = nullptr;
+    ID2D1SvgDocument* doc = nullptr;
+    IStream* st = nullptr;
+    HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, xml.size());
+    if (hg) {
+        memcpy(GlobalLock(hg), xml.data(), xml.size());
+        GlobalUnlock(hg);
+        if (FAILED(CreateStreamOnHGlobal(hg, TRUE, &st))) GlobalFree(hg);
+    }
+    UINT w = (UINT)ceilf(W), h = (UINT)ceilf(H);
+    if (st && SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wic))) &&
+        SUCCEEDED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), nullptr, (void**)&d2d)) &&
+        SUCCEEDED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dw)) &&
+        SUCCEEDED(wic->CreateBitmap(w, h, GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnLoad, &bmp)) &&
+        SUCCEEDED(d2d->CreateWicBitmapRenderTarget(bmp, D2D1::RenderTargetProperties(), &rt)) &&
+        SUCCEEDED(rt->QueryInterface(__uuidof(ID2D1DeviceContext5), (void**)&dc)) &&
+        SUCCEEDED(dc->CreateSvgDocument(st, D2D1::SizeF(W, H), &doc))) {
+        dc->BeginDraw();
+        dc->Clear(D2D1::ColorF(0, 0.0f));
+        dc->DrawSvgDocument(doc);
+        for (size_t at = 0; (at = xml.find("<text", at)) != std::string::npos;) {
+            size_t te = xml.find('>', at);
+            size_t ce = te == std::string::npos ? te : xml.find("</text>", te);
+            if (ce == std::string::npos) break;
+            std::string tag = xml.substr(at, te - at);
+            std::wstring txt = svg_text(xml.substr(te + 1, ce - te - 1));
+            at = ce + 7;
+            float x = (float)atof(svg_attr(tag, "x").c_str()), y = (float)atof(svg_attr(tag, "y").c_str());
+            float size = (float)atof(svg_attr(tag, "font-size").c_str());
+            if (size <= 0) size = 16;
+            std::string fw = svg_attr(tag, "font-weight"), anchor = svg_attr(tag, "text-anchor");
+            DWRITE_FONT_WEIGHT weight = fw == "bold"              ? DWRITE_FONT_WEIGHT_BOLD
+                                        : atoi(fw.c_str()) > 0 ? (DWRITE_FONT_WEIGHT)atoi(fw.c_str())
+                                                               : DWRITE_FONT_WEIGHT_NORMAL;
+            DWRITE_FONT_STYLE style =
+                svg_attr(tag, "font-style") == "italic" ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
+            unsigned rgb = 0;
+            std::string fill = svg_attr(tag, "fill");
+            if (fill.size() == 7 && fill[0] == '#') rgb = (unsigned)strtoul(fill.c_str() + 1, nullptr, 16);
+            else if (fill.size() == 4 && fill[0] == '#') {
+                unsigned v = (unsigned)strtoul(fill.c_str() + 1, nullptr, 16);
+                rgb = ((v >> 8 & 15) * 17) << 16 | ((v >> 4 & 15) * 17) << 8 | (v & 15) * 17;
+            }
+            IDWriteTextFormat* fmt = nullptr;
+            IDWriteTextLayout* lay = nullptr;
+            ID2D1SolidColorBrush* br = nullptr;
+            if (SUCCEEDED(dw->CreateTextFormat(wfamily.c_str(), nullptr, weight, style, DWRITE_FONT_STRETCH_NORMAL, size,
+                                               L"en-us", &fmt)) &&
+                SUCCEEDED(fmt->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP)) &&
+                SUCCEEDED(dw->CreateTextLayout(txt.c_str(), (UINT32)txt.size(), fmt, 8192, 1024, &lay)) &&
+                SUCCEEDED(dc->CreateSolidColorBrush(D2D1::ColorF(rgb), &br))) {
+                DWRITE_TEXT_METRICS m;
+                DWRITE_LINE_METRICS lm;
+                UINT32 nl = 0;
+                lay->GetMetrics(&m);
+                lay->GetLineMetrics(&lm, 1, &nl);
+                float tw = m.widthIncludingTrailingWhitespace;
+                float x0 = anchor == "middle" ? x - tw / 2 : anchor == "end" ? x - tw : x;
+                dc->DrawTextLayout(D2D1::Point2F(x0, y - (nl ? lm.baseline : size * 0.9f)), lay, br,
+                                   D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            }
+            if (br) br->Release();
+            if (lay) lay->Release();
+            if (fmt) fmt->Release();
+        }
+        if (SUCCEEDED(dc->EndDraw())) {
+            out.w = (int)w;
+            out.h = (int)h;
+            out.px.resize((size_t)w * h * 4);
+            if (SUCCEEDED(bmp->CopyPixels(nullptr, w * 4, (UINT)out.px.size(), out.px.data()))) {
+                for (size_t i = 0; i < out.px.size(); i += 4) {  /* premultiplied BGRA -> RGBA */
+                    uint8_t* q = &out.px[i];
+                    int b = q[0], g = q[1], r = q[2], a = q[3];
+                    q[0] = a ? (uint8_t)std::min(255, r * 255 / a) : 0;
+                    q[1] = a ? (uint8_t)std::min(255, g * 255 / a) : 0;
+                    q[2] = a ? (uint8_t)std::min(255, b * 255 / a) : 0;
+                }
+                ok = true;
+            }
+        }
+    }
+    if (doc) doc->Release();
+    if (dc) dc->Release();
+    if (rt) rt->Release();
+    if (bmp) bmp->Release();
+    if (dw) dw->Release();
+    if (d2d) d2d->Release();
+    if (wic) wic->Release();
+    if (st) st->Release();
+    return ok;
+}
+
 void reload_banner() {
     if (g_banner.srv) g_banner.srv->Release();
     g_banner = Tex();
@@ -464,11 +628,15 @@ void load_fonts(float dpi) {
         std::string p = fonts + file;
         if (GetFileAttributesA(p.c_str()) == INVALID_FILE_ATTRIBUTES) return nullptr;
         ImFont* f = io.Fonts->AddFontFromFileTTF(p.c_str(), kSize * dpi);
-        std::string sym = fonts + "seguisym.ttf";  /* check marks, arrows, dots */
-        if (f && merge_symbols && GetFileAttributesA(sym.c_str()) != INVALID_FILE_ATTRIBUTES) {
-            ImFontConfig c;
-            c.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(sym.c_str(), kSize * dpi, &c);
+        /* merged after the main font: check marks, arrows, dots (Segoe UI Symbol), then emoji (Segoe UI Emoji,
+         * drawn in one colour: the release notes use them) */
+        for (const char* extra : {"seguisym.ttf", "seguiemj.ttf"}) {
+            std::string sym = fonts + extra;
+            if (f && merge_symbols && GetFileAttributesA(sym.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                ImFontConfig c;
+                c.MergeMode = true;
+                io.Fonts->AddFontFromFileTTF(sym.c_str(), kSize * dpi, &c);
+            }
         }
         return f;
     };
@@ -1418,10 +1586,11 @@ void start_update_check() {
         char fmt[64];
         snprintf(fmt, sizeof fmt, "SonicRiders-%s-Setup-%%s.zip", zip_flavour());
         UpdateInfo info;
-        if (update_fetch_info(&info, fmt) == 0 && update_is_newer(info.tag, g_version.c_str())) {
+        if (update_fetch_info_ex(&info, fmt, 1) == 0 && update_is_newer(info.tag, g_version.c_str())) {
             std::lock_guard<std::mutex> lk(g_update_mx);
             g_update_tag = info.tag;
             g_update_notes = info.notes ? info.notes : "";
+            if (const char* nf = getenv("SR_LAUNCHER_NOTES")) g_update_notes = read_text(widen(nf));  /* testing */
             g_update_url = info.zip_url;
         }
         free(info.notes);
@@ -1429,6 +1598,269 @@ void start_update_check() {
     }).detach();
 }
 void open_update_page() { ShellExecuteA(nullptr, "open", UPDATE_PAGE, nullptr, nullptr, SW_SHOWNORMAL); }
+
+/* ---- the release notes on the Update page: GitHub markdown as headings, bullets, text, clickable links and
+ * pictures (downloaded once per start into %TEMP%; JPEG/PNG through WIC, SVG charts through Direct2D) */
+struct NoteBlock {
+    enum Kind { TEXT, HEADING, BULLET, QUOTE, PICTURE, GAP } kind = TEXT;
+    int level = 0;
+    std::string text, link;  /* link: the first [text](url) of the line; PICTURE: url in link, alt in text */
+};
+struct NotePicture {
+    std::atomic<int> state{0};  /* 0 not started, 1 loading, 2 pixels ready, 3 texture, 4 failed */
+    Pixels px;
+    Tex tex;
+};
+std::map<std::string, std::shared_ptr<NotePicture>> g_note_pics;  /* main thread only */
+std::string g_notes_parsed_from;
+std::vector<NoteBlock> g_note_blocks;
+
+/* one line of markdown as display text: no ** __ backticks, [text](url) -> text (the first url in *link),
+ * HTML tags dropped, invisible emoji joiners dropped (no font draws them alone) */
+std::string note_inline(const std::string& in, std::string* link) {
+    std::string o;
+    for (size_t i = 0; i < in.size();) {
+        if (in.compare(i, 2, "**") == 0 || in.compare(i, 2, "__") == 0) { i += 2; continue; }
+        if (in[i] == '`') { i++; continue; }
+        if (in[i] == '*' && ((i + 1 < in.size() && in[i + 1] != ' ') || (i > 0 && in[i - 1] != ' '))) {
+            i++;  /* *italic* */
+            continue;
+        }
+        if (in[i] == '[') {
+            size_t c = in.find(']', i);
+            if (c != std::string::npos && c + 1 < in.size() && in[c + 1] == '(') {
+                size_t e = in.find(')', c);
+                if (e != std::string::npos) {
+                    if (link && link->empty()) *link = in.substr(c + 2, e - c - 2);
+                    o += note_inline(in.substr(i + 1, c - i - 1), nullptr);
+                    i = e + 1;
+                    continue;
+                }
+            }
+        }
+        if (in[i] == '<' && i + 1 < in.size() && (in[i + 1] == '/' || isalpha((unsigned char)in[i + 1]))) {
+            size_t e = in.find('>', i);
+            if (e != std::string::npos) { i = e + 1; continue; }
+        }
+        int n;
+        unsigned cp = update_utf8(in.c_str() + i, &n);
+        if (update_is_emoji_joiner(cp)) { i += n; continue; }
+        o.append(in, i, n);
+        i += n;
+    }
+    return o;
+}
+
+/* the value of an HTML attribute (name="...") in a tag */
+std::string html_attr(const std::string& tag, const char* name) {
+    std::string pat = std::string(name) + "=\"";
+    for (size_t a = tag.find(pat); a != std::string::npos; a = tag.find(pat, a + 1))
+        if (a > 0 && (tag[a - 1] == ' ' || tag[a - 1] == '\t')) {
+            size_t b = tag.find('"', a + pat.size());
+            if (b != std::string::npos) return tag.substr(a + pat.size(), b - a - pat.size());
+        }
+    return "";
+}
+
+std::vector<NoteBlock> parse_notes(const std::string& md) {
+    std::vector<NoteBlock> out;
+    auto add_text = [&](NoteBlock::Kind k, int level, const std::string& raw) {
+        NoteBlock b;
+        b.kind = k;
+        b.level = level;
+        b.text = note_inline(raw, &b.link);
+        size_t s = b.text.find_first_not_of(' ');
+        b.text = s == std::string::npos ? "" : b.text.substr(s);
+        if (!b.text.empty()) out.push_back(b);
+    };
+    size_t pos = 0;
+    while (pos <= md.size()) {
+        size_t nl = md.find('\n', pos);
+        std::string line = md.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
+        pos = nl == std::string::npos ? md.size() + 1 : nl + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        size_t lead = line.find_first_not_of(" \t");
+        if (lead == std::string::npos) {
+            if (!out.empty() && out.back().kind != NoteBlock::GAP) out.push_back(NoteBlock{NoteBlock::GAP});
+            continue;
+        }
+        line = line.substr(lead);
+        /* pictures first: ![alt](url) and <img src="..." alt="...">; any text around them stays a text line */
+        bool had_pic = false;
+        for (;;) {
+            size_t a = line.find("![");
+            size_t h = line.find("<img");
+            size_t at = std::min(a, h);
+            if (at == std::string::npos) break;
+            NoteBlock p;
+            p.kind = NoteBlock::PICTURE;
+            size_t end;
+            if (at == a) {
+                size_t c = line.find("](", a);
+                size_t e = c == std::string::npos ? c : line.find(')', c);
+                if (e == std::string::npos) break;
+                p.text = line.substr(a + 2, c - a - 2);
+                p.link = line.substr(c + 2, e - c - 2);
+                end = e + 1;
+            } else {
+                size_t e = line.find('>', h);
+                if (e == std::string::npos) break;
+                std::string tag = line.substr(h, e - h);
+                p.link = html_attr(tag, "src");
+                p.text = html_attr(tag, "alt");
+                end = e + 1;
+            }
+            std::string before = line.substr(0, at);
+            if (before.find_first_not_of(" \t") != std::string::npos) add_text(NoteBlock::TEXT, 0, before);
+            if (!p.link.empty()) out.push_back(p);
+            line = line.substr(end);
+            had_pic = true;
+        }
+        if (had_pic) {
+            if (line.find_first_not_of(" \t") != std::string::npos) add_text(NoteBlock::TEXT, 0, line);
+            continue;
+        }
+        size_t hashes = line.find_first_not_of('#');
+        if (hashes > 0 && hashes != std::string::npos && line[hashes] == ' ') {
+            add_text(NoteBlock::HEADING, (int)hashes, line.substr(hashes + 1));
+        } else if ((line[0] == '-' || line[0] == '*' || line[0] == '+') && line.size() > 1 && line[1] == ' ') {
+            add_text(NoteBlock::BULLET, lead >= 2 ? 1 : 0, line.substr(2));
+        } else if (line[0] == '>') {
+            add_text(NoteBlock::QUOTE, 0, line.substr(line.size() > 1 && line[1] == ' ' ? 2 : 1));
+        } else if (line.find_first_not_of("-*_ ") == std::string::npos) {
+            if (!out.empty() && out.back().kind != NoteBlock::GAP) out.push_back(NoteBlock{NoteBlock::GAP});
+        } else {
+            add_text(NoteBlock::TEXT, 0, line);
+        }
+    }
+    while (!out.empty() && out.back().kind == NoteBlock::GAP) out.pop_back();
+    return out;
+}
+
+/* starts the download + decode of a picture on a helper thread (once per address) */
+std::shared_ptr<NotePicture> note_picture(const std::string& url) {
+    auto& p = g_note_pics[url];
+    if (!p) {
+        p = std::make_shared<NotePicture>();
+        if (url.compare(0, 8, "https://") != 0) {
+            p->state = 4;
+            return p;
+        }
+        p->state = 1;
+        static int counter;
+        wchar_t tmp[MAX_PATH];
+        GetTempPathW(MAX_PATH, tmp);
+        std::string lower = url;
+        for (char& c : lower) c = (char)tolower((unsigned char)c);
+        size_t q = lower.find_first_of("?#");
+        if (q != std::string::npos) lower.resize(q);
+        bool svg = lower.size() > 4 && lower.compare(lower.size() - 4, 4, ".svg") == 0;
+        std::wstring file = std::wstring(tmp) + L"SonicRidersLauncher-note-" + std::to_wstring(GetCurrentProcessId()) +
+                            L"-" + std::to_wstring(++counter) + (svg ? L".svg" : L".img");
+        std::shared_ptr<NotePicture> keep = p;
+        std::thread([keep, url, file, svg]() {
+            CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+            volatile long long got = 0, total = 0;
+            volatile int cancel = 0;
+            bool ok = update_download(url.c_str(), file.c_str(), &got, &total, &cancel) == 0 &&
+                      (svg ? decode_svg(file, keep->px) : decode_picture(file, keep->px));
+            DeleteFileW(file.c_str());
+            keep->state = ok ? 2 : 4;
+            CoUninitialize();
+        }).detach();
+    }
+    return p;
+}
+
+bool notes_pictures_loading() {
+    for (auto& kv : g_note_pics)
+        if (kv.second->state == 1 || kv.second->state == 2) return true;
+    return false;
+}
+
+void open_link(const std::string& url) {
+    if (url.compare(0, 8, "https://") == 0) ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+/* a wrapped text line that opens its link when clicked */
+void note_text_item(const NoteBlock& b) {
+    if (!b.link.empty()) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.75f, 1.0f, 1.0f));
+    ImGui::TextWrapped("%s", b.text.c_str());
+    if (!b.link.empty()) {
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip("%s", b.link.c_str());
+        }
+        if (ImGui::IsItemClicked()) open_link(b.link);
+    }
+}
+
+void render_notes(const std::string& md, float width) {
+    if (md != g_notes_parsed_from) {
+        g_notes_parsed_from = md;
+        g_note_blocks = parse_notes(md);
+    }
+    if (g_note_blocks.empty()) {
+        ImGui::TextDisabled("(no release notes)");
+        return;
+    }
+    for (const NoteBlock& b : g_note_blocks) {
+        switch (b.kind) {
+        case NoteBlock::GAP: ImGui::Dummy(ImVec2(1, ImGui::GetFontSize() * 0.4f)); break;
+        case NoteBlock::HEADING: {
+            float scale = b.level <= 1 ? 1.4f : b.level == 2 ? 1.2f : 1.05f;
+            ImGui::PushFont(g_font_bold, kSize * g_dpi * scale);
+            ImGui::PushStyleColor(ImGuiCol_Text, b.link.empty() ? kGoldV : ImVec4(0.55f, 0.75f, 1.0f, 1.0f));
+            ImGui::TextWrapped("%s", b.text.c_str());
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            if (!b.link.empty()) {
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                    ImGui::SetTooltip("%s", b.link.c_str());
+                }
+                if (ImGui::IsItemClicked()) open_link(b.link);
+            }
+            break;
+        }
+        case NoteBlock::BULLET:
+            if (b.level) ImGui::Indent();
+            ImGui::Bullet();
+            ImGui::SameLine();
+            note_text_item(b);
+            if (b.level) ImGui::Unindent();
+            break;
+        case NoteBlock::QUOTE:
+            ImGui::Indent();
+            ImGui::PushStyleColor(ImGuiCol_Text, kDim);
+            ImGui::TextWrapped("%s", b.text.c_str());
+            ImGui::PopStyleColor();
+            ImGui::Unindent();
+            break;
+        case NoteBlock::PICTURE: {
+            std::shared_ptr<NotePicture> p = note_picture(b.link);
+            if (p->state == 2) {
+                p->tex = make_texture(p->px);
+                p->px = Pixels();
+                p->state = p->tex.srv ? 3 : 4;
+            }
+            if (p->state == 3) {
+                float avail = std::max(ImGui::GetContentRegionAvail().x, 50.0f);
+                float w = std::min(avail, (float)p->tex.w * g_dpi);
+                ImGui::Image((ImTextureID)(intptr_t)p->tex.srv, ImVec2(w, w * p->tex.h / p->tex.w));
+                if (!b.text.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", b.text.c_str());
+            } else {
+                ImGui::TextDisabled(p->state == 4 ? "[picture: %s]" : "(loading picture: %s)",
+                                    b.text.empty() ? "no description" : b.text.c_str());
+            }
+            break;
+        }
+        default: note_text_item(b); break;
+        }
+    }
+    (void)width;
+}
 
 /* download -> unpack over this folder (build\update\apply.ps1: the zip holds only the port's own files, so the
  * disc image, saves, mods and builds stay) -> restart. The running exe is renamed to .old first (a running exe
@@ -1553,7 +1985,7 @@ void page_update(float w) {
     float notes_h = std::max(ImGui::GetContentRegionAvail().y - 120 * g_dpi, 100.0f);
     ImGui::BeginChild("notes", ImVec2(w, notes_h), ImGuiChildFlags_Borders);
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextUnformatted(notes.empty() ? "(no release notes)" : notes.c_str());
+    render_notes(notes, w);
     ImGui::PopTextWrapPos();
     ImGui::EndChild();
     ImGui::Spacing();
@@ -2313,7 +2745,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
                 break;
             }
         }
-        if (g_shot_file && frames >= 20 && (g_update_done || frames >= 600)) {  /* fonts, textures, update check settled */
+        if (g_shot_file && frames >= 20 && ((g_update_done && !notes_pictures_loading()) || frames >= 600)) {  /* fonts, textures, update check settled */
             save_backbuffer(widen(g_shot_file));
             break;
         }

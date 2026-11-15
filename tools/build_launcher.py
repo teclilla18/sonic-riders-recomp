@@ -83,8 +83,9 @@ def main():
     srcs.append(res)
     cmd = [cxx, "-std=c++17", "-O2", "-municode", "-mwindows", "-static", "-s",
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
+           "-DIMGUI_USE_WCHAR32",  # emoji are above U+FFFF
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [
-           "-o", out, "-ld3d11", "-ldxgi", "-ld3dcompiler", "-ldwmapi", "-lole32", "-lwindowscodecs",
+           "-o", out, "-ld3d11", "-ldxgi", "-ld3dcompiler", "-ldwmapi", "-lole32", "-lwindowscodecs", "-ld2d1", "-ldwrite",
            "-lcomdlg32", "-lshell32", "-lgdi32", "-luuid", "-lwinhttp", "-lws2_32", "-liphlpapi"]
     print("build_launcher: compiling (about a minute)...")
     r = subprocess.run(cmd)
