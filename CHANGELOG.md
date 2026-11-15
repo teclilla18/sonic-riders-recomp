@@ -11,7 +11,7 @@
   `SR_DUMPTEX_DOLPHIN=<folder>` writes the game's textures with their pack names for making packs. Names checked
   against Dolphin's own dumps (1,507 identical). Tested on PC; other platforms built but not tested yet.
 
-## v0.8.4 (2026-11-15)
+## v0.8.4 (2026-11-15; iOS zip added the same day)
 
 v0.8.3 plus these two changes only (branch `release/v0.8.4`; the Unreleased items above are not in it).
 
@@ -19,6 +19,9 @@ v0.8.3 plus these two changes only (branch `release/v0.8.4`; the Unreleased item
   and it is converted to a full `.iso` by itself before the build (about a minute; `tools/rvz2iso.py`, no Dolphin
   needed). Your `.rvz` is left as it is. Windows, Linux and Mac setups.
 - **Eject SD card** button in the Switch installer (SonicRiders-Switch-Setup) once the install is done.
+- **iOS zip** (added later the same day, built on the Mac from the v0.8.4 tag): the iOS app's code is the same as
+  v0.8.3's. On the Mac, an `.rvz` with zstd (Dolphin's default) needs the `zstandard` package for now (Apple's
+  Python 3.9).
 
 ## v0.8.3 (2026-11-14; Linux zip updated 2026-11-14; iOS zip added and updated 2026-11-14)
 
