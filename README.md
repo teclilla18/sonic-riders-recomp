@@ -10,8 +10,22 @@
 
 # Sonic Riders Recomp: native port for PC, Switch, Android & iOS
 
-[![Listed on Decomp Buddy](https://decompbuddy.com/badge.svg)](https://decompbuddy.com/games/sonic-riders-gamecube)
-[![Install With Decomp Buddy](https://decompbuddy.com/install-button.svg)](https://decompbuddy.com/games/sonic-riders-gamecube?install)
+<p align="center">
+  <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
+  <a href="https://decompbuddy.com/games/sonic-riders-gamecube?install"><img src="https://decompbuddy.com/install-button.svg" alt="Install With Decomp Buddy"></a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
+  <img src="https://img.shields.io/badge/Focus-Game%20Preservation-pink" alt="Focus: game preservation">
+  <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Android, Linux, iOS">
+  <img src="https://img.shields.io/badge/Recompiler-gcrecomp-orange" alt="Recompiler: gcrecomp (this repo)">
+  <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
+  <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><img src="https://img.shields.io/github/v/release/teclilla18/sonic-riders-recomp?label=Release&color=0aa5e8" alt="Latest release"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases"><img src="https://img.shields.io/github/downloads/teclilla18/sonic-riders-recomp/total?label=Downloads&color=teal" alt="Downloads"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/stargazers"><img src="https://img.shields.io/github/stars/teclilla18/sonic-riders-recomp?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
+</p>
 
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
