@@ -96,16 +96,39 @@ def pick_iso():
     title = "Select your Sonic Riders (USA) disc image (GXEE8P, revision 0)"
     home = os.path.expanduser("~")
     gui = os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
-    for cmd in (["kdialog", "--title", title, "--getopenfilename", home, "*.iso *.gcm|GameCube disc image"],
-                ["zenity", "--file-selection", "--title=" + title, "--file-filter=GameCube disc image | *.iso *.gcm"]):
+    for cmd in (["kdialog", "--title", title, "--getopenfilename", home, "*.iso *.gcm *.rvz *.wia|GameCube disc image"],
+                ["zenity", "--file-selection", "--title=" + title, "--file-filter=GameCube disc image | *.iso *.gcm *.rvz *.wia"]):
         if gui and shutil.which(cmd[0]):
             r = subprocess.run(cmd, capture_output=True, text=True)
             if r.returncode == 0 and r.stdout.strip():
                 return r.stdout.strip()
     if sys.stdin.isatty():
-        p = input("Path of your disc image (.iso; you can drag the file into this window): ").strip()
+        p = input("Path of your disc image (.iso or .rvz; you can drag the file into this window): ").strip()
         return p.strip("'\"")
     return ""
+
+
+def convert_if_compressed(iso):
+    """Dolphin's RVZ / WIA image -> a plain ISO in this folder's baserom/ (tools/rvz2iso.py); else unchanged."""
+    if not os.path.isfile(iso):
+        return iso
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import rvz2iso
+    if not rvz2iso.is_compressed_image(iso):
+        return iso
+    out_dir = os.path.join(ROOT, "baserom")
+    os.makedirs(out_dir, exist_ok=True)
+    dst = os.path.join(out_dir, os.path.splitext(os.path.basename(iso))[0] + ".iso")
+    log("This is a compressed RVZ/WIA image; converting it to an ISO (about a minute): %s" % dst)
+    try:
+        rvz2iso.convert(iso, dst, ISO_SHA1)
+    except Exception as e:
+        try:
+            os.remove(dst + ".part")
+        except OSError:
+            pass
+        fail("Could not convert the image: %s" % e)
+    return dst
 
 
 def check_iso(iso):
@@ -129,8 +152,8 @@ def check_iso(iso):
     log("SHA-1: " + h.hexdigest())
     if h.hexdigest() != ISO_SHA1:
         fail("The image does not match the known-good dump (expected SHA-1 %s)." % ISO_SHA1,
-             "A clean 1:1 dump (Redump: 'Sonic Riders (USA) (En,Ja,Fr,De,Es,It)') is needed. Trimmed, compressed "
-             "(RVZ/CISO/GCZ) or modified images do not work; convert RVZ back to ISO with Dolphin first.")
+             "A clean 1:1 dump (Redump: 'Sonic Riders (USA) (En,Ja,Fr,De,Es,It)') is needed. Trimmed, modified or "
+             "CISO/GCZ images do not work (an RVZ made with 'Remove Junk Data' does not either).")
     log("Disc image OK: Sonic Riders (USA), GXEE8P revision 0.", "green")
     return size
 
@@ -344,7 +367,7 @@ def main():
         iso = pick_iso()
         if not iso:
             fail("No disc image selected.", "Run it again and pick the image, or pass it: ./SonicRidersSetup.sh --iso /path/to/image.iso")
-    iso = os.path.abspath(os.path.expanduser(iso))
+    iso = convert_if_compressed(os.path.abspath(os.path.expanduser(iso)))
     iso_size = check_iso(iso)
 
     # 2 -------------------------------------------------------------

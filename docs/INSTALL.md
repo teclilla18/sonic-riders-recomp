@@ -20,8 +20,11 @@
 - **Your own copy of Sonic Riders (USA)** dumped to a disc image: game ID `GXEE8P`, revision 0, a clean
   1:1 `.iso` (1,459,978,240 bytes, SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`, the Redump
   dump "Sonic Riders (USA) (En,Ja,Fr,De,Es,It)"). You can dump your disc with a Wii and CleanRip.
-  RVZ/GCZ/CISO images must be converted back to a full ISO first (Dolphin: right-click the game,
-  Convert File, format ISO). The European and Japanese versions are not supported.
+  **An ISO is not necessary:** Dolphin's compressed `.rvz` (and `.wia`) images work too. Pick the `.rvz` and the
+  setup converts it to a full `.iso` by itself before the build (about a minute; the `.iso` lands in the setup
+  folder's `baserom\` and your `.rvz` is left as it is). An RVZ made with Dolphin's "Remove Junk Data" option is
+  not 1:1 and fails the check. GCZ/CISO images still need converting first (Dolphin: right-click the game, Convert
+  File, format ISO). The European and Japanese versions are not supported.
 - **A Windows 10 (version 1803 or newer) or Windows 11 PC**, 64-bit, with an internet connection the
   first time and about 4 GB of free disk space. The PC does the conversion; nothing is downloaded from
   the game. Nothing else to install: the setup downloads its own tools (no Python, Visual Studio,

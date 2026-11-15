@@ -9,7 +9,7 @@ shipped: the tool checks your image, recompiles its code locally, builds the Swi
   powershell -ExecutionPolicy Bypass -File setup\setup.ps1 -Iso <image> -Target switch -Sd E:\
 
 Parameters (all optional; asked for when missing):
-  -Iso PATH          your Sonic Riders (USA) disc image, GXEE8P revision 0 (Redump, 1.4 GB .iso)
+  -Iso PATH          your Sonic Riders (USA) disc image, GXEE8P revision 0 (Redump, 1.4 GB .iso; Dolphin's .rvz / .wia are converted)
   -Target T          switch | pc | both (Switch + PC) | android | all
   -Abi A             Android: arm64-v8a (phones, default) | x86_64 (the emulator) | both
   -Install yes|no    Android: install the APK on the phone connected by USB (adb), if there is one
@@ -134,7 +134,7 @@ if (-not $Iso) {
     Add-Type -AssemblyName System.Windows.Forms
     $dlg = New-Object System.Windows.Forms.OpenFileDialog
     $dlg.Title = "Select your Sonic Riders (USA) disc image (GXEE8P, revision 0)"
-    $dlg.Filter = "GameCube disc image (*.iso;*.gcm)|*.iso;*.gcm|All files (*.*)|*.*"
+    $dlg.Filter = "GameCube disc image (*.iso;*.gcm;*.rvz;*.wia)|*.iso;*.gcm;*.rvz;*.wia|All files (*.*)|*.*"
     if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { Fail "No disc image selected." }
     $Iso = $dlg.FileName
 }
@@ -143,19 +143,33 @@ $Iso = (Resolve-Path -LiteralPath $Iso).Path
 $isoSize = (Get-Item -LiteralPath $Iso).Length
 Log ("Image: {0} ({1:N0} bytes)" -f $Iso, $isoSize)
 $fs = [IO.File]::OpenRead($Iso)
-try { $hdr = New-Object byte[] 8; [void]$fs.Read($hdr, 0, 8) } finally { $fs.Close() }
+try { $hdr = New-Object byte[] 0x60; [void]$fs.Read($hdr, 0, 0x60) } finally { $fs.Close() }
+# Dolphin's compressed RVZ / WIA images are converted back to a plain ISO once Python is ready
+# (tools\rvz2iso.py); their header carries the disc's own first bytes at 0x58 and the ISO size at 0x24.
+$rvzSrc = $null
+$magic = [Text.Encoding]::ASCII.GetString($hdr, 0, 3)
+if (($magic -eq "RVZ" -or $magic -eq "WIA") -and $hdr[3] -eq 1) {
+    $rvzSrc = $Iso
+    $isoSize = 0; for ($i = 0x24; $i -lt 0x2C; $i++) { $isoSize = $isoSize * 256 + $hdr[$i] }
+    $hdr = [byte[]]$hdr[0x58..0x5F]
+    Log ("This is a compressed {0} image; it will be converted to a {1:N0}-byte ISO before the build." -f $magic, $isoSize)
+}
 $discId = [Text.Encoding]::ASCII.GetString($hdr, 0, 6)
 if ($discId -ne "GXEE8P") {
     Fail "This image's game ID is '$discId'; Sonic Riders (USA) is GXEE8P." "Only the USA release is supported (PAL GXEP8P and Japanese GXEJ8P are not)."
 }
 if ($hdr[7] -ne 0) { Fail ("This is revision {0} of the disc; revision 0 is supported." -f $hdr[7]) }
-Log "Checking the image's SHA-1 (about 10-30 seconds)..."
-$sha1 = (Get-FileHash -LiteralPath $Iso -Algorithm SHA1).Hash.ToLower()
-Log "SHA-1: $sha1"
-if ($sha1 -ne $IsoSha1) {
-    Fail "The image does not match the known-good dump (expected SHA-1 $IsoSha1)." "A clean 1:1 dump (Redump: 'Sonic Riders (USA) (En,Ja,Fr,De,Es,It)') is needed. Trimmed, compressed (RVZ/CISO/GCZ) or modified images do not work; convert RVZ back to ISO with Dolphin first."
+$badDump = "A clean 1:1 dump (Redump: 'Sonic Riders (USA) (En,Ja,Fr,De,Es,It)') is needed. Trimmed, modified or CISO/GCZ images do not work (an RVZ made with 'Remove Junk Data' does not either)."
+function Test-IsoHash([string]$path) {
+    Log "Checking the image's SHA-1 (about 10-30 seconds)..."
+    $h = (Get-FileHash -LiteralPath $path -Algorithm SHA1).Hash.ToLower()
+    Log "SHA-1: $h"
+    return $h -eq $IsoSha1
 }
-Log "Disc image OK: Sonic Riders (USA), GXEE8P revision 0." "Green"
+if (-not $rvzSrc) {
+    if (-not (Test-IsoHash $Iso)) { Fail "The image does not match the known-good dump (expected SHA-1 $IsoSha1)." $badDump }
+    Log "Disc image OK: Sonic Riders (USA), GXEE8P revision 0." "Green"
+}
 
 Step "2/7  What to build"
 if (-not $Target) {
@@ -411,6 +425,21 @@ $vcrt = Join-Path (Split-Path $dtk) "vcruntime140.dll"
 if (-not (Test-Path $vcrt)) { Copy-Item (Join-Path $pyDir "vcruntime140.dll") $vcrt }
 $imgui = Ensure-Tool $tc.imgui
 Log "Python, ninja, decomp-toolkit and Dear ImGui ready."
+
+if ($rvzSrc) {
+    # convert into baserom\ of this folder (where the PC build looks for the disc); the original stays untouched
+    $rvzDir = Join-Path $Root "baserom"
+    New-Item -ItemType Directory -Force -Path $rvzDir | Out-Null
+    $Iso = Join-Path $rvzDir ([IO.Path]::GetFileNameWithoutExtension($rvzSrc) + ".iso")
+    if ((Test-Path -LiteralPath $Iso) -and (Get-Item -LiteralPath $Iso).Length -eq $isoSize -and (Test-IsoHash $Iso)) {
+        Log "Using the ISO converted earlier: $Iso"
+    } else {
+        $free = (Get-PSDrive -Name ([IO.Path]::GetPathRoot($rvzDir).Substring(0, 1)) -ErrorAction SilentlyContinue).Free
+        if ($free -and $free -lt $isoSize + 200MB) { Fail ("Not enough free space for the converted ISO: {0:N1} GB needed on the drive of {1}." -f (($isoSize + 200MB) / 1GB), $Root) }
+        Run "convert the RVZ/WIA image to ISO (about a minute)" $python @("-I", (Join-Path $Root "tools\rvz2iso.py"), $rvzSrc, $Iso, "--sha1", $IsoSha1, "--zstd-dir", $zstdDir)
+    }
+    Log "Disc image OK: Sonic Riders (USA), GXEE8P revision 0 (converted to $Iso)." "Green"
+}
 
 $dkp = $null
 if ($doSwitch) {

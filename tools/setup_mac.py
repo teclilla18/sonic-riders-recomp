@@ -45,11 +45,11 @@ def out(cmd, env=None):
 def pick_iso():
     """macOS's own file dialog (AppleScript), else a typed path."""
     r = subprocess.run(["osascript", "-e", 'POSIX path of (choose file with prompt "Select your Sonic Riders (USA) '
-                        'disc image (GXEE8P, revision 0, .iso)")'], capture_output=True, text=True)
+                        'disc image (GXEE8P, revision 0, .iso or .rvz)")'], capture_output=True, text=True)
     if r.returncode == 0 and r.stdout.strip():
         return r.stdout.strip()
     if sys.stdin.isatty():
-        return input("Path of your disc image (.iso; you can drag the file into this window): ").strip().strip("'\"")
+        return input("Path of your disc image (.iso or .rvz; you can drag the file into this window): ").strip().strip("'\"")
     return ""
 
 
@@ -237,7 +237,7 @@ def main():
         iso = pick_iso()
         if not iso:
             fail("No disc image selected.", "Run it again and pick the image.")
-    iso = os.path.abspath(os.path.expanduser(iso))
+    iso = S.convert_if_compressed(os.path.abspath(os.path.expanduser(iso)))
     iso_size = S.check_iso(iso)
     icon = a.icon
     if not icon and not a.yes and sys.stdin.isatty():

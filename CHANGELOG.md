@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.4 (2026-11-15)
+
+v0.8.3 plus these two changes only (branch `release/v0.8.4`).
+
+- **RVZ works, an ISO is not necessary** (#27): pick Dolphin's `.rvz` (or `.wia`) in the launcher or the setup
+  and it is converted to a full `.iso` by itself before the build (about a minute; `tools/rvz2iso.py`, no Dolphin
+  needed). Your `.rvz` is left as it is. Windows, Linux and Mac setups.
+- **Eject SD card** button in the Switch installer (SonicRiders-Switch-Setup) once the install is done.
+
 ## v0.8.3 (2026-11-14)
 
 - **Faster updates**: the setup keeps its build between versions (in its tools folder), so an update rebuilds only

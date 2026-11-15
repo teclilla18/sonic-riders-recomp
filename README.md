@@ -45,7 +45,7 @@ wait 10–30 minutes the first time (Android: 20–40, then it installs over a U
 built on a Windows 10/11 PC, except Linux / Steam Deck, which builds on the Linux machine itself
 (no compiler or root rights needed), and iPhone / iPad, which builds on a Mac with Xcode.
 
-**You need:** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full 1.4 GB `.iso`) and a
+**You need:** your own **Sonic Riders (USA)** disc image (`GXEE8P`: a full 1.4 GB `.iso`, or Dolphin's `.rvz`, which the setup converts to `.iso` by itself) and a
 64-bit Windows 10 (1803+) or 11 PC with internet the first time. Switch: custom firmware with the
 Homebrew Menu. PC: a graphics card with OpenGL 3.3. Android: USB debugging turned on, about 2 GB free on
 the phone. [All requirements](docs/INSTALL.md#what-you-need)
