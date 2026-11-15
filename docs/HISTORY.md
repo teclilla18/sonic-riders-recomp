@@ -1464,3 +1464,13 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - Scripted D-pad / stick presses for player 1 do not move the Player Entry cursor (player 2's do) [uncertain why];
   `SR_POKEAT` on racer + 0xBA and work + 0x3C selects a character instead.
 - README badges (Decomp Buddy, shields.io) on Riders and Heroes.
+
+## 2026-11-14, night: roster design approved; Ayn Thor report
+
+- User approved the roster Step 3 design (notes/roster.md "Recommended design"): 8 race slots filled from mods,
+  base character, original 2 x 8 page kept with extra 2 x 8 pages, saves vanilla. Page switching left to us:
+  L / R and the cursor edge, a 0.2 s sideways slide, a shared page. Nothing implemented yet.
+- #23: Kiri235 reports bad drops on an Ayn Thor (Android) when boosting or with racers nearby. Replied asking
+  for the model, version, frame rate mode, a 60 vs 30 race and the log. Read of render_vk.c: speed blur adds
+  EFB copies and blits, each ending the render pass on a tiler [likely suspect, unproven]; Auto mode's
+  60 -> 30 switch may also be what they see [uncertain]. Plan in notes/android.md.

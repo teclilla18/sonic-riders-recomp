@@ -148,3 +148,18 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - ADPF: `platform_game_step_work` creates an APerformanceHint session for the game thread (dlsym, Android 13+;
   target 16.7 ms) and reports each step's work from hle_frame_end. Log: `[android] performance hint session ...`.
   `SR_NOHINT=1` off. S23 A/B (both features): no difference; the S23 never stalls.
+
+## Open: Ayn Thor slowdown (#23, Kiri235, 2026-11-14) [uncertain, no log yet]
+
+- Report: frames drop badly when going fast (boost) or when a few racers are near. Most Thor models are SM8550
+  (as the S23 Ultra, 59.3 fps 1P demo); the Lite is a Snapdragon 865 (Adreno 650). Asked on #23 for the model,
+  version, frame rate mode (Auto switches 60 -> 30 in busy scenes, which may be what they see), a 60 vs 30 race,
+  the bottom screen state, and `sonicriders.log` (copied over USB from `Android/data/net.srnative.sonicriders/files/`).
+- What the log decides: `[vk]` line (GPU ms/frame, draws, pipeline switches, device name) vs `[perf]` game-thread
+  work and `[hitch]` lines: GPU-bound or CPU-bound.
+- Leading GPU suspect: boosting turns on the speed-blur effect, i.e. extra EFB copies and `GXC_TEXBLIT` blits;
+  each copy ends the render pass (`efb_end`), so the tiler stores and reloads the tiles (see "Remaining GPU
+  leads" above). Racers nearby = more character draws (and per-pixel lighting, if on).
+- Our own repro: S23 over adb, a race boosting next to CPU racers, compare GPU ms with the blur on and off.
+- Gaps: Android has no "Save a bug report" button (`HAVE_BUG_REPORT` is PC/Linux) and the `[vk]` line does not
+  count render passes / EFB copies per frame. Both worth adding.

@@ -92,7 +92,18 @@ per id, hard-coded arrays), `src/handlers/ingame/customcss.cpp`, `src/gears/twea
   ids such as 0xA9 / 0x101 per costume); `10CSSV.DAT` is one sound bank with every character's select voice.
   A new character's portrait / name therefore needs a texture the screen can reference (texture injection).
 
-## Recommended design for Step 3 (proposal, not approved yet)
+## Recommended design for Step 3 (approved by the user 2026-11-14: all of points 1-5, layout = 2 x 8 pages)
+
+Page switching (the user left it to us, 2026-11-14):
+- **Buttons:** L / R flip to the previous / next page (keyboard and touch use their L / R mappings); moving the
+  cursor off the left or right edge of the grid also continues onto the neighbouring page. Check first that
+  vanilla Player Entry does not already use L / R (if it does, use the cursor-edge move plus Z).
+- **Animation:** the 16 tiles slide sideways as a strip (old page out, new page in from the side pressed),
+  about 12 frames (0.2 s) with an ease-out; a small page indicator ("1 / 3" or dots) under the grid. No
+  animation when there is only the vanilla page (no character mods installed: the screen is unchanged).
+- **Shared page:** the grid shows one page for everyone; any player who has not locked in can flip it.
+  Cursors keep their row and column; a player's chosen character stays in their own panel whatever page is
+  shown.
 
 1. **Unlimited roster, 8 race slots.** At most 8 racers exist in a race, so the game never needs more than
    8 custom characters at once. The roster (select screen, mod registry) can be any size. When a race loads,

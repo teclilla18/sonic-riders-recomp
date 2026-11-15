@@ -1,4 +1,4 @@
-# State (2026-11-14, late)
+# State (2026-11-14, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -11,9 +11,9 @@ user's gaming laptop (online tests). The PC's main checkout folder may be on a l
 
 Goal: new characters on their own Player Entry tiles next to the 16 originals (Smash-style, no L/R alternates),
 added by community character mods ("anyone can add any character"); a generic mod manager (install, uninstall,
-enable, disable; later other mod types). Stages on hold. **Steps 1-2 (research) done; Steps 3-5 (roster code,
-character mod format, manager) wait for the user's explicit approval** of the design in
-[docs/notes/roster.md](docs/notes/roster.md) "Recommended design".
+enable, disable; later other mod types). Stages on hold. **Steps 1-2 (research) done; Step 3 design approved by the
+user (2026-11-14 night)**: [docs/notes/roster.md](docs/notes/roster.md) "Recommended design" (points 1-5, 2 x 8
+pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod format, manager) follow Step 3.
 
 - **Research [confirmed, PC]** (docs/notes/roster.md): character ids 0-16; character info table 0x819C4CC0
   (17 x 0x20: type, letter, camera height, stars); racer + 0xBA = character id, and Player Entry edits it directly;
@@ -24,9 +24,9 @@ character mod format, manager) wait for the user's explicit approval** of the de
 - **Injection tests [confirmed, PC, local test mods]**: a new file letter + the mod's files loads and races with no
   code; another character's model on an id crashes in `fn_1_45508` (animation slots are per id) -> each custom
   character must name a base character with the same skeleton.
-- **Proposed design**: unlimited roster, 8 race slots (ids 17..24 filled per race from the mod data), inherit
-  from a base character, files by letter, select screen with extra pages at the original tile size (TE and the
-  other big mod use one shrunk 3 x 8 grid instead: the user picks), portraits via texture injection, saves untouched.
+- **Approved design**: unlimited roster, 8 race slots (ids 17..24 filled per race from the mod data), inherit
+  from a base character, files by letter, original 2 x 8 page untouched plus extra 2 x 8 pages of custom
+  characters, portraits via texture injection, saves untouched. Not implemented yet.
 - **Load tracer** (debug builds: `configure.py --trace-loads`, `SR_TRACE_LOADS*`; notes/debug-variables.md)
   [implemented, used all session]. Character selection in tests: `SR_POKEAT=3520:803E2994:<id>,3520:81A0D7FA:<id>`
   on the 1P route (scripted D-pad/stick for player 1 does not move that cursor; cause unknown).
@@ -68,10 +68,12 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 
 ## Open items, in priority order
 
-0. **Roster Step 3 approval** (user): pages vs TE-style 3 x 8 grid; the base-character rule; then build
-   roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
+0. **Roster Step 3** (approved, not started): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
    First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)
    with the load tracer; the select-screen draw code; gear compatibility (`useFlags`, gear selector).
+0b. **Ayn Thor slowdown (#23, Kiri235)**: drops when boosting / racers near. Asked for model, version, frame
+   rate mode, 60 vs 30, `sonicriders.log` (waiting). Suspect speed-blur EFB copies on the tiler; plan in
+   notes/android.md "Ayn Thor". Worth adding: Android bug-report button, render passes per frame in `[vk]`.
 1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
 2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
 3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.
