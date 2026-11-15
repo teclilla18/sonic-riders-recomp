@@ -30,7 +30,7 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
 - Every host helper thread on the Switch is pinned off core 0 (the game thread). Horizon does not time-slice equal
   priorities: a thread that must keep up (the audio mixer) runs one step above its core neighbour.
 - Eden: v0.1.1 only (v0.2.1 fails in dkDeviceCreate); never start it minimized (use `-WindowStyle Hidden`).
-- Look at frames through the port's own captures (`SR_SCREENSHOT`, `shot_*.bmp`, switch-remote screenshots), never
+- Look at frames through the port's own captures (`SR_SCREENSHOT`, `shot_*.png`, switch-remote screenshots), never
   desktop screenshots. PC test runs use `SR_MINIMIZED=1` (the user may be using the PC).
 - Switch CPU gains can't be measured on PC or Eden; only hardware. The test console (OLED) is overclocked: docked CPU 1785
   / GPU 1152 / MEM 2133, handheld CPU 1785 / GPU 614 / MEM 2133; state the mode and clocks with every hardware number. Hardware `[profile]` charges a caller's work

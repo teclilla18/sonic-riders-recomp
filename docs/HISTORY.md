@@ -1552,3 +1552,15 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   ISO input downloads nothing, no matching wheel -> plain "convert it to ISO in Dolphin" message [confirmed]. Not on a
   real Steam Deck [uncertain].
 - Planned for the next release (user): auto stick-spin option (#23), notes/plans-2026-11.md.
+
+## 2026-11-15 (PC, contributor): Switch screenshots as PNG (#10)
+
+- Switch self-captures were written as 24-bit BMP, which GitHub refuses, so bug reporters had to convert them.
+  `shot_thread` in `runtime/src/platform/switch/render_deko.c` now writes PNG through the vendored
+  `stb_image_write.h` (its implementation is already compiled in `runtime/src/texpack.c` for every target).
+- Found while testing: stb's PNG stride only separates rows, and inside a row it reads `comp` bytes per pixel, so
+  the RGBA capture cannot be written as RGB by passing a 4-byte stride; the pixels are packed to RGB first.
+- Checked on the PC host by compiling the old BMP path and the new PNG path against the same vendored header and
+  decoding both: 0 differing pixels against the source capture [confirmed on host]. Not built with devkitA64 and not
+  run on a Switch; PNG encoding time on the capture thread is unmeasured [uncertain].
+
