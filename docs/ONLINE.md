@@ -290,7 +290,10 @@ vertex shader narrows perspective views by game k / own k (`GX_XR_ASPECT`, XF re
 vertical view as the game's. The room uses the widest screen so nobody sees past what the game culls. Recordings
 store the game's k. Tested [confirmed, PC, two copies on localhost, 2P race route]: 16:9 host + 4:3 joiner, 9,000
 checksums equal, the joiner's 4:3 picture matches an offline 4:3 run of the same frame (framing and proportions);
-4:3 host + 16:9 joiner, the room took 16:9, 6,600 checksums equal.
+4:3 host + 16:9 joiner, the room took 16:9, 6,600 checksums equal. Switch-Switch [confirmed, 2026-11-15, build 4873a73]: OLED host 16:9
+(Fit, 1.5x) + second console joining at 4:3 (`SR_SCREEN=0`): 12,000 checksums equal on both; the joiner showed a full
+4:3 picture (bars at the sides of its 16:9 screen), the host 16:9, same race moment. A first try failed only because
+the joiner was started before the host was listening long enough ("the host did not answer within 60 s").
 
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
