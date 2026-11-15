@@ -254,13 +254,19 @@ def system_compiler():
     return None
 
 
-def compiler_works(cxx, tmp_dir=None):
+def static_cxx_runtime_works(cxx, tmp_dir=None):
+    """configure.py links libstdc++ statically; Fedora-family systems (Nobara, Bazzite) need the separate
+    libstdc++-static package for that. False when that link fails (the build then uses the shared one)."""
+    return compiler_works(cxx, tmp_dir, ["-static-libstdc++", "-static-libgcc"])
+
+
+def compiler_works(cxx, tmp_dir=None, extra=()):
     tmp_dir = tmp_dir or os.path.join(ROOT, "build")
     os.makedirs(tmp_dir, exist_ok=True)
     src = os.path.join(tmp_dir, "cc_test.cpp")
     with open(src, "w") as f:
         f.write("#include <threads.h>\n#include <cstdio>\nint main(){std::printf(\"ok\\n\");return 0;}\n")
-    r = subprocess.run(cxx + ["-std=c++20", src, "-o", os.path.join(tmp_dir, "cc_test")], capture_output=True, text=True)
+    r = subprocess.run(cxx + ["-std=c++20", src, "-o", os.path.join(tmp_dir, "cc_test")] + list(extra), capture_output=True, text=True)
     return r.returncode == 0
 
 
@@ -359,6 +365,9 @@ def main():
     if cc:
         log("Compiler: the system's %s / %s." % cc)
         conf_args += ["--cc", cc[0], "--cxx", cc[1]]
+        if not static_cxx_runtime_works([cc[1]]):
+            log("No static libstdc++ (libstdc++-static not installed): linking the system's shared one.")
+            conf_args.append("--shared-cxx-runtime")
     else:
         zig = os.path.join(ensure_tool(lx["zig"][arch], tools), "zig")
         log("Compiler: zig (%s), no system compiler needed." % os.path.basename(os.path.dirname(zig)))
