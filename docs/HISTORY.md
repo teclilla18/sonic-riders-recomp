@@ -1510,3 +1510,6 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   changed); one changed .cpp 11 s (6 steps, dtk + recomp skipped) [confirmed]. The v0.8.3 iOS zip was replaced
   from release/v0.8.3-fixes 4cced8a (user: replace, no new version). Not tested: launcher route, signed build,
   installing the updated app on a device [uncertain].
+- README Downloads badge read "invalid" after the iOS zip replacement (`gh release upload --clobber` deletes, then
+  uploads): GitHub's camo cache kept that render; shields itself showed 1.9k (= API sum 1,937). Camo PURGE sent
+  [likely cause: the half-uploaded asset; not proven]. Next replacement: upload under a new name first.
