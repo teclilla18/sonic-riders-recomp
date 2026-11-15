@@ -24,6 +24,7 @@
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
+#include "third_party/stb_image_write.h"  /* the implementation is compiled in runtime/src/texpack.c */
 
 void input_init(void);
 void input_pump(void);
@@ -865,7 +866,7 @@ static int fsr_present(const DkImageRect* src, const DkImageView* fv, const DkIm
 static int g_fb_slot = -1;
 
 /* Self-captures for hardware testing (off unless SR_SHOTS=1, e.g. in env.txt): presented frames
- * k_shots[] (or the frames listed in SR_SHOTS=a,b,c) are saved to the SD card as shot_<frame>.bmp;
+ * k_shots[] (or the frames listed in SR_SHOTS=a,b,c) are saved to the SD card as shot_<frame>.png;
  * each causes a visible hitch. */
 static const unsigned k_shots[] = {300, 900, 1800, 3000, 4500, 6000, 7200};
 static unsigned g_presented;
@@ -902,7 +903,7 @@ static void shot_request(DkImageView const* fv) {
 }
 
 /* The capture is copied out of the uncached GPU buffer in one memcpy (byte reads there made a save
- * take 7-10 s), then converted and written to the SD card by a thread of its own: no hitch. */
+ * take 7-10 s), then written to the SD card by a thread of its own: no hitch. */
 typedef struct { uint8_t* px; unsigned frame; } Shot;
 
 static int shot_thread(void* arg) {
@@ -911,28 +912,24 @@ static int shot_thread(void* arg) {
     rt_thread_lower_priority();
     uint64_t t0 = armGetSystemTick();
     char path[96];
-    snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.bmp", sh->frame);
-    FILE* f = fopen(path, "wb");
-    if (f) {
-        uint32_t row = FB_W * 3, size = 54 + row * FB_H;
-        uint8_t h[54] = {'B', 'M'};
-        memcpy(h + 2, &size, 4);
-        h[10] = 54; h[14] = 40;
-        int32_t w = FB_W, hh = FB_H;
-        memcpy(h + 18, &w, 4); memcpy(h + 22, &hh, 4);
-        h[26] = 1; h[28] = 24;
-        uint8_t* img = malloc((size_t)size);
-        memcpy(img, h, 54);
-        for (int y = FB_H - 1, oy = 0; y >= 0; y--, oy++) {  /* BMP rows go bottom-up */
+    snprintf(path, sizeof path, "sdmc:/switch/sonicriders/shot_%u.png", sh->frame);
+    /* PNG rows run top-down like the capture, so only the channels are packed: stb reads comp bytes
+     * per pixel and uses the stride only between rows, so the alpha cannot be skipped in place. */
+    uint8_t* out = malloc((size_t)FB_W * FB_H * 3);
+    int saved = 0;
+    if (out) {
+        for (int y = 0; y < FB_H; y++) {
             const uint8_t* s = sh->px + (size_t)y * FB_W * 4;
-            uint8_t* line = img + 54 + (size_t)oy * row;
-            for (int x = 0; x < FB_W; x++) { line[3 * x] = s[4 * x + 2]; line[3 * x + 1] = s[4 * x + 1]; line[3 * x + 2] = s[4 * x]; }
+            uint8_t* d = out + (size_t)y * FB_W * 3;
+            for (int x = 0; x < FB_W; x++) { d[3 * x] = s[4 * x]; d[3 * x + 1] = s[4 * x + 1]; d[3 * x + 2] = s[4 * x + 2]; }
         }
-        fwrite(img, 1, size, f);
-        free(img);
-        fclose(f);
-        rt_log("[deko3d] saved %s in the background (%.0f ms)", path, armTicksToNs(armGetSystemTick() - t0) / 1e6);
+        saved = stbi_write_png(path, FB_W, FB_H, 3, out, FB_W * 3);
+        free(out);
     }
+    if (saved)
+        rt_log("[deko3d] saved %s in the background (%.0f ms)", path, armTicksToNs(armGetSystemTick() - t0) / 1e6);
+    else
+        rt_log("[deko3d] could not write %s", path);
     free(sh->px);
     free(sh);
     return 0;

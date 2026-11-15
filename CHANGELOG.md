@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Switch screenshots are PNG** (#10): the settings-menu "Save screenshot" and `SR_SHOTS` captures are now
+  `shot_<frame>.png`, so they can be dragged straight into a bug report (GitHub refuses `.bmp`). Built and checked
+  on a PC host only; not run on a Switch yet.
 - **RVZ on Mac and Linux, no extra steps**: Dolphin's default RVZ (zstd) now converts there too. The setup fetches
   the small piece it needs by itself, only when you pick an `.rvz` (Mac: Apple's Python; Linux: Python 3.9-3.14,
   x86_64 and ARM). Tested: Mac (zstd RVZ, cold tools folder, build 7/7) and Linux in WSL (Python 3.12).

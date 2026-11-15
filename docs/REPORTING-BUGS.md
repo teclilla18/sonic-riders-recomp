@@ -34,9 +34,8 @@ Dolphin screenshot.
 2. Choose **Save screenshot (A)** and press **A**. The menu closes and the next game frame is saved,
    without the menu in it. (The Switch's own screenshot button often doesn't work for homebrew.)
 3. Take as many as you need; each one is a new file.
-   - Switch: `switch/sonicriders/shot_<number>.bmp` on the SD card.
+   - Switch: `switch/sonicriders/shot_<number>.png` on the SD card.
    - PC: `build\shot_<number>.png` in the install folder.
 
    The number is the frame, which also helps match the picture to the log.
-4. GitHub doesn't accept `.bmp` files: open the picture in Paint and *Save as* PNG, or put the files
-   in a zip. Then drag them into the bug report.
+4. Drag them into the bug report.
