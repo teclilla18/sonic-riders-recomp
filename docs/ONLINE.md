@@ -250,6 +250,17 @@ the host first ended the session on the laptop with "the other player left". Nex
 phones (notes/online-research.md steps 2-3).
 
 
+**2026-11-15 [measured]: PC-Switch over the LAN, cross-play** (build 2a522a4 on both; Switch OLED hosting from its
+HOME tile with `SR_NET=host:7777` and `tools/net_route_2p.py online-p1` in env.txt, Wi-Fi; this PC joining with
+`online-p2local`, wired; delay 4; online rules): 15,000 frames (boot, main menu at 780, Track Select, Player Entry,
+Metal City race into lap 2), **every rolling checksum equal on both** (x86 against ARM, so the NaN-sign fix holds in
+a live session), no backstop used. PC 59.9-60 fps, waiting 0.03-0.8 ms a frame for the Switch (4.7-4.9 ms around
+frames 3600-4800: race loading on the Switch). Switch (its settings: 1.5x resolution, Fit to screen, FOV 115 %;
+clocks not in the log): 100 of 127 fps samples at 59-60, 22 at 55-59, 5 below 55 (lowest 52.6); in a session
+the whole game slows with the slower machine, the PC waited instead of desyncing. The host refused a joiner one
+commit apart ("a different game build"): both sides must be the same build. Closing the PC left the Switch at
+"waiting for the other player". Next: Switch-Switch (two consoles), phones (INTERNET permission added 2a522a4).
+
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
 netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game
