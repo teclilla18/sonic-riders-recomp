@@ -84,7 +84,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_ONLINE_RULES=1` (the online rules offline: menus by player 1, no pause in races; docs/ONLINE.md "Online rules").
 - `SR_NET_NAME=<name>`, `SR_NET_PEER=<name>` (set by the launcher's lobby: this and the other player's names, for the banners and the log).
 - `SR_OWNVIEW=0|1|2` (online own view: half picture / full screen with more above and below, default / zoomed), `SR_OVLOG=<frame>` (that frame's own-view 2D moves); docs/ONLINE.md "Own view".
-- `SR_RECORD=<file>`, `SR_REPLAY=<file>`, `SR_NET=host:[<addr>:]<port>` / `join:<addr>:<port>`, `SR_NET_DELAY`, `SR_NET_TIMEOUT`, `SR_NET_TEST_DESYNC=<frame>`, `SR_ONLINE_SAVE=1`, `SR_VIEW=<1|2>`.
+- `SR_RECORD=<file>`, `SR_REPLAY=<file>`, `SR_NET=host:[<addr>:]<port>` / `join:<addr>:<port>`, `SR_NET_DELAY`, `SR_NET_TIMEOUT`, `SR_NET_TEST_DESYNC=<frame>`, `SR_ONLINE_SAVE=1`, `SR_VIEW=<1|2>`. `SR_DET_SKIP=1` (with `SR_DETCLOCK`): the game's own 30 fps mode on every frame (testing; ONLINE.md 2026-11-15).
 
 ## Recompiler switches (RECOMP_*)
 

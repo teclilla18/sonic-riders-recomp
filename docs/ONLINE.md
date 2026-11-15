@@ -271,6 +271,17 @@ about 45 % of samples at 59-60, 29 % below 55 (lowest 42.4). Wi-Fi itself was no
 under 1 ms). So online: proven PC-PC, PC-Switch, Switch-Switch on today's build. Next: phones, the lobby server,
 and a frame-rate answer for slow consoles in a session (e.g. both machines in the game's 30 fps mode).
 
+**2026-11-15 [measured, PC]: the game's 30 fps mode is game state.** Same 2P route, same inputs, offline det mode
+(`SR_DETCLOCK=1 SR_ONLINE_SAVE=1 SR_ONLINE_RULES=1 SR_PADS=2`), once drawn every step and once with
+`SR_DET_SKIP=1` (the game's own 30 fps mode on every frame, frame_pacing.c; 29.7 fps drawn): RAM dumps at steps
+4000/6000/8000/10000 differ in most MB blocks (1-3, 10-15), the two racers' structs (0x81A0D740, 0x1080 each) in
+11-215 words, and by step 10000 racer 1's speed (81A0E1EC) differs (0.651 vs 0.721). So draw skipping changes the
+race: one machine can not draw at 30 while another draws at 60, and a late joiner's catch-up can not skip drawing.
+Caveat: the switch was on from boot (loading screens too); a switch only mid-race was not tested. What stays
+possible: a session-wide switch to the game's 30 fps mode at the same agreed frame on every machine (decided by the
+host, carried in the lockstep stream), and every picture-only setting per player (resolution, FOV, HUD placement,
+bloom, colour, sharpness, PC in-between pictures).
+
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
 netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game

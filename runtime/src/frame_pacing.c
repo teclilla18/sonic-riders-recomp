@@ -411,6 +411,11 @@ static void frame_end_body(Cpu* c) {
          * 30 fps mode while loading */
         int ppc_detclock(void); void vi_det_frame_end(uint32_t thread, int in);
         if (ppc_detclock()) {
+            /* SR_DET_SKIP=1 (testing, online "own frame rate" research): the game's own 30 fps mode on every
+             * frame, to compare a session's game state drawn at 60 and at 30 */
+            static int det_skip = -1;
+            if (det_skip < 0) det_skip = getenv("SR_DET_SKIP") ? atoi(getenv("SR_DET_SKIP")) : 0;
+            if (det_skip) st32(GAME_FRAME_MODE, 1);
             vi_det_frame_end(g_main_thread, 1);
             f_8000610C_orig(c);
             vi_det_frame_end(g_main_thread, 0);
