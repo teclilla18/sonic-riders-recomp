@@ -108,8 +108,10 @@ def pick_iso():
     return ""
 
 
-def convert_if_compressed(iso):
-    """Dolphin's RVZ / WIA image -> a plain ISO in this folder's baserom/ (tools/rvz2iso.py); else unchanged."""
+def convert_if_compressed(iso, zstd_dir=None, zstd_help=""):
+    """Dolphin's RVZ / WIA image -> a plain ISO in this folder's baserom/ (tools/rvz2iso.py); else unchanged.
+    zstd_dir: an unpacked 'zstandard' wheel for zstd RVZ (the Mac setup); zstd_help: the plain-words message when
+    zstd still can't be read."""
     if not os.path.isfile(iso):
         return iso
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -121,12 +123,14 @@ def convert_if_compressed(iso):
     dst = os.path.join(out_dir, os.path.splitext(os.path.basename(iso))[0] + ".iso")
     log("This is a compressed RVZ/WIA image; converting it to an ISO (about a minute): %s" % dst)
     try:
-        rvz2iso.convert(iso, dst, ISO_SHA1)
+        rvz2iso.convert(iso, dst, ISO_SHA1, zstd_dir)
     except Exception as e:
         try:
             os.remove(dst + ".part")
         except OSError:
             pass
+        if zstd_help and isinstance(e, rvz2iso.NeedZstd):
+            fail(*zstd_help)
         fail("Could not convert the image: %s" % e)
     return dst
 

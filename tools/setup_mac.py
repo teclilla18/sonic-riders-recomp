@@ -194,6 +194,28 @@ def write_renew_notes(ipa_dir, ipa, bundle, team):
     return path
 
 
+def convert_image(iso, tools_arg):
+    """an RVZ/WIA image -> an ISO in baserom/ (setup_linux.convert_if_compressed). For zstd RVZ (Dolphin's default)
+    Apple's Python 3.9 needs the 'zstandard' wheel: downloaded (pinned, setup/toolchain.json "mac") only when a
+    compressed image is picked, so ISO users get nothing extra. Another Python (not 3.9 arm64): the wheel can't
+    load there; a zstd image then gets the plain-words message below."""
+    import json
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import rvz2iso
+    if not os.path.isfile(iso) or not rvz2iso.is_compressed_image(iso):
+        return iso
+    zstd_dir = None
+    if sys.version_info[:2] == (3, 9) and platform.machine() == "arm64":
+        tc = json.load(open(os.path.join(ROOT, "setup", "toolchain.json"), encoding="utf-8"))
+        tools = os.path.abspath(os.path.expanduser(tools_arg))
+        os.makedirs(tools, exist_ok=True)
+        zstd_dir = S.ensure_tool(tc["mac"]["zstandard"], tools)
+    help_ = ("This Mac can't unpack this kind of RVZ file.",
+             "Convert it to an ISO in Dolphin (right-click the game > Convert File > Format: ISO), "
+             "then run the setup again and pick the .iso.")
+    return S.convert_if_compressed(iso, zstd_dir, help_)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Sonic Riders setup for iPhone / iPad (on a Mac)")
     ap.add_argument("--iso", default="", help="your Sonic Riders (USA) disc image (GXEE8P revision 0, 1.4 GB .iso)")
@@ -237,7 +259,7 @@ def main():
         iso = pick_iso()
         if not iso:
             fail("No disc image selected.", "Run it again and pick the image.")
-    iso = S.convert_if_compressed(os.path.abspath(os.path.expanduser(iso)))
+    iso = convert_image(os.path.abspath(os.path.expanduser(iso)), a.tools)
     iso_size = S.check_iso(iso)
     icon = a.icon
     if not icon and not a.yes and sys.stdin.isatty():

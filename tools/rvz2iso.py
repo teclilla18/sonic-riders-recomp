@@ -31,6 +31,10 @@ class Bad(Exception):
     pass
 
 
+class NeedZstd(Bad):
+    """a zstd image on a Python without zstd (the setups show their own plain-words message for it)"""
+
+
 # ---------------------------------------------------------------- junk data (Dolphin LaggedFibonacciGenerator)
 LFG_K, LFG_J, SEED_WORDS = 521, 32, 17
 BUF_BYTES = LFG_K * 4
@@ -145,7 +149,7 @@ def make_decompressor(ctype, cdata, zstd_dir):
         try:
             import zstandard
         except ImportError:
-            raise Bad("this image uses zstd compression, which needs Python 3.14+ or the 'zstandard' package "
+            raise NeedZstd("this image uses zstd compression, which needs Python 3.14+ or the 'zstandard' package "
                       "(python3 -m pip install zstandard); or convert it to ISO in Dolphin "
                       "(right-click the game > Convert File > ISO)")
         return lambda d, n: zstandard.ZstdDecompressor().decompressobj().decompress(d)
