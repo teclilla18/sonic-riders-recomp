@@ -169,6 +169,11 @@ First-boot findings [confirmed on the iPhone]:
   (iOS).command" runs `tools/setup_mac.py` (7 steps: disc check, Xcode + Metal Toolchain + Homebrew ninja/shaderc
   + Apple ID, pinned downloads from setup/toolchain.json "mac", extract, dtk, configure + ninja, install).
   Apple silicon only; the folder path must have no spaces. Docs: INSTALL.md "Install on iPhone / iPad".
+- Kept build (2026-11-14, v0.8.3's replaced iOS zip): setup_mac.py builds in `<tools>/build` (default
+  `~/.local/share/SonicRidersSetup/tools-mac/build`) via tools/build_workdir.py, like Windows/Linux, then copies
+  SonicRiders.app and build/ios/SonicRiders.ipa back to the release folder (ios_run.py install reads APP there).
+  Mac test (unsigned, --install no): first build 81 s / 93 steps; update with ppc.h changed 40 s / 85 steps (every
+  gen file includes it, as it must); one runtime .cpp changed 11 s / 6 steps, dtk + recomp skipped [confirmed].
 - Signing: `ios_build.find_team()` = the Apple Development certificate, else `defaults read com.apple.dt.Xcode
   IDEProvisioningTeamByIdentifier` (an Apple ID added in Xcode, no manual project step). No team or `--team none`:
   an unsigned app/.ipa (CODE_SIGNING_ALLOWED=NO) that Sideloadly / AltStore sign. Bundle ID: see "App IDs" below.

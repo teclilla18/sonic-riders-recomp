@@ -11,7 +11,12 @@
   `SR_DUMPTEX_DOLPHIN=<folder>` writes the game's textures with their pack names for making packs. Names checked
   against Dolphin's own dumps (1,507 identical). Tested on PC; other platforms built but not tested yet.
 
-## v0.8.3 (2026-11-14; Linux zip updated 2026-11-14)
+## v0.8.3 (2026-11-14; Linux zip updated 2026-11-14; iOS zip added and updated 2026-11-14)
+
+- **iOS zip** (added 2026-11-14, updated the same day): the Mac setup now keeps its build between versions too (in
+  its tools folder), so an iOS update rebuilds only what changed (a one-file change: 11 s on an Apple silicon Mac
+  instead of a full build). The first build on v0.8.3 is still a full one. The zip is v0.8.3 plus this change only
+  (branch `release/v0.8.3-fixes`).
 
 - **Linux zip update** (#24): the setup no longer stops with `cannot find -lstdc++` on Fedora-family systems
   (Nobara, Bazzite, Fedora) without the `libstdc++-static` package; it links the system's shared C++ library

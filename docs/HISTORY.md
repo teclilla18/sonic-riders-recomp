@@ -1503,3 +1503,10 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   between the tag and main), uploaded to the v0.8.3 release; the release text's iOS section now gives update steps.
 - Unproven: no cold Mac unzip test and no device install of this zip yet; the user is downloading it to run the
   steps themselves [uncertain until then].
+- Same day: the v0.8.3 "keep the build between updates" change (d880c6b) had skipped the Mac setup, so every iOS
+  update was a full build (user: the biggest complaint). setup_mac.py now uses tools/build_workdir.py like
+  Windows/Linux and copies the .app/.ipa back to the release folder. Tested on this Mac, fresh copy of the tools
+  folder, unsigned, no install: v0.8.3 first build 81 s (93 steps); next zip from main 40 s (85 steps, ppc.h
+  changed); one changed .cpp 11 s (6 steps, dtk + recomp skipped) [confirmed]. The v0.8.3 iOS zip was replaced
+  from release/v0.8.3-fixes 4cced8a (user: replace, no new version). Not tested: launcher route, signed build,
+  installing the updated app on a device [uncertain].
