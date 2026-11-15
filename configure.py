@@ -38,6 +38,7 @@ ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --too
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
 ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
+ap.add_argument("--trace-loads", action="store_true", help="debug: build with the guest load tracer (SR_TRACE_LOADS, trace_loads.c) into build/<target>-trace")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
 ap.add_argument("--android-sdk", default="", help="android: SDK folder (build-tools, platforms; default $ANDROID_HOME)")
 ap.add_argument("--ndk", default="", help="android: NDK folder (default: the newest in <sdk>/ndk)")
@@ -73,6 +74,8 @@ if args.target == "ios":
 GEN = "build/gen"
 OUT = "build/%s" % ("host-" + args.toolchain if args.target == "host" and args.toolchain in ("mingw", "linux") else
                     "android-" + args.abi if args.target == "android" else args.target)
+if args.trace_loads:
+    OUT += "-trace"
 py = sys.executable.replace("\\", "/")
 if " " in py:
     py = '"%s"' % py  # a Python installed under a folder with spaces
@@ -125,6 +128,8 @@ if os.path.normcase(os.path.abspath(_imgui_src)) != os.path.normcase(os.path.joi
         if not os.path.exists(dst) or open(src, "rb").read() != open(dst, "rb").read():
             shutil.copyfile(src, dst)
 inc = "-Iruntime/include -Iruntime/src -I%s -DIMGUI_DISABLE_DEMO_WINDOWS -DIMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS -I%s -I%s/gen" % (IMGUI, GEN, OUT)
+if args.trace_loads:
+    inc += " -DPPC_TRACE_LOADS"
 # generated code: no FMA contraction (Gekko rounds the product of fmadds; ppc.h models it exactly)
 gen_flags = "-O2 -ffp-contract=off -fno-strict-aliasing -fwrapv -w"
 

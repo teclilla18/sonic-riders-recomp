@@ -46,6 +46,11 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_DVD_ATEND=1`: old disc model (data only at completion; test). `SR_DVD_MBPS=<n>`: modelled disc speed.
 - `SR_TRACE_MIN=<hex>` (PC, with `SR_WATCHDOG`): record only functions at or above that address (81800000 = the game's REL code) and dump the whole 4096-entry trace.
 - `SR_WATCH=ADDR,VALUE` / `ADDR,~VALUE` / `ADDR,*[,A2,A3,A4]` (PC): watch guest memory, sample host threads.
+- `SR_TRACE_LOADS=LO,LEN[,STRIDE]` (hex; only in a `configure.py --trace-loads` build): every guest load from the
+  range is counted per (last function entered, its return address, offset, size) and written every 5 s to
+  `SR_TRACE_LOADS_FILE`. `SR_TRACE_LOADS_FN=ADDR[-END]` keeps only loads by that function / code range;
+  `SR_TRACE_LOADS_NAMES=1` (with `_FN=80012EA8`, the SDK's path lookup) logs every file name the game opens.
+  Details and how to read the results: notes/roster.md "Tools".
 - `SR_PEEK`, `SR_POKE` (per present, one byte), `SR_POKEAT=<frame>:<addr>:<hex>[,...]` (deterministic), `SR_DUMPRAM` (PC).
 - `SR_GPTL=<field>`: timeline of game idle / PE finish / tokens / retraces. `SR_GPSLOW=<factor>`: slower GP thread (imitates the Switch).
 - `SR_GX_SYNC=1`: no GP thread (old path). `SR_DSP_SYNC=1`: AX mixing on the game thread (old path). `SR_DECODE_HELPER=0`: no vertex-decode helper thread.

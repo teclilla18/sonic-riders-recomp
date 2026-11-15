@@ -159,19 +159,31 @@ void mmio_write64(uint32_t ea, uint64_t v);
 #define PPC_ALWAYS_INLINE __attribute__((always_inline))
 static inline uint8_t* ppc_ptr(uint32_t ea) { return PPC_MEM_BASE + (ea & PPC_PHYS_MASK); }
 #define PPC_MMIO_UNLIKELY(ea) __builtin_expect(PPC_IS_MMIO(ea), 0)
+/* debug builds only (configure.py --trace-loads): record guest loads from one address range (trace_loads.c) */
+#ifdef PPC_TRACE_LOADS
+extern uint32_t g_tl_lo, g_tl_len;
+void ppc_trace_load(uint32_t ea, uint32_t size);
+#define PPC_TL(ea, n) do { if (__builtin_expect((uint32_t)((ea) - g_tl_lo) < g_tl_len, 0)) ppc_trace_load((ea), (n)); } while (0)
+#else
+#define PPC_TL(ea, n) ((void)0)
+#endif
 static inline PPC_ALWAYS_INLINE uint8_t ld8(uint32_t ea) {
+    PPC_TL(ea, 1);
     if (PPC_MMIO_UNLIKELY(ea)) return (uint8_t)mmio_read(ea, 1);
     return *ppc_ptr(ea);
 }
 static inline PPC_ALWAYS_INLINE uint16_t ld16(uint32_t ea) {
+    PPC_TL(ea, 2);
     if (PPC_MMIO_UNLIKELY(ea)) return (uint16_t)mmio_read(ea, 2);
     uint16_t v; memcpy(&v, ppc_ptr(ea), 2); return __builtin_bswap16(v);
 }
 static inline PPC_ALWAYS_INLINE uint32_t ld32(uint32_t ea) {
+    PPC_TL(ea, 4);
     if (PPC_MMIO_UNLIKELY(ea)) return mmio_read(ea, 4);
     uint32_t v; memcpy(&v, ppc_ptr(ea), 4); return __builtin_bswap32(v);
 }
 static inline PPC_ALWAYS_INLINE uint64_t ld64(uint32_t ea) {
+    PPC_TL(ea, 8);
     if (PPC_MMIO_UNLIKELY(ea)) return ((uint64_t)mmio_read(ea, 4) << 32) | mmio_read(ea + 4, 4);
     uint64_t v; memcpy(&v, ppc_ptr(ea), 8); return __builtin_bswap64(v);
 }
@@ -194,10 +206,10 @@ static inline PPC_ALWAYS_INLINE void st64(uint32_t ea, uint64_t v) {
 
 /* the same without the device test, for addresses based on r1 (stack) or r13 (small data), which are
  * always RAM (ppc2c.py ram_suffix) */
-static inline PPC_ALWAYS_INLINE uint8_t ld8r(uint32_t ea) { return *ppc_ptr(ea); }
-static inline PPC_ALWAYS_INLINE uint16_t ld16r(uint32_t ea) { uint16_t v; memcpy(&v, ppc_ptr(ea), 2); return __builtin_bswap16(v); }
-static inline PPC_ALWAYS_INLINE uint32_t ld32r(uint32_t ea) { uint32_t v; memcpy(&v, ppc_ptr(ea), 4); return __builtin_bswap32(v); }
-static inline PPC_ALWAYS_INLINE uint64_t ld64r(uint32_t ea) { uint64_t v; memcpy(&v, ppc_ptr(ea), 8); return __builtin_bswap64(v); }
+static inline PPC_ALWAYS_INLINE uint8_t ld8r(uint32_t ea) { PPC_TL(ea, 1); return *ppc_ptr(ea); }
+static inline PPC_ALWAYS_INLINE uint16_t ld16r(uint32_t ea) { PPC_TL(ea, 2); uint16_t v; memcpy(&v, ppc_ptr(ea), 2); return __builtin_bswap16(v); }
+static inline PPC_ALWAYS_INLINE uint32_t ld32r(uint32_t ea) { PPC_TL(ea, 4); uint32_t v; memcpy(&v, ppc_ptr(ea), 4); return __builtin_bswap32(v); }
+static inline PPC_ALWAYS_INLINE uint64_t ld64r(uint32_t ea) { PPC_TL(ea, 8); uint64_t v; memcpy(&v, ppc_ptr(ea), 8); return __builtin_bswap64(v); }
 static inline PPC_ALWAYS_INLINE void st8r(uint32_t ea, uint8_t v) { *ppc_ptr(ea) = v; }
 static inline PPC_ALWAYS_INLINE void st16r(uint32_t ea, uint16_t v) { v = __builtin_bswap16(v); memcpy(ppc_ptr(ea), &v, 2); }
 static inline PPC_ALWAYS_INLINE void st32r(uint32_t ea, uint32_t v) { v = __builtin_bswap32(v); memcpy(ppc_ptr(ea), &v, 4); }

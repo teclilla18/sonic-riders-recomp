@@ -195,6 +195,7 @@ int main(int argc, char** argv) {
         g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
         rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
     }
+    { void trace_loads_init(void); trace_loads_init(); }  /* SR_TRACE_LOADS (debug builds) */
     const char* w = getenv("SR_WATCH");
     if (w && sscanf(w, "%x,", &g_watch_addr) == 1 && strchr(w, ',')) {
         const char* v = strchr(w, ',') + 1;

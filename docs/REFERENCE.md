@@ -11,6 +11,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/debug-variables.md](notes/debug-variables.md) | Reference | every `SR_*` debug variable, `RECOMP_*` switches |
 | [notes/game-addresses.md](notes/game-addresses.md) | Reference | game addresses (modes, players, gear, SDK map pointers) |
 | [notes/gear-stats.md](notes/gear-stats.md) | Reference | vanilla top speed / boost per gear and level (GameFAQs guide numbers) |
+| [notes/roster.md](notes/roster.md) | Research | expanded character roster: character tables and ids, how TE did it, injection tests, load tracer, proposed design |
 | [notes/architecture.md](notes/architecture.md) | Reference | project goal, GLSL (uam) rules, device/HLE boundary, shader cache plan, architecture decisions, SDK map, naming |
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |
 | [notes/online-research.md](notes/online-research.md) | Draft | online play and cross-play research (2026-11-14): how Dolphin, Slippi, Anchor, CoopNet, Ryujinx connect players; recommended lobby codes + hole punching + relay server; steps |

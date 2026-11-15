@@ -54,6 +54,16 @@ void ppc_sum_report(uint32_t site, int reg) {
     if (n++ < 20) rt_log("[sumcheck] the call at %08X changed %s%d outside its register summary", site, reg < 32 ? "r" : "f",
                          reg & 31);
 }
+/* the last n function entries, newest first (debug tools: trace_loads.c) */
+int cpu_trace_recent(uint32_t* out, int n) {
+    unsigned p = g_trace_pos;
+    int k = 0;
+    for (int i = 1; i <= TRACE_RING && k < n; i++) {
+        uint32_t a = g_trace_ring[(p - i) % TRACE_RING];
+        if (a) out[k++] = a;
+    }
+    return k;
+}
 void cpu_dump_trace(void) {
     unsigned p = g_trace_pos;
     unsigned SHOW = g_trace_min ? TRACE_RING : 256;
