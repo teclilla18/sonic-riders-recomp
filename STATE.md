@@ -74,6 +74,8 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 0b. **Ayn Thor slowdown (#23, Kiri235)**: drops when boosting / racers near. Asked for model, version, frame
    rate mode, 60 vs 30, `sonicriders.log` (waiting). Suspect speed-blur EFB copies on the tiler; plan in
    notes/android.md "Ayn Thor". Worth adding: Android bug-report button, render passes per frame in `[vk]`.
+0c. **#24 Linux setup on Nobara** (`cannot find -lstdc++`, no libstdc++-static): fallback to the shared runtime
+   implemented (13c7f42), checked in WSL only; user told to `dnf install libstdc++-static`. Unreleased; wait for their reply.
 1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
 2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
 3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.

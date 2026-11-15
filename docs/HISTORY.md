@@ -1474,3 +1474,8 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   for the model, version, frame rate mode, a 60 vs 30 race and the log. Read of render_vk.c: speed blur adds
   EFB copies and blits, each ending the render pass on a tiler [likely suspect, unproven]; Auto mode's
   60 -> 30 switch may also be what they see [uncertain]. Plan in notes/android.md.
+- #24 (Chamlotte, Nobara 44): Linux setup failed at the last link, `cannot find -lstdc++`. Cause [confirmed from
+  setup.log]: `-static-libstdc++` needs Fedora's separate libstdc++-static package; setup's compiler probe
+  linked dynamically, so it passed. Fix 13c7f42: setup probes the static link and passes configure's new
+  `--shared-cxx-runtime` when it fails. Tested in WSL (probes + ldflags) only; no full build with it, not on Fedora.
+  Replied with the `dnf install libstdc++-static` workaround.
