@@ -135,6 +135,29 @@ def convert_if_compressed(iso, zstd_dir=None, zstd_help=""):
     return dst
 
 
+def convert_image(iso, lx, tools_arg, arch):
+    """An RVZ/WIA image -> an ISO (convert_if_compressed). zstd RVZ (Dolphin's default) needs zstd in Python:
+    3.14+ may have it built in; otherwise the pinned 'zstandard' wheel for this python3's version and CPU
+    (toolchain.json "linux"."zstandard") is downloaded, only when a compressed image is picked."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import rvz2iso
+    if not os.path.isfile(iso) or not rvz2iso.is_compressed_image(iso):
+        return iso
+    zstd_dir = None
+    try:
+        from compression import zstd  # noqa: F401  (Python 3.14+ built with zstd)
+    except ImportError:
+        spec = lx.get("zstandard", {}).get("cp%d%d" % sys.version_info[:2], {}).get(arch)
+        if spec:
+            tools = os.path.abspath(os.path.expanduser(tools_arg))
+            os.makedirs(tools, exist_ok=True)
+            zstd_dir = ensure_tool(spec, tools)
+    help_ = ("This computer can't unpack this kind of RVZ file.",
+             "Convert it to an ISO in Dolphin (right-click the game > Convert File > Format: ISO), "
+             "then run the setup again and pick the .iso.")
+    return convert_if_compressed(iso, zstd_dir, help_)
+
+
 def check_iso(iso):
     if not os.path.isfile(iso):
         fail("Disc image not found: %s" % iso)
@@ -371,7 +394,7 @@ def main():
         iso = pick_iso()
         if not iso:
             fail("No disc image selected.", "Run it again and pick the image, or pass it: ./SonicRidersSetup.sh --iso /path/to/image.iso")
-    iso = convert_if_compressed(os.path.abspath(os.path.expanduser(iso)))
+    iso = convert_image(os.path.abspath(os.path.expanduser(iso)), lx, a.tools, arch)
     iso_size = check_iso(iso)
 
     # 2 -------------------------------------------------------------

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **RVZ on Mac and Linux, no extra steps**: Dolphin's default RVZ (zstd) now converts there too. The setup fetches
+  the small piece it needs by itself, only when you pick an `.rvz` (Mac: Apple's Python; Linux: Python 3.9-3.14,
+  x86_64 and ARM). Tested: Mac (zstd RVZ, cold tools folder, build 7/7) and Linux in WSL (Python 3.12).
 - **Mods: easier stat changes** (PC; ideas from SR-Source's mod format): speeds in km/h on any speed field
   (`level1.boost_speed = 300 km/h`), `+=` / `*=` to add to or multiply what the game (and earlier mods) set,
   `[gear.*]` for every gear at once, and `game = GXEE8P` in `mod.ini` so a mod made for another game is left out.
