@@ -1,4 +1,4 @@
-# State (2026-11-15, early morning)
+# State (2026-11-15, night)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -56,21 +56,18 @@ pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod form
 
 ## Releases
 
-**v0.8.4 released 2026-11-15** (tag on branch release/v0.8.4, 4d9b942 = release/v0.8.3-fixes + RVZ/WIA -> ISO in the
-setups (tools/rvz2iso.py) + Eject SD card in the Switch installer). PC/Switch/Android/Linux zips; iOS zip from the Mac
-(cold Mac route, ISO). Tested: 5 DolphinTool RVZ/WIA variants -> Redump SHA-1; cold Sandbox PC + Android PASS from an
-RVZ; eject on a card reader. Mac (v0.8.4 zip, Python 3.9.6): RVZ lzma2/none + WIA lzma/bzip2 -> Redump SHA-1, zstd
-RVZ fails cleanly [confirmed]. Unreleased on main: zstd RVZ on Mac (9f417f6, pinned cp39 arm64 wheel, fetched only
-for an RVZ/WIA; tested Mac setup 7/7 from an empty tools folder) and Linux (157ccf2). Not tested: eject over hekate
-UMS, an .rvz picked in the Mac launcher, a device install of v0.8.4. Easy-read install guide https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W
-(docs/install-guide.html; the user must share it publicly). Every release links both guides (CLAUDE.md).
-
-**v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS zip added 2026-11-14, replaced the same day from release/v0.8.3-fixes
-4cced8a: the Mac setup keeps its build too, an update with one changed file 11 s [tested Mac, no device install yet]). Setup keeps its
-build (updates rebuild only what changed) [tested PC + Switch]; one-press UPDATE NOW [auto-build tested; the
-download step needs the next release]. Update guide artifact https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN
-(source docs/update-guide.html, republish each release). iOS test devices signed until **2026-11-21**.
-Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unreleased").
+**v0.8.4 released 2026-11-15** (tag on branch release/v0.8.4, 4d9b942 = release/v0.8.3-fixes + one commit; all five
+zips, iOS from the Mac; #27 closed by the user). Contents: **RVZ/WIA -> ISO** in every setup (tools/rvz2iso.py, pure
+Python) and **Eject SD card** in the Switch installer. Tested: 5 DolphinTool RVZ/WIA variants -> Redump SHA-1 (PC);
+cold Sandbox PC (launcher) + Android PASS from an RVZ; eject on a card reader (lock + dismount + eject); Mac Python 3.9:
+4 variants OK, zstd RVZ stopped cleanly [all confirmed]. Not tested: eject over hekate UMS, an .rvz picked in the Mac
+launcher, a device install of v0.8.4. **Unreleased on main**: zstd RVZ on Mac (9f417f6) and Linux (157ccf2, pinned
+zstandard wheels cp39-cp314 x86_64/aarch64, fetched only for an RVZ; tested WSL 3.12), plus the mods syntax, texture
+packs, load tracer (CHANGELOG "Unreleased").
+**Easy-read guides** (every release links both; CLAUDE.md): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN,
+install https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (docs/install-guide.html, README top; **the user still has
+to share it publicly**). v0.8.3 (2026-11-14): setup keeps its build, one-press UPDATE NOW (download step first runs
+with v0.8.4). iOS test devices signed until **2026-11-21**.
 
 ## Devices
 
@@ -88,7 +85,7 @@ Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unre
 
 **Must be in the NEXT release (user, 2026-11-15), with whatever else it holds:** an **auto stick-spin** option in the
 in-game settings menu (off by default): in the spin-the-stick scenes it refills air and speeds up as if the stick were
-spun at maximum efficiency (saves players' sticks; #23). Plan: notes/plans-2026-11.md "Auto air refill". Not started.
+spun at maximum efficiency (saves players' sticks; #23). Plan: notes/plans-2026-11.md "Auto air refill". Not started. Keep it simple for players (memory).
 
 0. **Poll #26 result** decides roster vs online first. **Roster Step 3** (approved, not started; research begun 2026-11-15: cursor `fn_1_141720` read, notes/roster.md): build roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
    First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)

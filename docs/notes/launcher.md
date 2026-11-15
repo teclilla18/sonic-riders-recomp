@@ -69,3 +69,10 @@ Tests: `SR_LAUNCHER_FAKE_VERSION=v0.7.0` (pretend to be older), `SR_LAUNCHER_UPD
 write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpacked v0.7.1 PC zip and Switch zip
 (as v0.7.0): real download from GitHub, exe swapped, saves kept, marker written.
 
+
+## Eject SD card (installer, 2026-11-15, v0.8.4)
+
+`eject_sd()` / `eject_button()` in launcher.cpp, shown on the Switch installer's DONE page when an SD card was chosen:
+open `\.\X:`, FSCTL_LOCK_VOLUME (retried 20 x 0.5 s while Explorer lets go), FlushFileBuffers, FSCTL_DISMOUNT_VOLUME,
+IOCTL_STORAGE_MEDIA_REMOVAL (allow), IOCTL_STORAGE_EJECT_MEDIA (Microsoft KB165721), on a worker thread. Dismounted =
+safe even where the reader ignores the eject command. Tested on a USB card reader; not over hekate UMS.

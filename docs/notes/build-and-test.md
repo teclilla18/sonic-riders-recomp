@@ -90,6 +90,13 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 
 ## Setup tool, releases, PC icon
 
+**RVZ / WIA input (2026-11-15, v0.8.4):** `tools/rvz2iso.py IN OUT [--sha1] [--zstd-dir]` turns Dolphin's
+compressed images back into the 1:1 ISO (GameCube only; reference: Dolphin docs/WiaAndRvz.md). The setups call it
+when the picked file starts with `RVZ`/`WIA`; the ISO goes to `<folder>/baserom/`. zstd: Windows uses the
+toolchain's zstandard wheel, Mac/Linux a pinned wheel from toolchain.json ("mac"/"linux"."zstandard") fetched
+only for an RVZ. Test images: `DolphinTool convert -f rvz -c zstd -b 131072 -l 5` (also none/lzma2/bzip2, `-f wia`);
+`sandbox_test.py --iso <file.rvz>` runs the cold test from an RVZ.
+
 **Setup tool and releases (2026-10-22):** `SonicRidersSetup.bat` → `setup/setup.ps1` builds everything from the user's disc image with a SHA-256-pinned toolchain (`setup/toolchain.json`; downloads through Windows' `curl.exe`, since devkitPro's server refuses .NET's web client even with the pacman user agent). PC builds from it use llvm-mingw (`configure.py --toolchain mingw`, output `build/host-mingw/`). `tools/make_release.py --version X` zips the files tracked at HEAD (guard-checked) plus a `VERSION` file; the port logs `[build] <version or git describe>` first (`build/<target>/gen/version.c`, written by `tools/write_version.py` at configure time and again before every ninja build). Hardware performance so far is with an overclock (CPU 1785 / GPU 1152 / MEM 2133); stock clocks run poorly.
 
 **Clean-install release test in Windows Sandbox (2026-11-04)** [confirmed: PC and Android pass, cold]. Run it for PC
