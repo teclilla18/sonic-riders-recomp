@@ -1443,3 +1443,24 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   host that can't be switched off by account settings; not done.
 - Progress card: v0.8.3, Features and polish 63 -> 66 % (one-press updates; download step untested).
 
+
+## 2026-11-14 (late): roster research, texture packs, mod syntax, badges
+
+User's new focus: an expanded roster (custom characters on their own Player Entry tiles, from community mods) and
+a mod manager; online paused, stages on hold. Research only for the roster (Steps 1-2 approved; Steps 3-5 wait).
+- **How Tournament Edition does it** [confirmed]: patched a copy of the user's disc with TE's own updater files
+  (Sewer56 patcher, `ApplyPatch`) -> TE 2.4.6.1. TE has no `_Main.rel`: one rebuilt `main.dol` (game code relinked
+  + C++). Matched all vanilla functions against it (3385 identical, ~650 changed); its select-screen cursor went
+  from 2 x 8 to 3 x 8 (`fn_1_141720`), new ids 17-22, old 17-entry tables guarded. Its public source (GPL,
+  RidersBoulevard/sonicriderste) confirmed the character record fields and the per-id animation mapping.
+- **Vanilla** [confirmed]: character info table 0x819C4CC0, racer + 0xBA = id (Player Entry writes it), file names
+  from the record's letter through `fn_80012EA8`, 27 readers of the id in a race (load tracer, new debug tool).
+- **Injection** [confirmed, local test mods]: a new letter + mod files loads with no code; a model on another
+  character's id crashes in `fn_1_45508` (per-id animation slots) -> design: base character per custom character.
+- **SR-Source** (Zero Gravity port on a Dolphin fork) studied: its mod format gave km/h, `+=` / `*=`, `[gear.*]`,
+  `game =` (all implemented, tested PC: 83 changes, Default L1 boost 300 km/h) and Dolphin-format texture packs
+  (texpack.c: names identical to Dolphin 2609a's dumps for 1,507 textures; a 2x test pack replaced the boot
+  logos [confirmed PC]; `_m` names [uncertain]; Switch/Android/iOS [untested]).
+- Scripted D-pad / stick presses for player 1 do not move the Player Entry cursor (player 2's do) [uncertain why];
+  `SR_POKEAT` on racer + 0xBA and work + 0x3C selects a character instead.
+- README badges (Decomp Buddy, shields.io) on Riders and Heroes.

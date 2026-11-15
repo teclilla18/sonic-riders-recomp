@@ -1,105 +1,93 @@
-# State (2026-11-14, evening)
+# State (2026-11-14, late)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
 (addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
 Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. A third Claude session runs on the
-user's gaming laptop (online tests, below).
+user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
+`sr-main` worktree next to it.
 
-## Current focus: online play and cross-play until v1 (user's decision, 2026-11-14)
+## Current focus: expanded character roster + modding (user's decision, 2026-11-14 late)
 
-Plan and research: docs/notes/online-research.md (lobby codes, hole punching, relay server; 3-4 players through the
-host; adjustable delay 3-15 frames from the measured ping, as the SRTE community plays). Mechanics: docs/ONLINE.md.
+Goal: new characters on their own Player Entry tiles next to the 16 originals (Smash-style, no L/R alternates),
+added by community character mods ("anyone can add any character"); a generic mod manager (install, uninstall,
+enable, disable; later other mod types). Stages on hold. **Steps 1-2 (research) done; Steps 3-5 (roster code,
+character mod format, manager) wait for the user's explicit approval** of the design in
+[docs/notes/roster.md](docs/notes/roster.md) "Recommended design".
 
-- **Two PCs over the LAN** [confirmed]: scripted 20,726 frames (desktop + laptop, .bat files); the user played two
-  hand sessions through the launcher lobby: 61,811 and 22,477 frames, every checksum equal, no desync. A scripted
-  run with the online rules: 8,966 frames equal, recordings byte-identical.
-- **Launcher lobby** (Online page, launcher/lobby.cpp) [tested by the user on two PCs]: name (no default), Host
-  (join code = the host's LAN IPv4 in 7 characters), list of LAN lobbies, join by code, players' names, START RACE
-  starts the game on both. Two players. Fixed after the user's test: the game started again by itself after a
-  race (black fullscreen), the bottom PLAY button in a lobby.
-- **Own view full screen** (gx_render.c ownview_frame) [confirmed PC frames; user played it]: this player's half,
-  3D with more above/below (user picked it over zoom), HUD to the corners, whole map, timer for both, speed blur.
-  The HUD goes to the screen edges whenever the session picture is wide (joiner set to 4:3 kept it in the middle,
-  fixed 2026-11-14, not seen by the user yet).
-- **Online rules** (netplay.c online_rules; header flag 8; `SR_ONLINE_RULES=1` offline) [confirmed offline + two
-  machines scripted; partly played]: sessions open at the main menu (frame ~780) by themselves; menus by player 1
-  only, except Player Entry (characters/boards; an unjoined player cannot back out; only P1's START); no pause in
-  races [not proven: a scripted START never paused even without the rule]; after the finish only P1 is heard;
-  several players may pick the same character (taken table cleared) [confirmed offline: two Sonics race].
-- **Screen options**: only "4:3 (original)" and "Fit to screen" (game menu + launcher); old 16:9 settings read as Fit.
-- **Dropped by the user (2026-11-14)**: each player hearing only their own racer (sounds carry no player; would need
-  a tag from racer update to AX voice in our mixer; findings in HISTORY 2026-11-14).
-- **Laptop helper session** (Remote Control peer, name changes; ListAgents): fetches builds from the PC over the LAN
-  (`python -m http.server 8099 --bind 10.0.0.32` serving ONLY exe files from a scratch folder, SHA-256 checked),
-  installs into its Desktop\SR Online Test (launcher layout + baserom copy), runs scripted joiners, reports `[net]`
-  lines. PC test folder: Desktop\SR Online Test (same layout). A game started from another path is blocked by the
-  PC firewall: run hosts from the test folder's exe. With stderr redirected the game writes no sonicriders.log.
+- **Research [confirmed, PC]** (docs/notes/roster.md): character ids 0-16; character info table 0x819C4CC0
+  (17 x 0x20: type, letter, camera height, stars); racer + 0xBA = character id, and Player Entry edits it directly;
+  every file open goes through `fn_80012EA8` (DVDConvertPathToEntrynum); 27 functions read the id in a 1P race;
+  id 17 on vanilla = empty panel, no crash. Tournament Edition (rebuilt binary + C++, public GPL source
+  RidersBoulevard/sonicriderste: study only) uses ids 17-22, a 3 x 8 grid, and maps each new character to a base
+  character's animation set; its gear mask caps it below 32 characters.
+- **Injection tests [confirmed, PC, local test mods]**: a new file letter + the mod's files loads and races with no
+  code; another character's model on an id crashes in `fn_1_45508` (animation slots are per id) -> each custom
+  character must name a base character with the same skeleton.
+- **Proposed design**: unlimited roster, 8 race slots (ids 17..24 filled per race from the mod data), inherit
+  from a base character, files by letter, select screen with extra pages at the original tile size (TE and the
+  other big mod use one shrunk 3 x 8 grid instead: the user picks), portraits via texture injection, saves untouched.
+- **Load tracer** (debug builds: `configure.py --trace-loads`, `SR_TRACE_LOADS*`; notes/debug-variables.md)
+  [implemented, used all session]. Character selection in tests: `SR_POKEAT=3520:803E2994:<id>,3520:81A0D7FA:<id>`
+  on the 1P route (scripted D-pad/stick for player 1 does not move that cursor; cause unknown).
+- **Mods, from SR-Source's ideas** [implemented, tested PC]: `km/h` on any speed, `+=` / `*=`, `[gear.*]`,
+  `game = GXEE8P` (other games' mods left out); **Dolphin-format texture packs** (`textures/` in a mod, texpack.c,
+  `SR_DUMPTEX_DOLPHIN`): names identical to Dolphin 2609a dumps for 1,507 textures, a 2x test pack replaced the
+  boot logos. `_m` (mipmap) names not matched against Dolphin yet (its run saw none). Switch: syntax-checked only.
+- README: Decomp Buddy + shields.io badges (Riders and Heroes).
+
+## Online play (paused for the roster, 2026-11-14 late; docs/ONLINE.md, notes/online-research.md)
+
+- Two PCs over the LAN [confirmed: scripted 20,726 frames; user hand sessions 61,811 + 22,477 frames, no desync].
+- Launcher lobby (launcher/lobby.cpp) [tested by the user on two PCs]; own view full screen [user played it];
+  online rules (netplay.c online_rules, `SR_ONLINE_RULES=1`) [confirmed offline + scripted two machines]: menus by
+  P1 only except Player Entry, no pause [not proven], same character allowed.
+- Other modes checked offline [confirmed]: Tag, Survival Race/Battle use Player Entry 0x18, P2 joins. Not yet:
+  World Grand Prix (Normal Race submenu 0x10), GAME_TOP_MODE in those races, results screens, two machines.
+- Laptop helper: serve only exe files over `http://10.0.0.32:8099`, SHA-256; hosts run from Desktop\SR Online Test.
 
 ## Releases
 
-**v0.8.3 released 2026-11-14** ("updating, revamped"; tag on 76da890; PC, Switch, Android, Linux zips; no iOS zip:
-iOS users stay on v0.8.2's; cold Sandbox PC + Android PASS, both second installs reused the kept build in 0 min).
-Contents: setup keeps its build in `<tools>/build` (tools/build_workdir.py), updates rebuild only what changed
-[tested: PC + Switch, 3-5 s on this PC; Linux changed, not run]; one-press UPDATE NOW in the launcher/installers
-(download, restart `--after-update`, rebuild + install with remembered choices; Switch waits for an SD card)
-[tested: auto-build from `--after-update` (Switch installer, no SD); the download step needs a newer release:
-first real check is the update after v0.8.3]; hekate UMS steps in INSTALL.md; the online work below (lobby
-[tested by the user on two PCs], online rules, own view, two screen options). v0.8.2 = Riders Plus (HISTORY
-2026-11-13/14). Not accepted by the user yet: the update flow.
-Easy-read update guide (user's format: per device, version chooser, colour key, Atkinson Hyperlegible / Lexend):
-https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, shared "anyone with the link" [confirmed by the user, logged
-out]; source docs/update-guide.html (republish the same file each release with new version numbers); linked from
-the v0.8.3 notes, README notice and INSTALL.md.
-iOS test devices signed until **2026-11-21** (renew before then). GitHub lists the 5 newest releases.
+**v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS stays on v0.8.2). Setup keeps its
+build (updates rebuild only what changed) [tested PC + Switch]; one-press UPDATE NOW [auto-build tested; the
+download step needs the next release]. Update guide artifact https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN
+(source docs/update-guide.html, republish each release). iOS test devices signed until **2026-11-21**.
+Unreleased on main: the mods syntax, texture packs, load tracer (CHANGELOG "Unreleased").
 
 ## Devices
 
-- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. **The Android APK lacks the INTERNET permission** (online).
-- OLED (switch-remote): c840558 build (three swapchain images), settings 1.5x / Fit / Auto / bloom 70; clocks
-  handheld 1785 / 614 / 2133, docked 1785 / 1152 / 2133. Two more Switch SD cards on v0.5.3.
-- Gaming laptop (GTX 1650 Max-Q, 10.0.0.89): online partner; Python 3.12 installed (user-approved).
+- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. The Android APK lacks the INTERNET permission (online).
+- OLED (switch-remote): c840558 build; clocks handheld 1785 / 614 / 2133, docked 1785 / 1152 / 2133.
+- Gaming laptop (GTX 1650 Max-Q, 10.0.0.89): online partner.
 
 ## Platforms
 
-- **Windows**: whole game, 1-4P 60 fps, sound, launcher (updates, remapping, Online lobby), picture options.
-- **Switch**: 1P ~60 overclocked; 4P steady 30; stock handheld 30 steady. Online: sockets work (2026-10-30 LAN
-  session); the lobby is PC-only so far (Switch needs SR_NET in env.txt).
-- **Android / iOS / Linux**: notes/android.md, notes/ios.md; online not tried there.
+- **Windows**: whole game, 1-4P 60 fps, sound, launcher (updates, remapping, Online lobby), picture options, mods.
+- **Switch**: 1P ~60 overclocked; 4P steady 30; stock handheld 30 steady.
+- **Android / iOS / Linux**: notes/android.md, notes/ios.md.
 
 ## Open items, in priority order
 
-0. **Update flow, first real run** (needed before calling it done): when the next release is out, press UPDATE NOW
-   in a v0.8.3 PC launcher and Switch installer (SD via hekate UMS) and confirm download -> restart -> rebuild ->
-   install with no other press; run the Linux setup twice once (only the build-cache change is untested there).
-1. **Online: other modes** (user, next). Checked 2026-11-14 [confirmed, PC offline, `SR_ONLINE_RULES=1 SR_PADS=2`,
-   scripted, frames]: Tag Mode (0x0F -> 0x13 -> 0x16 -> 0x18), Survival Race and Survival Battle (0x0F -> 0x14
-   submenu -> 0x16 -> 0x18) use the same Player Entry 0x18: player 2 joins, the race starts; same character seen in
-   Survival Battle (both Sonic). Not yet: World Grand Prix (Normal Race submenu 0x10; screens between races must
-   not wait on player 2), whether GAME_TOP_MODE is 8 in those modes' races (no-pause rule), their results screens,
-   two machines (laptop session). Offline helper scripts were in the session scratchpad (lost): rebuild from
-   tools/net_route_2p.py.
-2. Online, for the user's next hand test: no pause in races, HUD at the edges for a 4:3 joiner, same character,
-   main-menu start, only P1 starts the race / runs the results.
-3. Online next steps (notes/online-research.md "Steps"): Switch-Switch and PC-Switch sessions; phones (INTERNET
-   permission); lobby server with codes + punch + relay (ask the user who hosts it); 3-4 players; ping + delay
-   setting in the lobby.
-4. Higher frame rates on iOS/Android (render_vk.c pc_fps); MSAA / smooth lighting on Switch/Android/iOS.
-5. In-game update popup (plan first, ask the user); custom music folder (#17); right-stick camera; boost effect (#16).
-6. Open checks: F1 sharpness/pad change survives a restart; Optimus on the gaming laptop; bug-report zip; a real
-   pad with another window focused. Older issues #1 #2 #3 #4 #6 #7 #12 #14 (ask before posting on #14).
+0. **Roster Step 3 approval** (user): pages vs TE-style 3 x 8 grid; the base-character rule; then build
+   roster.c (8 race slots, table rows from mods), the Player Entry pages, portrait injection, character mod format.
+   First tasks inside Step 3: per-character tables in other modes (story, tag, survival, WGP, results, gear shop)
+   with the load tracer; the select-screen draw code; gear compatibility (`useFlags`, gear selector).
+1. **Texture packs on Switch / Android / iOS**: build and try a pack (memory use of big HD packs on the Switch).
+2. **Update flow, first real run** at the next release (PC launcher + Switch installer via hekate UMS); Linux setup twice.
+3. Online: WGP with the online rules, then Switch-Switch / PC-Switch, phones (INTERNET permission), lobby server.
+4. Higher frame rates on iOS/Android; in-game update popup (ask first); custom music (#17); right-stick camera; #16.
+5. Open checks: F1 sharpness/pad survives a restart; Optimus laptop; bug-report zip; pad with another window focused.
 
 ## Wish list / paused
 
-HD textures; PS4/PS5 on hold; Vita paused (branch `vita`); per-player race sound online (dropped for now).
+PS4/PS5 on hold; Vita paused (branch `vita`); per-player race sound online (dropped); custom stages (on hold).
 
 ## Next hardware-test checklist
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt, online-p1 / online-p2local routes): no desync.
+- [ ] A Dolphin-format texture pack in `mods/<Mod>/textures/` on the SD card: replaced, memory OK, no hitches.
+- [ ] Switch-Switch online session (two consoles, `SR_NET` in env.txt): no desync.
 - [ ] PC-Switch session (cross-play): PC host from the test folder, Switch joins.
-- [ ] Riders Plus charge jump on the Switch: hold A at cruise and right after a boost.
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
-- [ ] `SR_PERFTEST=1` at stock clocks, handheld; 4-player Metal City with `SR_PROFILE=1`.
 - [ ] Copy back `sonicriders.log`, `perftest.json`, `shader_keys.txt`.
