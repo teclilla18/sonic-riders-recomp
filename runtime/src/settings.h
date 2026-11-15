@@ -60,7 +60,8 @@ void settings_apply(void);  /* after a change: applies, saves and logs */
 float settings_display_aspect(void);  /* of the presented picture: 4/3, 16/9 or the window's */
 /* the wide modes draw a wider EFB instead of stretching: its width is 640 x this (1 = the original);
  * the backends scale viewports, scissors and copies by it (gx_render.c frame start) */
-float settings_wide_k(void);
+float settings_wide_k(void);  /* this machine's EFB width factor (its own screen shape) */
+float settings_game_k(void);  /* the game's camera aspect factor (game state; online: the room's) */
 /* backends: the window's or screen's aspect (width / height), for SCREEN_FIT; cheap when unchanged */
 void settings_set_window_aspect(float aspect);
 const char* settings_screen_name(int mode);

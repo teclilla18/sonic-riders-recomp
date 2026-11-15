@@ -53,8 +53,8 @@ static float round_aspect(float a) {
     return w / 640.0f * (4.0f / 3.0f);
 }
 
-float settings_display_aspect(void) {
-    if (g_fixed_k >= 1.0f) return 4.0f / 3.0f * g_fixed_k;
+/* the shape this machine's own settings and screen ask for */
+static float own_display_aspect(void) {
     switch (g_settings.screen) {
     case SCREEN_4_3: return 4.0f / 3.0f;
     /* 16:9 rounded like the fit mode's, so both give the game the same camera aspect (online play) */
@@ -64,7 +64,11 @@ float settings_display_aspect(void) {
     }
 }
 
+/* of the presented picture: this machine's own shape (narrowed to the room's camera if that is narrower) */
+float settings_display_aspect(void) { return g_fixed_k >= 1.0f ? 4.0f / 3.0f * g_wide_k : own_display_aspect(); }
 float settings_wide_k(void) { return g_wide_k; }
+/* the camera aspect the game itself uses (game state: the room's in an online session, a recording's in a replay) */
+float settings_game_k(void) { return (float)g_aspect_scale; }
 
 /* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
 static void settings_log(const char* when) {
@@ -80,9 +84,14 @@ static void settings_log(const char* when) {
 
 static void apply_view(void) {
     /* widescreen: the cameras' aspect ratio from 4:3 to the screen's, and an EFB as much wider */
+    /* online / replays (settings_fix_wide_k): the game keeps the fixed camera aspect (game state), while this
+     * machine draws its own screen shape; gx.vert narrows the perspective views by game k / own k
+     * (GX_XR_ASPECT). A picture wider than the game's camera would show past what the game culls, so the
+     * own shape is used only up to the fixed one (the room uses its widest player's shape). */
     int wide = g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT;
-    g_wide_k = g_fixed_k >= 1.0f ? g_fixed_k : wide ? settings_display_aspect() / (4.0f / 3.0f) : 1.0f;
-    g_aspect_scale = g_wide_k;
+    float own = wide ? own_display_aspect() / (4.0f / 3.0f) : 1.0f;
+    g_wide_k = g_fixed_k >= 1.0f ? (own < g_fixed_k ? own : g_fixed_k) : own;
+    g_aspect_scale = g_fixed_k >= 1.0f ? g_fixed_k : own;
     g_fov_scale = g_settings.fov / 100.0;
 }
 
@@ -170,7 +179,8 @@ void settings_load(void) {
 void settings_fix_wide_k(float k) {
     g_fixed_k = k >= 1.0f && k <= 8.0f ? k : 0.0f;
     apply_view();
-    rt_log("[settings] camera aspect fixed for this run: %.4f (EFB width x%.4f)", 4.0f / 3.0f * g_wide_k, g_wide_k);
+    rt_log("[settings] camera aspect fixed for this run: %.4f (game k %.4f); this screen draws %.4f (EFB width x%.4f)",
+           4.0f / 3.0f * (float)g_aspect_scale, (float)g_aspect_scale, 4.0f / 3.0f * g_wide_k, g_wide_k);
 }
 
 int settings_wide_k_fixed(void) { return g_fixed_k >= 1.0f; }

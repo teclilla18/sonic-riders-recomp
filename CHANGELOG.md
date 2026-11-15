@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Online: everyone keeps their own screen shape.** A 4:3 player and a 16:9 (or ultrawide) player in the same
+  race each get a full picture in their own shape, without black bars. (Sessions need both players on this
+  version.)
 - **Switch screenshots are PNG** (#10): the settings-menu "Save screenshot" and `SR_SHOTS` captures are now
   `shot_<frame>.png`, so they can be dragged straight into a bug report (GitHub refuses `.bmp`). Built and checked
   on a PC host only; not run on a Switch yet.

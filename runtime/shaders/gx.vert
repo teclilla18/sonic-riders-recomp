@@ -83,6 +83,10 @@ void main() {
      gx_render.c wide_anchor): in the middle, at the left or right edge, or stretched to the width */
   /* field of view setting (gx_render.h GX_XR_FOV): perspective projections see fs times the game's
      vertical angle (taken from the projection), the picture scaled about its centre */
+  /* online with a room camera wider than this screen (gx_render.h GX_XR_ASPECT): the same vertical view,
+     narrowed to this screen's shape */
+  float ac = uintBitsToFloat(XR(0x7C));
+  if (XR(0x26) == 0u && ac > 1.0) clip.x = clip.x * ac;
   float fs = uintBitsToFloat(XR(0x7D));
   if (XR(0x26) == 0u && fs > 0.0 && fs != 1.0 && P2 != 0.0) {
     float m = 1.0 / (tan(fs * atan(1.0 / abs(P2))) * abs(P2));

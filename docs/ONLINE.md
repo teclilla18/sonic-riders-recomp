@@ -282,6 +282,16 @@ possible: a session-wide switch to the game's 30 fps mode at the same agreed fra
 host, carried in the lockstep stream), and every picture-only setting per player (resolution, FOV, HUD placement,
 bloom, colour, sharpness, PC in-between pictures).
 
+**Own screen shape per player (2026-11-15, protocol 4).** The game's camera aspect stays game state, but each
+machine now draws its own shape: the joiner sends its screen shape in the hello (bytes 4-7), the host fixes the
+room's camera to the wider of the two (`settings_fix_wide_k`), and each machine's EFB/picture uses its own shape up
+to the room's (settings.c apply_view; `settings_game_k` = the game's, `settings_wide_k` = this screen's). The
+vertex shader narrows perspective views by game k / own k (`GX_XR_ASPECT`, XF register 0x7C, gx.vert), the same
+vertical view as the game's. The room uses the widest screen so nobody sees past what the game culls. Recordings
+store the game's k. Tested [confirmed, PC, two copies on localhost, 2P race route]: 16:9 host + 4:3 joiner, 9,000
+checksums equal, the joiner's 4:3 picture matches an offline 4:3 run of the same frame (framing and proportions);
+4:3 host + 16:9 joiner, the room took 16:9, 6,600 checksums equal.
+
 ## Online rules (2026-11-14, user: "similar rules to Mario Kart")
 
 netplay.c `online_rules`, on the controllers of each next frame, on every machine alike (it reads only game

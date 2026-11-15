@@ -16,6 +16,8 @@ extern "C" {
  * width factor k (float bits; 0 or 1 = the original 640) and flags, for the backends (viewport,
  * scissor and copy X times k) and the vertex shader (gx.vert: 2D kept at 4:3 in the middle). A third
  * carries the field of view setting. The game's writes to them are ignored (gx_fifo.c). */
+#define GX_XR_ASPECT 0x7C     /* game camera k / this screen's k (float bits; 0 or 1 = none): gx.vert narrows the
+                               * perspective views when the room's camera is wider than this screen (online) */
 #define GX_XR_FOV 0x7D        /* field of view scale (float bits; 0 or 1 = the game's): gx.vert */
 #define GX_XR_WIDE_K 0x7E
 #define GX_XR_WIDE_FLAGS 0x7F

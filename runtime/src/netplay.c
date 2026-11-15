@@ -102,7 +102,7 @@ static void rec_open(const char* path, int flags) {
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
     put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u));
-    float k = settings_wide_k();
+    float k = settings_game_k();  /* the game's camera aspect (an online session's: the room's) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
     put32(h + 20, kb);
@@ -182,7 +182,8 @@ static const char* peer_name(void) {
     return n;
 }
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
-#define PROTO 3  /* 2: no save check (everyone uses the generated online save); 3: the host's camera aspect */
+#define PROTO 4  /* 2: no save check (everyone uses the generated online save); 3: the host's camera aspect;
+                  * 4: the joiner's screen shape in the hello, the room's camera = the wider shape */
 static sock_t g_sock = SOCK_BAD;
 static struct sockaddr_in g_peer;
 static int g_net;                 /* 1: a session is on */
@@ -254,7 +255,7 @@ static void net_send_input(void) {
  * camera aspect (EFB width factor k, f32 at byte 8): game state, so every machine in the session uses the host's */
 static void net_send_welcome(void) {
     uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, settings_ring_cap() == 999, 0};
-    float k = settings_wide_k();
+    float k = settings_game_k();  /* the room's camera aspect (the wider of the two screens) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
     put32(m + 8, kb);
@@ -476,6 +477,16 @@ static void net_connect(const char* spec) {
                 continue;
             }
             g_peer = from;
+            {   /* protocol 4: the joiner's own screen shape (hello bytes 4-7); the room's camera is the wider of
+                 * the two, so each machine draws its own shape (settings.c apply_view) */
+                uint32_t jb = get32(m + 4);
+                float jk;
+                memcpy(&jk, &jb, 4);
+                float hk = settings_wide_k();
+                if (jk >= 1.0f && jk <= 8.0f && jk > hk) settings_fix_wide_k(jk);
+                rt_log("[net] screen shapes: this host %.4f, the joiner %.4f; the room's camera %.4f", 4.0f / 3.0f * hk,
+                       4.0f / 3.0f * jk, 4.0f / 3.0f * settings_game_k());
+            }
             break;
         }
         net_send_welcome();
@@ -490,6 +501,12 @@ static void net_connect(const char* spec) {
             overlay_set_banner(wb);
         }
         uint8_t hello[72] = {'S', 'R', M_HELLO, PROTO};
+        {   /* this machine's own screen shape (protocol 4) */
+            float ok = settings_wide_k();
+            uint32_t ob;
+            memcpy(&ob, &ok, 4);
+            put32(hello + 4, ob);
+        }
         snprintf((char*)hello + 8, 64, "%s", g_build_version);
         uint64_t t0 = platform_now_ns(), last = 0;
         for (;;) {

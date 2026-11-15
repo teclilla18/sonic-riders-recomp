@@ -91,6 +91,8 @@ static GxFrame* frame(void) {
         }
         float fov = (float)g_fov_scale;
         memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
+        float asp = settings_game_k() / k;  /* online: the room's camera wider than this screen */
+        memcpy(&g_gx.xf_reg[GX_XR_ASPECT], &asp, 4);
         g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */
         g_state_dirty = 1;
