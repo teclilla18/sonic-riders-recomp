@@ -1493,3 +1493,13 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - #24: Chamlotte confirmed the libstdc++-static workaround [confirmed, user]. #23: no log from Kiri235 yet.
 - `tools/gh_inbox.py` fails on this PC (its gh subprocess is not logged in although `gh` in the shell is) [uncertain
   why]; issues were read with gh directly.
+
+## 2026-11-14 (Mac): v0.8.3 iOS zip
+
+- v0.8.3 had shipped without an iOS zip ("keep using v0.8.2"), but it changes shared game code (screen options,
+  netplay, gx_render), so iOS players were behind. Found when the user asked if the latest release was built for iOS
+  (the Mac clone was 32 commits behind; first answer said v0.8.2, wrong — always fetch before status answers).
+- `make_release.py --flavor ios --version v0.8.3 --ref v0.8.3` (219 files, commit 76da8908; no iOS files differ
+  between the tag and main), uploaded to the v0.8.3 release; the release text's iOS section now gives update steps.
+- Unproven: no cold Mac unzip test and no device install of this zip yet; the user is downloading it to run the
+  steps themselves [uncertain until then].

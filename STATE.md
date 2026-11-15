@@ -56,7 +56,8 @@ pages, page switching L / R + cursor edge, slide animation). Steps 4-5 (mod form
 
 ## Releases
 
-**v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS stays on v0.8.2). Setup keeps its
+**v0.8.3 released 2026-11-14** (tag 76da890; PC, Switch, Android, Linux; iOS zip added 2026-11-14 by the Mac session, from the tag, not yet
+installed by anyone). Setup keeps its
 build (updates rebuild only what changed) [tested PC + Switch]; one-press UPDATE NOW [auto-build tested; the
 download step needs the next release]. Update guide artifact https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN
 (source docs/update-guide.html, republish each release). iOS test devices signed until **2026-11-21**.
