@@ -297,7 +297,29 @@
 
   <!-- ============================== iOS ============================== -->
   <div class="device" id="d-ios" role="tabpanel" aria-labelledby="t-ios" hidden>
-    <div class="callout info"><span class="ic">💡</span><div><b>Nothing new for iPhone and iPad in v0.8.3.</b> Keep using v0.8.2: <span class="file">SonicRiders-iOS-Setup-v0.8.2.zip</span> on the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.2">v0.8.2 release</a>.</div></div>
+    <section class="all" id="ios-all">
+      <h2>Every version <span class="tag">no one-press button on iOS yet</span></h2>
+      <ol class="steps">
+        <li tabindex="0"><span class="txt">On your Mac, download <span class="file">SonicRiders-iOS-Setup-v0.8.3.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Unzip it into a folder whose path has no spaces.</span>
+          <span class="detail">Your home folder works, for example <span class="file">~/SonicRiders</span>.</span></li>
+        <li tabindex="0"><span class="txt">Open <span class="file">Sonic Riders Launcher</span> from the new folder.</span>
+          <span class="detail">If macOS blocks it, follow <span class="file">START HERE (Mac).html</span> in the same folder.</span></li>
+        <li tabindex="0"><span class="txt">On the <span class="gold">Build</span> page, pick the same disc image and press <span class="btn">BUILD THE APP</span>.</span>
+          <span class="detail">A new folder builds the whole game once (a few minutes). When it says <span class="gold">Done</span>, the new <span class="file">SonicRiders.ipa</span> is in <span class="file">Desktop/Sonic Riders iOS</span>.</span></li>
+        <li tabindex="0"><span class="txt">On the <span class="gold">Install</span> page, install it over the old app.</span>
+          <span class="detail">With Sideloadly: <span class="btn">Open SonicRiders.ipa in Sideloadly</span>, then Start. From the Mac: <span class="btn">Install only (renewing)</span>.</span></li>
+      </ol>
+    </section>
+
+    <div class="callout warn"><span class="ic">⚠️</span><div><b>Never delete the app to update.</b> Deleting it removes your saves and the disc image copied to it.</div></div>
+    <div class="callout good"><span class="ic">✅</span><div><b>Nothing else to do.</b> Your saves and disc image stay on the device, and installing starts a new 7 days before you need to renew.</div></div>
+
+    <div class="final">
+      <h2>🔍 Check it worked</h2>
+      <p>In the game, open the settings menu.</p>
+      <p>Look at the version number in the <span class="gold">About</span> tab.</p>
+    </div>
   </div>
 
   <p class="why"><b>Why is there still a short build?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. It's always made on your PC from your own disc. The big conversion happens only on the first install; updates only rebuild the parts that changed. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md#updating-to-a-new-version">INSTALL.md</a>.</p>
