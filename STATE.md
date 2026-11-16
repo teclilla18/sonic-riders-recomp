@@ -71,6 +71,12 @@ iOS test devices signed until **2026-11-21**.
 
 ## Open items, in priority order
 
+**NEXT thing to work on (user, 2026-11-16): hold-B continuous boost** (Riders Plus). Tapping B boosts as now;
+**holding B keeps boosting** for as long as it is held, draining air at a fair, calculated rate for the hold time
+(derive it from the gear's own boost air cost and boost length, so a hold costs what repeated taps would).
+Exception: **High Booster** (gear 10, docs/notes/gear-stats.md; boost costs put it in the red after one boost,
+docs/local/gamefaqs-42167-advanced-gear-guide.txt) keeps the one-press boost only. Not started.
+
 **Must be in the NEXT release (user, 2026-11-15):** the **auto stick-spin** option (off by default, Gameplay tab;
 #23; notes/plans-2026-11.md "Auto air refill"). Not started.
 
