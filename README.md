@@ -37,6 +37,68 @@ Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
+## Riders Plus: Sonic Riders, turned up
+
+<p align="center">
+  <img src="docs/images/v0.8.2/riders-plus-banner.jpg" width="100%" alt="Sonic on the Blue Star racing through a neon city under the Riders Plus logo, with 999 rings and a Lv. 5 badge">
+</p>
+
+**Riders Plus** is our own take on the game's racing. It's built into this port and **on by default**. Every
+track, character and gear stays the same; the limits are what change. You get more rings, two more gear levels,
+and you keep your speed instead of losing it. Turn it off any time in **Settings > Gameplay > Riders Plus** for
+the original GameCube rules. Riders Plus and [online play](docs/ONLINE.md) are the two parts of this project
+we'll keep building on.
+
+| | Original game | Riders Plus |
+|---|---|---|
+| Ring limit | 100 | **999** (a hit or a fall still costs 100) |
+| Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 350** |
+| Gold 100-ring capsule | Gone once taken | **Comes back after 25 seconds** |
+| Dash panels | Set you to the panel's speed, even if you were faster | **The panel's speed, or your speed + 25 km/h** |
+| Speed Shoes | Set you to 200 km/h | **Your speed + 80 km/h** (at least 200) |
+| Charging a jump | Slows you down at once | **Keeps your speed for 0.75 s** |
+
+<p align="center">
+  <img src="docs/images/riders-plus/lv4-level-up.jpg" width="49%" alt="LEVEL UP!! to Lv. 4 at 203 rings, Metal City, 250 km/h">
+  <img src="docs/images/riders-plus/lv5-level-up.jpg" width="49%" alt="LEVEL UP!! to Lv. 5 at 350 rings, Metal City">
+  <br><sub>LEVEL UP!! to Lv. 4 at 200 rings, and to Lv. 5 at 350</sub>
+</p>
+
+### Lv. 4 and Lv. 5
+
+Collect 200 rings for Lv. 4 and 350 for Lv. 5. You get the game's own LEVEL UP!! (sparkle, sound and a full air
+tank), and the HUD shows "Lv. 4" or "Lv. 5" in the game's own digits. Each gear keeps its own Lv. 1-3 stats and
+builds on its Lv. 3 numbers. Sonic's Blue Star goes from 180 / 250 km/h (top speed / boost) at Lv. 3 to 200 / 275
+at Lv. 4 and 215 / 300 at Lv. 5.
+
+<p align="center">
+  <img src="docs/images/gear-levels-chart.svg" width="49%" alt="Chart: Blue Star top speed and boost from Lv. 1 to Lv. 5">
+  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Plus">
+</p>
+
+### More rings, more speed
+
+<p align="center">
+  <img src="docs/images/riders-plus/gold-capsule-298.jpg" width="100%" alt="1st place at Lv. 5 with 402 rings, 298 km/h, a gold 100-ring capsule beside the track">
+  <br><sub>1st place, 402 rings, 298 km/h, with the gold 100-ring capsule back on the track</sub>
+</p>
+<p align="center">
+  <img src="docs/images/riders-plus/lv5-boost.jpg" width="49%" alt="Boosting at Lv. 5 with 433 rings, 293 km/h">
+  <img src="docs/images/riders-plus/tunnel-294.jpg" width="49%" alt="Metal City tunnel at 294 km/h">
+  <br>
+  <img src="docs/images/riders-plus/trick-rank-ss.jpg" width="49%" alt="Rank SS trick in Metal City">
+  <br><sub>Lv. 5 boosts at 293 and 294 km/h, and a Rank SS trick. All shots: a real race on PC, 21:9 (3440 x 1440)</sub>
+</p>
+
+### What's next
+
+Riders Plus gets new additions with each release. Next up: extra character slots for mod characters, custom music
+([#17](https://github.com/teclilla18/sonic-riders-recomp/discussions/17)) and a right-stick camera. Have an idea for
+it? [Tell us in Discussions](https://github.com/teclilla18/sonic-riders-recomp/discussions).
+
+<sub>Riders Plus banner: made by the project owner with ChatGPT. Race shots: this port on PC. Charts: our own, from
+measured PC races.</sub>
+
 **Original** (4:3)
 <a href="docs/images/compare/original-1.jpg"><img src="docs/images/compare/original-1.jpg" width="100%" alt="Metal City race start in the original game, 4:3 with black bars, 30 fps"></a>
 **This port** (PC, 21:9)

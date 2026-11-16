@@ -50,7 +50,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # picture is refused until its SHA-1 is put here. Also the launcher banner (the user's OK, 2026-11-07): public
 # fan art the user chose, not from the game.
 OWN_ART = {
-    "docs/images/banner.jpg": "54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b",  # README banner (fan art, user's choice, 2026-11-09)
+    "docs/images/banner.jpg": "1e6a2119f6276b1ecbed54a4c1b4c4bb9edef6b3",  # README banner (fan art, user's choice, 2026-11-09; cropped thinner 2026-11-16)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four
     "docs/images/compare/original-1.jpg": "4bd5401024ca6f240715dc878434d6d298f59421",
@@ -59,9 +59,16 @@ OWN_ART = {
     "docs/images/compare/recomp-2.jpg": "fcd82ec1a09589caf26a55fcaf501e0f7bd4cdde",
     "docs/images/settings-display.jpg": "c02503fd7d6f88b77049d5b695505cab0fc6bb7b",  # settings menu screenshot for the v0.8.0 notes (the user's OK, 2026-11-11)
     # v0.8.2 release notes (the user's OK, 2026-11-14): the user's ChatGPT banners and a PC race screenshot pair
-    "docs/images/v0.8.2/riders-plus-banner.jpg": "b7c437e2dd8aa0030d94f696c561ca1a454b883c",
+    "docs/images/v0.8.2/riders-plus-banner.jpg": "74a6b9d10125473c5be6130b8520b29aabc5c750",  # fixed hand (2026-11-16)
     "docs/images/v0.8.2/online-coming-soon.jpg": "2d581b0f9a375a972d77d26a7d870cfeade37af2",
     "docs/images/v0.8.2/riders-plus-lv5.jpg": "334b4f1100ec2981fd006e6ea71ffbc81046e2e1",
+    # README Riders Plus section (the user's OK, 2026-11-16): the user's recorded PC race, replayed at 21:9
+    "docs/images/riders-plus/lv4-level-up.jpg": "49e32a6731443637290c05c66091ecf539dfbbd5",
+    "docs/images/riders-plus/lv5-level-up.jpg": "e943e0f254e90fc9076ac0dedd5fbbde8db8b0c1",
+    "docs/images/riders-plus/gold-capsule-298.jpg": "785f018329aae3140b9fa36fadfc437808b482fb",
+    "docs/images/riders-plus/lv5-boost.jpg": "56cefaa56117aa79fc437d676cc7f10fe9287daa",
+    "docs/images/riders-plus/trick-rank-ss.jpg": "d8d432b8da8a8a35b25ecaf7131ad59e8620f533",
+    "docs/images/riders-plus/tunnel-294.jpg": "8ac53a61c267a2e2cbb103b35d38f4c7b229803d",
     "launcher/icon_256.png": "80541e60eb82d9440c001da3bc4c7240bda2b111",  # launcher icon (user's ChatGPT art, 2026-11-09)
     "launcher/icon_32.png": "24e3018e7e6651be4cbba8228f81364bf9d0a70e",
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
