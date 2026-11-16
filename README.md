@@ -1,3 +1,4 @@
+# UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
 > **Vote: what comes next?** Online play or custom characters and stages: [cast your vote in the poll](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)
 >
 > **Alpha testers needed:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
