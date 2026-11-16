@@ -1,4 +1,6 @@
 # UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
+> ☕ **Enjoying the port? [Support it on Ko-fi](https://ko-fi.com/teclilla18)**: every coffee helps keep updates coming.
+>
 > **Vote: what comes next?** Online play or custom characters and stages: [cast your vote in the poll](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)
 >
 > **Alpha testers needed:** [Sonic Heroes native port](https://github.com/teclilla18/sonic-heroes-recomp)
@@ -31,6 +33,7 @@
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><img src="https://img.shields.io/github/v/release/teclilla18/sonic-riders-recomp?label=Release&color=0aa5e8" alt="Latest release"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases"><img src="https://img.shields.io/github/downloads/teclilla18/sonic-riders-recomp/total?label=Downloads&color=teal" alt="Downloads"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/stargazers"><img src="https://img.shields.io/github/stars/teclilla18/sonic-riders-recomp?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
+  <a href="https://ko-fi.com/teclilla18"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
 Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
