@@ -134,6 +134,14 @@ Playable from boot to races, story mode and 4-player Free Race, with sound, on b
 | [Building from source](docs/BUILDING.md) | For developers |
 | [Contributing](CONTRIBUTING.md) | Help is welcome from players and developers; coding agents can use [CLAUDE.md](CLAUDE.md) |
 
+## Support development
+
+Enjoying Sonic Riders Recompiled? Consider supporting continued development!
+
+☕ [Support the project on Ko-fi](https://ko-fi.com/teclilla18)
+
+Donations are completely optional and do not grant ownership or rights to any Sonic Riders intellectual property.
+
 ## How it works
 
 The game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of time on your PC
