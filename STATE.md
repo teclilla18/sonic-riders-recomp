@@ -91,10 +91,13 @@ docs/local/gamefaqs-42167-advanced-gear-guide.txt) keeps the one-press boost onl
 #23; notes/plans-2026-11.md "Auto air refill"). Not started.
 
 1. **Online**: room-wide 30 fps switch (next), then the items in "Current focus".
-2. **#23 Ayn Thor slowdown** (Kiri235, logs read 2026-11-15 by log-reader): GPU-bound (Adreno 740 10-14 ms/frame,
-   spikes 22) above ~4,000 draws; on "Fit" the 1x EFB is 3416x1056; frame rate was Auto in all runs. Reply posted
-   asking for a race in 4:3. If 4:3 helps: cheaper wide EFB on phones; also count speed-blur EFB passes. Two
-   0.5-3 s "render wait" hitches (likely the app going to the background) [uncertain].
+2. **#23 Ayn Thor slowdown** (Kiri235): their 4:3 log (v0.8.2, 1x, Auto) shows CPU fine, GPU 11-17 ms in busy
+   frames (max 24), so Auto locks to 30; all shaders specialized, no pipeline hitches; 4:3 changed nothing (not pixel
+   cost). Same GPU as our S23 (Adreno 740, driver 802A4035 vs 802A4001) and an old S23 race log (v0.2.4) had similar
+   GPU times, so likely our Android renderer near its limit in busy scenes [likely]. User told Kiri235 we would
+   reproduce and fix on the S23 and send a test build. Plan: reproduce on the S23 (race with boosts, racers bunched;
+   ask before the heavy run), GPU A/B (vertex / fragment shader / the 4 EFB passes per frame with LOAD/STORE in
+   render_vk.c efb_begin), make the costly part cheaper, test APK to Kiri235. Logs: 0.zip on #23.
 3. Texture packs on Switch / Android / iOS (memory); update flow first real run at the next release.
 4. #18 WGP freeze, #12, #24 (Fedora not confirmed), custom music (#17), right-stick camera, #16.
 

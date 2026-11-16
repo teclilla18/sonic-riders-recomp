@@ -1596,4 +1596,8 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   Sponsorships [confirmed, repo page].
 - S23: v0.8.4 APK built from the tag in a temporary worktree, installed with adb [confirmed, install Success].
 - Queued as the next item (4343306): hold-B continuous boost with air drain; High Booster stays one press.
+- Recorded late for 2026-11-15 (no repo update that session): #23 Kiri235 4:3 log: GPU 11-17 ms busy frames (max
+  24), CPU fine, shaders all specialized; Thor = S23 GPU (Adreno 740), old S23 log similar, so likely our renderer
+  [likely]; user promised a fix + test build. ShadowRecomp cloned (build/ext). BastianWolf80 (YouTube, CTR track)
+  invited to Discussions for custom stages.
 
