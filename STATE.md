@@ -1,4 +1,4 @@
-# State (2026-11-15, late evening)
+# State (2026-11-16)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -6,6 +6,16 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. A third Claude session runs on the
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
+
+## 2026-11-16 (PC): README and Ko-fi, no code
+
+README: featured "Riders Plus" section under the intro (banner with the fixed hand, rules table, six 21:9 shots from
+the user's recorded PC race replayed at 3440x1440, redrawn charts); top banner cropped to 1529x600; Ko-fi line in
+the notice box + Ko-fi badge; repo Sponsor button on (user ticked Sponsorships) [confirmed, repo page]. S23 has the
+v0.8.4 release APK (built from the tag) [confirmed, adb install].
+Tip for README pictures: a recording made in a window that was 4:3 at start stores the 16:9 camera aspect; patch
+the k float at header +20 of the .rec to replay at 21:9 (race played the same), and capture with `SR_SHOTSTEP`
+(game frames), not `SR_SCREENSHOT` (presented frames run far ahead in a replay).
 
 ## Current focus: online play (user, 2026-11-15; poll #26 ended 1-0 for online, user said "work on online")
 

@@ -1581,3 +1581,19 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   feels]; a narrower screen than 4:3 or a third player not covered.
 - #23: Kiri235's zipped data folder held three logs; log-reader: GPU-bound on the Thor's wide 1x EFB (3416x1056)
   [likely]; reply posted asking for a race in 4:3. Android INTERNET permission added (not run on a phone).
+
+## 2026-11-16 (PC, Mike): README Riders Plus section, Ko-fi, hold-B boost queued
+
+- README: "Riders Plus" featured section under the intro (1ba9d5e): the user's banner with Sonic's hand fixed
+  (also replaces docs/images/v0.8.2/riders-plus-banner.jpg), original vs Riders Plus table, six stills in
+  docs/images/riders-plus/ from the user's recorded Metal City race, charts redrawn (gear-levels, charge-jump).
+  Top banner cropped to 1529x600 (6e088b6). Guard hashes updated; JPEGs kept under 512 KB.
+- Pictures: the recording held camera k 1.3344 (window was 4:3 when the run started); patching k to 1.7917 in the
+  .rec header gave a 21:9 replay with the same level-ups at the same ring counts [confirmed, log], though the
+  per-frame checksums differ (camera state). `SR_SCREENSHOT` frames are presented frames and ran ahead of the
+  replay (all shots on the file-select screen); `SR_SHOTSTEP` (game frames) worked.
+- Ko-fi line at the top of the README and a Ko-fi badge (6bca840); Sponsor button visible after the user ticked
+  Sponsorships [confirmed, repo page].
+- S23: v0.8.4 APK built from the tag in a temporary worktree, installed with adb [confirmed, install Success].
+- Queued as the next item (4343306): hold-B continuous boost with air drain; High Booster stays one press.
+
