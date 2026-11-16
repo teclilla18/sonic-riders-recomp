@@ -81,6 +81,14 @@ iOS test devices signed until **2026-11-21**.
 
 ## Open items, in priority order
 
+**ABSOLUTE NEXT (user, 2026-11-16): ready-made Android APK in a SEPARATE public repo** (option 3), so players
+without a PC can play; a takedown would hit that repo, not this one. Model: Unleashed Recompiled (SEGA; prebuilt
+builds on GitHub, players add their own game files). Steps: (1) update CLAUDE.md hard rule 1 + check_no_game_data
+to allow exactly this (APK only in the separate repo, never here; no ISO/assets; never DX); (2) bring the disc
+picker into main (local branch `android-disc-picker`, 2394600: DiscSetupActivity launcher, tested on the S23:
+copy SHA-1 = disc); (3) optional in-app RVZ converter (port tools/rvz2iso.py + zstd); (4) create the repo, release
+APK with a notice ("download only here; you need your own Sonic Riders USA disc image"); link it from this README.
+
 **NEXT thing to work on (user, 2026-11-16): hold-B continuous boost** (Riders Plus). Tapping B boosts as now;
 **holding B keeps boosting** for as long as it is held, draining air at a fair, calculated rate for the hold time
 (derive it from the gear's own boost air cost and boost length, so a hold costs what repeated taps would).
