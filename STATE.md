@@ -109,3 +109,10 @@ Console: overclocked unless the test is about stock clocks (say which). Build fr
 - [ ] A Dolphin-format texture pack in `mods/<Mod>/textures/` on the SD card: replaced, memory OK, no hitches.
 - [ ] Switch PNG screenshots (#10): menu "Save screenshot" writes a PNG that opens.
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
+
+## Studies and contacts (2026-11-15)
+
+- ShadowRecomp (FoxWorkshop, GPL-3.0, Xbox Shadow recomp) cloned at build/ext/ShadowRecomp: ideas only for our mod
+  manager (memory: shadowrecomp-study); build it once the user dumps their Xbox copy.
+- YouTube: BastianWolf80 (got a CTR track working with Claude) invited to help with custom stages via Discussions; if
+  they show up, write a "custom stages: what we know" discussion post.
