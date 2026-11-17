@@ -316,8 +316,17 @@ def compiler_works(cxx, tmp_dir=None, extra=()):
     src = os.path.join(tmp_dir, "cc_test.cpp")
     with open(src, "w") as f:
         f.write("#include <threads.h>\n#include <cstdio>\nint main(){std::printf(\"ok\\n\");return 0;}\n")
-    r = subprocess.run(cxx + ["-std=c++20", src, "-o", os.path.join(tmp_dir, "cc_test")] + list(extra), capture_output=True, text=True)
+    try:
+        r = subprocess.run(cxx + ["-std=c++20", src, "-o", os.path.join(tmp_dir, "cc_test")] + list(extra),
+                           capture_output=True, text=True)
+    except OSError as e:  # the compiler (or its wrapper) can't be started at all
+        compiler_works.last_error = str(e)
+        return False
+    compiler_works.last_error = (r.stdout + r.stderr).strip()
     return r.returncode == 0
+
+
+compiler_works.last_error = ""
 
 
 # ---------------------------------------------------------------- install
@@ -427,12 +436,16 @@ def main():
         for name, sub in (("zig-cc", "cc"), ("zig-c++", "c++")):
             p = os.path.join(wrap, name)
             with open(p, "w", newline="\n") as f:
-                f.write('#!/bin/sh\nexec "%s" %s "$@"\n' % (zig, sub))
+                # zig's cache in the tools folder, not ~/.cache (#30: zig failed on a Steam Deck)
+                f.write('#!/bin/sh\nexport ZIG_GLOBAL_CACHE_DIR="%s"\nexec "%s" %s "$@"\n'
+                        % (os.path.join(tools, "zig-cache"), zig, sub))
             os.chmod(p, 0o755)
         if " " in wrap:
             fail("The tools folder must not contain spaces: %s" % tools, "Pass another one with --tools DIR.")
         conf_args += ["--cc", os.path.join(wrap, "zig-cc"), "--cxx", os.path.join(wrap, "zig-c++")]
         if not compiler_works([os.path.join(wrap, "zig-c++")]):
+            for line in compiler_works.last_error.splitlines()[-25:]:  # zig's own words, for the bug report
+                log("  zig: " + line)
             fail("The downloaded zig compiler does not work on this system.", "Report it with setup.log attached.")
     log("decomp-toolkit, ninja, Dear ImGui and a compiler ready.", "green")
 
