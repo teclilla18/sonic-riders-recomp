@@ -1,0 +1,25 @@
+{
+  "sdk": {
+    "version": "20261117",
+    "repository": "https://github.com/ouncebrew/ounce-devkit",
+    "commit": "b11c29cba8d476f193bdc78ac98f344c167e541c",
+    "url": "https://github.com/ouncebrew/ounce-devkit/releases/download/devkit-20261117/ounce-devkit-20261117.tar.xz",
+    "sha256": "33cc5478324f8243dc801c3d4b8fe781885a306975f63937bd246ffdfd73cf79",
+    "components": {
+      "libounce": "39406be1f25a2f1da3f7dfdaf7a42d2216cda4d0",
+      "ouncevk": "114e9298fc0e6ba351d68a1b22be7f4072a759f8",
+      "kaihen": "ddbf020066725a12274e65537066efbf268f67bc"
+    }
+  },
+  "references_only_not_linked": {
+    "dusklight": {
+      "repository": "https://github.com/wowilookgood/dusklight",
+      "tag": "v2.0.3-switch2-1",
+      "commit": "ad781a8fcd25e17597dcf906217e2d4079d2aa93"
+    },
+    "aurora": {
+      "repository": "https://github.com/wowilookgood/aurora",
+      "commit": "dc1a528e81c8972443721ae47d324773001bc0ca"
+    }
+  }
+}

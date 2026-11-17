@@ -15,8 +15,14 @@
  *     and the touch controls (touch_android.c) over it;
  *   - the swapchain is made again when the surface is lost (the app went to the background).
  * Not yet: specialized shaders (the ubershader runs every draw), GPU timestamps, pre-rotation. */
+#ifdef __SWITCH2__
+#include <switch.h>
+#include "platform/switch2/switch2_platform.h"
+#define VK_USE_PLATFORM_VI_NN 1
+#else
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#endif
 #ifdef __ANDROID__
 #include <SDL_syswm.h>
 #endif
@@ -35,8 +41,10 @@
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
+#ifndef __SWITCH2__
 #include "touch_android.h"
 #include "touch_icons.h"     /* generated: tools/embed_icons.py (android/touch_icons) */
+#endif
 
 void input_init(void);
 void input_pump(void);
@@ -73,7 +81,9 @@ static const uint8_t k_xf_image_chunks[XF_IMAGE_CHUNKS] = {0, 1, 2, 3, 16, 17, 2
 #define VKC(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) rt_fatal("[vk] %s failed: %d", #x, (int)r_); } while (0)
 
 /* ---- device ---- */
+#ifndef __SWITCH2__
 static SDL_Window* g_win;
+#endif
 static VkInstance g_inst;
 static VkPhysicalDevice g_pd;
 static VkPhysicalDeviceProperties g_props;
@@ -90,6 +100,28 @@ static int g_core13;  /* Vulkan 1.3 core on both sides (else the dynamic renderi
 
 /* ---- swapchain ---- */
 static VkSurfaceKHR g_surf;
+
+static void drawable_size(int* w, int* h) {
+#ifdef __SWITCH2__
+    u32 width = 0, height = 0;
+    nwindowGetDimensions(nwindowGetDefault(), &width, &height);
+    *w = (int)width; *h = (int)height;
+#else
+    SDL_Vulkan_GetDrawableSize(g_win, w, h);
+#endif
+}
+
+static int surface_create(void) {
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_VULKAN_NATIVE_SURFACE");
+    VkViSurfaceCreateInfoNN info = {.sType = VK_STRUCTURE_TYPE_VI_SURFACE_CREATE_INFO_NN, .window = nwindowGetDefault()};
+    VkResult rc = vkCreateViSurfaceNN(g_inst, &info, NULL, &g_surf);
+    rt_log("[switch2] native surface rc=%d", rc);
+    return rc == VK_SUCCESS;
+#else
+    return SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf);
+#endif
+}
 static VkSwapchainKHR g_swap;
 static VkFormat g_swap_fmt = VK_FORMAT_UNDEFINED;
 static VkExtent2D g_ext;      /* the screen as the game sees it (landscape) */
@@ -111,6 +143,9 @@ static unsigned g_draw_lo, g_draw_hi = ~0u;
 static int g_one_pipe;
 static unsigned g_fr_binds, g_binds_sum;  /* GX pipeline switches this frame, and summed for the report */
 static uint64_t g_last_gpu_ns;  /* the last measured frame's GPU time (for the [hitch] line) */
+#ifdef __SWITCH2__
+double platform_gpu_frame_ms(void) { return g_last_gpu_ns ? (double)g_last_gpu_ns / 1e6 : -1.0; }
+#endif
 
 /* a call's result where the device can be lost: 1 if it worked, 0 if lost (noted), else a fatal error */
 static int vk_ok(VkResult r, const char* what) {
@@ -545,6 +580,9 @@ static int prewarm_thread(void* arg) {
     uint64_t t0 = platform_now_ns();
     uint32_t n = 0;
     for (uint32_t i = 0; i < g_pw_nkeys; i++) {
+#ifdef __SWITCH2__
+        if (switch2_stopping()) break;
+#endif
         uint64_t key = g_pw_keys[i];
         if ((key >> 63) && ((key >> 4) & 15) == TGT_SWAP && g_swap_fmt == VK_FORMAT_UNDEFINED) continue;
         VkPipeline p = pipe_make(key);
@@ -658,7 +696,7 @@ static int swap_create(void) {
     VkExtent2D ext = caps.currentExtent;
     if (ext.width == UINT32_MAX || !ext.width) {
         int w, h;
-        SDL_Vulkan_GetDrawableSize(g_win, &w, &h);
+        drawable_size(&w, &h);
         ext.width = (uint32_t)w;
         ext.height = (uint32_t)h;
     }
@@ -724,7 +762,7 @@ static int swap_recreate(void) {
         SDL_VERSION(&wm.version);
         if (!SDL_GetWindowWMInfo(g_win, &wm) || !wm.info.android.window) return 0;
 #endif
-        if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) {
+        if (!surface_create()) {
             g_surf = VK_NULL_HANDLE;
             return 0;
         }
@@ -741,11 +779,17 @@ static int g_portability;
 #endif
 
 static void vk_setup(void) {
+#ifdef __SWITCH2__
+    unsigned n = 2;
+    const char* ie[16] = {VK_KHR_SURFACE_EXTENSION_NAME, VK_NN_VI_SURFACE_EXTENSION_NAME};
+    switch2_checkpoint("BEGIN_VULKAN_INSTANCE");
+#else
     unsigned n = 0;
     SDL_Vulkan_GetInstanceExtensions(g_win, &n, NULL);
     const char* ie[16];
     if (n > 16) n = 16;
     SDL_Vulkan_GetInstanceExtensions(g_win, &n, ie);
+#endif
     uint32_t iv = VK_API_VERSION_1_1;
     vkEnumerateInstanceVersion(&iv);
     VkApplicationInfo app = {VK_STRUCTURE_TYPE_APPLICATION_INFO, NULL, "sonicriders", 1, "sonicriders", 1,
@@ -781,7 +825,13 @@ static void vk_setup(void) {
         sscanf(getenv("SR_VK_DRAWS"), "%u-%u", &g_draw_lo, &g_draw_hi);
         rt_log("[vk] SR_VK_DRAWS: only draws %u-%u of each frame", g_draw_lo, g_draw_hi);
     }
-    if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) rt_fatal("[vk] surface: %s", SDL_GetError());
+    if (!surface_create()) {
+#ifdef __SWITCH2__
+        rt_fatal("[vk] cannot create native presentation surface");
+#else
+        rt_fatal("[vk] surface: %s", SDL_GetError());
+#endif
+    }
     uint32_t nq = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(g_pd, &nq, NULL);
     VkQueueFamilyProperties qf[16];
@@ -801,6 +851,9 @@ static void vk_setup(void) {
 
 /* everything that belongs to the VkDevice: made at start-up and again after a device loss (device_recover) */
 static void device_setup(void) {
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_VULKAN_DEVICE_SETUP");
+#endif
     int core13 = g_core13;
     float prio = 1.0f;
     VkDeviceQueueCreateInfo qci = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, NULL, 0, g_qfi, 1, &prio};
@@ -820,6 +873,9 @@ static void device_setup(void) {
     want.dualSrcBlend = g_dual_src;
     VkDeviceCreateInfo dci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, &drf, 0, 1, &qci, 0, NULL, ndx, dext, &want};
     VKC(vkCreateDevice(g_pd, &dci, NULL, &g_dev));
+#ifdef __SWITCH2__
+    switch2_checkpoint("VULKAN_DEVICE_CREATED; allocating frame resources and shader modules");
+#endif
     vkGetDeviceQueue(g_dev, g_qfi, 0, &g_q);
     p_begin_rendering = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdBeginRendering" : "vkCmdBeginRenderingKHR");
     p_end_rendering = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdEndRendering" : "vkCmdEndRenderingKHR");
@@ -999,7 +1055,9 @@ static void device_setup(void) {
     image_make(&g_depth, EFB_W, EFB_H, g_depth_fmt, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0);
     image_make(&g_ov, OVERLAY_W, OVERLAY_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_dummy, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+#ifndef __SWITCH2__
     image_make(&g_icons, TOUCH_ATLAS_W, TOUCH_ATLAS_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+#endif
 
     /* first commands: the dummy white, a transparent overlay, the EFB black with depth at the far plane */
     g_cmd = g_cb[0];
@@ -1011,11 +1069,13 @@ static void device_setup(void) {
     vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_dummy.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &r);
     to_layout(&g_dummy, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     /* the touch controls' pictures, once */
+#ifndef __SWITCH2__
     memcpy(g_smap[0] + OFF_STAGE, k_touch_atlas, sizeof k_touch_atlas);
     to_layout(&g_icons, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkBufferImageCopy ir = {OFF_STAGE, 0, 0, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {TOUCH_ATLAS_W, TOUCH_ATLAS_H, 1}};
     vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_icons.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ir);
     to_layout(&g_icons, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+#endif
     VkImageSubresourceRange cr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     to_layout(&g_ov, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkClearColorValue clear0 = {{0, 0, 0, 0}};
@@ -1510,13 +1570,18 @@ static void draw_overlay_and_touch(void) {
     float W = (float)g_ext.width, H = (float)g_ext.height;
     float ov[4];
     picture_rect(16.0f / 9.0f, ov);  /* the menu keeps its own 16:9 shape */
+#ifndef __SWITCH2__
     touch_set_overlay_rect(ov[0], ov[1], ov[2], ov[3]);
     TouchShape ts[16];
     int nt = touch_shapes(ts, 16, (int)W, (int)H);
+#else
+    int nt = 0;
+#endif
     if (!(img && g_ov_box[0] < g_ov_box[2]) && !nt) return;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 0);
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
+#ifndef __SWITCH2__
     for (int i = 0; i < nt; i++) {
         float px[4] = {ts[i].cx - ts[i].r, ts[i].cy - ts[i].r, ts[i].cx + ts[i].r, ts[i].cy + ts[i].r};
         if (ts[i].image >= 0 && ts[i].image < TOUCH_ICONS) {  /* a picture: premultiplied, faded by its opacity */
@@ -1530,6 +1595,7 @@ static void draw_overlay_and_touch(void) {
         float shape[4] = {(float)ts[i].kind, (float)ts[i].icon, (float)ts[i].pressed, 1.0f};
         quad(Q_TOUCH, TGT_SWAP, 15, NULL, NULL, W, H, px, NULL, col, shape);
     }
+#endif
     p_end_rendering(g_cmd);
 }
 
@@ -2171,9 +2237,19 @@ static void ios_wait_in_background(int w, int h) {
 #endif
 
 static void pump(void) {
+#ifdef __SWITCH2__
+    if (!appletMainLoop()) g_quit = 1;
+    int w = 0, h = 0;
+    drawable_size(&w, &h);
+    if (g_ext.width && ((uint32_t)w != g_ext.width || (uint32_t)h != g_ext.height)) g_swap_bad = 1;
+    input_pump();
+    const char* limit = getenv("SR_SWITCH2_FRAMES");
+    if (limit && (unsigned)strtoul(limit, NULL, 10) > 0 && g_frames_done >= (unsigned)strtoul(limit, NULL, 10)) g_quit = 1;
+    if (overlay_take_quit_request()) g_quit = 1;
+#else
     SDL_Event e;
     int w = (int)g_ext.width, h = (int)g_ext.height;
-    if (!w) SDL_Vulkan_GetDrawableSize(g_win, &w, &h);
+    if (!w) drawable_size(&w, &h);
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT: g_quit = 1; break;
@@ -2201,6 +2277,7 @@ static void pump(void) {
         touch_event(&e, w, h);
     }
     input_pump();
+#endif
 }
 
 #ifdef SR_IOS
@@ -2210,6 +2287,9 @@ void ios_attach_window(SDL_Window* win);
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_NATIVE_VULKAN_RENDERER");
+#else
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #ifdef SR_IOS
@@ -2228,13 +2308,20 @@ static int render_thread(void* arg) {
     ios_attach_window(g_win);  /* platform/ios/ios_scene.m: iOS 27 needs the window on a scene */
 #endif
     SDL_DisableScreenSaver();  /* the screen stays on while the game runs */
+#endif
     vk_setup();
+#ifdef __SWITCH2__
+    switch2_checkpoint("VULKAN_RENDERER_READY; waiting for recompiled-core frames");
+#endif
     for (;;) {
         mtx_lock(&g_lock);
         while (!g_pending) {
             mtx_unlock(&g_lock);
             pump();
             mtx_lock(&g_lock);
+#ifdef __SWITCH2__
+            if (g_quit) break;
+#endif
             if (!g_pending) {
                 struct timespec ts;
                 timespec_get(&ts, TIME_UTC);
@@ -2243,6 +2330,9 @@ static int render_thread(void* arg) {
                 cnd_timedwait(&g_cv, &g_lock, &ts);
             }
         }
+#ifdef __SWITCH2__
+        if (!g_pending && g_quit) { mtx_unlock(&g_lock); break; }
+#endif
         GxFrame* f = g_pending;
         mtx_unlock(&g_lock);
         pump();
@@ -2254,12 +2344,28 @@ static int render_thread(void* arg) {
         mtx_unlock(&g_lock);
         if (overlay_take_quit_request()) g_quit = 1;
         if (g_quit) {
+#ifdef __SWITCH2__
+            break;
+#else
             pcache_save(1);
             rt_log("[android] quit");
             fflush(stderr);
             exit(0);
+#endif
         }
     }
+#ifdef __SWITCH2__
+    /* Stop producers and pipeline helpers before destroying their GPU/memory. */
+    switch2_stop_workers();
+    pipe_drain();
+    keys_save();
+    pcache_save(1);
+    switch2_checkpoint("BEGIN_VULKAN_SHUTDOWN");
+    device_teardown();
+    if (g_surf) { vkDestroySurfaceKHR(g_inst, g_surf, NULL); g_surf = VK_NULL_HANDLE; }
+    if (g_inst) { vkDestroyInstance(g_inst, NULL); g_inst = VK_NULL_HANDLE; }
+    switch2_checkpoint("VULKAN_SHUTDOWN_COMPLETE");
+#endif
     return 0;
 }
 
@@ -2269,9 +2375,11 @@ void render_start(void) {
     g_free[0] = &g_frames[0];
     g_free[1] = &g_frames[1];
     g_nfree = 2;
+#ifndef __SWITCH2__
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) rt_fatal("SDL_Init: %s", SDL_GetError());
+#endif
     input_init();
-#ifdef SR_IOS
+#if defined(SR_IOS) || defined(__SWITCH2__)
     /* iOS: UIKit wants the window and the event pump on the main thread; main() runs render_main_loop()
      * there after starting the game thread */
 #else
@@ -2279,6 +2387,6 @@ void render_start(void) {
 #endif
 }
 
-#ifdef SR_IOS
+#if defined(SR_IOS) || defined(__SWITCH2__)
 void render_main_loop(void) { render_thread(NULL); }
 #endif

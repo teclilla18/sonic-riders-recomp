@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (experimental Switch 2 branch)
+
+- Add a separate native Switch 2 build using libounce/OunceVK and the existing
+  recompilation core/Vulkan renderer. Includes staged diagnostics, isolated
+  runtime data, permitted-core discovery and explicit resource cleanup.
+  The standalone diagnostic is hardware-tested; integrated game boot and
+  gameplay remain untested on Switch 2. No release is published.
+
 ## v0.8.6 (2026-11-16; Linux zip updated the same day)
 
 - **Linux zip update** (#30): if the setup's compiler check fails, zig's own error now goes into setup.log, and zig keeps

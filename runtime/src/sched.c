@@ -277,6 +277,11 @@ static void deliver(Cpu* c) {
 }
 
 void ppc_preempt(Cpu* c) {
+#ifdef __SWITCH2__
+    /* Native shutdown sets the existing generated-code polling flag. */
+    void switch2_thread_checkpoint(void);
+    switch2_thread_checkpoint();
+#endif
     if (c->msr & MSR_EE) deliver(c);
 }
 

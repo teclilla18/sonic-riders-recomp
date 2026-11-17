@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
 from ninja_syntax import Writer  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--target", choices=["host", "switch", "android", "ios"], default="host")
+ap.add_argument("--target", choices=["host", "switch", "switch2", "android", "ios"], default="host")
 ap.add_argument("--toolchain", choices=["msvc", "mingw", "linux"],
                 default="linux" if sys.platform.startswith("linux") else "msvc", help="host compiler setup")
 ap.add_argument("--cc", default="", help="C compiler command (host, --toolchain linux), e.g. clang or \"zig cc\"")
@@ -40,6 +40,8 @@ ap.add_argument("--cxx", default="", help="C++ compiler command (host, --toolcha
 ap.add_argument("--llvm-mingw", default="", help="llvm-mingw folder (host, --toolchain mingw)")
 ap.add_argument("--sdl", default="", help="SDL2 development folder (host; default: build/ext/SDL2-*)")
 ap.add_argument("--devkitpro", default="", help="devkitPro folder (switch)")
+ap.add_argument("--ounce-sdk", default="", help="switch2: isolated ounce-devkit root (default: Phase 1 SDK)")
+ap.add_argument("--glslc", default="", help="switch2: shaderc glslc executable")
 ap.add_argument("--imgui", default="", help="Dear ImGui v1.92.9b source folder (default: build/ext/imgui-1.92.9b; the setup downloads it)")
 ap.add_argument("--trace-loads", action="store_true", help="debug: build with the guest load tracer (SR_TRACE_LOADS, trace_loads.c) into build/<target>-trace")
 ap.add_argument("--no-base-reg", action="store_true", help="switch: keep the guest memory base out of x28 (for comparisons)")
@@ -62,6 +64,10 @@ ap.add_argument("--android-app", choices=["game", "probe"], default="game", help
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+if args.target == "switch2":
+    import switch2_build
+    switch2_build.configure(args, ROOT)
+    sys.exit(0)
 if args.target == "android":
     import android_build  # noqa: E402
     if args.android_app == "probe":

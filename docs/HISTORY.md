@@ -1619,3 +1619,21 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - **#30** (Steam Deck: "the downloaded zig compiler does not work"): the check hid zig's error; not the path with
   spaces (reproduced fine in WSL). setup_linux.py now logs zig's error and keeps zig's cache in the tools folder
   [tested in WSL; whether it fixes the Deck: uncertain]; Linux zip replaced on v0.8.6; reply posted.
+
+## 2026-11-17: experimental native Switch 2 bring-up
+
+- **Tested [confirmed]** standalone SR2Diag48b77e581423 on the user's physical
+  firmware23.0.1 Switch2, handheld(mode0), clocks not recorded: services, timing,
+  workers/TLS/cores, input, audible audio, stack SVC guest mapping and confirmed
+  Vulkan colors. Explicit resource cleanup succeeds; post-main exit hook is
+  unobserved [likely stdio-order logging gap]. Code-map path automatically skips
+  missing advertised SVC hints, not an invalid process handle.
+- **Implemented/build-tested [confirmed]** separate switch2 target using pinned
+  ounce-devkit and shared core/Vulkan shaders, native input/audio/window services,
+  permitted-core discovery, matching sparse RW guest layout, cooperative worker
+  joins and FsFile lifecycle markers. Original Switch preprocessing and Android
+  renderer syntax checks pass; no full other-platform replay was performed.
+- **Untested:** integrated Switch2 boot, shaders, gameplay, audio pacing, shutdown,
+  loader return and performance. No acceptance/release claim. Next is bounded
+  first boot, then complete race. Work stays on feature/switch2-native locally;
+  no push, merge or publication. Details: notes/switch2.md.

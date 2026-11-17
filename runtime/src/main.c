@@ -211,8 +211,12 @@ int main(int argc, char** argv) {
      * this thread only waits */
     profile_start();
     rt_thread_start(game_thread, NULL);
-#ifdef SR_IOS
+#if defined(SR_IOS) || defined(__SWITCH2__)
     { void render_main_loop(void); render_main_loop(); }  /* never returns (render_vk.c) */
+#ifdef __SWITCH2__
+    { void switch2_shutdown(void); switch2_shutdown(); }
+    return 0;
+#endif
 #endif
     for (;;) {
         struct timespec ts = {3600, 0};

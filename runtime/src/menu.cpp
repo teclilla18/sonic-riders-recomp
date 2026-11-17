@@ -563,7 +563,7 @@ void tab_performance() {
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();
-#ifdef __SWITCH__
+#if defined(__SWITCH__) && !defined(__SWITCH2__)
     heading("Handheld graphics");
     if (check("Nintendo's 384 MHz graphics setting in handheld", &g_settings.handheld_gpu,
               "One of the clock settings Nintendo offers its own games (the system's default is 307 MHz). "
@@ -746,7 +746,7 @@ void quit_row() {
     ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
 #endif
     ImGui::PopStyleColor();
-#ifdef __SWITCH__
+#if defined(__SWITCH__) && !defined(__SWITCH2__)
     /* no Quit Game: games on the Switch are closed from the HOME menu */
     ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close);
     if (ImGui::Button("Close")) close_menu();

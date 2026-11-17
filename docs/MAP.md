@@ -53,6 +53,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Switch input | switch/input_hid.c | |
 | Switch renderer (deko3d) | switch/render_deko.c (1100) | |
 | Switch platform | switch/platform_switch.c | |
+| Native Switch 2 platform and shutdown | switch2/platform_switch2.c, switch2/audio_switch2.c; android/render_vk.c native guards | `mem_init`, `switch2_stop_workers`, `switch2_shutdown`, `surface_create` |
 
 ## Shaders (`runtime/shaders/`)
 
@@ -66,6 +67,7 @@ vk_*.frag / vk_quad.vert: Vulkan helpers (copies, fills, touch controls).
 | Topic | File |
 |---|---|
 | Build file generator (all targets) | configure.py (`--target host/switch/android`, `--icon`) |
+| Native Switch 2 build and packaging | tools/switch2_build.py (`configure`, `link`, `pack`); notes/switch2.md |
 | Android APK steps (no Gradle), icon into resources | tools/android_build.py (`step_apk`, `add_apk`) |
 | Android app icon | tools/android_icon.py |
 | Phone test runs over adb | tools/android_run.py |
