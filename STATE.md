@@ -62,9 +62,9 @@ base character per custom character, extra 2 x 8 Player Entry pages, portraits v
 
 ## Releases
 
-**v0.8.4 released 2026-11-15** (RVZ/WIA -> ISO, Eject SD card). **Unreleased on main**: zstd RVZ on Mac/Linux, mods
+**v0.8.5 released 2026-11-16** (tag cf5689a; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS; no iOS zip: the release says iOS comes Thursday 11-19, guides point iOS to v0.8.4; known issue #29 in the notes; v0.8.0 release deleted, tag kept; **v0.8.2 is never deleted**, user). **Released in v0.8.5**: zstd RVZ on Mac/Linux, mods
 syntax, texture packs, load tracer, Switch PNG screenshots (#10, contributor PR #28: not built for or run on a Switch),
-launcher notes view, online protocol 4 (own screen shape), Android INTERNET permission (CHANGELOG "Unreleased").
+launcher notes view, online protocol 4 (own screen shape), Android INTERNET permission (CHANGELOG v0.8.5). Unreleased on main: nothing yet.
 **Easy-read guides** (every release links both): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install
 https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (asked the user whether it is public: no answer yet).
 iOS test devices signed until **2026-11-21**.
