@@ -175,6 +175,7 @@ already unpacked. Download the pack yourself (we don't host packs), then:
   menu, **Mods**). When two packs change the same texture, the lower one wins.
 - On the Switch, HD textures are shown at up to 512 x 512 so they fit in the console's memory; the PC
   shows them at full size.
+- Known issue (v0.8.6, Switch): the game freezes briefly the first time each HD texture appears. A fix is coming.
 - A pack made for a different version or a mod of the game only changes the textures that match yours.
   That's normal.
 - Making your own pack, and the details: [docs/MODDING.md](docs/MODDING.md#texture-packs).
