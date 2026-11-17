@@ -62,9 +62,17 @@ base character per custom character, extra 2 x 8 Player Entry pages, portraits v
 
 ## Releases
 
-**v0.8.5 released 2026-11-16** (tag cf5689a; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS; no iOS zip: the release says iOS comes Thursday 11-19, guides point iOS to v0.8.4; known issue #29 in the notes; v0.8.0 release deleted, tag kept; **v0.8.2 is never deleted**, user). **Released in v0.8.5**: zstd RVZ on Mac/Linux, mods
-syntax, texture packs, load tracer, Switch PNG screenshots (#10, contributor PR #28: not built for or run on a Switch),
-launcher notes view, online protocol 4 (own screen shape), Android INTERNET permission (CHANGELOG v0.8.5). Unreleased on main: nothing yet.
+**v0.8.6 released 2026-11-16 (evening)** (tag e19f0dd; PC, Switch, Android, Linux zips; cold Sandbox PC + Android
+PASS; v0.8.5 release deleted right after (tag kept), v0.8.2 is never deleted (user); no iOS zip: notes and guides say
+iOS comes Thursday 11-19, iOS points to v0.8.4). New in it: **HD texture packs in one click** (texpack.c DDS BC1/2/3/7
+via bcdec, `_arb`, other-`_m` fallback, Switch cap 512; launcher Mods page + Switch installer "Add texture pack...",
+Windows tar.exe unpacks zip/7z/rar; setup.ps1 copies mods\ to the SD card with robocopy). **Tested:** PC with a 1 GB
+BC7 Dolphin pack (install 9 s, 1,074 textures, demo races 59.9 fps, 0 slow frames); the user played PC ("I love it",
+**accepted** on PC). **Not tested:** Switch on hardware (only 15 textures sent by FTP, "very minimum textures load" as
+expected; the user is copying the full pack via hekate UMS), the installer's SD copy end to end, Android/iOS packs.
+Coverage of that pack on the original game: 145+ of 738 textures on the title + two demo races (pack made for a mod).
+Release notes say "largely untested, report issues". v0.8.5 (2026-11-16, tag cf5689a) had the rest of the old
+Unreleased list. Unreleased on main: nothing.
 **Easy-read guides** (every release links both): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install
 https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (asked the user whether it is public: no answer yet).
 iOS test devices signed until **2026-11-21**.
