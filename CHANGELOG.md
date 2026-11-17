@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.8.5 (2026-11-16)
+
+Known issue: in split-screen races the HUD still shows Lv. 3 after Riders Plus Lv. 4 or 5 (#29); the level itself
+works. The auto stick-spin option (#23) comes in the next version.
 
 - **Lv. 5 now at 300 rings** (was 350), from player feedback: 350 was too hard to reach in a normal 3-lap race.
 - **Drift dash adds to your speed** instead of capping you at about 250 km/h (Riders Plus).
