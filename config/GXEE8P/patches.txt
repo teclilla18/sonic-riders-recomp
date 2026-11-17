@@ -90,6 +90,10 @@ decl extern volatile int g_ring_cap;
 # speed shoes (item type 6, case at 8188A010): the speed is set to 200 km/h (rodata, f0) at 8188A018. With the 999
 # cap: the higher of 200 km/h and the racer's own + 80 km/h
 8188A018 before { if (g_ring_cap != 100) { union { uint32_t u; float f; } cur_; cur_.u = ld32(c->r[21] + 0xAACu); double v_ = (double)cur_.f + 80.0 / 216.0; if (v_ > c->f[0].ps0) { float s_ = (float)v_; c->f[0].ps0 = s_; c->f[0].ps1 = s_; } } }
+# drift dash (racer r29): 818DF63C adds the level block's drift-dash speed (+0x30) to the speed (+0xAAC), then
+# 818DF648-818DF684 clamp it to the constant at r31+0x60 (f0 = min, f3 = after the add). With Riders Plus: no clamp,
+# the dash adds to the racer's own speed (user request 2026-11-16)
+818DF684 before { if (g_ring_cap != 100) { c->f[0].ps0 = c->f[3].ps0; c->f[0].ps1 = c->f[3].ps0; } }
 # falling off the course: the respawn (fn 81817264) stores 0 (r6, which also clears other fields after it) as the
 # rings; with the 999 cap a fall takes 100 rings like a hit (the old count kept before the store, rewritten after)
 81817A58 before int32_t ring_before = (int32_t)ld32(c->r[25] + 0xB98u);

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Gear Lv. 5 at 300 rings** (was 350), with Riders Plus.
+- **Drift dash adds to your speed** with Riders Plus: the game capped it (about 250 km/h, and a drift above that
+  slowed you down to it); now the drift-dash speed is added to whatever speed you have.
 - **Online: everyone keeps their own screen shape.** A 4:3 player and a 16:9 (or ultrawide) player in the same
   race each get a full picture in their own shape, without black bars. (Sessions need both players on this
   version.)

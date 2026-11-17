@@ -55,7 +55,7 @@ we'll keep building on.
 | | Original game | Riders Plus |
 |---|---|---|
 | Ring limit | 100 | **999** (a hit or a fall still costs 100) |
-| Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 350** |
+| Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 300** |
 | Gold 100-ring capsule | Gone once taken | **Comes back after 25 seconds** |
 | Dash panels | Set you to the panel's speed, even if you were faster | **The panel's speed, or your speed + 25 km/h** |
 | Speed Shoes | Set you to 200 km/h | **Your speed + 80 km/h** (at least 200) |
@@ -63,13 +63,13 @@ we'll keep building on.
 
 <p align="center">
   <img src="docs/images/riders-plus/lv4-level-up.jpg" width="49%" alt="LEVEL UP!! to Lv. 4 at 203 rings, Metal City, 250 km/h">
-  <img src="docs/images/riders-plus/lv5-level-up.jpg" width="49%" alt="LEVEL UP!! to Lv. 5 at 350 rings, Metal City">
-  <br><sub>LEVEL UP!! to Lv. 4 at 200 rings, and to Lv. 5 at 350</sub>
+  <img src="docs/images/riders-plus/lv5-level-up.jpg" width="49%" alt="LEVEL UP!! to Lv. 5, Metal City">
+  <br><sub>LEVEL UP!! to Lv. 4 at 200 rings, and to Lv. 5 at 300</sub>
 </p>
 
 ### Lv. 4 and Lv. 5
 
-Collect 200 rings for Lv. 4 and 350 for Lv. 5. You get the game's own LEVEL UP!! (sparkle, sound and a full air
+Collect 200 rings for Lv. 4 and 300 for Lv. 5. You get the game's own LEVEL UP!! (sparkle, sound and a full air
 tank), and the HUD shows "Lv. 4" or "Lv. 5" in the game's own digits. Each gear keeps its own Lv. 1-3 stats and
 builds on its Lv. 3 numbers. Sonic's Blue Star goes from 180 / 250 km/h (top speed / boost) at Lv. 3 to 200 / 275
 at Lv. 4 and 215 / 300 at Lv. 5.

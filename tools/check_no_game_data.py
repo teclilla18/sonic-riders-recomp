@@ -60,6 +60,7 @@ OWN_ART = {
     "docs/images/settings-display.jpg": "c02503fd7d6f88b77049d5b695505cab0fc6bb7b",  # settings menu screenshot for the v0.8.0 notes (the user's OK, 2026-11-11)
     # v0.8.2 release notes (the user's OK, 2026-11-14): the user's ChatGPT banners and a PC race screenshot pair
     "docs/images/v0.8.2/riders-plus-banner.jpg": "74a6b9d10125473c5be6130b8520b29aabc5c750",  # fixed hand (2026-11-16)
+    "docs/images/issues/mp-level-hud.jpg": "e8d45030f746c1ce4f90e66e622662965dd961e0",  # issue: split-screen HUD stays Lv 3 (user, 2026-11-16)
     "docs/images/v0.8.2/online-coming-soon.jpg": "2d581b0f9a375a972d77d26a7d870cfeade37af2",
     "docs/images/v0.8.2/riders-plus-lv5.jpg": "334b4f1100ec2981fd006e6ea71ffbc81046e2e1",
     # README Riders Plus section (the user's OK, 2026-11-16): the user's recorded PC race, replayed at 21:9

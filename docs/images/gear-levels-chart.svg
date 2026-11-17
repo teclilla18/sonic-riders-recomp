@@ -69,7 +69,7 @@
 <rect x="1074.0" y="200" width="10" height="312" rx="5" fill="#ffffff" opacity="0.18"/>
 <text x="1103.0" y="182" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-style="italic" font-weight="900" fill="#ffe8a0" text-anchor="middle">300</text>
 <text x="1062.0" y="556" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="26" font-style="italic" font-weight="900" fill="#ffd23f" text-anchor="middle">Lv. 5</text>
-<text x="1062.0" y="582" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#9fb0ea" text-anchor="middle">350 rings</text>
+<text x="1062.0" y="582" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#9fb0ea" text-anchor="middle">300 rings</text>
 <rect x="870" y="46" width="22" height="22" rx="6" fill="url(#top)"/><text x="902" y="64" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#ffffff">Top speed</text>
 <rect x="1020" y="46" width="22" height="22" rx="6" fill="url(#boost)"/><text x="1052" y="64" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#ffffff">Boost</text>
 <text x="50" y="602" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#7d8cc8">km/h, as the speedometer shows them</text>
