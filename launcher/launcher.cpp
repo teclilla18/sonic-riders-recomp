@@ -1098,6 +1098,7 @@ void installer_next_steps() {
     }
 }
 
+void texpack_ui(bool switch_installer);
 void page_installer(float w) {
     float col = (w - 40) * 0.5f;
     bool idle = g_install == INST_IDLE;
@@ -1199,6 +1200,11 @@ void page_installer(float w) {
             }
         }
         ImGui::EndDisabled();
+        if (g_mode == M_SWITCH && idle) {
+            ImGui::Spacing();
+            section("4. TEXTURE PACKS (OPTIONAL)");
+            texpack_ui(true);
+        }
         if (g_install == INST_FAILED) {
             ImGui::Spacing();
             ImGui::TextColored(kRed, "Something went wrong: the messages on the left say what. setup.log in this folder "
@@ -1304,7 +1310,206 @@ void page_game(float w) {
     note("Two-player online races are being tested (docs\\ONLINE.md). They will get their own page here.");
 }
 
+/* ---------------------------------------------------------------- Add texture pack (Dolphin-format packs) */
+/* A pack downloaded by the player (.zip / .7z / .rar / folder) becomes mods\<name>\textures + mod.ini, on the
+ * player's own PC (packs are never shipped or hosted by us). Archives are unpacked with Windows' own tar.exe
+ * (libarchive: zip, 7z, rar). The pack's GXEE8P folder (Dolphin's Load\Textures\GXEE8P) is the textures folder. */
+std::atomic<int> g_tp_state{0};  /* 0 idle, 1 working, 2 done, 3 failed */
+std::mutex g_tp_mu;
+std::string g_tp_msg;
+DWORD g_tp_start;
+void tp_say(int st, const std::string& m) {
+    std::lock_guard<std::mutex> lk(g_tp_mu);
+    g_tp_msg = m;
+    g_tp_state = st;
+}
+void rm_tree(const std::wstring& p) {
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((p + L"\\*").c_str(), &fd);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            std::wstring n = fd.cFileName;
+            if (n == L"." || n == L"..") continue;
+            std::wstring c = p + L"\\" + n;
+            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) rm_tree(c);
+            else { SetFileAttributesW(c.c_str(), FILE_ATTRIBUTE_NORMAL); DeleteFileW(c.c_str()); }
+        } while (FindNextFileW(h, &fd));
+        FindClose(h);
+    }
+    RemoveDirectoryW(p.c_str());
+}
+bool copy_tree(const std::wstring& from, const std::wstring& to) {
+    CreateDirectoryW(to.c_str(), nullptr);
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((from + L"\\*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return false;
+    bool ok = true;
+    do {
+        std::wstring n = fd.cFileName;
+        if (n == L"." || n == L"..") continue;
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ok = copy_tree(from + L"\\" + n, to + L"\\" + n) && ok;
+        else ok = CopyFileW((from + L"\\" + n).c_str(), (to + L"\\" + n).c_str(), FALSE) && ok;
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return ok;
+}
+/* the folder named GXEE8P (any depth, case-insensitive); `other`: a game-ID-like folder for another game */
+std::wstring find_game_dir(const std::wstring& p, int depth, std::wstring& other) {
+    if (depth > 6) return L"";
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((p + L"\\*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return L"";
+    std::vector<std::wstring> sub;
+    std::wstring found;
+    do {
+        std::wstring n = fd.cFileName;
+        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || n == L"." || n == L"..") continue;
+        if (_wcsicmp(n.c_str(), L"GXEE8P") == 0) { found = p + L"\\" + n; break; }
+        bool id = n.size() == 6 && (n[0] == L'G' || n[0] == L'R' || n[0] == L'S');
+        for (wchar_t c : n) id = id && ((c >= L'A' && c <= L'Z') || (c >= L'0' && c <= L'9'));
+        if (id && other.empty()) other = n;
+        sub.push_back(p + L"\\" + n);
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    if (!found.empty()) return found;
+    for (auto& s : sub) {
+        std::wstring r = find_game_dir(s, depth + 1, other);
+        if (!r.empty()) return r;
+    }
+    return L"";
+}
+int count_textures(const std::wstring& p) {
+    int n = 0;
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((p + L"\\*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return 0;
+    do {
+        std::wstring f = fd.cFileName;
+        if (f == L"." || f == L"..") continue;
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { n += count_textures(p + L"\\" + f); continue; }
+        size_t k = f.size();
+        if (k > 9 && _wcsnicmp(f.c_str(), L"tex1_", 5) == 0 &&
+            (_wcsicmp(f.c_str() + k - 4, L".png") == 0 || _wcsicmp(f.c_str() + k - 4, L".dds") == 0))
+            n++;
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return n;
+}
+void texpack_install(std::wstring src) {
+    g_tp_start = GetTickCount();
+    tp_say(1, "Unpacking the pack... (big packs take a minute or two)");
+    bool is_folder = is_dir(src);
+    /* the mod's name: the file name without extension, letters / digits / space / - _ only, at most 40 */
+    std::wstring base = src.substr(src.find_last_of(L"\\/") + 1);
+    if (!is_folder && base.find_last_of(L'.') != std::wstring::npos) base = base.substr(0, base.find_last_of(L'.'));
+    std::string name;
+    for (wchar_t c : base) {
+        bool ok = (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z') || (c >= L'0' && c <= L'9') || c == L'-';
+        name += ok ? (char)c : (c == L' ' || c == L'_' || c == L'.') ? ' ' : '_';
+        if (name.size() >= 40) break;
+    }
+    while (!name.empty() && name.back() == ' ') name.pop_back();
+    if (name.empty()) name = "Texture pack";
+    std::wstring mods = path(L"mods");
+    CreateDirectoryW(mods.c_str(), nullptr);
+    std::string folder = name;
+    for (int i = 2; exists(mods + L"\\" + widen(folder)); i++) folder = name + " (" + std::to_string(i) + ")";
+    std::wstring dst = mods + L"\\" + widen(folder);
+    std::wstring tmp = mods + L"\\.unpacking";
+    rm_tree(tmp);
+    std::wstring root = src;
+    if (!is_folder) {
+        CreateDirectoryW(tmp.c_str(), nullptr);
+        wchar_t sys[MAX_PATH];
+        GetSystemDirectoryW(sys, MAX_PATH);
+        std::wstring cl = L"\"" + std::wstring(sys) + L"\\tar.exe\" -xf \"" + src + L"\" -C \"" + tmp + L"\"";
+        STARTUPINFOW si = {sizeof si};
+        PROCESS_INFORMATION pi = {};
+        DWORD code = 1;
+        if (CreateProcessW(nullptr, &cl[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            GetExitCodeProcess(pi.hProcess, &code);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
+        if (code != 0) {
+            rm_tree(tmp);
+            tp_say(3, "Couldn't unpack it. Use a .zip, .7z or .rar file (or unpack it yourself and pick the folder).");
+            return;
+        }
+        root = tmp;
+    }
+    std::wstring other;
+    std::wstring game = find_game_dir(root, 0, other);
+    if (game.empty() && count_textures(root) > 0) game = root;  /* a folder of tex1_ files without GXEE8P */
+    if (game.empty()) {
+        if (!is_folder) rm_tree(tmp);
+        tp_say(3, other.empty() ? "No textures found: this doesn't look like a Dolphin texture pack."
+                                : "This pack is for another game (" + narrow(other) +
+                                      "). Sonic Riders (USA) packs have a GXEE8P folder.");
+        return;
+    }
+    tp_say(1, "Installing...");
+    CreateDirectoryW(dst.c_str(), nullptr);
+    bool ok = is_folder ? copy_tree(game, dst + L"\\textures")
+                        : MoveFileExW(game.c_str(), (dst + L"\\textures").c_str(), MOVEFILE_COPY_ALLOWED) != 0;
+    /* the pack's credits and licence files go along with it */
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((root + L"\\*.txt").c_str(), &fd);
+    if (h != INVALID_HANDLE_VALUE) {
+        do CopyFileW((root + L"\\" + fd.cFileName).c_str(), (dst + L"\\" + fd.cFileName).c_str(), TRUE);
+        while (FindNextFileW(h, &fd));
+        FindClose(h);
+    }
+    if (!is_folder) rm_tree(tmp);
+    int n = count_textures(dst + L"\\textures");
+    if (!ok || n == 0) {
+        rm_tree(dst);
+        tp_say(3, "Couldn't copy the pack into the mods folder (disk full?).");
+        return;
+    }
+    write_text(dst + L"\\mod.ini", "[mod]\nname=" + name + "\ngame=GXEE8P\n");
+    char b[200];
+    snprintf(b, sizeof b, "Installed \"%s\": %d textures, turned on. Press PLAY.", folder.c_str(), n);
+    tp_say(2, b);
+}
+
+void texpack_ui(bool switch_installer) {
+    note(switch_installer ? "Optional. HD texture packs made for Dolphin work on the Switch too: add the pack you downloaded "
+                            "(zip, 7z, rar or a folder), then BUILD AND INSTALL (or UPDATE NOW) copies it to the SD card."
+                          : "HD texture packs made for Dolphin work here. Download one, then add it: zip, 7z and rar files or a folder.");
+    int tps = g_tp_state;
+    ImGui::BeginDisabled(tps == 1);
+    if (ImGui::Button("Add texture pack...")) {
+        std::wstring f = pick_file(GetActiveWindow(),
+                                   L"Texture packs (*.zip, *.7z, *.rar)\0*.zip;*.7z;*.rar\0All files (*.*)\0*.*\0",
+                                   L"Pick the texture pack you downloaded");
+        if (!f.empty()) { g_tp_state = 1; std::thread(texpack_install, f).detach(); }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add a pack folder...")) {
+        std::wstring f = pick_folder(GetActiveWindow(), L"Pick the unpacked texture pack folder");
+        if (!f.empty()) { g_tp_state = 1; std::thread(texpack_install, f).detach(); }
+    }
+    ImGui::EndDisabled();
+    if (tps != 0) {
+        std::string m;
+        { std::lock_guard<std::mutex> lk(g_tp_mu); m = g_tp_msg; }
+        if (tps == 1) m += "  " + std::to_string((GetTickCount() - g_tp_start) / 1000) + " s";
+        ImVec4 col = tps == 3 ? ImVec4(1.0f, 0.55f, 0.45f, 1) : tps == 2 ? ImVec4(0.5f, 0.9f, 0.6f, 1) : ImVec4(1, 1, 1, 1);
+        ImGui::PushStyleColor(ImGuiCol_Text, col);
+        ImGui::TextWrapped("%s", m.c_str());
+        ImGui::PopStyleColor();
+    }
+    static int s_seen = 0;
+    if (tps == 2 && s_seen != 2) { mods_load(); mods_save(); }  /* the new pack shows up, on, at the bottom */
+    s_seen = tps;
+}
+
 void page_mods(float w) {
+    section("TEXTURE PACKS");
+    texpack_ui(false);
+    ImGui::Spacing();
     section("INSTALLED MODS");
     if (g_mods.empty()) note("No mods installed. Put each mod in its own folder inside mods\\ (docs\\MODDING.md).");
     float cw = std::min(w, 620.0f);
@@ -2618,6 +2823,13 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         if (exists(d + L"\\setup\\setup.ps1")) { g_root = d; break; }
     }
     SetCurrentDirectoryW(g_root.c_str());
+    if (const wchar_t* tp = _wgetenv(L"SR_LAUNCHER_ADDPACK")) {  /* testing: Add texture pack, result to stdout, quit */
+        texpack_install(tp);
+        mods_load();
+        mods_save();
+        printf("%d %s\n", (int)g_tp_state, g_tp_msg.c_str());
+        return g_tp_state == 2 ? 0 : 1;
+    }
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     std::string v = read_text(path(L"VERSION"));

@@ -150,6 +150,35 @@ the phone. [All requirements](docs/INSTALL.md#what-you-need)
 Android: touch controls on screen (top-left button = settings menu) or any controller. Up to 4 players on
 Switch and PC, 2 on one phone: connect more controllers. [Full controls, settings and multiplayer](docs/PLAYING.md)
 
+## HD texture packs (PC and Switch)
+
+Texture packs made for **Dolphin** work as they are: `.png` or `.dds`, in a `.zip`, `.7z` or `.rar`, or
+already unpacked. Download the pack yourself (we don't host packs), then:
+
+**On PC**
+
+1. Open the **Sonic Riders** launcher and go to the **Mods** page.
+2. Press **Add texture pack...** and pick the file you downloaded (or **Add a pack folder...** for an
+   unpacked one).
+3. Wait for **Installed** (a big pack takes about 10 seconds), then press **PLAY**.
+
+**On Switch**
+
+1. Open **Install Sonic Riders (Switch).exe** on your PC and connect the SD card as usual.
+2. Under **4. Texture packs (optional)**, press **Add texture pack...** and pick the file you downloaded.
+3. Press **BUILD AND INSTALL** (or **UPDATE NOW**). The pack is copied to the SD card with the game
+   (a few minutes the first time for a big pack; later only what changed).
+
+**Good to know**
+
+- Turn a pack off or on, or change the order, on the launcher's **Mods** page (or in game: settings
+  menu, **Mods**). When two packs change the same texture, the lower one wins.
+- On the Switch, HD textures are shown at up to 512 x 512 so they fit in the console's memory; the PC
+  shows them at full size.
+- A pack made for a different version or a mod of the game only changes the textures that match yours.
+  That's normal.
+- Making your own pack, and the details: [docs/MODDING.md](docs/MODDING.md#texture-packs).
+
 ## Status
 
 <p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 70% done"></p>

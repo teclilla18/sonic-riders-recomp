@@ -583,6 +583,15 @@ if ($sdDir) {
     Copy-Item $builtNro $nroDest -Force
     if ((Get-FileHash $nroDest -Algorithm SHA256).Hash -ne (Get-FileHash $builtNro -Algorithm SHA256).Hash) { Fail "The copy on the SD card does not match the build (card full or failing?)." }
     Log "Copied sonicriders.nro to $sdDir (verified)."
+    $modsSrc = Join-Path $Root "mods"
+    if (Test-Path -LiteralPath $modsSrc -PathType Container) {
+        # mods\ (texture packs added in the installer) -> /switch/sonicriders/mods/; only new or changed files are copied
+        Log "Copying your mods and texture packs to the SD card (big packs: a few minutes the first time)..."
+        & robocopy $modsSrc (Join-Path $sdDir "mods") /E /XD .unpacking /R:2 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -ge 8) { Fail "Copying the mods folder to the SD card failed (card full?)." }
+        $global:LASTEXITCODE = 0
+        Log "Mods on the SD card are up to date." "Green"
+    }
     if ($CopyIso -eq "yes") {
         $isoSd = Join-Path $sdDir ([IO.Path]::GetFileName($Iso))
         $sdFree = (Get-PSDrive -Name ($sdDir.Substring(0, 1)) -ErrorAction SilentlyContinue).Free

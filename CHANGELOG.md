@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.6 (2026-11-16)
+
+- **HD texture packs in one click (PC and Switch).** Texture packs made for Dolphin now install from the
+  launcher: press **Add texture pack...** and pick the pack you downloaded (`.zip`, `.7z`, `.rar` or a folder).
+  - **PC:** launcher, **Mods** page, **Add texture pack...**, wait for *Installed*, press **PLAY**.
+  - **Switch:** in **Install Sonic Riders (Switch).exe**, section *4. Texture packs (optional)*, press
+    **Add texture pack...**, then **BUILD AND INSTALL** (or **UPDATE NOW**): the pack goes to the SD card with
+    the game. On the Switch, HD textures are kept at up to 512 x 512 so they fit in memory.
+  - **DDS packs work now** (BC1, BC2, BC3, BC7), not only PNG, and Dolphin's `_arb` names are understood.
+  - Turn packs on and off on the **Mods** page or in the game's settings menu (**Mods**).
+  - README section "HD texture packs" has the steps.
+
 ## v0.8.5 (2026-11-16)
 
 Known issue: in split-screen races the HUD still shows Lv. 3 after Riders Plus Lv. 4 or 5 (#29); the level itself

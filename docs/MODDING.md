@@ -5,9 +5,9 @@
 > [!NOTE]
 > Modding is new and in development. **File mods** (replacing or adding the game's files, such as
 > character models, textures, music and stages) and **stat mods** (Extreme Gear stats, memory writes,
-> simple Gecko codes) work in the PC version now (not yet in a release: build from source or wait for
-> the next version). New track slots and code mods are planned; see [Roadmap](#roadmap). The Switch version reads the same `mods` folder from the SD card
-> but hasn't been tested yet.
+> simple Gecko codes) work in the PC version (since v0.8.5). **Texture packs** work on PC and Switch (v0.8.6). New
+> track slots and code mods are planned; see [Roadmap](#roadmap). The Switch version reads the same `mods` folder
+> from the SD card; file and stat mods haven't been tested there yet.
 
 - [How mods work](#how-mods-work)
 - [Installing a mod](#installing-a-mod)
@@ -215,7 +215,10 @@ mods/
   (`[texpack] 60 custom textures from 1 mod(s)`) and replaced.
 - **Making a pack (PC):** start the game with the variable `SR_DUMPTEX_DOLPHIN=<folder>` to write every texture the
   game uses into that folder with its pack name, edit the pictures, put them in a mod's `textures` folder.
-- PNG only for now (no DDS). Custom mipmap files (`_mip1` …) are ignored. Water ripples and other effects that
+- PNG and DDS (BC1, BC2, BC3, BC7, plain 32-bit). Custom mipmap files (`_mip1` …) are ignored; `_arb` names work.
+- **Easiest:** the launcher's **Mods** page, **Add texture pack...** (PC), or the Switch installer's
+  **Add texture pack...** + BUILD AND INSTALL (the pack is copied to the SD card). On the Switch textures are kept
+  at up to 512 x 512. Water ripples and other effects that
   distort a texture may look slightly off with a picture of a different size.
 
 The names were checked against Dolphin's own dumps (1,507 textures of the intro, menus and the demo race named
@@ -257,5 +260,5 @@ character-swap example) and see what changes in game.
 | 4 | **Tracks**: replacing a track's files works with step 1; adding *new* track slots needs research into how the game lists its tracks | Research |
 | 5 | **Code mods**: C hooks or a modified `main.dol` / `_Main.rel`, applied when the installer translates the game | Later |
 | 6 | Switch: the same `mods` folder on the SD card, tested on hardware | After step 2 |
-| 7 | **Texture packs** in Dolphin's format (`textures/` in a mod) | Works on PC (next release); other platforms built, not tested |
+| 7 | **Texture packs** in Dolphin's format (`textures/` in a mod), PNG and DDS, one-click install | PC and Switch (v0.8.6); Android / iOS built, not tested |
 | 8 | **New characters on their own select-screen tiles**, from character mods | Research done (docs/notes/roster.md); design waiting for approval |

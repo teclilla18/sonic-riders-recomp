@@ -10,6 +10,9 @@
  * really uses (min..max index; "$" in a file name accepts any palette); "_m" when the texture is sampled with
  * mipmaps (TexMode0 mipmap filter on).
  *
+ * DDS files (what most HD packs ship) are read too: BC1/BC2/BC3/BC7 (legacy FourCC or a DX10 header) and plain
+ * 32-bit RGBA/BGRA; the base level is decoded to RGBA (bcdec) and the GPU makes the smaller levels.
+ *
  * SR_DUMPTEX_DOLPHIN=<folder> (PC): writes every texture the game decodes as a PNG with that name, once each
  * (for making packs; also how the names were checked against Dolphin's own dumps). */
 #include <dirent.h>
@@ -28,6 +31,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STBIW_ASSERT(x) ((void)0)
 #include "third_party/stb_image_write.h"
+#define BCDEC_IMPLEMENTATION
+#include "third_party/bcdec.h"
 
 /* ---- XXH64 (the reference algorithm, seed 0 only as Dolphin uses it) ---- */
 #define P1 0x9E3779B185EBCA87ull
@@ -125,8 +130,10 @@ static void scan(const char* dir, int depth) {
         char name[256];
         if (n >= sizeof name) continue;
         for (size_t i = 0; i <= n; i++) name[i] = (char)(e->d_name[i] >= 'A' && e->d_name[i] <= 'Z' ? e->d_name[i] + 32 : e->d_name[i]);
-        if (strcmp(name + n - 4, ".png") != 0) continue;  /* DDS: not yet */
+        if (strcmp(name + n - 4, ".png") != 0 && strcmp(name + n - 4, ".dds") != 0) continue;
         name[n - 4] = 0;
+        n -= 4;
+        if (n > 4 && !strcmp(name + n - 4, "_arb")) name[n - 4] = 0;  /* Dolphin's "arbitrary mipmaps" mark */
         if (strstr(name, "_mip")) continue;  /* custom mip levels: the base level is used, the GPU makes the rest */
         add(name, path);
     }
@@ -208,6 +215,115 @@ void texpack_name(char* out, size_t n, const uint8_t* src, uint32_t size, int fm
         snprintf(out, n, "tex1_%ux%u%s_%016llx_%d", w, h, mip ? "_m" : "", (unsigned long long)hsh, fmt);
 }
 
+/* Largest side of a pack texture in memory: Switch keeps HD packs at <= 512 (a 4K pack decoded at full size would
+ * not fit next to the game); PC uses the pack's own size. DDS: the matching smaller level is read from the file;
+ * PNG: halved after loading. */
+#ifdef __SWITCH__
+#define TEXPACK_MAX 512
+#else
+#define TEXPACK_MAX 16384
+#endif
+static uint8_t* halve_rgba(uint8_t* px, int* w, int* h) {
+    int nw = *w > 1 ? *w / 2 : 1, nh = *h > 1 ? *h / 2 : 1;
+    uint8_t* o = malloc((size_t)nw * nh * 4);
+    if (!o) { free(px); return NULL; }
+    for (int y = 0; y < nh; y++)
+        for (int x = 0; x < nw; x++) {
+            int x0 = x * 2 < *w ? x * 2 : *w - 1, x1 = x * 2 + 1 < *w ? x * 2 + 1 : *w - 1;
+            int y0 = y * 2 < *h ? y * 2 : *h - 1, y1 = y * 2 + 1 < *h ? y * 2 + 1 : *h - 1;
+            for (int c = 0; c < 4; c++)
+                o[((size_t)y * nw + x) * 4 + c] = (uint8_t)((px[((size_t)y0 * *w + x0) * 4 + c] + px[((size_t)y0 * *w + x1) * 4 + c] +
+                                                              px[((size_t)y1 * *w + x0) * 4 + c] + px[((size_t)y1 * *w + x1) * 4 + c] + 2) / 4);
+        }
+    free(px);
+    *w = nw;
+    *h = nh;
+    return o;
+}
+
+/* A DDS file's base level as RGBA8 (malloc'd), or NULL (logged). */
+static uint8_t* load_dds(const char* path, int* ow, int* oh) {
+    FILE* f = fopen(path, "rb");
+    if (!f) { rt_log("[texpack] %s: can't open it", path); return NULL; }
+    uint8_t hd[148];
+    size_t got = fread(hd, 1, sizeof hd, f);
+    const char* why = NULL;
+    uint32_t h = 0, w = 0, off = 128, kind = 0, bgra = 0;  /* kind: 1 BC1, 2 BC2, 3 BC3, 7 BC7, 32 plain */
+    if (got < 128 || memcmp(hd, "DDS ", 4) != 0) why = "not a DDS file";
+    else {
+        h = rd32(hd + 12); w = rd32(hd + 16);
+        uint32_t pf_flags = rd32(hd + 80), bits = rd32(hd + 88);
+        const uint8_t* cc = hd + 84;
+        if (pf_flags & 4) {
+            if (!memcmp(cc, "DXT1", 4)) kind = 1;
+            else if (!memcmp(cc, "DXT2", 4) || !memcmp(cc, "DXT3", 4)) kind = 2;
+            else if (!memcmp(cc, "DXT4", 4) || !memcmp(cc, "DXT5", 4)) kind = 3;
+            else if (!memcmp(cc, "DX10", 4) && got >= 148) {
+                uint32_t fmt = rd32(hd + 128);
+                off = 148;
+                if (fmt >= 70 && fmt <= 72) kind = 1;
+                else if (fmt >= 73 && fmt <= 75) kind = 2;
+                else if (fmt >= 76 && fmt <= 78) kind = 3;
+                else if (fmt >= 97 && fmt <= 99) kind = 7;
+                else if (fmt == 28 || fmt == 29) kind = 32;
+                else if (fmt == 87 || fmt == 91) { kind = 32; bgra = 1; }
+            }
+        } else if ((pf_flags & 0x40) && bits == 32) {
+            kind = 32;
+            bgra = rd32(hd + 92) == 0x00FF0000u;  /* red mask in the third byte: BGRA */
+        }
+        if (!kind) why = "unsupported DDS format (BC1, BC2, BC3, BC7 or 32-bit only)";
+        else if (!w || !h || w > 16384 || h > 16384) why = "bad size";
+    }
+    uint8_t* out = NULL;
+    if (!why) {
+        size_t bsz = kind == 1 ? 8 : 16;
+        uint32_t mips = rd32(hd + 28), caps = rd32(hd + 8);
+        if (!(caps & 0x20000) || mips < 1) mips = 1;  /* DDSD_MIPMAPCOUNT */
+        while ((w > TEXPACK_MAX || h > TEXPACK_MAX) && mips > 1) {  /* skip to a smaller stored level */
+            off += kind == 32 ? w * h * 4 : ((w + 3) / 4) * ((h + 3) / 4) * (uint32_t)bsz;
+            w = w > 1 ? w / 2 : 1;
+            h = h > 1 ? h / 2 : 1;
+            mips--;
+        }
+        uint32_t bw = (w + 3) / 4, bh = (h + 3) / 4;
+        size_t need = kind == 32 ? (size_t)w * h * 4 : (size_t)bw * bh * bsz;
+        uint8_t* data = malloc(need);
+        out = malloc((size_t)bw * 4 * bh * 4 * 4);
+        if (!data || !out) why = "out of memory";
+        else if (fseek(f, (long)off, SEEK_SET) != 0 || fread(data, 1, need, f) != need) why = "file is cut short";
+        else if (kind == 32) {
+            memcpy(out, data, need);
+            if (bgra)
+                for (size_t i = 0; i < need; i += 4) { uint8_t t = out[i]; out[i] = out[i + 2]; out[i + 2] = t; }
+        } else {
+            int pitch = (int)(bw * 4 * 4);  /* decoded into a 4-aligned picture, cropped below */
+            const uint8_t* b = data;
+            for (uint32_t by = 0; by < bh; by++)
+                for (uint32_t bx = 0; bx < bw; bx++, b += bsz) {
+                    uint8_t* dst = out + ((size_t)by * 4 * pitch) + bx * 16;
+                    if (kind == 1) bcdec_bc1(b, dst, pitch);
+                    else if (kind == 2) bcdec_bc2(b, dst, pitch);
+                    else if (kind == 3) bcdec_bc3(b, dst, pitch);
+                    else bcdec_bc7(b, dst, pitch);
+                }
+            if (bw * 4 != w)
+                for (uint32_t row = 1; row < h; row++) memmove(out + (size_t)row * w * 4, out + (size_t)row * pitch, (size_t)w * 4);
+        }
+        free(data);
+    }
+    fclose(f);
+    if (why) {
+        rt_log("[texpack] %s: can't read it (%s)", path, why);
+        free(out);
+        return NULL;
+    }
+    *ow = (int)w;
+    *oh = (int)h;
+    while (out && (*ow > TEXPACK_MAX || *oh > TEXPACK_MAX)) out = halve_rgba(out, ow, oh);
+    return out;
+}
+
 /* the pack's picture for this name (RGBA8, malloc'd; free with free()), or NULL */
 uint8_t* texpack_load(const char* name, int has_tlut, uint32_t* w, uint32_t* h) {
     Slot* s = find_slot(name);
@@ -220,12 +336,32 @@ uint8_t* texpack_load(const char* name, int has_tlut, uint32_t* w, uint32_t* h) 
             s = find_slot(wild);
         }
     }
+    if ((!s || !s->name) && strlen(name) < 200) {  /* a pack made with the other "_m" (mipmaps on/off): same texture */
+        char alt[256];
+        const char* m = strstr(name, "_m_");
+        if (m) snprintf(alt, sizeof alt, "%.*s%s", (int)(m - name), name, m + 2);
+        else {
+            const char* u = strchr(name + 5, '_');  /* after tex1_<w>x<h> */
+            if (!u) return NULL;
+            snprintf(alt, sizeof alt, "%.*s_m%s", (int)(u - name), name, u);
+        }
+        s = find_slot(alt);
+    }
     if (!s || !s->name) return NULL;
     int x, y, c;
-    uint8_t* px = stbi_load(s->path, &x, &y, &c, 4);
-    if (!px) {
-        rt_log("[texpack] %s: can't read it (%s)", s->path, stbi_failure_reason());
-        return NULL;
+    size_t pl = strlen(s->path);
+    uint8_t* px;
+    if (pl > 4 && (s->path[pl - 1] | 32) == 's' && (s->path[pl - 2] | 32) == 'd') {
+        px = load_dds(s->path, &x, &y);
+        if (!px) return NULL;
+    } else {
+        px = stbi_load(s->path, &x, &y, &c, 4);
+        if (!px) {
+            rt_log("[texpack] %s: can't read it (%s)", s->path, stbi_failure_reason());
+            return NULL;
+        }
+        while (px && (x > TEXPACK_MAX || y > TEXPACK_MAX)) px = halve_rgba(px, &x, &y);
+        if (!px) return NULL;
     }
     *w = (uint32_t)x;
     *h = (uint32_t)y;
