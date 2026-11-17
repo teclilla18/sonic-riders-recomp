@@ -1,6 +1,9 @@
 # Changelog
 
-## v0.8.6 (2026-11-16)
+## v0.8.6 (2026-11-16; Linux zip updated the same day)
+
+- **Linux zip update** (#30): if the setup's compiler check fails, zig's own error now goes into setup.log, and zig keeps
+  its cache in the setup's tools folder (a likely fix for a Steam Deck where it failed).
 
 - **HD texture packs in one click (PC and Switch).** Texture packs made for Dolphin now install from the
   launcher: press **Add texture pack...** and pick the pack you downloaded (`.zip`, `.7z`, `.rar` or a folder).

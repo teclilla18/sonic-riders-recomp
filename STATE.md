@@ -72,7 +72,8 @@ BC7 Dolphin pack (install 9 s, 1,074 textures, demo races 59.9 fps, 0 slow frame
 expected; the user is copying the full pack via hekate UMS), the installer's SD copy end to end, Android/iOS packs.
 Coverage of that pack on the original game: 145+ of 738 textures on the title + two demo races (pack made for a mod).
 Release notes say "largely untested, report issues". v0.8.5 (2026-11-16, tag cf5689a) had the rest of the old
-Unreleased list. Unreleased on main: nothing.
+Unreleased list. Linux zip replaced the same evening from 6e9e2e7 (#30: zig error text in setup.log, zig cache in the tools folder;
+tested in WSL, not on a Deck; reply posted on #30). Unreleased on main: nothing.
 **Easy-read guides** (every release links both): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install
 https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (asked the user whether it is public: no answer yet).
 iOS test devices signed until **2026-11-21**.
