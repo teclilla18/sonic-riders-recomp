@@ -72,7 +72,7 @@ BC7 Dolphin pack (install 9 s, 1,074 textures, demo races 59.9 fps, 0 slow frame
 expected; the user is copying the full pack via hekate UMS), the installer's SD copy end to end, Android/iOS packs.
 Coverage of that pack on the original game: 145+ of 738 textures on the title + two demo races (pack made for a mod).
 Release notes say "largely untested, report issues". v0.8.5 (2026-11-16, tag cf5689a) had the rest of the old
-Unreleased list. **Switch test (user, OLED handheld, overclocked profile, full 1 GB pack copied over hekate UMS, build e19f0dd):** works
+Unreleased list. **Switch test (user, OLED, mode and clocks not stated, full 1 GB pack copied over hekate UMS, build e19f0dd):** works
 (1,044 indexed, 512 replaced, all capped 512x512, no read errors, no crash, avg 58.1 fps) but **65 hitches from
 pack loading** (texture lookups 46-114 ms typical, worst 1.3 s, 7 s total; log in build/old/switch-texpack-20261116.log).
 Known issue added to the v0.8.6 notes + README. **User's decision: fix by Thursday 11-19** with background loading
