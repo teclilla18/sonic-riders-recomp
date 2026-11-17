@@ -1,4 +1,4 @@
-# UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
+# REGULAR UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
 > ☕ **Enjoying the port? [Support it on Ko-fi](https://ko-fi.com/teclilla18)**: every coffee helps keep updates coming.
 >
 > **Vote: what comes next?** Online play or custom characters and stages: [cast your vote in the poll](https://github.com/teclilla18/sonic-riders-recomp/discussions/26)
