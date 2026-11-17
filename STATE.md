@@ -1,4 +1,4 @@
-# State (2026-11-16)
+# State (2026-11-16, late)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -7,135 +7,88 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. 
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
 
-## 2026-11-16 (PC): README and Ko-fi, no code
+## Thursday 2026-11-19 release (user's plan): Switch texture-pack fix, auto stick-spin, iOS
 
-README: featured "Riders Plus" section under the intro (banner with the fixed hand, rules table, six 21:9 shots from
-the user's recorded PC race replayed at 3440x1440, redrawn charts); top banner cropped to 1529x600; Ko-fi line in
-the notice box + Ko-fi badge; repo Sponsor button on (user ticked Sponsorships) [confirmed, repo page]. S23 has the
-v0.8.4 release APK (built from the tag) [confirmed, adb install].
-Tip for README pictures: a recording made in a window that was 4:3 at start stores the 16:9 camera aspect; patch
-the k float at header +20 of the .rec to replay at 21:9 (race played the same), and capture with `SR_SHOTSTEP`
-(game frames), not `SR_SCREENSHOT` (presented frames run far ahead in a replay).
-
-## Current focus: online play (user, 2026-11-15; poll #26 ended 1-0 for online, user said "work on online")
-
-User's choices today: (1) slow consoles + **players keep their own settings online** first; (2) lobby: the
-recommended design (agreed): room codes (6 chars), a short public room list, host's rules on the room card,
-punch first + relay fallback, no accounts, Discord as the meeting place (Kiri235 offered to moderate); (3) phones later.
-User's lobby wish: an **Online tab in the in-game overlay** (all platforms) listing internet lobbies; join while the
-host is on stage/character select; late join into an open slot at character select. Design answer given (written up
-in docs/ONLINE.md "Lobby design"): no save states exist (every guest thread is a host thread), so joining = restart
-into the room + replay its input history at full speed ("catch-up"), then the new controller plugs in at an agreed
-frame. Long sessions on Switch/phones: the room restarts at the next stage select when someone waits (standings
-reset; WGP no late join). Nothing of this is implemented.
-
-- **Tested today [confirmed]** (docs/ONLINE.md, 2026-11-15 entries), 2P race route, 15,000 frames each, all
-  checksums equal: **PC-Switch** (OLED host, PC joins; PC 60 fps), **Switch-Switch** over Wi-Fi (OLED host, second
-  console joins; 42-60 fps, the second console's sys-clk profile is near stock: 1224/460/1600 handheld).
-- **Own screen shape per player** (protocol 4, 4873a73) [implemented, tested]: the room's camera = the wider screen
-  (joiner sends its shape in the hello), each machine draws its own shape (gx.vert `GX_XR_ASPECT` narrows the view).
-  PC both ways (9,000 / 6,600 frames, joiner's 4:3 picture = offline 4:3 frame) and Switch-Switch (16:9 host, 4:3
-  joiner, 12,000 frames). Not played by the user. Older builds can not join this one.
-- **The game's 30 fps mode is game state** [confirmed, PC, `SR_DET_SKIP=1`]: drawing at 30 vs 60 with the same inputs
-  diverges (racer speed differs by step 10000). So no per-player frame rate and no draw-skipping catch-up. Caveat:
-  tested with the mode on from boot, not switched mid-race.
-- **Next (approved by the user): the room-wide 30 fps switch** for slow consoles: every machine enters/leaves the
-  game's 30 fps mode at the same agreed frame (decided by the host from both machines' lateness, carried in the
-  lockstep stream). Then: host rules on the room card; gear-stat mods must be turned off for a session (today a joiner
-  with stat mods would desync); the lobby server (notes/online-research.md step 4).
-- Kept from before: two PCs over the LAN [confirmed]; launcher lobby (launcher/lobby.cpp) [tested by the user on two
-  PCs]; own view full screen [user played it]; online rules (`SR_ONLINE_RULES=1`); Android has the INTERNET
-  permission now (2a522a4; APK builds, not run on the phone). Not yet: WGP with the online rules, 3-4 players.
-
-## Launcher release notes (57dc4b7) [implemented, tested PC]
-
-Emoji (Segoe UI Emoji merged, one colour, `IMGUI_USE_WCHAR32`), pictures (JPEG/PNG via WIC, SVG via Direct2D +
-DirectWrite text), headings, bullets, clickable links on the Update page; the game's F1 notes drop emoji/pictures.
-Screenshots of v0.8.2 notes, the gear chart and live v0.8.4 notes (`SR_LAUNCHER_NOTES=<md>`). Not in a release yet.
-Side effect: launcher.cpp, update_core.h, launcher.md, AndroidManifest.xml.in are now LF in the index (were CRLF).
-
-## Roster expansion (paused for online)
-
-Design approved 2026-11-14 night, not started: docs/notes/roster.md "Recommended design" (8 race slots ids 17-24,
-base character per custom character, extra 2 x 8 Player Entry pages, portraits via texpack.c). Research and tools
-(load tracer `configure.py --trace-loads`) are in notes/roster.md.
+1. **Texture packs without freezes (Switch first)**: background loading. Today texpack_load (texpack.c) runs on the
+   game thread inside gx_texture.c's cache miss; on the OLED that froze 65 times (46-114 ms typical, worst 1.3 s,
+   7 s total) in one session with a 1 GB BC7 pack. Plan: on a miss, draw the game's own decoded texture now, queue
+   the pack file to a low-priority worker (read + bcdec + 512 cap), swap the cache entry's picture when ready
+   (gx_frame_retire for the old one). Verify: PC route with `SR_PERFTEST=1` + the pack (no `[hitch]` with
+   "lookups"), then the OLED with the full pack (the user copies it over hekate UMS; log on F: or FTP).
+   Baseline log: build/old/switch-texpack-20261116.log.
+2. **Auto stick-spin option** (user, 2026-11-15: "must be in the NEXT release"; off by default, Gameplay tab; #23;
+   notes/plans-2026-11.md "Auto air refill"). Not started. It missed v0.8.5 and v0.8.6 by the user's choice.
+3. **iOS zip**: notes and guides promised iOS "this Thursday" (last iOS zip v0.8.4). Built on the Mac from the tag.
 
 ## Releases
 
-**v0.8.6 released 2026-11-16 (evening)** (tag e19f0dd; PC, Switch, Android, Linux zips; cold Sandbox PC + Android
-PASS; v0.8.5 release deleted right after (tag kept), v0.8.2 is never deleted (user); no iOS zip: notes and guides say
-iOS comes Thursday 11-19, iOS points to v0.8.4). New in it: **HD texture packs in one click** (texpack.c DDS BC1/2/3/7
-via bcdec, `_arb`, other-`_m` fallback, Switch cap 512; launcher Mods page + Switch installer "Add texture pack...",
-Windows tar.exe unpacks zip/7z/rar; setup.ps1 copies mods\ to the SD card with robocopy). **Tested:** PC with a 1 GB
-BC7 Dolphin pack (install 9 s, 1,074 textures, demo races 59.9 fps, 0 slow frames); the user played PC ("I love it",
-**accepted** on PC). **Not tested:** Switch on hardware (only 15 textures sent by FTP, "very minimum textures load" as
-expected; the user is copying the full pack via hekate UMS), the installer's SD copy end to end, Android/iOS packs.
-Coverage of that pack on the original game: 145+ of 738 textures on the title + two demo races (pack made for a mod).
-Release notes say "largely untested, report issues". v0.8.5 (2026-11-16, tag cf5689a) had the rest of the old
-Unreleased list. **Switch test (user, OLED, mode and clocks not stated, full 1 GB pack copied over hekate UMS, build e19f0dd):** works
-(1,044 indexed, 512 replaced, all capped 512x512, no read errors, no crash, avg 58.1 fps) but **65 hitches from
-pack loading** (texture lookups 46-114 ms typical, worst 1.3 s, 7 s total; log in build/old/switch-texpack-20261116.log).
-Known issue added to the v0.8.6 notes + README. **User's decision: fix by Thursday 11-19** with background loading
-(draw the original, a worker thread reads + decodes the pack texture, swap when ready), console test before release.
-Linux zip replaced the same evening from 6e9e2e7 (#30: zig error text in setup.log, zig cache in the tools folder;
-tested in WSL, not on a Deck; reply posted on #30). Unreleased on main: nothing.
-**Easy-read guides** (every release links both): update https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install
-https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (asked the user whether it is public: no answer yet).
-iOS test devices signed until **2026-11-21**.
+**v0.8.6 released 2026-11-16** (tag e19f0dd; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS).
+**HD texture packs in one click**: texpack.c reads DDS (BC1/2/3/7 via bcdec, third_party/bcdec.h), `_arb` names, a
+pack with the other `_m` still matches, Switch caps pack textures at 512 (DDS: smaller stored level; PNG halved);
+launcher Mods page and Switch installer "Add texture pack..." (Windows tar.exe unpacks zip/7z/rar; GXEE8P folder ->
+mods/<name>/textures + mod.ini, on); setup.ps1 copies mods\ to the SD card (robocopy, changed files only).
+- PC: **accepted** (the user played it, "I love it"); tested with a 1 GB BC7 Dolphin pack (install 9 s, 1,074
+  textures; demo races 59.9 fps, 0 slow frames).
+- Switch (user, OLED, mode/clocks not stated, pack copied by hand): **works but freezes** (above); known issue in the
+  release notes and README. The installer's SD copy was not run end to end (robocopy step tested on its own).
+- Android / iOS packs: built, not tested. That pack (made for a mod) matched 145+ of 738 textures seen on the
+  title + two demo races; the rest is expected.
+- **Linux zip replaced** the same evening from 6e9e2e7 (#30: zig's error text into setup.log, zig cache in the tools
+  folder; tested in WSL, not on a Deck; reply posted on #30, waiting for HazeX2's new setup.log).
+**v0.8.5** (tag cf5689a; release deleted when v0.8.6 replaced it): Lv. 5 at 300, drift dash, own screen shape online,
+PNG screenshots (seen working on the Switch: shot_114157.png), launcher notes view, RVZ on Mac/Linux, stat-mod syntax.
+**Releases page rule:** 5 newest + **v0.8.2 forever** (user). **Easy-read guides** (bumped every release): update
+https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (iOS rows
+point to v0.8.4 until Thursday). iOS test devices signed until **2026-11-21**. Unreleased on main: nothing.
+Release lesson: push the tag yourself before `gh release create` (`--verify-tag`); otherwise gh tags remote main.
+
+## Online play (paused for the Thursday items; user chose it 2026-11-15)
+
+Lobby design agreed (docs/ONLINE.md "Lobby design"): room codes, short public list, host's rules on the room card,
+punch + relay fallback, no accounts, Discord; Online tab in the overlay; joining = restart + replay the room's input
+history ("catch-up"). Nothing of the lobby is implemented.
+- [confirmed] PC-Switch and Switch-Switch 2P races (15,000 frames, checksums equal); own screen shape per player
+  (protocol 4) tested PC both ways + Switch-Switch, not played by the user.
+- The game's 30 fps mode is game state [confirmed, PC]: no per-player frame rate.
+- **Next (approved): room-wide 30 fps switch** at an agreed frame; then host rules, stat mods off in sessions, the
+  lobby server (notes/online-research.md step 4).
+
+## Other open items, in priority order
+
+1. **Ready-made Android APK in a SEPARATE public repo** (user, 2026-11-16, "absolute next" before the texture work):
+   (1) CLAUDE.md rule 1 + check_no_game_data allow exactly this (APK only there, never here, never DX); (2) disc
+   picker into main (local branch `android-disc-picker`, 2394600, tested on the S23); (3) optional in-app RVZ
+   converter; (4) create the repo + release with notice; link from README. Standing rule: EVERY release advertises
+   that repo once it exists (v0.8.5/v0.8.6 could not: it doesn't exist yet).
+2. **Hold-B continuous boost** (Riders Plus; user 2026-11-16): holding B keeps boosting, air drained at the rate
+   repeated taps would cost (from the gear's boost air cost and length); High Booster (gear 10) keeps one-press.
+3. **#29** split-screen HUD shows Lv 3 at Lv. 4/5 (the 1P digits patch, game_levels.c, doesn't cover the
+   split-screen ring graphic). Cosmetic; in the v0.8.5/v0.8.6 notes as a known issue.
+4. **#23 Ayn Thor slowdown** (Kiri235): GPU-bound busy frames (Adreno 740, same as our S23) [likely our Android
+   renderer]; plan: reproduce on the S23 (ask before the heavy run), GPU A/B in render_vk.c, test APK to Kiri235.
+5. #30 waits for the reporter; #18 WGP freeze, #12, #24, custom music (#17), right-stick camera, #16.
+6. Roster expansion: design approved 2026-11-14 (docs/notes/roster.md), paused.
 
 ## Devices
 
-- OLED (switch-remote, 10.0.0.44): build 4873a73 as `sonicriders.nro` (the user's earlier one:
-  `sonicriders.user-20261115.nro`); env.txt = the user's; `env.online.txt` = host test env. Clocks handheld
-  1785 / 614 / 2133, docked 1785 / 1152 / 2133.
-- **Second Switch** (10.0.0.18, MCP `switch-remote-2`, sys-botbase + ftpsrv installed today, HOME tile installed by
-  the user): build 4873a73; previous `sonicriders.prev-20261115.nro`; `env.online.txt` = joiner test env. sys-clk
-  profile for this title: handheld 1224 / 460 / 1600.
+- OLED (switch-remote, 10.0.0.44): `sonicriders.nro` = v0.8.6 build e19f0dd; previous dev build
+  `sonicriders.dev-4873a73.nro`; user's `sonicriders.user-20261115.nro`; `mods/HDPackTest/` = the full test pack
+  (on in mods.ini: turn it off or remove it for non-texture tests). Clocks handheld 1785 / 614 / 2133, docked
+  1785 / 1152 / 2133. When the SD card is in the PC it is F:.
+- Second Switch (10.0.0.18, MCP `switch-remote-2`): build 4873a73; sys-clk handheld 1224 / 460 / 1600.
 - S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. Gaming laptop (10.0.0.89): online partner.
-
-## Open items, in priority order
-
-**ABSOLUTE NEXT (user, 2026-11-16): ready-made Android APK in a SEPARATE public repo** (option 3), so players
-without a PC can play; a takedown would hit that repo, not this one. Model: Unleashed Recompiled (SEGA; prebuilt
-builds on GitHub, players add their own game files). Steps: (1) update CLAUDE.md hard rule 1 + check_no_game_data
-to allow exactly this (APK only in the separate repo, never here; no ISO/assets; never DX); (2) bring the disc
-picker into main (local branch `android-disc-picker`, 2394600: DiscSetupActivity launcher, tested on the S23:
-copy SHA-1 = disc); (3) optional in-app RVZ converter (port tools/rvz2iso.py + zstd); (4) create the repo, release
-APK with a notice ("download only here; you need your own Sonic Riders USA disc image"); link it from this README.
-Standing rule (user): EVERY release (notes + README) advertises the Android repo with the ready-made app.
-
-**NEXT thing to work on (user, 2026-11-16): hold-B continuous boost** (Riders Plus). Tapping B boosts as now;
-**holding B keeps boosting** for as long as it is held, draining air at a fair, calculated rate for the hold time
-(derive it from the gear's own boost air cost and boost length, so a hold costs what repeated taps would).
-Exception: **High Booster** (gear 10, docs/notes/gear-stats.md; boost costs put it in the red after one boost,
-docs/local/gamefaqs-42167-advanced-gear-guide.txt) keeps the one-press boost only. Not started.
-
-**Must be in the NEXT release (user, 2026-11-15):** the **auto stick-spin** option (off by default, Gameplay tab;
-#23; notes/plans-2026-11.md "Auto air refill"). Not started.
-
-1. **Online**: room-wide 30 fps switch (next), then the items in "Current focus".
-2. **#23 Ayn Thor slowdown** (Kiri235): their 4:3 log (v0.8.2, 1x, Auto) shows CPU fine, GPU 11-17 ms in busy
-   frames (max 24), so Auto locks to 30; all shaders specialized, no pipeline hitches; 4:3 changed nothing (not pixel
-   cost). Same GPU as our S23 (Adreno 740, driver 802A4035 vs 802A4001) and an old S23 race log (v0.2.4) had similar
-   GPU times, so likely our Android renderer near its limit in busy scenes [likely]. User told Kiri235 we would
-   reproduce and fix on the S23 and send a test build. Plan: reproduce on the S23 (race with boosts, racers bunched;
-   ask before the heavy run), GPU A/B (vertex / fragment shader / the 4 EFB passes per frame with LOAD/STORE in
-   render_vk.c efb_begin), make the costly part cheaper, test APK to Kiri235. Logs: 0.zip on #23.
-3. Texture packs on Switch / Android / iOS (memory); update flow first real run at the next release.
-4. #18 WGP freeze, #12, #24 (Fedora not confirmed), custom music (#17), right-stick camera, #16.
+- PC `sr-main/mods/` holds the test pack ("super srdx hd texture pack v2 4k dds", on) and old test mods (off).
 
 ## Next hardware-test checklist
 
 Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
 
-- [ ] Room-wide 30 fps switch: OLED + second console (its near-stock profile triggers it), no desync, both switch together.
-- [ ] A Dolphin-format texture pack in `mods/<Mod>/textures/` on the SD card: replaced, memory OK, no hitches.
-- [ ] Switch PNG screenshots (#10): menu "Save screenshot" writes a PNG that opens.
+- [ ] Texture packs with background loading: full pack, a race on 3 stages; no `[hitch]` with "lookups"; memory OK.
+- [ ] Switch installer end to end: "Add texture pack..." + BUILD AND INSTALL copies mods/ to the SD card.
+- [ ] Room-wide 30 fps switch: OLED + second console, no desync, both switch together.
 - [ ] Stock clocks with three swapchain images: fps, no new judder.
 
 ## Studies and contacts (2026-11-15)
 
-- ShadowRecomp (FoxWorkshop, GPL-3.0, Xbox Shadow recomp) cloned at build/ext/ShadowRecomp: ideas only for our mod
-  manager (memory: shadowrecomp-study); build it once the user dumps their Xbox copy.
-- YouTube: BastianWolf80 (got a CTR track working with Claude) invited to help with custom stages via Discussions; if
-  they show up, write a "custom stages: what we know" discussion post.
+- ShadowRecomp (GPL-3.0, Xbox Shadow recomp) at build/ext/ShadowRecomp: ideas only for our mod manager.
+- BastianWolf80 (YouTube, custom CTR track) invited to Discussions for custom stages.

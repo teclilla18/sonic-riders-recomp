@@ -85,3 +85,13 @@ write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpa
 open `\.\X:`, FSCTL_LOCK_VOLUME (retried 20 x 0.5 s while Explorer lets go), FlushFileBuffers, FSCTL_DISMOUNT_VOLUME,
 IOCTL_STORAGE_MEDIA_REMOVAL (allow), IOCTL_STORAGE_EJECT_MEDIA (Microsoft KB165721), on a worker thread. Dismounted =
 safe even where the reader ignores the eject command. Tested on a USB card reader; not over hekate UMS.
+
+## Add texture pack (2026-11-16, v0.8.6)
+
+Mods page (and the Switch installer's "4. Texture packs (optional)"): `texpack_install` on a worker thread unpacks
+.zip/.7z/.rar with `%SystemRoot%\System32\tar.exe` (libarchive; 7z read checked on this PC's bsdtar 3.8.4) into
+mods\.unpacking, finds the GXEE8P folder (any depth; a 6-letter game ID folder for another game gives a plain
+message), moves it to mods\<file name, ASCII, max 40>	extures, copies the pack's top-level .txt files, writes
+mod.ini, then the UI thread reloads and saves mods.ini (pack on, at the bottom). setup.ps1 copies mods\ to
+/switch/sonicriders/mods/ with robocopy /E (skips .unpacking) on every Switch install/update with an SD card.
+Testing: `SR_LAUNCHER_ADDPACK=<archive or folder>` runs the install without a window and exits 0 on success.

@@ -1601,3 +1601,21 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   [likely]; user promised a fix + test build. ShadowRecomp cloned (build/ext). BastianWolf80 (YouTube, CTR track)
   invited to Discussions for custom stages.
 
+
+## 2026-11-16 (PC, evening): v0.8.5 and v0.8.6 (HD texture packs), Linux #30
+
+- **v0.8.5 released** [confirmed]: the old Unreleased list (Lv. 5 at 300, drift dash, own screen shape online, PNG
+  screenshots, launcher notes, RVZ Mac/Linux, mods syntax); auto stick-spin (#23) left out by the user's choice;
+  sandbox PC + Android PASS. `gh release create` without a pushed tag tagged remote main (the user's README edit);
+  the user force-moved the tag to cf5689a (the hook blocks force pushes for Claude). Lesson in build-and-test.md.
+- **Texture packs, one click (v0.8.6, same evening)**: the user's 1 GB Dolphin pack (made for a mod; CC BY-NC-ND,
+  never shipped) was BC7 DDS, which texpack.c could not read. Added DDS (bcdec), `_arb`, other-`_m` fallback, a Switch
+  512 cap; "Add texture pack..." in the launcher and the Switch installer (Windows tar.exe), setup.ps1 copies mods  to the SD card. PC: installs in 9 s, demo races 59.9 fps / 0 slow frames [confirmed]; the user played it
+  ("I love it"). Coverage measured with `SR_DUMPTEX_DOLPHIN` on the perftest route: 145 of 738 textures seen [confirmed].
+  Sandbox PC + Android PASS; v0.8.5 release deleted, v0.8.2 kept forever (user).
+- **Switch result** (user, OLED, pack copied over hekate UMS; mode/clocks not stated): 512 textures replaced, all
+  capped, no crash, avg 58.1 fps, but 65 freezes from loading (worst 1.3 s) [confirmed, log]. Known issue added to
+  the notes; background loading planned for Thursday 11-19.
+- **#30** (Steam Deck: "the downloaded zig compiler does not work"): the check hid zig's error; not the path with
+  spaces (reproduced fine in WSL). setup_linux.py now logs zig's error and keeps zig's cache in the tools folder
+  [tested in WSL; whether it fixes the Deck: uncertain]; Linux zip replaced on v0.8.6; reply posted.

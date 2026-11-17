@@ -25,6 +25,8 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Settings menu (ImGui) | menu.cpp (760) | `tab_display`, `tab_controls`, `quit_row`, `close_menu`, `overlay_input`, `overlay_pointer`, `overlay_image` |
 | Menu software rasterizer | menu_raster.cpp | |
 | Mods | mods.c, mods_data.c, game_mods.c | |
+| Texture packs (Dolphin names, PNG/DDS, Switch 512 cap) | texpack.c, called from gx_texture.c on a cache miss | `texpack_load`, `load_dds`, `texpack_name` |
+| Add texture pack (launcher + Switch installer) | launcher/launcher.cpp | `texpack_install`, `texpack_ui` |
 | Gear Lv. 4 / 5 (999 rings) | game_levels.c, config/GXEE8P/patches.txt | `lv_racer_update`, `lv_player_update`, `lv_hud_cell`, `lv_texture_decoded` |
 | Online / lockstep | netplay.c (600) | `SR_NET` |
 | Online lobby (launcher) | launcher/lobby.cpp (protocol), launcher.cpp `page_online`, `online_poll` | `SR_NET_NAME`, `SR_NET_PEER` |
