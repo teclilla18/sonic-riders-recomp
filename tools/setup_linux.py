@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import platform
+import shlex
 import shutil
 import stat
 import subprocess
@@ -304,6 +305,46 @@ def system_compiler():
     return None
 
 
+def zig_target(arch):
+    """Use Zig's bundled libc headers/startup files, with this machine's glibc ABI.
+
+    Native mode probes a system C compiler for libc development files. On SteamOS
+    that can fail with LibCStdLibHeaderNotFound even though runtime glibc is present.
+    An explicit GNU target avoids that probe; musl would not match system SDL2/GL.
+    """
+    if arch not in ("x86_64", "aarch64"):
+        fail("Unsupported Linux compiler architecture: %s" % arch)
+    try:
+        libc = os.confstr("CS_GNU_LIBC_VERSION") or ""
+    except (OSError, ValueError):
+        libc = ""
+    parts = libc.split()
+    version = parts[1].split(".") if len(parts) == 2 and parts[0] == "glibc" else []
+    if len(version) != 2 or not all(p.isdecimal() for p in version):
+        fail("Could not determine this system's glibc version.",
+             "The downloaded compiler needs a glibc-based Linux system (such as SteamOS). Attach setup.log to a report.")
+    return "%s-linux-gnu.%s" % (arch, parts[1])
+
+
+def write_zig_wrappers(zig, tools, arch):
+    target = zig_target(arch)
+    log("Zig target: %s (bundled development files, system glibc/SDL2/OpenGL)." % target)
+    # Ninja runs $cc/$cxx through the shell; keep the existing no-spaces tools rule.
+    wrap = os.path.join(tools, "zig-bin")
+    if " " in wrap:
+        fail("The tools folder must not contain spaces: %s" % tools, "Pass another one with --tools DIR.")
+    os.makedirs(wrap, exist_ok=True)
+    commands = []
+    for name, sub in (("zig-cc", "cc"), ("zig-c++", "c++")):
+        p = os.path.join(wrap, name)
+        with open(p, "w", newline="\n") as f:
+            f.write('#!/bin/sh\nexport ZIG_GLOBAL_CACHE_DIR=%s\nexec %s %s -target %s "$@"\n'
+                    % (shlex.quote(os.path.join(tools, "zig-cache")), shlex.quote(zig), sub, target))
+        os.chmod(p, 0o755)
+        commands.append(p)
+    return commands
+
+
 def static_cxx_runtime_works(cxx, tmp_dir=None):
     """configure.py links libstdc++ statically; Fedora-family systems (Nobara, Bazzite) need the separate
     libstdc++-static package for that. False when that link fails (the build then uses the shared one)."""
@@ -415,12 +456,16 @@ def main():
     ninja = os.path.join(ensure_tool(lx["ninja"][arch], tools), "ninja")
     imgui = ensure_tool(tc["imgui"], tools)
     conf_args = ["--imgui", imgui]
-    if not system_sdl_headers():
-        conf_args += ["--sdl", ensure_tool(lx["sdl2_headers"], tools)]
-        log("SDL2 headers: downloaded (the game uses the system's SDL2 library).")
     cc = None if a.compiler == "zig" else system_compiler()
     if a.compiler == "system" and not cc:
         fail("No working C/C++ compiler (clang or gcc) found.", "Install one, or run with --compiler auto to download zig.")
+    # Explicit-target Zig uses bundled libc headers and does not search the host's
+    # multiarch include directories. Debian/Ubuntu SDL_config.h redirects there;
+    # use our pinned portable SDL headers with Zig, even if system SDL.h exists.
+    # Only the headers are downloaded: configure.py still links system SDL2/GL.
+    if not cc or not system_sdl_headers():
+        conf_args += ["--sdl", ensure_tool(lx["sdl2_headers"], tools)]
+        log("SDL2 headers: downloaded (the game uses the system's SDL2 library).")
     if cc:
         log("Compiler: the system's %s / %s." % cc)
         conf_args += ["--cc", cc[0], "--cxx", cc[1]]
@@ -430,20 +475,9 @@ def main():
     else:
         zig = os.path.join(ensure_tool(lx["zig"][arch], tools), "zig")
         log("Compiler: zig (%s), no system compiler needed." % os.path.basename(os.path.dirname(zig)))
-        # wrappers: ninja runs "$cc ..." through the shell; a path with spaces would split
-        wrap = os.path.join(tools, "zig-bin")
-        os.makedirs(wrap, exist_ok=True)
-        for name, sub in (("zig-cc", "cc"), ("zig-c++", "c++")):
-            p = os.path.join(wrap, name)
-            with open(p, "w", newline="\n") as f:
-                # zig's cache in the tools folder, not ~/.cache (#30: zig failed on a Steam Deck)
-                f.write('#!/bin/sh\nexport ZIG_GLOBAL_CACHE_DIR="%s"\nexec "%s" %s "$@"\n'
-                        % (os.path.join(tools, "zig-cache"), zig, sub))
-            os.chmod(p, 0o755)
-        if " " in wrap:
-            fail("The tools folder must not contain spaces: %s" % tools, "Pass another one with --tools DIR.")
-        conf_args += ["--cc", os.path.join(wrap, "zig-cc"), "--cxx", os.path.join(wrap, "zig-c++")]
-        if not compiler_works([os.path.join(wrap, "zig-c++")]):
+        zig_cc, zig_cxx = write_zig_wrappers(zig, tools, arch)
+        conf_args += ["--cc", zig_cc, "--cxx", zig_cxx]
+        if not compiler_works([zig_cxx]):
             for line in compiler_works.last_error.splitlines()[-25:]:  # zig's own words, for the bug report
                 log("  zig: " + line)
             fail("The downloaded zig compiler does not work on this system.", "Report it with setup.log attached.")
