@@ -35,8 +35,9 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 - **Separate investigation:** Green Cave/Tails post-race loading stall keeps drawing near60fps;
   no GPU block/device loss evidenced. Consistent with #6; exact cause unproven without watchdog
   state. Evidence/provenance: docs/notes/loading-hang.md. No speculative loader changes.
-- User authorizes replacing only the existing v0.8.6 Android source/setup ZIP after cold tests;
-  validation/publication pending. Keep tag/other assets/main unchanged; no issue closure/replies.
+- **Released:** existing v0.8.6 Android source/setup ZIP updated from faab3dd4 (runtime90868613).
+  Cold PC/Android installs pass in normal/space paths; downloaded public asset SHA-256 verified.
+  Tag/other assets/main unchanged by this task; no issue closure/replies.
   Real iOS/MoltenVK, real GPU reset, exhaustive overlap/stages/long sessions remain unproven.
 - Separate pacing audit **tested [confirmed]**: matched-capture runs used SR_DETCLOCK, which
   intentionally bypasses adaptive pacing. Normal Auto at 2x/effects keeps 59.94-59.95 steps/s:
@@ -79,7 +80,7 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
   Installer SD copy not tested end to end. Android/iOS packs not device-validated.
 - Linux #30 setup fix committed at 1235bc4; reporter confirmed Steam Deck build/launch, issue closed.
 - Keep 5 newest releases plus v0.8.2 forever. Update easy-read guides at actual releases;
-  iOS signatures expire 2026-11-21. No release publishing from this experimental task.
+  iOS signatures expire 2026-11-21. Android-only v0.8.6 update published with user authorization.
 
 ## Online (paused for Thursday work)
 
@@ -92,7 +93,6 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
 ## Next checks
 
-- Complete authorized v0.8.6 Android asset update after cold PC/Android setup checks.
 - Investigate #6 separately using preserved Green Cave log plus a watchdog reproduction;
   exact historical CRI/DI signature is unconfirmed. Keep #32/#6 open and source branch unmerged.
 - Real Mac/iOS/MoltenVK build/test before integrating/releasing shared renderer changes.

@@ -235,3 +235,25 @@ update only the existing v0.8.6 Android source/setup ZIP after cold setup checks
 The runtime remains the tested 90868613 implementation; this follow-up changes
 documentation only. No new tag, main merge, other platform asset replacement,
 issue closure or external issue reply is authorized. Real MoltenVK remains untested.
+
+
+### Publication result
+
+**Released, 2026-11-18:** replaced only
+[`SonicRiders-Android-Setup-v0.8.6.zip`](https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6/SonicRiders-Android-Setup-v0.8.6.zip)
+on existing v0.8.6. Package source faab3dd4, runtime implementation 90868613,
+249 entries, 8,210,435 bytes. SHA-256:
+`fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e`.
+
+User-approved cold Windows Sandbox tests pass for PC (90868613 implementation)
+and the exact Android ZIP (faab3dd4, documentation-only follow-up), both standard
+and space-containing install paths. Fresh downloads, mark-of-the-web extraction,
+exit 0 and expected executable/APK existence confirmed. These are setup/build
+checks; gameplay validation is the earlier S23 and reporter evidence above.
+
+The published Android ZIP was downloaded and hash-verified. Original release notes
+were preserved and an Android update/source/checksum/known-hang section appended.
+The v0.8.6 tag, release identity and PC/Switch/Linux asset IDs/digests are unchanged.
+No main merge, new tag, public APK, issue reply or closure. Original Android asset
+and before/after publication audits remain backed up locally. Newer documentation
+commits do not require repackaging this verified runtime/source artifact.

@@ -1688,3 +1688,10 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Green Cave/Tails completes race then stalls on loading for~130s while four-draw frames and simulation stay~59.9/s,GPU~7ms,renderwait0.04-0.05ms,disc54MB/0furthercompletions. No Vulkanerror/device-loss/GPUblock evidenced [confirmed]. Separate guestloading/game-state progress failure likely; exact#6CRI/DI signature uncertain without watchdog/IRQ/threads. No speculativefix; disc/scheduler/OS/frame_pacing source unchanged by#32.
 - Preserved both raw logs locally with hashes/provenance; docs/notes/loading-hang.md links original attachments and compares historical PC/Eden CRI/filetail/loader-resume research. Keep#6open for a targeted watchdog reproduction.
 - User conditionally authorizes existingv0.8.6Android asset update and explicitly authorizes cold PC/Android Sandbox checks. Source/setup ZIP only; tag/main/otherplatformassets/issues remain unchanged. Publication results follow separately.
+
+
+## 2026-11-18: v0.8.6 Android-only release asset updated (#32)
+
+- After reporter verification and explicit Sandbox permission, cold PC/Android setups PASS both normal and space paths (fresh downloads, exit0, expected EXE/APK). PCsource90868613; exactAndroidZIPfaab3dd4 differs only in verification docs, runtime unchanged [confirmed].
+- Replaced only SonicRiders-Android-Setup-v0.8.6.zip on existingv0.8.6:249entries,8210435bytes,SHA256fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e. Downloaded public asset matches hash [confirmed]. Original releasebody preserved; appended Android fix/source/checksum and separate#6 knownhang note. Tag/releaseidentity/otherassetIDsanddigests unchanged; originalAndroidasset retained locally for rollback.
+- No main merge,newtag,APKupload,issuecommentorclosure. Branch-only docs and excluded canonical handoff updated; raw Mali logs remain local with immutable hashes/provenance. Green Cave exactcause and realMoltenVK remain unproven; no speculative loader fix shipped.
