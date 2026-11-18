@@ -1725,3 +1725,12 @@ FIFO/backgroundwriter, retain explicitflush/stopbarriers and dropvisibility.
 Queue/regression/platform/artifact checks pass; hardware cleanup/behaviorpending.
 PCMvoicesstop/recycle, mono resumes/laterstops withoutbigstutter; music/announcer
 rootcause not established. No decoderfix or releaseZIPchanges.
+
+
+## 2026-11-18: prioritize Alpha1 publication readiness
+
+User selected tested c8c06fdda996/fa2ec57 baseline including scheduler and
+asynchronous logging fixes. Latesttwo races noselectfreeze; temporary stalls/
+distortion and audio dropouts remainknownissues. Logs preserved withoutanalysis.
+Stop furtherdebugging; package Switch2only with default2x/60/noexitlimit and
+disabledlivechanges, audit and finalcoldSandbox, prepare forapproval.

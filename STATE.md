@@ -1,30 +1,27 @@
-# Experimental native logging-stall fix (2026-11-18)
+# Switch 2 Alpha 1 final publication candidate (2026-11-18)
 
-Branchcodex/switch2-stall-diag; release64e8316 ZIP unchanged, sixrace scheduler
-checkpoint5db73f5 preserved. Subsequenttests still noselectionfreezes; notproof
-permanentelimination. Keep2x/livechangesdisabled/frames0 and alluserdata.
+User priority: playable alpha released ASAP, not bug-free. STOP optional fixes,
+features, optimization and extensive diagnostics. No publication before approval.
+Branch codex/switch2-alpha1-final from tested fa2ec57/c8c06fdda996. Runtime/config
+must match that baseline exactly. Experimental branches/checkpoints preserved.
 
-3e551results/menu stutterconfirmedsharedlogwrite/flush:118/817/982/4162ms
-heartbeat stalls correlate matchinglogIOduration, pads/overlay/applets0ms.
-PCMstereo stops/reuses; mono laterrecoversandstopswithoutbigstutter. Logging
-fixdoesnotestablishmusic/announcerrootcause; no decoder/forcedrestartfix.
-Evidence build/alpha/audio3e551-hw1/focused-analysis.md +allrawlogs.
+Hardware: scheduler wakeup fix plus bounded asynchronous logger tested across
+consecutive races without selectionfreeze; permanent elimination not claimed.
+Latest2races: first two temporary stalls/recoverable distortion, second otherwise
+flawless/minor selection audio glitch. Logs preserved build/alpha/logfix-c8c06-latest
+ONLY; no investigation. Known intermittent stutter, music/announcer dropout,
+temporary distortion and startup/cache-save hitches remain documented.
 
-Implementednativeboundedroutine-logqueue with nonblockingproducer(dropful/
-contention), FIFOwriter awayguest/rendercores. Writeroutlivesmanagedworkers;
-checkpoint/fatal/shutdownflushbarrierspreserveacceptedrecordorder. Persistent
-logsretain backgroundIOtiming and visible drops. No SDIO underqueuelock.
-Loggingmaydropdiagnosticrecords underpressure ratherthanblockgameplay.
+Fresh2x/60fps/no automatic exit, live resolution controls disabled. Preserve
+settings, ISO, saves and caches. HigherFPS remains separate/excluded. Runtime
+unchanged; update release notes/metadata/audit to latest tested baseline.
 
-Buildc8c06fdda996 bytes29468857 SHA
-1a9fc3aa7ad2f072eeac4d6a10110c17c6617c8f6611084f4b97352d9af992a2.
-LocalqueueFIFO/capacity/wrap/truncation/seqtestsPASS; schedulerregressionPASS;
-originalSwitchpreprocessing/AndroidsyntaxPASS; nativeartifactsource/linkPASS.
-Hardwareacceptancepending includingflush/cleanshutdown. Deploymentstatus recorded
-in AIhandoff/build/switch2/logfix-deployment.json. Neverclaimmusicfixedyet.
-
-Nexthardware: results/menu same route, characterselect/back; announcerrecovery
-andlaterloss. Report stutter/audioeventtimes. Quitnormallyandreturnlogs. Lookfor
-[log2-queue]startupenabled anddrops, backgroundlogIOslow vs inputpumpfast,
-PCMreuse/gueststreamstate. If writerfallbacklog appears, reportit. Testreturnto
-hbmenu/relaunch. No releaseZIPregeneration/coldtest/publication beforeapproval.
+Regenerate ONLY Switch2 setup ZIP using tools/make_release.py from clean guarded
+source; audit every entry with tools/audit_switch2_release.py, exact runtime
+fa2ec57 comparison. Final cold Sandbox --flavor switch2 --space, no --cache,
+GUI thenCLI through exactZIP/MOTW/Explorer, ownISO readonly, results-only writable.
+Existing approval covers validation/retest; minimized established workflow.
+Record exact sourcecommit/size/checksum/results in final handoff/candidate record.
+Do not repeat prior research or optional tests. No other platform packages,
+stable-release changes, push/merge/remote tag/upload/announcement before approval.
+Easy-read public artifact republish needs external access; local guides updated.

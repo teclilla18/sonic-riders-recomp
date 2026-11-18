@@ -47,17 +47,13 @@ def audit(path):
             if n=='release-metadata.json':
                 meta=json.loads(data); assert meta['source_commit']==commit and not meta['higher_fps_included']
         assert actual==expected, ('Unexpected/missing entries',actual^expected)
-    # Runtime/config/shaders must remain byte-identical to accepted source.
-    # Exact reviewed Alpha1 stability patch; every other runtime/config file stays accepted.
-    approved = {'runtime/src/settings.c': '7925aea0e5175a60413b9cce2a97edda600cdccf52e8c13c59754e9deeb5f595', 'runtime/src/menu.cpp': '7d44bf7a81bf7f824e2a00f279a417ed7d158a5d8e72cbe3d8cc64b9a3f1618d'}
-    changed=set(git('diff','--name-only','f05fd81','HEAD','--','runtime','config').decode().splitlines())
-    assert changed == set(approved), 'Unexpected runtime/config changes'
-    for name, expected in approved.items():
-        assert hashlib.sha256(git('show','HEAD:'+name)).hexdigest() == expected, 'Unreviewed runtime change: '+name
+    # Runtime/config/shaders must exactly match the user-selected tested alpha baseline.
+    baseline = 'fa2ec57f1fb7feebc470377652fcf02f386b6f33'
+    assert not git('diff',baseline,'HEAD','--','runtime','config').strip(), 'Runtime/config differs from tested c8c06fdda996 source'
     checksum=hashlib.sha256(Path(path).read_bytes()).hexdigest()
     assert (Path(str(path)+'.sha256')).read_text().split()[0]==checksum
     report={'source_commit':commit,'zip':Path(path).name,'bytes':Path(path).stat().st_size,'sha256':checksum,
-            'files':len(names),'runtime_baseline':'f05fd81','audit':'PASS'}
+            'files':len(names),'runtime_baseline':baseline,'audit':'PASS'}
     print(json.dumps(report,indent=2))
     return report
 if __name__=='__main__':

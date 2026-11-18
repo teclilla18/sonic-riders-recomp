@@ -2,10 +2,17 @@
 
 ## v0.8.6-switch2-alpha.1 (experimental candidate; not published)
 
+- Final baseline is hardware-tested c8c06fdda996/fa2ec57, retaining scheduler
+  wakeup and asynchronous native logging fixes. Fresh defaults: 2x, 60 FPS,
+  no automatic exit; live resolution changes disabled.
+- Known issues: intermittent stutters/temporary freezes, music/announcer
+  dropout and temporary audio distortion. Playable alpha, not bug-free.
+  No further optional fixes before this release.
+
 - First dedicated native Switch 2 setup ZIP, using the existing GUI/PowerShell
   installer and pinned toolchain. Local own-disc compilation, isolated SD path,
   manual-transfer layout and preservation of saves/settings/caches.
-- Runtime source is the accepted f05fd81/7d1bc5fcd419 baseline. No higher-FPS
+- Runtime source is the tested fa2ec57/c8c06fdda996 baseline. No higher-FPS
   interpolation; its Player Entry freeze is preserved for separate investigation.
 - Manual exit/no time cap by default; persistent runtime/lifecycle diagnostics.
   Startup/cache-save hitches remain known. Hardware acceptance covers one
@@ -590,6 +597,3 @@ distributed.
   screenshots (see NOTES.md).
 - Guard against game data and personal details in git: pre-commit hook and GitHub Actions
   (`tools/check_no_game_data.py`), also used by `tools/make_release.py`.
-
-
-Switch 2 Alpha1: fresh default2x; live resolution changes disabled exclusively on Switch2. Existing saved choices retained. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Live2x->1x permanently froze overlay while gameplay continued; underlying cause unconfirmed. Super Sonic race entry succeeded on accepted7d1bc5fcd419. Cold GUI/CLI/space testing passed for prior candidate7517958; final restricted candidate requires a new cold validation.

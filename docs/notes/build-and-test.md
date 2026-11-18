@@ -99,7 +99,7 @@ only for an RVZ. Test images: `DolphinTool convert -f rvz -c zstd -b 131072 -l 5
 
 **Switch 2 Alpha 1:** use `tools/make_release.py --flavor switch2 --version v0.8.6-switch2-alpha.1`
 from the clean isolated alpha branch. It creates SonicRiders-Switch2-Setup-Alpha1.zip,
-.sha256, SOURCE_COMMIT and release-metadata.json. Runtime/config must match f05fd81.
+.sha256, SOURCE_COMMIT and release-metadata.json. Runtime/config must match fa2ec57 (hardware-tested c8c06fdda996 baseline).
 Run `tools/audit_switch2_release.py <zip>` over every ZIP entry. Then ASK before
 `tools/sandbox_test.py --flavor switch2 --zip <zip> --iso <own image> --space --launch`.
 No --cache for final validation. First install uses the existing GUI automation,

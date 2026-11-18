@@ -6,7 +6,7 @@ No compiled game or Nintendo/SEGA game data is distributed.
 
 ## What has been tested
 
-Runtime baseline: checkpoint `f05fd81`, accepted build `7d1bc5fcd419`.
+Runtime baseline: checkpoint `fa2ec57`, hardware-tested build `c8c06fdda996`, including the scheduler wakeup and bounded asynchronous logging fixes.
 One physical Switch 2: firmware23.0.1, kaiHEN20261117.1 launched through Seedsow,
 native-game hold-R Homebrew Menu flow, OunceShell installed. These environment
 details are the tester's report, not a promise for other setups or firmware.
@@ -20,7 +20,7 @@ building only; they cannot establish physical Switch 2 functionality.
 Higher-FPS interpolation is excluded. Its separate experimental build froze at
 Player Entry after selecting Sonic with Chaos Emerald gear (user report). It is
 preserved separately for investigation. Alpha uses the accepted renderer.
-Startup/loading can hitch for several seconds; logs identified synchronous
+Known issues: intermittent stuttering or temporary freezes, music/announcer dropout, temporary audio distortion and minor selection audio glitches. Relaunching has restored missing music in tests; not all symptoms are fixed. Recent two-race test had no selection freeze: first race had two temporary stalls and recoverable distortion, second was otherwise flawless. Further fixes are deferred after Alpha 1. Startup/loading can hitch for several seconds; logs identified synchronous
 pipeline-cache saving. Do not delete caches as a routine update step.
 
 ## Install on Windows
@@ -110,6 +110,3 @@ requires a genuinely cold Windows Sandbox run of the exact ZIP, GUI and CLI,
 including the existing --space workflow. Preserve RESULT.txt, progress.txt and
 setup logs locally. Source commit/dependency metadata and ZIP SHA-256 accompany
 the candidate. No tag, push, release upload or announcement before approval.
-
-
-Switch 2 Alpha1: fresh default2x; live resolution changes disabled exclusively on Switch2. Existing saved choices retained. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Live2x->1x permanently froze overlay while gameplay continued; underlying cause unconfirmed. Super Sonic race entry succeeded on accepted7d1bc5fcd419. Cold GUI/CLI/space testing passed for prior candidate7517958; final restricted candidate requires a new cold validation.
