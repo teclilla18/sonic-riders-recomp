@@ -1667,3 +1667,11 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   ZIP audit and exact cold GUI/CLI/space test are mandatory candidate gates;
   precise results/checksum/source commit recorded locally before approval.
   Physical acceptance remains baseline-only; no release publication yet.
+
+
+## 2026-11-18: isolated native stall diagnostics
+
+No confirmed freeze fix. Existing native no-op profiler omitted originalSwitch
+stall dump. Reuse that monitor with bounded reports and native worker-wait and
+render-queue observations; no timing/rate/resource policy changes or FPS work.
+Validated release ZIP unchanged; physical diagnosis pending.

@@ -24,6 +24,10 @@ typedef struct {
     int (*fn)(void*);
     void* arg;
     _Atomic int exited;
+    _Atomic unsigned wait_kind; /* 0=running/other, 1=sleep, 2=condition */
+    _Atomic uintptr_t wait_object;
+    _Atomic uint64_t wait_since;
+    _Atomic unsigned wait_count;
 } Worker;
 static Worker* g_workers[WORKERS];
 static unsigned g_nworkers;
@@ -142,13 +146,24 @@ void switch2_thread_checkpoint(void) {
         threadExit();
     }
 }
+static void worker_wait(unsigned kind, const void* object) {
+    if (!g_self) return;
+    if (kind) {
+        atomic_store(&g_self->wait_object, (uintptr_t)object);
+        atomic_store(&g_self->wait_since, platform_now_ns());
+        atomic_fetch_add(&g_self->wait_count, 1);
+    }
+    atomic_store(&g_self->wait_kind, kind);
+}
 void platform_sleep_ns(uint64_t ns) {
+    worker_wait(1, NULL);
     while (ns) {
         switch2_thread_checkpoint();
         uint64_t slice = ns < 10000000 ? ns : 10000000;
         svcSleepThread((s64)slice);
         ns -= slice;
     }
+    worker_wait(0, NULL);
     switch2_thread_checkpoint();
 }
 void platform_local_time(int* y, int* m, int* d, int* h, int* min, int* s) {
@@ -230,9 +245,11 @@ static int wait_cond(pthread_cond_t* cond, pthread_mutex_t* mutex, const struct 
         if (slice.tv_nsec >= 1000000000) { slice.tv_sec++; slice.tv_nsec -= 1000000000; }
         int final = deadline && (deadline->tv_sec < slice.tv_sec || (deadline->tv_sec == slice.tv_sec && deadline->tv_nsec <= slice.tv_nsec));
         if (final) slice = *deadline;
+        /* Preserve original logical wait age across the 50ms shutdown slices. */
+        if (atomic_load(&g_self->wait_kind) != 2) worker_wait(2, cond);
         int rc = __real_pthread_cond_timedwait(cond, mutex, &slice);
         if (g_self && switch2_stopping()) { pthread_mutex_unlock(mutex); switch2_thread_checkpoint(); }
-        if (rc != ETIMEDOUT || final) return rc;
+        if (rc != ETIMEDOUT || final) { worker_wait(0, NULL); return rc; }
     }
 }
 int __wrap_pthread_cond_wait(pthread_cond_t* c, pthread_mutex_t* m) { return wait_cond(c, m, NULL); }
@@ -318,6 +335,57 @@ void switch2_shutdown(void) {
     switch2_checkpoint("PRE_LIBC_SHUTDOWN_COMPLETE; awaiting filesystem EXIT_HOOK and tester hbmenu confirmation");
 }
 void profile_register_thread(void) {}
-void profile_start(void) { rt_log("[switch2] sampling profiler not enabled during initial bring-up"); }
+/* Adapt the original Switch stall monitor, without enabling per-entry tracing
+ * or exiting the app. Only dump after eight focused seconds without GX frames.
+ * Nonblocking worker snapshot avoids acquiring a possibly stalled runtime lock. */
+void sched_dump(void);
+void mmio_dump(void);
+unsigned long long gx_frames_presented(void);
+static int stall_thread(void* arg) {
+    (void)arg;
+    rt_thread_pin(3);
+    unsigned long long last = gx_frames_presented();
+    unsigned still = 0;
+    int reported = 0;
+    for (;;) {
+        platform_sleep_ns(1000000000ULL);
+        unsigned long long frames = gx_frames_presented();
+        if (frames != last || appletGetFocusState() != AppletFocusState_InFocus) {
+            if (reported && frames != last) rt_log("[stall2] recovered after %u samples, frame %llu", still, frames);
+            last = frames; still = 0; reported = 0;
+            continue;
+        }
+        ++still;
+        if (still < 8 || (reported && still != 16)) continue;
+        reported = 1;
+        rt_log("[stall2] no GX progress for %u samples frame=%llu retrace=%u guest_fn=%08X lr=%08X ns=%llu; observational snapshot",
+               still, frames, vi_field_count(), g_ppc_cur_fn, g_ppc_cur_lr, (unsigned long long)platform_now_ns());
+        fflush(stderr);
+        if (mutexTryLock(&g_workers_lock)) {
+            for (unsigned i = 0; i < g_nworkers; i++) {
+                Worker* w = g_workers[i];
+                if (!w) continue;
+                unsigned kind = atomic_load(&w->wait_kind);
+                uint64_t since = atomic_load(&w->wait_since), now = platform_now_ns();
+                rt_log("[stall2] worker%u fn=%p exited=%d wait=%u object=%p age_ms=%llu waits=%u", i, (void*)w->fn,
+                       atomic_load(&w->exited), kind, (void*)atomic_load(&w->wait_object),
+                       (unsigned long long)(kind && now >= since ? (now-since)/1000000 : 0), atomic_load(&w->wait_count));
+            }
+            mutexUnlock(&g_workers_lock);
+        } else rt_log("[stall2] worker registry busy (not blocked for dump)");
+        fflush(stderr);
+        /* Existing best-effort dump is intentionally unlocked, just as on
+         * Switch1. Scheduler state may change during a snapshot. */
+        mmio_dump();
+        sched_dump();
+        rt_log("[stall2] snapshot complete");
+        fflush(stderr);
+    }
+    return 0;
+}
+void profile_start(void) {
+    rt_log("[stall2] experimental no-progress diagnostics: 8s/16s samples; no guest trace or forced exit");
+    rt_thread_start(stall_thread, NULL);
+}
 void profile_dump(void) {}
 void platform_sample_threads(void) {}

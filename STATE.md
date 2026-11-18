@@ -1,3 +1,32 @@
+# Experimental Switch 2 stall diagnostics (2026-11-18)
+
+Branch codex/switch2-stall-diag starts at validated64e8316. Alpha release branch,
+ZIP/checksums, accepted f05fd81 and FPSb381e54 checkpoints remain preserved.
+No publication or release ZIP regeneration until hardware acceptance.
+
+Implemented: native stall monitor adapted from originalSwitch, with focused
+no-GX-progress snapshots at8/16samples, recovery logging, guest fn/lr, existing
+scheduler/MMIO/DVD/DSP/IRQ dumps, nonblocking render queue and native worker
+sleep/condvar wait ages/objects/counts. No full guest trace/forced exit or fixes.
+Snapshot state is observational, not a synchronized proof of causality; long
+loads may trigger it too. Thread0=running/other does not prove executing CPU.
+
+Evidence: build80f7b92ba6c3 freezes intermittently at1.5x/2x with regular Sonic
+and SuperSonic, including samegear immediately after successful full race.
+A reaches SI then perf/audio/render summaries cease, HID continues. No explicit
+fatal/device loss. Music-only dropout is separate; transport counters alone do
+not diagnose guest music stream. Startup cache save remains lower priority.
+
+Local platform compatibility checks pass (originalSwitch preprocess unchanged,
+Android Vulkan syntax, SDK C11 interposition). Native build/hardware test result
+is recorded in AI handoff; no native emulator substitute. Console1.5x/frames0
+and active release NRO are preserved; experimental NRO uses separate filename.
+Next: repeat selection/race/return/selection on physical hardware. After freeze,
+wait20seconds with focus before HOME-close and FTP logs. Compare stall2 snapshots
+for guest wait/queue/IRQ/DVD state; do not infer issue18 equivalence prematurely.
+
+## Preserved release checkpoint (historical)
+
 # Switch 2 Alpha 1 release candidate (2026-11-17)
 
 Isolated branch codex/switch2-alpha1, based on accepted f05fd81.

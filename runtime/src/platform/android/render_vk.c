@@ -2205,7 +2205,16 @@ static int g_nfree;
 static GxFrame* g_pending;
 static volatile int g_quit;
 
-void render_dump(void) {}
+void render_dump(void) {
+#ifdef __SWITCH2__
+    /* Try only: dumping must not wait on a lock implicated in the stall. */
+    if (mtx_trylock(&g_lock) == thrd_success) {
+        rt_log("[stall2-render] pending=%p free=%d quit=%d done=%u presented=%u slot=%u lost=%d swap_bad=%d",
+               (void*)g_pending, g_nfree, g_quit, g_frames_done, g_presented, g_slot, g_lost, g_swap_bad);
+        mtx_unlock(&g_lock);
+    } else rt_log("[stall2-render] frame queue lock busy");
+#endif
+}
 
 GxFrame* render_take_free_frame(void) {
     mtx_lock(&g_lock);
