@@ -31,3 +31,5 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 Kinds: **Reference** = maintained, current; **Historical** = true when written, "current" / "next" in it meant then;
 **Investigation** = analysis of a problem and its evidence limits; **Draft** = design or research, not evidence of
 implementation. When a note is superseded, move it to `docs/archive/` with `git mv` and fix the links here.
+
+- [Switch 2 technical handoff](notes/switch2-handoff.md): architecture, native fixes, regression evidence, release validation and remaining work.

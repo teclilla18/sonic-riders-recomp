@@ -1631,3 +1631,11 @@ No runtime merge, rebuild, or release asset changes.
 Headless Edge checks passed six-tab navigation and mouse/keyboard checklist toggles
 in both guides; original platform panels, supplied artwork bytes and exact announcement
 verified, with game-data audit clean [confirmed].
+
+## 2026-11-18: final Alpha 1 presentation and continuity
+
+Player-facing release description prepared with unchanged prior technical information
+in a collapsed section. Shared agent rules and native architecture/fix/test/release
+handoff consolidated; no runtime changes, bug investigation or builds. Thirteen-race
+regression evidence is promising, not proof of permanent freeze elimination. External
+Claude Artifact republication remains pending. Release assets/tag/stable stay unchanged.

@@ -7,6 +7,14 @@ Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. 
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
 
+## Final Switch 2 continuity
+
+- [Technical handoff](docs/notes/switch2-handoff.md) records architecture, fixes,
+  hardware evidence, release validation, rollback points and unresolved issues.
+- Shared Codex/Claude workflow is explicit in AGENTS.md. No runtime changes or builds.
+- Alpha release body uses the player announcement with old technical details collapsed.
+- External install/update Claude Artifacts still need republication and verification.
+
 ## Switch 2 Alpha 1 public announcement
 
 - **Released:** v0.8.6-switch2-alpha.1 is a separate experimental pre-release;
