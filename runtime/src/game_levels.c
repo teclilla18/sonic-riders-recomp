@@ -39,6 +39,13 @@ extern volatile int g_ring_cap;
 static const float k_top[3]   = {1.0f, 200.0f / 180.0f, 215.0f / 180.0f};
 static const float k_boost[3] = {1.0f, 1.10f, 1.20f};
 static const float k_drift[3] = {1.0f, 1.10f, 1.25f};
+/* Super only, Riders Plus on: target top/drift/boost from the unmodified 182/100/250 live baseline.
+ * Ratios preserve stat mods; always multiply the captured unscaled field, including the Base tier. */
+static const float k_super[3][3] = {
+    {195.0f / 182.0f, 220.0f / 182.0f, 240.0f / 182.0f},
+    {110.0f / 100.0f, 125.0f / 100.0f, 140.0f / 100.0f},
+    {270.0f / 250.0f, 300.0f / 250.0f, 330.0f / 250.0f},
+};
 
 #define BLK3 0x94Cu  /* the third (Lv. 3) stat block */
 #define OFF_TOP 0x08u
@@ -52,6 +59,7 @@ typedef struct {
     uint32_t wrote[3];           /* what was written, to notice the game rebuilding the block */
     uint32_t block, identity;
     int valid;
+    int applied;                 /* owned writes, including Super's balanced Base tier (ext == 0) */
 } LvRacer;
 static LvRacer g_lv[8];
 static const uint32_t k_off[3] = {OFF_TOP, OFF_DRIFT, OFF_BOOST};
@@ -79,7 +87,7 @@ uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32
 }
 
 static void restore_level(uint32_t racer, LvRacer* r) {
-    if (!r->valid || !r->ext) return;
+    if (!r->valid || !r->applied) return;
     for (int f = 0; f < 3; f++)
         if (ld32(racer + r->block + k_off[f]) == r->wrote[f])
             st32(racer + r->block + k_off[f], r->base[f]);
@@ -101,14 +109,16 @@ void lv_race_reset(void) {
 
 static void write_level(uint32_t racer, LvRacer* r, int ext) {
     const float* k[3] = {k_top, k_drift, k_boost};
+    int balance = super_racer(racer) && g_ring_cap != 100;
     for (int f = 0; f < 3; f++) {
-        float v = u32_as_f32(r->base[f]) * k[f][ext];
-        r->wrote[f] = ext ? f32_as_u32(v) : r->base[f];
+        float v = u32_as_f32(r->base[f]) * (balance ? k_super[f][ext] : k[f][ext]);
+        r->wrote[f] = balance || ext ? f32_as_u32(v) : r->base[f];
         st32(racer + r->block + k_off[f], r->wrote[f]);
     }
     if (ext > r->ext) r->levelup = 1;
     if (ext != r->ext) rt_log("[levels] racer %d: Lv. %d (rings %u)", racer_index(racer), 3 + ext, ld32(racer + 0xB98));
     r->ext = ext;
+    r->applied = balance || ext;
     if (!ext) r->levelup = 0;
 }
 
@@ -130,7 +140,7 @@ void lv_racer_update(uint32_t racer) {
         uint32_t cur = ld32(racer + block + k_off[f]);
         /* Track fields independently: a stat mod rebuilding just boost must not turn our raised top
          * speed into the next baseline. A full race rebuild is also caught explicitly by reset. */
-        if (!r->valid || !r->ext || cur != r->wrote[f]) { r->base[f] = cur; changed = 1; }
+        if (!r->valid || !r->applied || cur != r->wrote[f]) { r->base[f] = cur; changed = 1; }
     }
     r->block = block; r->identity = identity; r->valid = 1;
     int want = 0;
@@ -138,7 +148,8 @@ void lv_racer_update(uint32_t racer) {
         uint32_t rings = ld32(racer + 0xB98);
         want = rings >= LV5_RINGS ? 2 : rings >= LV4_RINGS ? 1 : 0;
     }
-    if (want != r->ext || changed) write_level(racer, r, want);
+    int apply = want || (super && g_ring_cap != 100);
+    if (want != r->ext || changed || apply != r->applied) write_level(racer, r, want);
 }
 
 /* Game thread, once per simulation step. Ring-powered racers can skip the native level checks;
@@ -152,7 +163,7 @@ void lv_racers_frame(void) {
     }
     for (int i = 0; i < 8; i++) {
         uint32_t p = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
-        if (super_racer(p) || g_lv[i].ext) lv_racer_update(p);
+        if (super_racer(p) || g_lv[i].applied) lv_racer_update(p);
     }
 }
 

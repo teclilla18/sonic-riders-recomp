@@ -37,10 +37,19 @@ int main(void) {
     for (unsigned t = 0; t < sizeof rings / sizeof rings[0]; t++) {
         int e = rings[t] >= 300 ? 2 : rings[t] >= 200 ? 1 : 0;
         st32(p + 0xB98, rings[t]);
-        for (int repeat = 0; repeat < 10; repeat++) lv_racer_update(p);
-        expect(p, 0x8DC, OFF_TOP, 182 * k_top[e]);
-        expect(p, 0x8DC, OFF_DRIFT, 100 * k_drift[e]);
-        expect(p, 0x8DC, OFF_BOOST, 250 * k_boost[e]);
+        uint8_t before[GAME_PLAYER_SIZE];
+        for (unsigned b = 0; b < sizeof before; b++) before[b] = ld8(p + b);
+        for (int repeat = 0; repeat < 100; repeat++) lv_racer_update(p);
+        for (unsigned b = 0; b < sizeof before; b++) {
+            int speed_field = 0;
+            for (int f = 0; f < 3; f++)
+                if (b >= 0x8DC + k_off[f] && b < 0x8DC + k_off[f] + 4) speed_field = 1;
+            if (!speed_field) assert(ld8(p + b) == before[b]);
+        }
+        const float target[3][3] = {{195,110,270},{220,125,300},{240,140,330}};
+        expect(p, 0x8DC, OFF_TOP, target[e][0]);
+        expect(p, 0x8DC, OFF_DRIFT, target[e][1]);
+        expect(p, 0x8DC, OFF_BOOST, target[e][2]);
         expect(p, BLK3, OFF_TOP, 200);
         assert(ld8(p + 0x102E) == 0 && ld32(p + 0xB98) == rings[t]);
         assert(ld32(p + 0x984) == 12345 && ld32(p + 0x988) == 67890);
@@ -55,16 +64,26 @@ int main(void) {
     assert(ld8(p + 0x102E) == 0 && ld32(p + 0x988) == 67890);
     /* A partial stat rebuild uses the new boost baseline without compounding the other fields. */
     st32(p + 0x8DC + OFF_BOOST, f32_as_u32(280.0f / 216.0f)); lv_racer_update(p);
-    expect(p, 0x8DC, OFF_TOP, 182 * k_top[2]); expect(p, 0x8DC, OFF_BOOST, 336);
+    expect(p, 0x8DC, OFF_TOP, 240); expect(p, 0x8DC, OFF_BOOST, 369.6f);
     g_ring_cap = 100; lv_racers_frame();
     assert(lv_super_air_cap(p, 220000, 110000, 110000) == 110000);
     expect(p, 0x8DC, OFF_TOP, 182); expect(p, 0x8DC, OFF_BOOST, 280);
     assert(!lv_super_player_update(p));
+    /* Base-tier writes also need ownership: toggle, partial mods and constructor/reset restore originals. */
+    g_ring_cap = 999; st32(p + 0xB98, 0); lv_racer_update(p);
+    expect(p, 0x8DC, OFF_TOP, 195); expect(p, 0x8DC, OFF_BOOST, 302.4f);
+    assert(!lv_super_player_update(p)); /* Base balance itself never queues level-up feedback */
+    st32(p + 0x8DC + OFF_DRIFT, f32_as_u32(120.0f / 216.0f));
+    for (int repeat = 0; repeat < 100; repeat++) lv_racer_update(p);
+    expect(p, 0x8DC, OFF_TOP, 195); expect(p, 0x8DC, OFF_DRIFT, 132);
+    lv_racer_reset(p); expect(p, 0x8DC, OFF_TOP, 182); expect(p, 0x8DC, OFF_DRIFT, 120);
+    lv_racer_update(p); g_ring_cap = 100; lv_racers_frame();
+    expect(p, 0x8DC, OFF_TOP, 182); expect(p, 0x8DC, OFF_DRIFT, 120);
     /* Standard Blue Star retains the original Lv.3 baseline and feedback mechanism. */
     g_ring_cap = 999; stats(q, BLK3, 180, 100, 250); st8(q + 0x102E, 2); st32(q + 0xB98, 300);
     lv_racer_update(q); lv_racer_update(p);
     expect(q, BLK3, OFF_TOP, 215); expect(q, BLK3, OFF_BOOST, 300);
-    expect(p, 0x8DC, OFF_TOP, 182 * k_top[2]);
+    expect(p, 0x8DC, OFF_TOP, 195); /* still below 200 rings */
     lv_player_update(q); assert(ld8(q + 0x102E) == 1); st8(q + 0x102E, 2);
     /* A gear/character change restores only our still-owned fields. */
     st8(p + GAME_RACER_GEAR, 0); st8(p + GAME_RACER_CHARACTER, 0); lv_racer_update(p);
