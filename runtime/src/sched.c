@@ -631,6 +631,22 @@ static void dbg_events_dump(void) {
 
 void dsp_dump(void);
 
+#ifdef __SWITCH2__
+void sched_stream_dump(void) {
+    /* Brief periodic progress snapshots even when SFX/gameplay remain alive.
+     * No runtime lock held during logging; guest state is best effort. */
+    extern unsigned long long di_bytes_read(void);
+    rt_log("[stream2] disc_total=%llu irq_running=%d preempt=%d irq_head=%u tail=%u",
+           di_bytes_read(), atomic_load(&g_irq_running), g_core_preempt[0], g_native_head, g_native_tail);
+    for (GThread* g = g_threads; g; g = g->next) {
+        uint32_t t = g->ctx;
+        rt_log("[stream2] ctx=%08X selected=%d state=%u suspend=%d queue=%08X phase=%u switches=%u parked=%08X/%08X/%08X",
+               t, g == g_running, t ? ld16(t+0x2C8) : 0, t ? (int)ld32(t+0x2CC) : 0,
+               t ? ld32(t+0x2DC) : 0, atomic_load(&g->diag_phase), atomic_load(&g->diag_switches), g->bt[0], g->bt[1], g->bt[2]);
+    }
+    di_dump(); dsp_dump(); os_irq_dump(); render_dump();
+}
+#endif
 void sched_dump(void) {
 #ifdef __SWITCH2__
     int available = mtx_trylock(&g_lock) == thrd_success;

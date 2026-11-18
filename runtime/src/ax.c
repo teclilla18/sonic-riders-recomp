@@ -245,6 +245,15 @@ static void process_pb_list(uint32_t addr) {
     int guard = 0;
     if (g_axlog < 0) g_axlog = getenv("SR_AXLOG") != NULL;
     int dump = g_axlog && g_lists % 400 == 1;
+#ifdef __SWITCH2__
+    static uint64_t last_ns;
+    static unsigned stopped;
+    uint64_t now = platform_now_ns();
+    int snapshot = now - last_ns >= 2000000000ULL;
+    if (snapshot) last_ns = now;
+    unsigned voices = 0, running = 0, streaming = 0, pcm16 = 0, updates = 0;
+    unsigned detailed = 0;
+#endif
     while (addr && guard++ < 256) {
         PB pb, orig;
         read_pb(addr, &pb);
@@ -261,6 +270,21 @@ static void process_pb_list(uint32_t addr) {
             uint32_t ua = (uint32_t)pb.upd_hi << 16 | pb.upd_lo;
             for (int i = 0; i < 64; i++) upd[i] = ua ? ld16(ua + 2 * i) : 0;
         }
+#ifdef __SWITCH2__
+        voices++;
+        running += pb.running == 1;
+        streaming += pb.running == 1 && pb.is_stream == 1;
+        pcm16 += pb.running == 1 && pb.sample_format == 0xA;
+        updates += any_upd != 0;
+        /* Raw PB state, not an asserted music identity. Bounded snapshots let
+         * the same voice/address be compared before and after audible loss. */
+        if (snapshot && pb.running == 1 && detailed++ < 16)
+            rt_log("[voice2] ns=%llu pb=%08X fmt=%04X loop=%u stream=%u cur=%08X end=%08X loopaddr=%08X loops=%u mc=%04X env=%u main=%04X/%04X updates=%d",
+                   (unsigned long long)now, addr, pb.sample_format, pb.looping, pb.is_stream,
+                   (uint32_t)pb.cur_hi << 16 | pb.cur_lo, (uint32_t)pb.end_hi << 16 | pb.end_lo,
+                   (uint32_t)pb.loop_hi << 16 | pb.loop_lo, pb.loop_counter, pb.mixer_control,
+                   pb.vol_env, pb.main_l.volume, pb.main_r.volume, any_upd != 0);
+#endif
         if (!any_upd && pb.running != 1) {  /* a stopped voice with no updates: nothing to do */
             addr = (uint32_t)pb.next_hi << 16 | pb.next_lo;
             continue;
@@ -271,9 +295,19 @@ static void process_pb_list(uint32_t addr) {
             for (int b = 0; b < NBUF; b++) bufs[b] = g_buf[b] + ms * 32;
             process_voice(&pb, bufs, 32);
         }
+#ifdef __SWITCH2__
+        stopped += orig.running == 1 && pb.running != 1;
+#endif
         if (memcmp(&pb, &orig, sizeof pb)) write_pb(addr, &pb);
         addr = (uint32_t)pb.next_hi << 16 | pb.next_lo;
     }
+#ifdef __SWITCH2__
+    if (snapshot) {
+        rt_log("[voice2] ns=%llu list=%u voices=%u active=%u streaming=%u pcm16=%u updated=%u stopped_since=%u details_capped=16",
+               (unsigned long long)now, g_lists, voices, running, streaming, pcm16, updates, stopped);
+        stopped = 0;
+    }
+#endif
 }
 
 /* ---- buffer transfers with main RAM (32-bit big-endian samples) ---- */

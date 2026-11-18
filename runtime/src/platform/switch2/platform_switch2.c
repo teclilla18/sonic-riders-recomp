@@ -28,6 +28,8 @@ typedef struct {
     _Atomic uintptr_t wait_object;
     _Atomic uint64_t wait_since;
     _Atomic unsigned wait_count;
+    _Atomic uint64_t wait_max_ns;
+    _Atomic unsigned wait_timeouts;
 } Worker;
 static Worker* g_workers[WORKERS];
 static unsigned g_nworkers;
@@ -248,6 +250,9 @@ static int wait_cond(pthread_cond_t* cond, pthread_mutex_t* mutex, const struct 
         /* Preserve original logical wait age across the 50ms shutdown slices. */
         if (atomic_load(&g_self->wait_kind) != 2) worker_wait(2, cond);
         int rc = __real_pthread_cond_timedwait(cond, mutex, &slice);
+        uint64_t waited = platform_now_ns() - atomic_load(&g_self->wait_since);
+        if (waited > atomic_load(&g_self->wait_max_ns)) atomic_store(&g_self->wait_max_ns, waited);
+        if (rc == ETIMEDOUT) atomic_fetch_add(&g_self->wait_timeouts, 1);
         if (g_self && switch2_stopping()) { pthread_mutex_unlock(mutex); switch2_thread_checkpoint(); }
         /* A timed wait can consume a signal racing its timeout while it
          * reacquires the mutex. Never hide that timeout from an indefinite
@@ -353,9 +358,31 @@ static int stall_thread(void* arg) {
     unsigned long long last = gx_frames_presented();
     unsigned still = 0;
     int reported = 0;
+    unsigned samples = 0;
     for (;;) {
         platform_sleep_ns(1000000000ULL);
         unsigned long long frames = gx_frames_presented();
+        if (++samples % 5 == 0) {
+            uint64_t t = platform_now_ns();
+            void sched_stream_dump(void);
+            rt_log("[stream2] ns=%llu GX=%llu VI=%u fn=%08X lr=%08X", (unsigned long long)t, frames, vi_field_count(), g_ppc_cur_fn, g_ppc_cur_lr);
+            sched_stream_dump();
+            if (mutexTryLock(&g_workers_lock)) {
+                for (unsigned i = 0; i < g_nworkers; i++) {
+                    Worker* w = g_workers[i];
+                    if (!w) continue;
+                    unsigned kind = atomic_load(&w->wait_kind);
+                    uint64_t since = atomic_load(&w->wait_since);
+                    rt_log("[wait2] worker=%u arg=%p kind=%u object=%p age_ms=%llu max_ms=%llu waits=%u timeouts=%u",
+                           i, w->arg, kind, (void*)atomic_load(&w->wait_object),
+                           (unsigned long long)(kind && t >= since ? (t-since)/1000000 : 0),
+                           (unsigned long long)(atomic_exchange(&w->wait_max_ns, 0)/1000000),
+                           atomic_load(&w->wait_count), atomic_load(&w->wait_timeouts));
+                }
+                mutexUnlock(&g_workers_lock);
+            }
+            rt_log("[stream2] diagnostic_snapshot_ms=%.2f", (platform_now_ns()-t)/1e6);
+        }
         if (frames != last || appletGetFocusState() != AppletFocusState_InFocus) {
             if (reported && frames != last) rt_log("[stall2] recovered after %u samples, frame %llu", still, frames);
             last = frames; still = 0; reported = 0;

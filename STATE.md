@@ -1,140 +1,36 @@
-# Experimental native condition-wait fix (2026-11-18)
+# Experimental Switch 2 audio/stutter diagnostics (2026-11-18)
 
-# 5c449 hardware comparison and targeted wait fix
+Branch codex/switch2-stall-diag. Validated Alpha1releasebranch64e8316/ZIP
+unchanged; higherFPSb381e54 separate/excluded. No publication.
 
-One successful race with audible music, followed by second identical selection
-freeze. Bothsnapshots8.612s apart atframe10568: selected guest81A93E80 maps
-host0xd850d0000/cv0xd850d0008 toworker17, phase4, switches969, waits1001,
-waitage14378->22990ms fixed. Main801B3610 phase4 target81A93E80. Allguesthosts
-phase4 with unchanged switchcounts; scheduler/IRQmutexesavailable, irq_running0,
-preempt1, nativequeuehead145210/tail145211. VI+516; renderpendingNULL/free1;
-noGPUdevice-loss. DVDexecutingNULL unlike preceding run, DIcompleted. Audio
-all89summaries zeroerrors/drops; usermusicworked. No evidence of sharedmusiccause.
+Scheduler fix5db73f5/build4a6ead9bbb02 is hardware-tested for SIXconsecutive
+races at2x with zero character-selection freezes and cleanQuit/hbmenu. This is
+promising evidence, not permanent elimination. Exactbinary+manifest preserved
+build/alpha/scheduler-sixrace-4a6ead9bbb02/ and branch
+codex/switch2-sixrace-checkpoint at5db73f5; SD backup retained on deployment.
 
-Confirmed source defect: native shutdown wrapper converts indefinite waits into
-50ms timed waits but hides ETIMEDOUT by looping internally. POSIX timeout/signal
-race may consume the signal while the mutex is being reacquired, after another
-thread sets the predicate. Wrapper then waits again without caller predicate
-check, leaving selected guest parked. Allruntime indefinite waits use loops/
-continue; stdcondition_variable predicatewait also rechecks. Targeted native
-fix returns0 on internal timeout withoutdeadline (legal spuriouswake with mutex
-stillheld), so caller rechecks. Explicitdeadline and unmanageddriverpath unchanged.
-This defect is consistent with snapshots, but exact race/hardwarefix acceptance
-requires physical testing; not proof musicdropout sharescause.
+Remaining: music lost race1, announcer lost byrace3 while ordinarySFX continue.
+Race2/3 stutter, sampledmin32.3/28.2fps with long renderwaits and audiofeedgaps
+up to3.569s, but recordedGPU/execute short. Cache/newpipe events earlier do not
+explain sustainedstutter; pausedlaterraces okay. Rootcause/sharedrelation to
+scheduler unconfirmed; no speculativefix. Sourceofmixedaudio versus guest
+stream/voice/refill/waits needs new diagnostics. All19workerscleanexitconfirmed.
+Evidence: build/alpha/condfix-six-races/focused-analysis.md and rawlogs.
 
-Regression test extracts actualwait_cond and deterministically injects expired
-wait concurrent with ready predicate/no later signal. FAILbefore, PASSafter;
-alsotests intermediate/finaldeadline, errors and driver bypass. Native build/
-artifact/sourcechecks and originalSwitchpreprocess/Androidsyntax PASS.
-Build4a6ead9bbb02 SHA5e224e9a905c9839aed2fcce57840da5771391feb00c1a123e8b70aaa134d74b.
-NoFPS/cache/renderpolicy changes. Live resolution staysdisabled. Deployment2x
-peruser, otherdataretained. Validatedrelease ZIP and rollbackcheckpointspreserved.
+Implemented next experiment: native-only bounded2sAXvoices/aggregates,5s guest
+thread/DVD/DSP/IRQ/renderqueue/workerwait summaries, completedwait maximum and
+timeouts, longinputpump logging. Retains successfulpredicate-recheckfix,
+2xresolution, disabledlivechanges andframes0; no rendererpolicy/audio rate/FPS
+changes. Snapshotsoverheadlogged; evidence is asynchronous and can perturbtiming.
+Locallytested: schedulerregressionPASS, originalSwitchmain/sched/menu/AX
+preprocessingunchanged, AndroidVksyntaxPASS, nativebuild/link/manifest/hashchecks
+PASS. Build67582dd7f046 bytes29464525 SHA
+4f1a317d3b7f182b7539e76a81e5f7df4e231b0b60b8da1112b9bb151fc26942.
+Exactdeploymentresults recorded in AI handoff and build/switch2/audiodiag-deployment.json.
+Hardwarepending. No releaseZIPrebuild/coldtest until hardwareacceptance.
 
-## Historical diagnostics
-
-# Refined native stall diagnostics (2026-11-18)
-
-# Diagnostic20e0 hardware result (2026-11-18)
-
-Both focused snapshots are8.022s apart: frame1780/GXbytes16426405 fixed,
-retraces2338->2819; guestfnF0000003=PROF_SWITCH, lr8001062C, current/selected
-guest81A93850 and runqueuebits0 fixed. Main801B3610 and801E4C90/801E4978 wait
-on queue8021BDF4;81A93B68/81A93E80/801E4660 suspended. Renderer pendingNULL,
-free1,presented1780,no device loss: renderer waiting for producer, not fullqueue.
-DVD executing801F97A8 command1/state1 offset41620364 length800 transferred0
-unchanged despite recorded DVDdone. DIlen0/complete-1, IRQpending04002480 posted1
-unchanged; DSPCSR0958/ARAMcount0. Host timers/waits continue, several parked
-worker ages advance. Exact guest selected-context->hostwait mapping missing.
-Likely lead scheduler handoff/interrupt delivery, not a confirmed defect.
-
-User music stopped~5sec; transport summaries all15 zeroerrors/drops. Does not
-prove healthy guest music decoder/stream. Shared DVD/guest-progress cause is
-plausible but unconfirmed. No general audio/GPU/cache fix attempted.
-
-Source diagnostic2 adds ONLY __SWITCH2__ guestctx/hostarg/cv mapping, selected,
-started,phase1initialwait/2guest/3handofflock/4park/5resumed,switchcount/target;
-trylock scheduler+IRQ status,preempt,irqrunning,nativeIRQ head/tail/decdeadline.
-Snapshot asynchronous; phase stale after resume until next switch, not a CPU PC.
-These mappings should distinguish selectedhost stillparked vs other waits.
-Same8/16sample stalltrigger. No tracing or guest timing policy changes.
-
-OriginalSwitch main/sched/menu preprocessing unchanged; AndroidVk syntax PASS;
-NRO/link/manifest/source/objectchecks PASS. Build5c449024047a,29464525bytes,
-SHAdadcba505ffd5dfedd105d1a4e39d26723f9515c8a9e0aba3c904ed1e101050b.
-Physical validation pending. Existing release64e8316 ZIP/checkpoints unchanged.
-
-## Previous diagnostic checkpoint
-
-# Experimental Switch 2 stall diagnostics (2026-11-18)
-
-Branch codex/switch2-stall-diag starts at validated64e8316. Alpha release branch,
-ZIP/checksums, accepted f05fd81 and FPSb381e54 checkpoints remain preserved.
-No publication or release ZIP regeneration until hardware acceptance.
-
-Implemented: native stall monitor adapted from originalSwitch, with focused
-no-GX-progress snapshots at8/16samples, recovery logging, guest fn/lr, existing
-scheduler/MMIO/DVD/DSP/IRQ dumps, nonblocking render queue and native worker
-sleep/condvar wait ages/objects/counts. No full guest trace/forced exit or fixes.
-Snapshot state is observational, not a synchronized proof of causality; long
-loads may trigger it too. Thread0=running/other does not prove executing CPU.
-
-Evidence: build80f7b92ba6c3 freezes intermittently at1.5x/2x with regular Sonic
-and SuperSonic, including samegear immediately after successful full race.
-A reaches SI then perf/audio/render summaries cease, HID continues. No explicit
-fatal/device loss. Music-only dropout is separate; transport counters alone do
-not diagnose guest music stream. Startup cache save remains lower priority.
-
-Local platform compatibility checks pass (originalSwitch preprocess unchanged,
-Android Vulkan syntax, SDK C11 interposition). Native build/hardware test result
-is recorded in AI handoff; no native emulator substitute. Console1.5x/frames0
-and active release NRO are preserved; experimental NRO uses separate filename.
-Next: repeat selection/race/return/selection on physical hardware. After freeze,
-wait20seconds with focus before HOME-close and FTP logs. Compare stall2 snapshots
-for guest wait/queue/IRQ/DVD state; do not infer issue18 equivalence prematurely.
-
-## Preserved release checkpoint (historical)
-
-# Switch 2 Alpha 1 release candidate (2026-11-17)
-
-Isolated branch codex/switch2-alpha1, based on accepted f05fd81.
-Package: SonicRiders-Switch2-Setup-Alpha1.zip.
-Proposed title: Sonic Riders Recomp — Switch 2 Alpha 1.
-Proposed tag: v0.8.6-switch2-alpha.1 (separate pre-release, not latest).
-Do not push/merge/tag remotely/publish/announce before candidate approval.
-
-## Baseline and status
-
-- **Accepted:** runtime7d1bc5fcd419/f05fd81, physical firmware23.0.1 with reported
-  kaiHEN20261117.1/Seedsow native homebrew, handheld mode0, clocks unrecorded.
-  Tried gameplay/graphics/input/music/sound/overlay/enhancements and clean exit
-  work. One tested route/environment is not universal compatibility evidence.
-- **Excluded:** higher-FPS branchb381e54/build67341d614683. User reports Player
-  Entry freeze selecting Sonic/Chaos Emerald gear; HOME/volume still work.
-  Preserved separately. No FPS investigation/fix is authorized in this task.
-- **Restored:** exact accepted NRO FTP-verified after saving failed-build logs,
-  binary/manifest/env/settings locally. Onlypc_fps reset0; frames0 retained.
-- **Implemented:** dedicated setup target/GUI, isolated compiler/build/SD path,
-  pinned SDK and compiler dependencies, SD-ready manual-transfer output,
-  update preservation; existing ISO/RVZ/extraction/recompilation reused.
-- **Locally tested:** GUI compilation; native installation/platform validation,
-  update preservation and cold-workdir source-commit/SDK-lock regressions.
-- **Release gate:** exact source ZIP must pass the whole-archive audit and a
-  genuinely cold Windows Sandbox GUI+CLI/space install. Ask before launching.
-  Candidate checksum/commit and exact results live in the candidate validation
-  record and local AI handoff. Sandbox cannot validate physical gameplay.
-
-## Known limits and next step
-
-Startup pipeline-cache saving can stall for seconds; no optimization included.
-Other firmware/loaders, docking/sleep/multiplayer, all stages/story, Super Sonic
-and long-run stability remain community tests. No universal FPS guarantee.
-Default60, no automatic exit (frames0), hold Minus then Quit Game to hbmenu.
-Public stable v0.8.6 and automatic updater channels must remain unchanged;
-native alpha GUI uses manual updates. Installer docs: docs/SWITCH2-ALPHA.md.
-Easy-read local guides updated; republishing existing Claude artifact URLs
-requires external access/user help and publication approval. No announcements.
-Preserve accepted artifact/checkpoint and experimental feature branch.
-Inbox unchanged at start. Use log-reader for later log analysis.
-
-
-Switch 2 Alpha1: fresh default2x; live resolution changes disabled exclusively on Switch2. Existing saved choices retained. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Live2x->1x permanently froze overlay while gameplay continued; underlying cause unconfirmed. Super Sonic race entry succeeded on accepted7d1bc5fcd419. Cold GUI/CLI/space testing passed for prior candidate7517958; final restricted candidate requires a new cold validation.
+Nexttest: normalentry, same race/menu/reselect route. Note approximate time of
+music/announcer loss and stutter, pause/menustate and mode/clocks. Quit normally
+when possible, preservelogs viaFTP. Analyzevoice2/stream2/wait2/vk2-loop alongside
+existingaudio2/perf/cachetimers. Never assume rawvoicePB is namedmusic without
+correlation. Preserveactiveconfig/ISO/saves/caches/rollbackbuilds.

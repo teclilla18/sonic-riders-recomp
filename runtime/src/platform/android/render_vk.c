@@ -2260,6 +2260,7 @@ static void ios_wait_in_background(int w, int h) {
 
 static void pump(void) {
 #ifdef __SWITCH2__
+    uint64_t pump_t0 = platform_now_ns();
     if (!appletMainLoop()) g_quit = 1;
     int w = 0, h = 0;
     drawable_size(&w, &h);
@@ -2268,6 +2269,8 @@ static void pump(void) {
     const char* limit = getenv("SR_SWITCH2_FRAMES");
     if (limit && (unsigned)strtoul(limit, NULL, 10) > 0 && g_frames_done >= (unsigned)strtoul(limit, NULL, 10)) g_quit = 1;
     if (overlay_take_quit_request()) g_quit = 1;
+    if (platform_now_ns()-pump_t0 > 50000000ULL)
+        rt_log("[vk2-loop] input/event pump %.2f ms", (platform_now_ns()-pump_t0)/1e6);
 #else
     SDL_Event e;
     int w = (int)g_ext.width, h = (int)g_ext.height;

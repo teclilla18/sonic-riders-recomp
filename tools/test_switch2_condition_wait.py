@@ -16,9 +16,10 @@ HARNESS = r'''
 #include <time.h>
 typedef int pthread_cond_t;
 typedef int pthread_mutex_t;
-typedef struct { _Atomic unsigned wait_kind; } Worker;
+typedef struct { _Atomic unsigned wait_kind, wait_timeouts; _Atomic uint64_t wait_since, wait_max_ns; } Worker;
 static Worker worker, *g_self = &worker;
 static int calls, mode, predicate;
+static uint64_t platform_now_ns(void) { return 100000000ULL; }
 static int switch2_stopping(void) { return 0; }
 static void switch2_thread_checkpoint(void) { assert(0); }
 static int pthread_mutex_unlock(pthread_mutex_t* m) { (void)m; return 0; }

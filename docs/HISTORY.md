@@ -1695,3 +1695,14 @@ race can consume a wake then park forever. Return legal spurious success for
 internal indefinite timeouts, preserve explicit deadlines/driver waits. Actual
 wrapper regression fails before/passes after. Native build/artifact and platform
 checks pass; physical acceptance pending, no claimed music fix.
+
+
+## 2026-11-18: six-race scheduler-fix stress test
+
+Hardware/user: six2x races without selectionfreeze and cleanQuit; promising, not
+permanent elimination. Preserve exact4a6ead build and checkpoint5db73f5. Music/
+announcer loss persists, two races stutter with multi-second audiofeed gaps and
+renderwaits not explained by short Vulkan execution or earlier cache events.
+No supported nextfix. Add bounded native guestvoice/stream/wait/progress and
+inputpumptiming diagnostics; scheduler regression/platform/build checks pass.
+New build67582dd7f046 pending hardware. Validated release ZIP unchanged.
