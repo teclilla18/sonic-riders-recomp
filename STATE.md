@@ -23,8 +23,15 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 - **Tested [confirmed, reporter 2026-11-18]:** build 3b2592b7 automatically selects legacy on
   Mali-G57 MC3 / Vulkan 1.1.177. Reporter completed a race without issues; log reaches 17,700
   presented frames, 100% shader coverage. Auto maintains ~60 steps/s even at 30.6 rendered fps.
-- **Open:** returned log records SIGSEGV immediately after `[android] quit`; shutdown cause
-  unproven. Not released; real iOS/MoltenVK, real GPU reset, exhaustive alpha/depth overlaps,
+- **Implemented:** ordered Android quit: park producers, join pipeline/UI workers, close audio,
+  wait GPU, destroy Vulkan/SDL, run owned save/network/record handlers and flush before `_Exit`.
+- **Tested [confirmed]:** S23 dynamic-path shutdown reproduced a libc finalizer race (FORTIFY,
+  destroyed mutex in Android/vendor RenderThread). Both paths pass delayed clean menu exits;
+  Full Khronos race/natural quits, simulated recovery/menu resume and 5-second holds pass both
+  paths without validation errors/fatals. Normal signed APK exits pass without delay.
+  Windows/ARM64 concurrency/exit-handler tests and x86_64 Android syntax pass. Details in the note.
+- **Uncertain:** exact original Mali SIGSEGV attribution; reporter must retest updated package.
+  Not released; real iOS/MoltenVK, real GPU reset, exhaustive alpha/depth overlaps,
   all stages and long-session memory pressure remain unproven.
 - Prepare standard experimental Android source/setup ZIP only; no generated APK sharing, public
   release, main merge, issue reply or closure authorized. Details: docs/notes/vulkan-legacy.md.
@@ -82,8 +89,9 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
 ## Next checks
 
-- Investigate the Mali quit-time SIGSEGV separately from the confirmed boot/race success;
-  obtain a useful fault stack/tombstone before assigning cause. Keep #32 open for user decision.
+- Reporter retest of updated shutdown package; require completed cleanup and no fatal signal.
+  Original Mali fault PC is unmapped; do not claim that exact crash fixed before confirmation.
+  Keep #32 open and branch unmerged for user decision.
 - Real Mac/iOS/MoltenVK build/test before integrating/releasing shared renderer changes.
 - Any further normal-play slowdown needs logs with SR_DETCLOCK off and the selected mode stated.
 - Switch pack worker: three stages/full pack, memory/hitches; installer SD copy end to end.

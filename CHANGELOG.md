@@ -4,9 +4,12 @@
 
 - Automatically use traditional render passes on drivers without dynamic rendering;
   preserve the existing path on supported devices. Tested on the S23 by forcing both paths;
-  the reporter's Mali-G57 and iOS/MoltenVK still require testing.
+  the reporter confirms a completed Mali-G57 race. iOS/MoltenVK still requires testing.
 - Check optional features, format/allocation limits and depth-clear usage. Preserve
   the solid-floor destination-alpha fix on devices without dual-source blending.
+- Shut down Android renderer/audio workers and Vulkan/SDL resources in order. Preserve save/record
+  handlers while avoiding a reproduced library-finalizer race with Android graphics threads.
+  S23 clean-exit tests pass; the reporter's exact Mali quit-time fault still needs retesting.
 - Diagnostic `SR_VK_FORCE_LEGACY=1`; technical details in `docs/notes/vulkan-legacy.md`.
 
 ## Documentation — Switch 2 Alpha 1

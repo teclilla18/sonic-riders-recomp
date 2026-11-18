@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__ANDROID__) || defined(SR_IOS)
+#include <SDL.h>
+#endif
 
 #include "imgui.h"
 #include "imgui_internal.h"  /* ClearActiveID: touch scrolling (phones) */
@@ -123,6 +126,10 @@ Job* g_done;       /* drawn (helper -> render thread) */
 bool g_busy;       /* a job is out (render thread only) */
 bool g_retry;      /* a changed picture waits for the helper */
 bool g_worker_started;
+bool g_worker_stopping, g_worker_stopped;
+#if defined(__ANDROID__) || defined(SR_IOS)
+SDL_Thread* g_raster_thread;
+#endif
 
 void job_free(Job* j) {
     for (ImDrawList* l : j->dd.CmdLists) IM_DELETE(l);
@@ -167,7 +174,8 @@ int raster_thread(void*) {
         Job* j;
         {
             std::unique_lock<std::mutex> lk(g_mx);
-            g_cv.wait(lk, [] { return g_job != nullptr; });
+            g_cv.wait(lk, [] { return g_job != nullptr || g_worker_stopping; });
+            if (g_worker_stopping) break;
             j = g_job;
             g_job = nullptr;
         }
@@ -179,6 +187,11 @@ int raster_thread(void*) {
         std::lock_guard<std::mutex> lk(g_mx);
         g_done = j;
     }
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        g_worker_stopped = true;
+    }
+    g_cv.notify_all();
     return 0;
 }
 
@@ -933,7 +946,12 @@ void frame() {
     content_box(dd, j->box);
     if (!g_worker_started) {
         g_worker_started = true;
+#if defined(__ANDROID__) || defined(SR_IOS)
+        g_raster_thread = SDL_CreateThreadWithStackSize(raster_thread, "menu-raster", 8u << 20, nullptr);
+        if (!g_raster_thread) rt_fatal("[menu] cannot create raster thread: %s", SDL_GetError());
+#else
         rt_thread_start(raster_thread, nullptr);
+#endif
     }
     g_busy = true;
     {
@@ -1026,6 +1044,33 @@ void overlay_mouse_wheel(float dx, float dy) {
 }
 
 void overlay_request_quit(void) { g_quit_request = 1; }
+
+void overlay_shutdown(void) {
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        if (g_worker_stopping) return;
+        g_worker_stopping = true;
+    }
+    g_cv.notify_all();
+#if defined(__ANDROID__) || defined(SR_IOS)
+    if (g_raster_thread) {
+        SDL_WaitThread(g_raster_thread, nullptr);
+        g_raster_thread = nullptr;
+    }
+#else
+    if (g_worker_started) {
+        std::unique_lock<std::mutex> lk(g_mx);
+        g_cv.wait(lk, [] { return g_worker_stopped; });
+    }
+#endif
+    /* No worker can retain an ImDrawList or font-atlas pointer after this point. */
+    if (g_job) job_free(g_job);
+    if (g_done) job_free(g_done);
+    g_job = g_done = nullptr;
+    g_busy = g_open = g_had_image = false;
+    if (g_ready) ImGui::DestroyContext();
+    g_ready = false;
+}
 
 int overlay_take_quit_request(void) {
     int r = g_quit_request;

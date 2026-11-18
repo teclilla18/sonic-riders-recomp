@@ -90,8 +90,8 @@ Diagnostics (not persisted in settings):
 - **Quit failure [confirmed]:** `[android] quit` immediately precedes SIGSEGV in
   the returned Mali log, despite successful gameplay. No Vulkan error/device-loss
   message precedes it. Existing `render_thread` calls `exit(0)` there; this path
-  was not edited by #32. The crash handler's stack does not establish the fault's
-  cause or exclude a driver/resource-lifetime interaction. Do not claim clean exit.
+  was not edited by the original #32 fallback. The crash handler's stack does not
+  establish the exact Mali fault's cause. The shutdown follow-up below is an experimental fix.
 - **Unproven:** real iOS/MoltenVK execution (no Mac SDK/device used); real GPU reset; exhaustive
   alpha/depth overlap cases, all stages and long-session memory pressure.
 
@@ -123,6 +123,91 @@ py -3 tools/test_vk_shaders.py --validator <spirv-val> --dksh build/switch
 Reporter distribution must use the standard experimental Android **source/setup
 ZIP**, built by `tools/make_release.py --flavor android` from a committed branch.
 Never share the locally built APK, generated code, shaders, logs or disc files.
-Mali boot/gameplay are now reporter-confirmed; the quit crash still needs investigation.
+Mali boot/gameplay are reporter-confirmed; the shutdown follow-up still needs reporter verification.
 Keep #32 open for the user's decision. No release,
 merge into main or external reply is authorized by this experiment.
+
+
+## Android shutdown follow-up (2026-11-18, experimental)
+
+The reporter log gives an unmapped SIGSEGV PC after quit, insufficient to prove its
+exact cause. The old `exit(0)` quit block predates #32. Unchanged S23 menu and full
+race baselines passed both paths, so the original Mali crash was not reproduced.
+
+An intermediate explicit-teardown candidate still calling libc `exit` reproduced a
+**dynamic-path** S23 crash: teardown completed, then 8 ms later FORTIFY reported a
+destroyed pthread mutex in Android's RenderThread. The stack traverses libc++, QTI
+gralloc/mapper, Adreno EGL and libhwui. Android also recorded EXIT_SELF/status 0;
+that record alone is insufficient to validate quit. This establishes a shared
+Android finalization hazard, not a legacy-only failure. It does not prove that the
+reporter's Mali SIGSEGV has precisely the same cause.
+
+Bionic [exit.cpp](https://android.googlesource.com/platform/bionic/+/741541d307f2b48c5c87fb7f38e6618d3175dbd0/libc/bionic/exit.cpp)
+runs thread/process finalizers before terminating the process. Android framework
+and vendor threads can still use library globals during those finalizers.
+
+Implemented shutdown order:
+
+1. Gate frame producers under the existing render lock; leave guest workers parked.
+2. Cancel remaining prewarm jobs, finish any active driver call, join the SDL thread
+   (including TLS/JNI cleanup), then drain completed pipelines. Recovery and format
+   invalidation use the same join. Preserve the original 8 MiB worker stacks.
+3. Stop/join the overlay raster worker before releasing its ImGui lists/context.
+   Serialize audio close with queue/open/pause; later producer calls return safely.
+4. Save the cache; wait GPU idle; destroy pipelines and legacy framebuffers/passes
+   before image views/images, then remaining children/device, surface and instance.
+   Reuse the existing device teardown, retirement and swapchain ownership rules.
+5. Destroy the SDL window and quit SDL. Run application-owned card/network/record
+   handlers in LIFO order, flush streams, then Android `_Exit` without process-wide
+   library finalizers. Keep crash handling active throughout cleanup. Do not return
+   SDL_main while detached guest workers can execute libmain (SDL unloads it).
+
+`rt_atexit` retains the existing application handlers, including registration from
+another handler and the fallback standard-exit path. Windows/iOS/other platforms
+retain libc exit semantics. Shared iOS renderer cleanup uses the same worker join;
+real MoltenVK execution remains untested. Screenshot writers retain only copied CPU
+pixels/file state, no Vulkan/SDL handles. Early non-renderer diagnostic exits are
+outside the normal interactive shutdown path and were not rewritten.
+
+Focused Windows and ARM64 tests cover in-flight compile/audio quiescence,
+cancellation/join/drain ordering, idempotence, no audio calls after SDL close,
+handler LIFO/reentrancy/capacity, buffered writes, exit status and unchanged host
+finalizer semantics. The existing feature/pass/framebuffer/pool regressions pass.
+
+`SR_SHUTDOWN_DELAY_MS=1..5000` holds the process alive **after** completed cleanup
+and application handlers, before termination. Both S23 menu paths survive a 500 ms
+hold, well beyond the observed 8 ms failure window, and exit EXIT_SELF/status 0
+without fatal signals. Full 1P/2P natural-quit routes also pass with Khronos validation loaded, zero
+warnings/errors/VUIDs/fatal signals, and complete cleanup plus a 500 ms hold:
+
+| S23 path | 1P steps/s / fps | 2P steps/s / fps |
+|---|---|---|
+| Dynamic | 59.95 / 51.09 | 59.95 / 56.38 |
+| Legacy + no-dual + no-push | 59.83 / 26.59 | 59.97 / 55.27 |
+
+Each scene measures 1,800 steps. Validation/forced compatibility settings and
+sequential runs make these unsuitable as release performance comparisons. Normal
+Auto remains enabled, deterministic timing disabled; no pacing code changes.
+
+Additional Khronos runs on both paths recover from simulated loss at frame 31,
+background/resume, recreate the swapchain, resume menu rendering at 59.9 fps and
+exit cleanly after a 5-second post-cleanup hold. No validation warnings/errors or
+fatal signals. This tests menu resume, not mid-race gameplay resume or real GPU
+failure. Final normal signed-build menu exits also pass both paths with no hold;
+validation APK removed and temporary GPU debug settings restored.
+
+Reproduce (local device and own disc build required for app tests):
+
+```text
+py -3 tools/test_android_shutdown.py --cc <clang> --vulkan-include <Vulkan-header-root>
+py -3 tools/test_runtime_exit.py --cc <clang>
+py -3 -m unittest discover -s tools -p test_android_quit_test.py
+py -3 tools/android_quit_test.py --serial <adb-serial> --out build/quit-dynamic --require-cleanup --args "SR_SHUTDOWN_DELAY_MS=500"
+py -3 tools/android_quit_test.py --serial <adb-serial> --out build/quit-legacy --trigger perftest --require-cleanup --args "SR_VK_FORCE_LEGACY=1 SR_VK_NODUALSRC=1 SR_VK_NOPUSH=1 SR_SHUTDOWN_DELAY_MS=500"
+```
+
+The app test waits for the actual tested PID to exit; force-stop is setup only.
+It checks fresh logcat/fatal signals plus the matching ApplicationExitInfo and both
+cleanup markers. Optional `--background-resume` exercises Home/resume before menu
+quit. A previous-run crash dialog is preserved in logs and dismissed before taps.
+No release, merge, issue closure or external reply is authorized.

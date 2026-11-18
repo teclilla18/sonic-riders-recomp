@@ -35,6 +35,8 @@ int overlay_take_controllers_request(void);
 int overlay_take_quit_request(void);
 /* quit as if the window closed: the render thread exits at the end of its frame, never while it draws */
 void overlay_request_quit(void);
+/* Render thread only, after its last overlay call: stop the raster helper before ImGui/SDL teardown. */
+void overlay_shutdown(void);
 int overlay_menu_open(void);
 void overlay_menu_toggle(void);                    /* touch controls: open/close the menu at once */
 void overlay_pointer(float x, float y, int down);  /* touch on the open menu (overlay pixels) */

@@ -554,7 +554,7 @@ static void net_connect(const char* spec) {
     g_net = 1;
     g_recv_upto = g_peer_ack = (uint32_t)g_delay;  /* the first D frames: neutral for everyone, never sent */
     g_last_recv_ns = platform_now_ns();
-    atexit(net_bye_at_exit);
+    rt_atexit(net_bye_at_exit);
     overlay_set_banner(NULL);
 }
 
@@ -574,7 +574,7 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
     const char* n = getenv("SR_PADS");
     g_ports = n && atoi(n) > 1 ? (atoi(n) > MAXP ? MAXP : atoi(n)) : 1;
     if (rep && !rep_open(rep)) rt_fatal("SR_REPLAY: cannot replay %s", rep);
-    atexit(rec_close);
+    rt_atexit(rec_close);
 }
 
 void netplay_connect(void) {  /* main(), after the memory card is loaded, before the game runs */

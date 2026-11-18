@@ -632,6 +632,8 @@ static mtx_t g_pw_lock;
 static PipeEntry* g_pw_done;
 static uint32_t g_pw_ndone, g_pw_cap;
 static _Atomic int g_pw_running;  /* the render thread waits for all pass/pipeline users before teardown */
+static _Atomic int g_pw_cancel;
+static SDL_Thread* g_pw_thread;
 
 static VkPipeline pipe_make(uint64_t key) { return (key >> 63) ? quad_pipe_make(key) : gx_pipe_make(key); }
 
@@ -667,12 +669,17 @@ static void pipe_drain(void) {  /* render thread: take the helper's finished pip
 
 /* swap_destroy has waited for GPU work. Stop the producer before changing the format it reads,
  * then discard incompatible pipelines. Disk keys describe states, not handles, and remain useful. */
-static void pipelines_invalidate(void) {
-    while (g_pw_running) {
-        struct timespec ts = {0, 2000000};
-        thrd_sleep(&ts, NULL);
+static void prewarm_stop(void) {
+    g_pw_cancel = 1;
+    if (g_pw_thread) {
+        SDL_WaitThread(g_pw_thread, NULL);  /* includes SDL/JNI TLS cleanup, not only the last Vulkan call */
+        g_pw_thread = NULL;
     }
     pipe_drain();
+}
+
+static void pipelines_invalidate(void) {
+    prewarm_stop();
     for (uint32_t i = 0; i < g_pipes_cap; i++)
         if (g_pipes[i].p) vkDestroyPipeline(g_dev, g_pipes[i].p, NULL);
     if (g_pipes) memset(g_pipes, 0, g_pipes_cap * sizeof *g_pipes);
@@ -688,6 +695,7 @@ static int prewarm_thread(void* arg) {
     uint64_t t0 = platform_now_ns();
     uint32_t n = 0;
     for (uint32_t i = 0; i < g_pw_nkeys; i++) {
+        if (g_pw_cancel) break;  /* finish the current driver call, never destroy its device underneath it */
         uint64_t key = g_pw_keys[i];
         if ((key >> 63) && ((key >> 4) & 15) == TGT_SWAP && g_swap_fmt == VK_FORMAT_UNDEFINED) continue;
         VkPipeline p = pipe_make(key);
@@ -707,6 +715,13 @@ static int prewarm_thread(void* arg) {
     return 0;
 }
 
+static void prewarm_launch(void) {
+    g_pw_cancel = 0;
+    g_pw_running = 1;
+    g_pw_thread = SDL_CreateThreadWithStackSize(prewarm_thread, "vk-prewarm", 8u << 20, NULL);
+    if (!g_pw_thread) rt_fatal("[vk] cannot create prewarm thread: %s", SDL_GetError());
+}
+
 static void prewarm_start(void) {
     FILE* f = fopen(PIPE_KEYS_FILE, "rb");
     uint32_t hd[2] = {0, 0};
@@ -724,8 +739,7 @@ static void prewarm_start(void) {
     g_pw_nkeys = g_nkeys;
     g_pw_keys = malloc(g_nkeys * sizeof *g_pw_keys);
     memcpy(g_pw_keys, g_keys, g_nkeys * sizeof *g_pw_keys);
-    g_pw_running = 1;
-    rt_thread_start(prewarm_thread, NULL);
+    prewarm_launch();
 }
 
 /* the pipeline for a key: from the table, else made now (render thread) */
@@ -2060,11 +2074,7 @@ static void device_recover(void) {
     nlost++;
     rt_log("[vk] device lost after frame %u: rebuilding the renderer", g_frames_done);
     keys_save();
-    while (g_pw_running) {
-        struct timespec ts = {0, 2000000};
-        thrd_sleep(&ts, NULL);
-    }
-    pipe_drain();
+    prewarm_stop();
     device_teardown();
     g_lost = 0;
     device_setup();
@@ -2073,8 +2083,7 @@ static void device_recover(void) {
         g_pw_nkeys = g_nkeys;
         g_pw_keys = malloc(g_nkeys * sizeof *g_pw_keys);
         memcpy(g_pw_keys, g_keys, g_nkeys * sizeof *g_pw_keys);
-        g_pw_running = 1;
-        rt_thread_start(prewarm_thread, NULL);
+        prewarm_launch();
         while (g_pw_running && platform_now_ns() - t_dev < 5000000000ull) {
             pump();
             pipe_drain();
@@ -2372,12 +2381,13 @@ static GxFrame* g_free[2];
 static int g_nfree;
 static GxFrame* g_pending;
 static volatile int g_quit;
+static int g_stopping;  /* protected by g_lock; producers park before GPU/SDL teardown */
 
 void render_dump(void) {}
 
 GxFrame* render_take_free_frame(void) {
     mtx_lock(&g_lock);
-    while (!g_nfree) cnd_wait(&g_cv, &g_lock);
+    while (!g_nfree || g_stopping) cnd_wait(&g_cv, &g_lock);
     GxFrame* f = g_free[--g_nfree];
     mtx_unlock(&g_lock);
     return f;
@@ -2385,13 +2395,51 @@ GxFrame* render_take_free_frame(void) {
 
 void render_submit(GxFrame* f) {
     mtx_lock(&g_lock);
-    while (g_pending) cnd_wait(&g_cv, &g_lock);
+    while (g_pending || g_stopping) cnd_wait(&g_cv, &g_lock);
     g_pending = f;
     cnd_broadcast(&g_cv);
     mtx_unlock(&g_lock);
 }
 
 int render_poll_quit(void) { return g_quit; }
+
+static void shutdown_note(const char* phase) {
+    rt_log("[shutdown] %s", phase);
+    fflush(stderr);  /* keep the last completed phase if a driver hangs or faults */
+}
+
+/* The render thread owns Vulkan object lifetimes and the SDL window. Stop its producers before
+ * releasing anything; guest workers remain parked through the application save/network handlers.
+ * Never return SDL_main while detached guest threads still execute libmain. */
+static void renderer_shutdown(void) {
+    mtx_lock(&g_lock);
+    if (g_stopping) { mtx_unlock(&g_lock); return; }
+    g_stopping = 1;
+    cnd_broadcast(&g_cv);
+    mtx_unlock(&g_lock);
+    shutdown_note("frame producers parked");
+    prewarm_stop();
+    shutdown_note("pipeline compiler joined");
+    overlay_shutdown();
+    shutdown_note("overlay helper joined");
+    platform_audio_shutdown();
+    shutdown_note("audio output closed");
+    if (g_dev) {
+        pcache_save(1);
+        shutdown_note("pipeline cache saved; waiting for GPU and destroying device objects");
+        device_teardown();  /* GPU idle, then framebuffers before views, then device */
+    }
+    shutdown_note("Vulkan device destroyed");
+    if (g_surf) vkDestroySurfaceKHR(g_inst, g_surf, NULL);
+    g_surf = VK_NULL_HANDLE;
+    if (g_inst) vkDestroyInstance(g_inst, NULL);
+    g_inst = VK_NULL_HANDLE;
+    shutdown_note("Vulkan surface and instance destroyed");
+    if (g_win) SDL_DestroyWindow(g_win);
+    g_win = NULL;
+    SDL_Quit();
+    shutdown_note("SDL stopped; shutdown complete");
+}
 
 #ifdef SR_IOS
 /* iOS refuses GPU work from an app in the background: MoltenVK then reports a lost device, and rebuilding it
@@ -2478,11 +2526,11 @@ static int render_thread(void* arg) {
     vk_setup();
     for (;;) {
         mtx_lock(&g_lock);
-        while (!g_pending) {
+        while (!g_pending && !g_quit) {
             mtx_unlock(&g_lock);
             pump();
             mtx_lock(&g_lock);
-            if (!g_pending) {
+            if (!g_pending && !g_quit) {
                 struct timespec ts;
                 timespec_get(&ts, TIME_UTC);
                 ts.tv_nsec += 4000000;
@@ -2490,6 +2538,7 @@ static int render_thread(void* arg) {
                 cnd_timedwait(&g_cv, &g_lock, &ts);
             }
         }
+        if (g_quit) { mtx_unlock(&g_lock); break; }
         GxFrame* f = g_pending;
         mtx_unlock(&g_lock);
         pump();
@@ -2500,14 +2549,12 @@ static int render_thread(void* arg) {
         cnd_broadcast(&g_cv);
         mtx_unlock(&g_lock);
         if (overlay_take_quit_request()) g_quit = 1;
-        if (g_quit) {
-            pcache_save(1);
-            rt_log("[android] quit");
-            fflush(stderr);
-            exit(0);
-        }
+        if (g_quit) break;
     }
-    return 0;
+    rt_log("[android] quit");
+    renderer_shutdown();
+    fflush(stderr);
+    rt_exit(0);  /* flush our save/netplay handlers; avoid Android-wide finalizers racing RenderThread */
 }
 
 void render_start(void) {

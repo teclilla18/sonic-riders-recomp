@@ -105,3 +105,5 @@ Environment variables read by `tools/recomp/gcrecomp.py` when generating code (a
 - `configure.py --no-base-reg`: Switch without the x28 guest-memory base register.
 - After editing `config/GXEE8P/patches.txt`, run `python tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen`
   if ninja says there is nothing to do [uncertain].
+
+- `SR_SHUTDOWN_DELAY_MS=1..5000` (Android): diagnostic hold after explicit Vulkan/SDL cleanup and owned exit handlers, before direct process termination; verifies delayed shutdown faults. Normal quits have no delay.

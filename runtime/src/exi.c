@@ -259,7 +259,7 @@ static void card_init(Card* c, int chan, const char* path, const uint8_t* sram) 
         rt_log("[card] slot A: new formatted card %s (59 blocks)", path);
     }
     if (f) fclose(f);
-    atexit(card_flush_at_exit);
+    rt_atexit(card_flush_at_exit);
     rt_thread_start(card_writer, c);
 }
 
