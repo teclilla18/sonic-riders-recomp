@@ -1184,7 +1184,7 @@ void page_installer(float w) {
             ImGui::Checkbox("I accept the Android SDK License", &g_ic.license);
             if (ImGui::SmallButton("Read shader compiler license"))
                 ShellExecuteW(nullptr, L"open", L"https://developer.android.com/studio/terms", nullptr, nullptr, SW_SHOWNORMAL);
-            note("Uses glslc from the pinned Android NDK (about 1 GB). Alpha is experimental; default60, no time cap. The default SDK icon is used.");
+            note("Uses glslc from the pinned Android NDK (about 1 GB). Alpha defaults: 60fps, 2x, no time cap. Live resolution changes disabled; edit settings.ini while closed and restart. Existing choices retained.");
         }
         section("3. ICON (OPTIONAL)");
         ImGui::BeginDisabled(!idle || g_mode == M_SWITCH2);

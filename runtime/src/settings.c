@@ -9,7 +9,12 @@
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
 /* the 999 ring cap starts on, the original 100 one menu switch away (user, 2026-11-12) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1};
+#ifdef __SWITCH2__
+#define DEFAULT_RES RES_2X
+#else
+#define DEFAULT_RES RES_1X
+#endif
+Settings g_settings = {SCREEN_4_3, 0, DEFAULT_RES, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1};
 volatile int g_ring_cap = 999;  /* patches.txt: the most rings a racer holds */
 static int g_fixed_ring_cap;    /* settings_fix_ring_cap, 0 = the setting's */
 volatile double g_aspect_scale = 1.0;

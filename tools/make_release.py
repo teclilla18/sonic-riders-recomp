@@ -91,7 +91,7 @@ def readme_first(flavor, version):
                 "Fresh default: 60 fps, no automatic exit. Hold Minus ~0.5s for menu; Quit Game and confirm returns to hbmenu.\r\n"
                 "Verified baseline: build7d1bc5fcd419/f05fd81; firmware23.0.1, kaiHEN20261117.1 via Seedsow.\r\n"
                 "Launch via hold-R on a native Switch 2 game; this is native homebrew, not Switch 1 compatibility mode.\r\n"
-                "Known: startup/cache-save hitches. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
+                "Known: startup/cache-save hitches. Switch2 default2x; live resolution changes disabled. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Existing choices retained. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
                 "Experimental higher FPS caused a freeze and is excluded. No universal performance guarantee.\r\n"
                 "Report mode/clocks, firmware/loader, build ID, steps and runtime/lifecycle logs (review personal paths first).\r\n"
                 "Never share your ISO, NRO, extracted assets, saves or keys. See docs/SWITCH2-ALPHA.md for full instructions/credits.\r\n"

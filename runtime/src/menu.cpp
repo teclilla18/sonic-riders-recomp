@@ -385,6 +385,9 @@ void tab_display() {
     }
 #ifdef PIC_RES_RADIO
     heading("Resolution");
+#ifdef __SWITCH2__
+    ImGui::BeginDisabled();
+#endif
     for (int i = 0; i < RES_MODES; i++) {
         static const int order[RES_MODES] = {RES_1X, RES_1_25X, RES_1_5X, RES_2X};  /* smallest first */
         const int r = order[i];
@@ -409,6 +412,10 @@ void tab_display() {
             settings_apply();
         }
     }
+ #ifdef __SWITCH2__
+    ImGui::EndDisabled();
+    note("Switch 2 Alpha: live resolution changes are disabled. Fresh default: 2x. Close the game, edit resolution in settings.ini (0=1x, 2=2x), then restart. Existing saved choices are retained.");
+#endif
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
 #endif
 #ifdef PIC_SCALE_SLIDER

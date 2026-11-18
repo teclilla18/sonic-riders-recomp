@@ -387,3 +387,6 @@ On Linux the install folder ends up with `Sonic Riders.sh` (the launcher), `buil
 The PC install folder ends up with `Sonic Riders.lnk` (the shortcut), `build\host-mingw\sonicriders.exe`
 (the game), `baserom\` (a link to your disc image), `saves\` (memory card and settings) and
 `sonicriders.log`.
+
+
+Switch 2 Alpha1: fresh default2x; live resolution changes disabled exclusively on Switch2. Existing saved choices retained. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Live2x->1x permanently froze overlay while gameplay continued; underlying cause unconfirmed. Super Sonic race entry succeeded on accepted7d1bc5fcd419. Cold GUI/CLI/space testing passed for prior candidate7517958; final restricted candidate requires a new cold validation.

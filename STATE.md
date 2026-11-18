@@ -39,3 +39,6 @@ Easy-read local guides updated; republishing existing Claude artifact URLs
 requires external access/user help and publication approval. No announcements.
 Preserve accepted artifact/checkpoint and experimental feature branch.
 Inbox unchanged at start. Use log-reader for later log analysis.
+
+
+Switch 2 Alpha1: fresh default2x; live resolution changes disabled exclusively on Switch2. Existing saved choices retained. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Live2x->1x permanently froze overlay while gameplay continued; underlying cause unconfirmed. Super Sonic race entry succeeded on accepted7d1bc5fcd419. Cold GUI/CLI/space testing passed for prior candidate7517958; final restricted candidate requires a new cold validation.
