@@ -914,6 +914,221 @@ static void ov_bbox(const GxFrame* f, const GxCmd* d, const GxUniforms* u, const
         if (y > b[3]) b[3] = y;
     }
 }
+/* Local split-screen HUD. The perspective viewports establish ownership; the HUD itself is drawn
+ * later in one full-screen ortho pass. Work on the completed frame so neither letter runs nor bands
+ * can join players. Projection copies translate whole groups; the existing shader preserves size.
+ * No guest memory, perspective registers, scissors, copies or online own-view state are changed. */
+typedef struct { float cx, cy, hx, hy; } HudView;
+typedef struct {
+    uint32_t cmd, uni, group, layer;
+    float b[4], move;
+    HudView source;
+    int owner, tex, cover;
+} HudDraw;
+
+static HudView hud_viewport(const GxUniforms* u) {
+    float xs = fabsf(fbits(u->xfr[0x1A])), ys = fabsf(fbits(u->xfr[0x1B]));
+    float x = fbits(u->xfr[0x1D]) - (float)((u->bp[0x59] & 0x3FF) * 2);
+    float y = fbits(u->xfr[0x1E]) - (float)(((u->bp[0x59] >> 10) & 0x3FF) * 2);
+    return (HudView){x / 320.0f - 1.0f, 1.0f - y / 240.0f, xs / 320.0f, ys / 240.0f};
+}
+static int hud_near(float a, float b) { return fabsf(a - b) < 0.005f; }
+static int hud_view_id(HudView v, int quad) {
+    if (!hud_near(v.hy, 0.5f) || !hud_near(v.hx, quad ? 0.5f : 1.0f) ||
+        !hud_near(fabsf(v.cy), 0.5f) || !hud_near(quad ? fabsf(v.cx) : v.cx, quad ? 0.5f : 0.0f)) return -1;
+    return (v.cy < 0.0f ? (quad ? 2 : 1) : 0) + (quad && v.cx > 0.0f);
+}
+static HudView hud_player_view(int owner, int quad) {
+    return (HudView){quad ? (owner & 1 ? 0.5f : -0.5f) : 0.0f,
+                     owner >= (quad ? 2 : 1) ? -0.5f : 0.5f, quad ? 0.5f : 1.0f, 0.5f};
+}
+static int hud_contains(const float a[4], const float b[4], float eps) {
+    return b[0] >= a[0] - eps && b[1] <= a[1] + eps && b[2] >= a[2] - eps && b[3] <= a[3] + eps;
+}
+static int hud_owner(const float b[4], unsigned mask, int quad) {
+    for (int j = 0; j < (quad ? 4 : 2); j++) {
+        if (!(mask & (1u << j))) continue;
+        HudView v = hud_player_view(j, quad);
+        float rect[4] = {v.cx - v.hx, v.cx + v.hx, v.cy - v.hy, v.cy + v.hy};
+        if (hud_contains(rect, b, 0.002f)) return j;
+    }
+    return -1;
+}
+static int hud_cover(const float b[4], int quad) {
+    for (int j = 0; j < (quad ? 4 : 2); j++) {
+        HudView v = hud_player_view(j, quad);
+        if (b[0] <= v.cx - v.hx + 0.015f && b[1] >= v.cx + v.hx - 0.015f &&
+            b[2] <= v.cy - v.hy + 0.015f && b[3] >= v.cy + v.hy - 0.015f &&
+            fabsf(0.5f * (b[0] + b[1]) - v.cx) < 0.04f &&
+            fabsf(0.5f * (b[2] + b[3]) - v.cy) < 0.04f) return 1;
+    }
+    return 0;
+}
+static float hud_group_anchor(float lo, float hi, float height, HudView v) {
+    /* A group centred in its own view stays centred, including player-specific notifications.
+     * The complete compact HUD has unequal edge margins even when its individual digits cross
+     * the old global dead zone. This tolerance is relative to the view, never a resolution offset. */
+    float mid = (0.5f * (lo + hi) - v.cx) / v.hx;
+    float dead = height > v.hy ? 0.15f : 0.5f;
+    return v.cx + (mid < -dead ? -v.hx : mid > dead ? v.hx : 0.0f);
+}
+static uint32_t hud_root(HudDraw* d, uint32_t i) {
+    while (d[i].group != i) { d[i].group = d[d[i].group].group; i = d[i].group; }
+    return i;
+}
+static int hud_join(const float a[4], const float b[4]) {
+    float xo = fminf(a[1], b[1]) - fmaxf(a[0], b[0]);
+    float yo = fminf(a[3], b[3]) - fmaxf(a[2], b[2]);
+    float ha = a[3] - a[2], hb = b[3] - b[2];
+    if (xo >= 0 && yo >= 0) return 1;
+    /* Original HUD artwork has small gaps between its backing, gauge and lap digits. These are
+     * tolerances in source clip space, independent of output resolution/aspect. A short text line
+     * beside a tall gauge is a separate group unless their pictures actually overlap. */
+    if (xo >= 0.25f * fminf(a[1] - a[0], b[1] - b[0]) && yo >= -0.05f) return 1;
+    return xo >= -0.04f && yo >= 0.35f * fminf(ha, hb) &&
+           (xo >= -0.006f || fminf(ha, hb) >= 0.5f * fmaxf(ha, hb));
+}
+static void local_hud_frame(GxFrame* f) {
+    if (!(f->wide_k > 1.0f)) return;
+    uint32_t mode = ld32(GAME_TOP_MODE);
+    if ((mode != GAME_TOP_MODE_RACE && mode != GAME_TOP_MODE_MULTIPLAYER) ||
+        ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED) return;
+    /* Respect original 4:3, menus/results, and the online picture-aspect policy. */
+    if (g_settings.screen != SCREEN_FIT && !settings_wide_k_fixed()) return;
+    unsigned halves = 0, quarters = 0;
+    for (uint32_t i = 0; i < f->nunis; i++) {
+        const GxUniforms* u = &f->unis[i];
+        if (u->xfr[0x26]) continue;
+        int h = hud_view_id(hud_viewport(u), 0), q = hud_view_id(hud_viewport(u), 1);
+        if (h >= 0) halves |= 1u << h;
+        if (q >= 0) quarters |= 1u << q;
+    }
+    int quad = quarters == 7 || quarters == 15;
+    unsigned mask = quad ? quarters : halves;
+    if (!quad && halves != 3) return;
+    HudDraw* draws = NULL;
+    uint32_t n = 0, cap = 0;
+    int cu = -1, ct = -1;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        const GxCmd* c = &f->cmds[i];
+        if (c->type == GXC_STATE) { cu = (int)c->a; ct = (int)c->b; continue; }
+        if (c->type != GXC_DRAW || cu < 0 || ct < 0 || !f->unis[cu].xfr[0x26]) continue;
+        const GxUniforms* u = &f->unis[cu];
+        if (!(u->xfr[GX_XR_WIDE_FLAGS] & GX_WIDE_HUD_43)) continue;
+        HudView vp = hud_viewport(u);
+        int full = hud_near(vp.cx, 0) && hud_near(vp.cy, 0) && hud_near(vp.hx, 1) && hud_near(vp.hy, 1);
+        if (!full && hud_view_id(vp, quad) < 0) continue;
+        draws = grow(draws, &cap, n + 1, sizeof *draws);
+        HudDraw* d = &draws[n++];
+        *d = (HudDraw){.cmd = i, .uni = (uint32_t)cu, .group = n - 1, .source = vp, .tex = c->tex[0]};
+        ov_bbox(f, c, u, &f->xtabs[ct], d->b);
+        d->b[0] = vp.cx + vp.hx * d->b[0]; d->b[1] = vp.cx + vp.hx * d->b[1];
+        d->b[2] = vp.cy + vp.hy * d->b[2]; d->b[3] = vp.cy + vp.hy * d->b[3];
+        d->cover = hud_cover(d->b, quad);
+        d->owner = d->cover ? -1 : hud_owner(d->b, mask, quad);
+    }
+    /* Map/fade draws straddle splits. Reserve the whole map, including marker draws, and the global
+     * timer's line below its centred backing. Only horizontally contained neighbours join a shared
+     * line: the timer backing overlaps the edge of the adjacent player's boost label. */
+    for (uint32_t i = 0; i < n; i++) {
+        HudDraw* seed = &draws[i];
+        if (seed->owner >= 0 || seed->cover || seed->b[1] - seed->b[0] >= 1.5f ||
+            seed->b[3] - seed->b[2] >= 1.8f) continue;
+        float b[4]; memcpy(b, seed->b, sizeof b);
+        for (int grew = 1; grew;) {
+            grew = 0;
+            for (uint32_t j = 0; j < n; j++) {
+                HudDraw* d = &draws[j];
+                if (d->cover || d->b[0] < b[0] - 0.002f || d->b[1] > b[1] + 0.002f ||
+                    d->b[2] > b[3] + 0.006f || d->b[3] < b[2] - 0.006f) continue;
+                d->owner = -1;
+                if (d->b[2] < b[2]) b[2] = d->b[2], grew = 1;
+                if (d->b[3] > b[3]) b[3] = d->b[3], grew = 1;
+            }
+        }
+    }
+    /* Notifications after the shared map may overlap a gauge and reuse its atlas. Shared/global
+     * layers separate their components from the earlier HUD; late gauge pieces before the map still join.
+     * Compact messages retain the inner half of their view about its centre, rather than snapping a
+     * slightly offset text run to an edge. Tall HUD columns use their complete group's edge margins. */
+    uint32_t layer = 0;
+    int owned = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        if (draws[i].owner < 0) { if (owned) layer++; owned = 0; }
+        else { draws[i].layer = layer; owned = 1; }
+    }
+    for (uint32_t i = 0; i < n; i++) {
+        if (draws[i].owner < 0) continue;
+        for (uint32_t j = 0; j < i; j++)
+            if (draws[i].owner == draws[j].owner && draws[i].layer == draws[j].layer &&
+                draws[i].tex == draws[j].tex && hud_join(draws[i].b, draws[j].b))
+                draws[hud_root(draws, i)].group = hud_root(draws, j);
+    }
+    for (uint32_t i = 0; i < n; i++) {
+        if (draws[i].owner < 0) continue;
+        uint32_t root = hud_root(draws, i);
+        float lo = draws[i].b[0], hi = draws[i].b[1], ylo = draws[i].b[2], yhi = draws[i].b[3];
+        for (uint32_t j = 0; j < n; j++)
+            if (draws[j].owner >= 0 && hud_root(draws, j) == root) {
+                lo = fminf(lo, draws[j].b[0]); hi = fmaxf(hi, draws[j].b[1]);
+                ylo = fminf(ylo, draws[j].b[2]); yhi = fmaxf(yhi, draws[j].b[3]);
+            }
+        float anchor = hud_group_anchor(lo, hi, yhi - ylo, hud_player_view(draws[i].owner, quad));
+        draws[i].move = (f->wide_k - 1.0f) * (anchor - draws[i].source.cx) / draws[i].source.hx;
+    }
+    const char* at = getenv("SR_LOCALHUDLOG");
+    int log = at && g_frames + 1 == (unsigned)atoi(at);
+    if (log) rt_log("[localhud] layout %s active %X draws %u wide %.4f", quad ? "quarters" : "halves", mask, n, f->wide_k);
+    /* Insert projection-only state copies, cached by source and translation. Keep every copy/present
+     * command in place; vertices, texture matrices, depth and scissor retain their original meanings. */
+    GxCmd* out = malloc(sizeof *out * ((size_t)f->ncmds + 2 * (size_t)n + 1));
+    if (!out) { free(draws); return; }
+    struct { uint32_t src, dst; float move; } cache[64];
+    unsigned nc = 0;
+    uint32_t no = 0, di = 0;
+    cu = ct = -1;
+    int emitted = -1;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        GxCmd c = f->cmds[i];
+        if (c.type == GXC_STATE) { cu = (int)c.a; ct = (int)c.b; emitted = cu; out[no++] = c; continue; }
+        if (c.type != GXC_DRAW) { out[no++] = c; continue; }
+        int want = cu;
+        if (di < n && draws[di].cmd == i) {
+            HudDraw* d = &draws[di++];
+            if (log) rt_log("[localhud] cmd %u owner %d tex %d x %.4f %.4f y %.4f %.4f move %.4f cover %d",
+                i, d->owner, d->tex, d->b[0], d->b[1], d->b[2], d->b[3], d->move, d->cover);
+            if (d->owner >= 0 || d->cover) {
+                for (uint32_t j = 0; j < c.b; j++)
+                    f->verts[f->idx[c.a + j]].nrm[3] = d->cover ? GX_ANCHOR_STRETCH : GX_ANCHOR_MIDDLE;
+            } else if (d->b[1] - d->b[0] < 1.5f && d->b[3] - d->b[2] < 1.8f) {
+                for (uint32_t j = 0; j < c.b; j++) f->verts[f->idx[c.a + j]].nrm[3] = GX_ANCHOR_MIDDLE;
+            }
+            if (d->move != 0.0f) {
+                unsigned j = 0;
+                while (j < nc && !(cache[j].src == d->uni && cache[j].move == d->move)) j++;
+                if (j < nc) want = (int)cache[j].dst;
+                else {
+                    GxUniforms u = f->unis[d->uni];
+                    float sign = fbits(u.xfr[0x1A]) < 0 ? -1.0f : 1.0f;
+                    u.xfr[0x21] = ubits(fbits(u.xfr[0x21]) + sign * d->move);
+                    want = (int)f->nunis;
+                    f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof *f->unis);
+                    f->unis[f->nunis++] = u;
+                    if (nc < 64) { cache[nc].src = d->uni; cache[nc].dst = (uint32_t)want; cache[nc++].move = d->move; }
+                }
+            }
+        }
+        if (want != emitted && want >= 0 && ct >= 0) {
+            GxCmd state = {.type = GXC_STATE, .a = (uint32_t)want, .b = (uint32_t)ct};
+            out[no++] = state; emitted = want;
+        }
+        out[no++] = c;
+    }
+    f->cmds = grow(f->cmds, &f->cap_cmds, no, sizeof *f->cmds);
+    memcpy(f->cmds, out, no * sizeof *out); f->ncmds = no;
+    free(out); free(draws);
+}
+
 static void ownview_frame(GxFrame* f, int me) {
     int mode = ownview_mode();
     uint32_t nu0 = f->nunis, nd = 0;
@@ -1190,6 +1405,7 @@ static void efb_copy(uint32_t v) {
         game_mods_frame();
         push_cmd(GXC_PRESENT);
         gx_decode_sync();
+        if (p < 0) local_hud_frame(g_frame);
         if (own) ownview_frame(g_frame, p);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;

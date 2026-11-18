@@ -1743,3 +1743,11 @@ interpolation/ownership/presentation implementation atop released scheduler and
 logging fixes, keeping game timing and normal60 default. Local rate/ownership/
 regression/platform/native checks pass; physical acceptance pending. No changes
 to published ZIP/tag/main. Personal rollback backup preserved on deployment.
+
+## 2026-11-18: isolated personal Switch 2 Riders Plus / HUD integration
+
+User authorized deploying latest local fixes over FTP. New local branch from installed personal source5b59adc;
+original personal/native/public checkouts preserved. Applied only five shared fix source files and three focused
+tests from public local3dfb3f0/3e46743 using clean3-way patches, preserving native/Unlimited code.
+Integrated actual-source gameplay/frame tests pass; native condition-wait and actual interpolation/rate/ownership
+regressions pass. Native build/deployment pending. No physical acceptance, no source push/merge/release/replies.
