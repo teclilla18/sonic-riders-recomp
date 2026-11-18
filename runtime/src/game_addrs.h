@@ -19,9 +19,12 @@
 /* _Main.rel: the unlock data (REL bss at the runtime's fixed 819FF380; a GameCube runs it from 805FB080,
  * where these are 806A9048 / 806A90A0). One status byte per Extreme Gear (0 locked, 1 the default gear,
  * 2 owned) and per character. The Chaos Emerald is gear 18: race code tests the player's gear
- * (player +0x1034) against 18 and 19, the two gears that run on rings. */
+ * (player +0xBB) against 18 and 19, the two gears that run on rings. +0x1034 is an ability mask. */
 #define GAME_GEAR_STATUS     0x81AAD348u
 #define GAME_GEAR_CHAOS_EMERALD 18
+#define GAME_RACER_GEAR       0xBBu
+#define GAME_RACER_CHARACTER  0xBAu
+#define GAME_CHAR_SUPER_SONIC 11
 #define GAME_CHAR_STATUS     0x81AAD3A0u
 #define GAME_PLAYERS         0x81A0D740u  /* _Main.rel bss: the 8 racers (code indexes it by i * 0x1080) */
 #define GAME_PLAYER_SIZE     0x1080u
@@ -32,6 +35,7 @@
 #define GAME_TOP_MODE        0x8021B8C0u
 #define GAME_TOP_MODE_MENUS  1u
 #define GAME_TOP_MODE_RACE   8u   /* demo and Free Race seen (notes/game-addresses.md) */
+#define GAME_TOP_MODE_MULTIPLAYER 4u /* local 3P/4P Free Race, confirmed in PC RAM */
 /* mode 8 is not "racing": it can stay on in menus (Player Entry seen; the user's Extras/Theater after
  * story mode). This .sdata word is 1 in every menu dumped and 0 in races, paused or not (2026-11-07,
  * RAM dumps: Free Race, pause, quit dialog vs title, Player Entry, Normal Race, Extras) [likely]. */

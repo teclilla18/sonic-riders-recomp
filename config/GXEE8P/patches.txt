@@ -101,16 +101,32 @@ decl extern volatile int g_ring_cap;
 # ---- Gear levels 4 and 5 (game_levels.c; with the 999 ring cap): the three per-frame racer loops, just before
 # the game's own level update (racer in r8 / r9 / r8)
 decl void lv_racer_update(uint32_t racer);
+decl void lv_race_reset(void);
+decl void lv_racer_reset(uint32_t racer);
+818EE43C before lv_race_reset();
+818F2008 before lv_racer_reset(c->r[3]);
+# Ring-powered fuel is clamped before conversion back to rings. Super keeps his own max-air
+# denominator (and per-ring cost); only the ceiling is extended, never the stat's resource scale.
+decl uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32_t original);
+81815FEC before c->r[0] = lv_super_air_cap(c->r[29], c->r[6], ld32(c->r[3] + 0x1Cu), c->r[0]);
+818160C8 before c->r[0] = lv_super_air_cap(c->r[29], c->r[6], ld32(c->r[3] + 0x1Cu), c->r[0]);
 8182B864 before lv_racer_update(c->r[8]);
 81831AB4 before lv_racer_update(c->r[9]);
 81835F64 before lv_racer_update(c->r[8]);
 # the racer's own level-up/down (fn 81835F14 region, racer in r31): this one runs for the player and plays
 # the game's level-up for Lv. 4 / 5
 decl void lv_player_update(uint32_t racer);
+decl int lv_super_player_update(uint32_t racer);
+# Super bypasses the native ability guards and enters ONLY the feedback branch: no level/air/speed writes.
+81836024 before if (lv_super_player_update(c->r[31])) goto sr_super_levelup_fx;
+818360E4 before sr_super_levelup_fx: ;
 81836054 before lv_player_update(c->r[31]);
 # the HUD's level-digit cell pointer while a racer is at Lv. 4 / 5 (1P HUD fn_1_31670, entries 0x12 + level,
-# racer r26: steady r16, on a change r3; split-screen HUD fn_1_2FE30, entries 0x87 + level, racer r21: r9)
+# racer r26: steady r16, on a change r3; split-screen HUD fn_1_2B3B8, entries 0x87 + level,
+# racer r21: steady r4, on a change r3). Keep the alternate HUD fn_1_2FE30 hooks too.
 decl uint32_t lv_hud_cell(uint32_t racer, uint32_t cell, int kind);
+8182D528 after c->r[4] = lv_hud_cell(c->r[21], c->r[4], 0);
+8182D5F8 after c->r[3] = lv_hud_cell(c->r[21], c->r[3], 0);
 81833204 after c->r[16] = lv_hud_cell(c->r[26], c->r[16], 1);
 81833300 after c->r[3] = lv_hud_cell(c->r[26], c->r[3], 1);
 81831148 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);

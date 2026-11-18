@@ -2,11 +2,14 @@
  *
  * The game keeps a racer's level in a byte at racer +0x102E (0..2 = Lv. 1..3), raised when the rings reach
  * 30 / 60 (byte table at REL rodata 0x19FC) and lowered below them, and three per-level stat blocks of
- * 0x38 bytes at racer +0x8DC / +0x914 / +0x94C (built by fn 818F1F4C from the character and the gear:
+ * 0x38 bytes at racer +0x8DC / +0x914 / +0x94C (built by fn 818F2008 from the character and the gear:
  * +0x08 top speed, +0x30 drift-dash speed, +0x34 boost speed; x216 = the speedometer). About 100 functions
  * index those blocks by the level byte and the racer's air sits right after the third block, so the byte
  * never goes past 2 here. Instead, while it is 2, Lv. 4 / Lv. 5 are kept in this file and the third
  * block's speeds are raised; they are put back when the racer drops below 200 rings again.
+ * Chaos Emerald is racer +0xBB (not +0x1034, an ability mask). Transformed Sonic (+0xBA == 11)
+ * stays at native level 0 and uses block 1, including his own 182/100/250 baseline. Scale that block
+ * without changing his native level or ring resource. The player's effect-only branch supplies feedback.
  *
  * The HUD draws the level digit as a cell of its sprite table (lbl_1_data_9F4, x / y / w / h in the 512x512
  * HUD texture; the game reads a heap copy of it): the 1P HUD (fn_1_31670) entries 0x12 + level (16x16, the
@@ -20,6 +23,7 @@
  * player's level-up check (fn 81836054) sees the byte at 1 and the rings over 60, so it raises it to 2 as
  * on a real Lv. 2 -> 3. */
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include "game_addrs.h"
 #include "gx_render.h"
@@ -46,14 +50,53 @@ typedef struct {
     int levelup;                 /* a level-up to play (lv_player_update) */
     uint32_t base[3];            /* the game's Lv. 3 values (top, drift, boost) as float bits */
     uint32_t wrote[3];           /* what was written, to notice the game rebuilding the block */
+    uint32_t block, identity;
+    int valid;
 } LvRacer;
 static LvRacer g_lv[8];
 static const uint32_t k_off[3] = {OFF_TOP, OFF_DRIFT, OFF_BOOST};
 
 static int racer_index(uint32_t racer) {
     uint32_t d = racer - GAME_PLAYERS;
-    if (d >= 8 * 0x1080u || d % 0x1080u) return -1;
-    return (int)(d / 0x1080u);
+    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE) return -1;
+    return (int)(d / GAME_PLAYER_SIZE);
+}
+
+static int super_racer(uint32_t racer) {
+    return ld8(racer + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
+           ld8(racer + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
+}
+
+/* The native ring-powered path mirrors floor(fuel * 100 / max_air) into the ring word.
+ * Keep that denominator and all costs intact; only extend the fuel clamp. Raising max_air itself
+ * would dilute each ring and would still leave the mirror bounded to 100. */
+uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32_t original) {
+    if (g_ring_cap == 100 || !super_racer(racer) || !max_air) return original;
+    if ((int32_t)air < 0) return 0;
+    uint64_t cap = (uint64_t)max_air * (uint32_t)g_ring_cap / 100u;
+    if (cap > INT32_MAX) cap = INT32_MAX;
+    return (uint32_t)((uint64_t)air < cap ? air : cap);
+}
+
+static void restore_level(uint32_t racer, LvRacer* r) {
+    if (!r->valid || !r->ext) return;
+    for (int f = 0; f < 3; f++)
+        if (ld32(racer + r->block + k_off[f]) == r->wrote[f])
+            st32(racer + r->block + k_off[f], r->base[f]);
+}
+
+/* Before the real stat constructor, not after a new gear's baseline might equal our old raised value. */
+void lv_racer_reset(uint32_t racer) {
+    int i = racer_index(racer);
+    if (i < 0) return;
+    restore_level(racer, &g_lv[i]);
+    memset(&g_lv[i], 0, sizeof g_lv[i]);
+}
+
+/* Before the game's race initialization; identical stats in consecutive races are still a new owner. */
+void lv_race_reset(void) {
+    for (int i = 0; i < 8; i++) restore_level(GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE, &g_lv[i]);
+    memset(g_lv, 0, sizeof g_lv);
 }
 
 static void write_level(uint32_t racer, LvRacer* r, int ext) {
@@ -61,11 +104,12 @@ static void write_level(uint32_t racer, LvRacer* r, int ext) {
     for (int f = 0; f < 3; f++) {
         float v = u32_as_f32(r->base[f]) * k[f][ext];
         r->wrote[f] = ext ? f32_as_u32(v) : r->base[f];
-        st32(racer + BLK3 + k_off[f], r->wrote[f]);
+        st32(racer + r->block + k_off[f], r->wrote[f]);
     }
     if (ext > r->ext) r->levelup = 1;
     if (ext != r->ext) rt_log("[levels] racer %d: Lv. %d (rings %u)", racer_index(racer), 3 + ext, ld32(racer + 0xB98));
     r->ext = ext;
+    if (!ext) r->levelup = 0;
 }
 
 /* patches.txt: the per-frame racer loops, just before the game's own level update (game thread) */
@@ -73,21 +117,56 @@ void lv_racer_update(uint32_t racer) {
     int i = racer_index(racer);
     if (i < 0) return;
     LvRacer* r = &g_lv[i];
-    uint32_t cur[3];
-    for (int f = 0; f < 3; f++) cur[f] = ld32(racer + BLK3 + k_off[f]);
-    if (r->ext == 0 || memcmp(cur, r->wrote, sizeof cur) != 0) {
-        /* not raised by us, or the game rebuilt the block (a new race): these are its own values */
-        memcpy(r->base, cur, sizeof cur);
-        memcpy(r->wrote, cur, sizeof cur);
-        r->ext = 0;
-        r->levelup = 0;
+    int super = super_racer(racer);
+    uint32_t block = super ? 0x8DCu : BLK3;
+    uint32_t identity = ld8(racer + GAME_RACER_GEAR) | (uint32_t)ld8(racer + GAME_RACER_CHARACTER) << 8 |
+                        (uint32_t)ld8(racer + 0xBFu) << 16;
+    if (r->valid && (r->block != block || r->identity != identity)) {
+        restore_level(racer, r);
+        memset(r, 0, sizeof *r);
     }
+    int changed = !r->valid;
+    for (int f = 0; f < 3; f++) {
+        uint32_t cur = ld32(racer + block + k_off[f]);
+        /* Track fields independently: a stat mod rebuilding just boost must not turn our raised top
+         * speed into the next baseline. A full race rebuild is also caught explicitly by reset. */
+        if (!r->valid || !r->ext || cur != r->wrote[f]) { r->base[f] = cur; changed = 1; }
+    }
+    r->block = block; r->identity = identity; r->valid = 1;
     int want = 0;
-    if (g_ring_cap != 100 && ld8(racer + 0x102E) == 2) {
+    if (g_ring_cap != 100 && (super || ld8(racer + 0x102E) == 2)) {
         uint32_t rings = ld32(racer + 0xB98);
         want = rings >= LV5_RINGS ? 2 : rings >= LV4_RINGS ? 1 : 0;
     }
-    if (want != r->ext) write_level(racer, r, want);
+    if (want != r->ext || changed) write_level(racer, r, want);
+}
+
+/* Game thread, once per simulation step. Ring-powered racers can skip the native level checks;
+ * also retire outstanding writes when toggled off, including a player whose native check is suspended. */
+void lv_racers_frame(void) {
+    uint32_t mode = ld32(GAME_TOP_MODE);
+    if ((mode != GAME_TOP_MODE_RACE && mode != GAME_TOP_MODE_MULTIPLAYER) ||
+        ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED) {
+        lv_race_reset();
+        return;
+    }
+    for (int i = 0; i < 8; i++) {
+        uint32_t p = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
+        if (super_racer(p) || g_lv[i].ext) lv_racer_update(p);
+    }
+}
+
+/* Before the native check's air/ability guards. Jump to its existing effect/sound/panel branch,
+ * after all native level, max-speed and air-refill writes. No synthetic native level for Super. */
+int lv_super_player_update(uint32_t racer) {
+    int i = racer_index(racer);
+    if (i < 0 || !super_racer(racer)) return 0;
+    lv_racer_update(racer);
+    if (!g_lv[i].ext || !g_lv[i].levelup) return 0;
+    g_lv[i].levelup = 0;
+    if (getenv("SR_LEVELLOG")) rt_log("[levels] racer %d: Super level-up feedback, native %u, fuel %u refill %u",
+        i, ld8(racer + 0x102E), ld32(racer + 0x984), ld32(racer + 0x988));
+    return 1;
 }
 
 /* patches.txt: the player's own level-up check (fn 81836054, before it reads the byte) */
@@ -95,6 +174,7 @@ void lv_player_update(uint32_t racer) {
     lv_racer_update(racer);
     int i = racer_index(racer);
     if (i < 0 || !g_lv[i].levelup) return;
+    if (super_racer(racer)) return;
     g_lv[i].levelup = 0;
     if (ld8(racer + 0x102E) == 2 && ld32(racer + 0xB98) >= 60) st8(racer + 0x102E, 1);  /* the game raises it back */
 }
@@ -111,7 +191,15 @@ static const CellKind k_kind[2] = {
 /* patches.txt: the HUD's level-digit cell pointer for `racer` (kind 0 = 20x20 cells, 1 = 16x16) */
 uint32_t lv_hud_cell(uint32_t racer, uint32_t cell, int kind) {
     int i = racer_index(racer);
-    if (i < 0 || g_lv[i].ext == 0) return cell;
+    if (i < 0 || kind < 0 || kind > 1 || g_lv[i].ext == 0) return cell;
+    if (getenv("SR_LEVELLOG")) {
+        static int seen[8][2];
+        if (seen[i][kind] != g_lv[i].ext) {
+            rt_log("[levels-hud] racer %d kind %d ext %d source %08X rect %u %u %u %u", i, kind, g_lv[i].ext,
+                   cell, ld32(cell), ld32(cell + 4), ld32(cell + 8), ld32(cell + 12));
+            seen[i][kind] = g_lv[i].ext;
+        }
+    }
     int e = g_lv[i].ext - 1;
     const CellKind* k = &k_kind[kind];
     uint32_t a = CELL_TABLE + 16u * (uint32_t)(kind * 2 + e);

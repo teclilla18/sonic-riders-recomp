@@ -396,6 +396,7 @@ void hle_frame_end(Cpu* c) {
 }
 
 static void frame_end_body(Cpu* c) {
+    { void lv_racers_frame(void); lv_racers_frame(); }
     poke_at();
     ram_hash();
     { void netplay_frame_start(void); netplay_frame_start(); }  /* the state checksum for record/replay/online */
