@@ -367,7 +367,7 @@ static int stall_thread(void* arg) {
                 if (!w) continue;
                 unsigned kind = atomic_load(&w->wait_kind);
                 uint64_t since = atomic_load(&w->wait_since), now = platform_now_ns();
-                rt_log("[stall2] worker%u fn=%p exited=%d wait=%u object=%p age_ms=%llu waits=%u", i, (void*)w->fn,
+                rt_log("[stall2] worker%u fn=%p arg=%p exited=%d wait=%u object=%p age_ms=%llu waits=%u", i, (void*)w->fn, w->arg,
                        atomic_load(&w->exited), kind, (void*)atomic_load(&w->wait_object),
                        (unsigned long long)(kind && now >= since ? (now-since)/1000000 : 0), atomic_load(&w->wait_count));
             }

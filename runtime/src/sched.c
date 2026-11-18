@@ -35,6 +35,11 @@ typedef struct GThread {
     cnd_t cv;
     Cpu cpu;
     uint32_t bt[12];     /* guest backtrace where it last parked (diagnostics) */
+#ifdef __SWITCH2__
+    _Atomic unsigned diag_phase; /* 1=start wait,2=guest,3=handoff lock,4=park,5=resumed */
+    _Atomic unsigned diag_switches;
+    _Atomic uint32_t diag_target;
+#endif
     struct GThread* next;
 } GThread;
 
@@ -68,9 +73,15 @@ static int thread_main(void* arg) {
     GThread* g = arg;
     rt_thread_pin(0);
     profile_register_thread();
+#ifdef __SWITCH2__
+    atomic_store(&g->diag_phase, 1);
+#endif
     mtx_lock(&g_lock);
     while (g_running != g) cnd_wait(&g->cv, &g_lock);
     mtx_unlock(&g_lock);
+#ifdef __SWITCH2__
+    atomic_store(&g->diag_phase, 2);
+#endif
     t_self = g;
     Cpu* c = &g->cpu;
     ppc_enter_guest_thread();  /* the Switch's generated code reads the memory base from x28 */
@@ -104,6 +115,11 @@ static void det_bt_log(const Cpu* c) {
 static void handoff(GThread* next) {
     uint32_t prof_fn = g_ppc_cur_fn;
     g_ppc_cur_fn = PROF_SWITCH;
+#ifdef __SWITCH2__
+    atomic_store(&t_self->diag_target, next->ctx);
+    atomic_fetch_add(&t_self->diag_switches, 1);
+    atomic_store(&t_self->diag_phase, 3);
+#endif
     mtx_lock(&g_lock);
     g_running = next;
     if (!next->started) {
@@ -112,7 +128,13 @@ static void handoff(GThread* next) {
     } else {
         cnd_signal(&next->cv);
     }
+#ifdef __SWITCH2__
+    atomic_store(&t_self->diag_phase, 4);
+#endif
     while (g_running != t_self) cnd_wait(&t_self->cv, &g_lock);
+#ifdef __SWITCH2__
+    atomic_store(&t_self->diag_phase, 5);
+#endif
     mtx_unlock(&g_lock);
     /* this thread runs again. It returns through the scheduler into code that enters no new function
      * for a while, so the profiler would keep charging that time to the scheduler's last call: charge
@@ -610,6 +632,22 @@ static void dbg_events_dump(void) {
 void dsp_dump(void);
 
 void sched_dump(void) {
+#ifdef __SWITCH2__
+    int available = mtx_trylock(&g_lock) == thrd_success;
+    if (available) mtx_unlock(&g_lock);
+    rt_log("[sched2] scheduler_lock_available=%d irq_running=%d preempt=%d", available, atomic_load(&g_irq_running), g_core_preempt[0]);
+    int irq_available = mtx_trylock(&g_irq_lock) == thrd_success;
+    if (irq_available) mtx_unlock(&g_irq_lock);
+    rt_log("[sched2] irq_lock_available=%d bits=%08X native_head=%u tail=%u dec_deadline=%lld",
+           irq_available, atomic_load(&g_irq_bits), g_native_head, g_native_tail, (long long)g_dec_deadline);
+    /* Best effort, never hold scheduler lock while doing SD I/O. Correlate cv
+     * addresses with native worker wait objects; samples are not transactional. */
+    for (GThread* g = g_threads; g; g = g->next) {
+        rt_log("[sched2] ctx=%08X host=%p cv=%p selected=%d started=%d phase=%u switches=%u target=%08X",
+               g->ctx, (void*)g, (void*)&g->cv, g == g_running, g->started,
+               atomic_load(&g->diag_phase), atomic_load(&g->diag_switches), atomic_load(&g->diag_target));
+    }
+#endif
     dbg_events_dump();
     dbg_quiet_dump();
     profile_dump();

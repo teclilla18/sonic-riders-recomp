@@ -1,3 +1,36 @@
+# Refined native stall diagnostics (2026-11-18)
+
+# Diagnostic20e0 hardware result (2026-11-18)
+
+Both focused snapshots are8.022s apart: frame1780/GXbytes16426405 fixed,
+retraces2338->2819; guestfnF0000003=PROF_SWITCH, lr8001062C, current/selected
+guest81A93850 and runqueuebits0 fixed. Main801B3610 and801E4C90/801E4978 wait
+on queue8021BDF4;81A93B68/81A93E80/801E4660 suspended. Renderer pendingNULL,
+free1,presented1780,no device loss: renderer waiting for producer, not fullqueue.
+DVD executing801F97A8 command1/state1 offset41620364 length800 transferred0
+unchanged despite recorded DVDdone. DIlen0/complete-1, IRQpending04002480 posted1
+unchanged; DSPCSR0958/ARAMcount0. Host timers/waits continue, several parked
+worker ages advance. Exact guest selected-context->hostwait mapping missing.
+Likely lead scheduler handoff/interrupt delivery, not a confirmed defect.
+
+User music stopped~5sec; transport summaries all15 zeroerrors/drops. Does not
+prove healthy guest music decoder/stream. Shared DVD/guest-progress cause is
+plausible but unconfirmed. No general audio/GPU/cache fix attempted.
+
+Source diagnostic2 adds ONLY __SWITCH2__ guestctx/hostarg/cv mapping, selected,
+started,phase1initialwait/2guest/3handofflock/4park/5resumed,switchcount/target;
+trylock scheduler+IRQ status,preempt,irqrunning,nativeIRQ head/tail/decdeadline.
+Snapshot asynchronous; phase stale after resume until next switch, not a CPU PC.
+These mappings should distinguish selectedhost stillparked vs other waits.
+Same8/16sample stalltrigger. No tracing or guest timing policy changes.
+
+OriginalSwitch main/sched/menu preprocessing unchanged; AndroidVk syntax PASS;
+NRO/link/manifest/source/objectchecks PASS. Build5c449024047a,29464525bytes,
+SHAdadcba505ffd5dfedd105d1a4e39d26723f9515c8a9e0aba3c904ed1e101050b.
+Physical validation pending. Existing release64e8316 ZIP/checkpoints unchanged.
+
+## Previous diagnostic checkpoint
+
 # Experimental Switch 2 stall diagnostics (2026-11-18)
 
 Branch codex/switch2-stall-diag starts at validated64e8316. Alpha release branch,

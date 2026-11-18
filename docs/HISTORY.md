@@ -1675,3 +1675,12 @@ No confirmed freeze fix. Existing native no-op profiler omitted originalSwitch
 stall dump. Reuse that monitor with bounded reports and native worker-wait and
 render-queue observations; no timing/rate/resource policy changes or FPS work.
 Validated release ZIP unchanged; physical diagnosis pending.
+
+
+## 2026-11-18: first stall snapshots and handoff mapping refinement
+
+Frame1780 fixed while VI advances; renderqueue empty, guesthandoff tag fixed,
+DVD completion recorded with guestcommand still executing and IRQqueued.
+No rootcause established. Added native-only guestctx-to-hostcondvar mapping,
+handoff phase/target and scheduler/IRQ queue/lock snapshots for next hardware
+test. Music-only dropout shared cause unconfirmed. Release ZIP unchanged.
