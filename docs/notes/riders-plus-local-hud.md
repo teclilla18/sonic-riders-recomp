@@ -1,5 +1,14 @@
 # Riders Plus Super Sonic and local HUD (2026-11-18)
 
+Latest native follow-up: Super-only Plus active top/boost/drift targets195/270/110 Base,
+220/300/125 Lv4 and240/330/140 Lv5. Applied ownership includes Base; ratios preserve stat mods.
+Actual-source regressions and minimized PC on/off exact-stat routes pass. Native7a05aa6f5f02 from4459752
+is installed via OunceMTP with verified stages/final SHA-256 readbacks, old pair retained locally/onSD,
+Unlimited/settings/env/cache preserved and saves/unrelated entries untouched. Hardware balance acceptance
+is pending. User's prior-build2P GUI issue and repeatedLv5 records are being investigated separately on the
+public local review branch. No corresponding fix is included in this installed balance build. Canonical
+excluded handoff holds tooling/worktree paths and easy rollback. Historical pre-balance evidence follows.
+
 Implemented on the local review branch `codex/riders-plus-local-hud`, from public main `bf9f723`.
 Not released or user-accepted. Keep source local: no merge, push, release changes or issue replies. The user
 subsequently authorized a Switch 2 FTP deployment for a personal playtest; use an isolated native checkout,

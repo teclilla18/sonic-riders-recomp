@@ -1756,3 +1756,15 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
   Staged and installed NRO/manifest readbacks match; old pair backed up locally/onSD. Settings/env byte-identical,
   other data untouched; Unlimited stays enabled. Native wait/interpolation/rate/ownership regressions pass.
   User may exitFTPandlaunch; physical gameplay/user acceptance pending. No push/merge/release/replies.
+
+### 2026-11-18 - Local Super balance deployed through OunceMTP
+- Implemented Super-only Plus targets Base195/270/110, Lv4 220/300/125, Lv5 240/330/140 top/boost/drift.
+  Baseline ratios/mod compatibility/Base ownership restore correctly. No other mechanics changed here.
+- Actual-source regressions and public minimized PC on/off exact-stat/control routes pass. Native build
+  7a05aa6f5f02 from4459752 validates header/identity/source hashes/sidecar; new balance not hardware-accepted.
+- User granted standing connected-device dev/test deployment permission. OunceMTP/WPD transaction backs up
+  prior installedda8pair locally/onSD, verifies stages + installed NRO/manifest SHA256 readbacks. Unlimited,
+  settings/env/cache preserved; saves/unrelated entries untouched. Rollback plan validated, not applied.
+- User prior-build test confirms2P GUI problem,3P/4P mostly fine; returned screenshots/log retrieved read-only.
+  Investigations of2P timer/group overlap and finished-phase repeatedLv5 bookkeeping proceed on public local
+  review branch. This native balance build includes neither fix. No push/publish/public asset change.

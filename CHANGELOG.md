@@ -1,5 +1,11 @@
 # Changelog
 
+## Local development test — not published
+
+- Riders Plus Super balance: Base195/270/110, Lv4 220/300/125, Lv5 240/330/140 km/h
+  top/boost/drift, preserving captured stat mods without compounding. Native test build installed with
+  verified OunceMTP backups/readbacks; settings/Unlimited/data preserved. No HUD/bookkeeping fix included.
+
 ## v0.8.6-switch2-alpha.1 (experimental candidate; not published)
 
 - Final baseline is hardware-tested c8c06fdda996/fa2ec57, retaining scheduler
