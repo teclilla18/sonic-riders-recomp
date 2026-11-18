@@ -1,4 +1,6 @@
 # Playing
+For native Switch 2 Alpha 1, use the [separate alpha guide](SWITCH2-ALPHA.md). Stable/original Switch instructions below are separate.
+
 
 [← Back to the README](../README.md)
 

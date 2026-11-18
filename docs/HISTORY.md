@@ -1652,3 +1652,18 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   write remains unmeasured. No speculative runtime fix, rebuild or deployment.
 - Local source checkpoint preserves previous targeted fixes and acceptance
   evidence. No push, merge or publication. Extended coverage remains pending.
+
+## 2026-11-17: prepare native Switch 2 Alpha 1 installer
+
+- Isolated accepted f05fd81 runtime; unvalidated FPS implementation excluded.
+  User then reported build67341d614683 freezes at Player Entry with Sonic and
+  Chaos Emerald gear. Failed binary/logs/config preserved via FTP; exact
+  accepted7d1bc5fcd419 restored, pc_fps0 only, env frames0 retained.
+- Existing setup/GUI/release/Sandbox infrastructure gains a native target.
+  Compiler/SDK/build/SD destinations isolated; hashes pinned; ISO/RVZ flow reused.
+  Source-commit record avoids needing Git in a cold release install. User data
+  retained. Default60/no automatic exit; manual alpha updates remain separate.
+- Local GUI compile and targeted installer/cold-input regressions pass. Whole
+  ZIP audit and exact cold GUI/CLI/space test are mandatory candidate gates;
+  precise results/checksum/source commit recorded locally before approval.
+  Physical acceptance remains baseline-only; no release publication yet.

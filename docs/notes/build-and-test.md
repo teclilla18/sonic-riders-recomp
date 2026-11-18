@@ -97,6 +97,18 @@ toolchain's zstandard wheel, Mac/Linux a pinned wheel from toolchain.json ("mac"
 only for an RVZ. Test images: `DolphinTool convert -f rvz -c zstd -b 131072 -l 5` (also none/lzma2/bzip2, `-f wia`);
 `sandbox_test.py --iso <file.rvz>` runs the cold test from an RVZ.
 
+**Switch 2 Alpha 1:** use `tools/make_release.py --flavor switch2 --version v0.8.6-switch2-alpha.1`
+from the clean isolated alpha branch. It creates SonicRiders-Switch2-Setup-Alpha1.zip,
+.sha256, SOURCE_COMMIT and release-metadata.json. Runtime/config must match f05fd81.
+Run `tools/audit_switch2_release.py <zip>` over every ZIP entry. Then ASK before
+`tools/sandbox_test.py --flavor switch2 --zip <zip> --iso <own image> --space --launch`.
+No --cache for final validation. First install uses the existing GUI automation,
+second uses CLI in a space path; local fake SD validates native platform2/version1,
+manifest/commit/layout, no exit limit and retained save/settings/cache sentinels.
+Only results mapping is writable; never export NRO/game data. GUI/CLI installation
+success is not physical hardware acceptance. Keep stable latest/updaters separate;
+publish only a verified exact-source tag pre-release after explicit approval.
+
 **Tagging a release (2026-11-16):** push the tag yourself first (`git tag vX <commit>; git push origin vX`), then
 `gh release create vX --verify-tag ...`. Without an existing tag gh tags the remote default branch (v0.8.5 got the
 wrong commit that way and the tag had to be force-moved by the user).

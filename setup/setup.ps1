@@ -10,7 +10,7 @@ shipped: the tool checks your image, recompiles its code locally, builds the Swi
 
 Parameters (all optional; asked for when missing):
   -Iso PATH          your Sonic Riders (USA) disc image, GXEE8P revision 0 (Redump, 1.4 GB .iso; Dolphin's .rvz / .wia are converted)
-  -Target T          switch | pc | both (Switch + PC) | android | all
+  -Target T          switch2 (native alpha) | switch | pc | both (Switch + PC) | android | all
   -Abi A             Android: arm64-v8a (phones, default) | x86_64 (the emulator) | both
   -Install yes|no    Android: install the APK on the phone connected by USB (adb), if there is one
   -AcceptAndroidSdkLicense   Android: you accept the Android SDK License (https://developer.android.com/studio/terms);
@@ -32,7 +32,7 @@ setup\toolchain.json and checked before use.
 #>
 param(
     [string]$Iso,
-    [ValidateSet("", "switch", "pc", "both", "android", "all")][string]$Target = "",
+    [ValidateSet("", "switch", "switch2", "pc", "both", "android", "all")][string]$Target = "",
     [ValidateSet("arm64-v8a", "x86_64", "both")][string]$Abi = "arm64-v8a",
     [ValidateSet("", "yes", "no")][string]$Install = "",
     [switch]$AcceptAndroidSdkLicense,
@@ -181,13 +181,15 @@ if (-not $Target) {
     $c = Ask "Choose 1, 2, 3, 4 or 5" "1"
     switch ($c) { "1" { $Target = "switch" } "2" { $Target = "pc" } "3" { $Target = "both" } "4" { $Target = "android" } "5" { $Target = "all" } default { Fail "Unknown choice '$c'." } }
 }
+$doSwitch2 = $Target -eq "switch2"
+if ($doSwitch2) { $SdSub = "switch\sonicriders-switch2"; $HomeIcon = "no" }
 $doSwitch = @("switch", "both", "all") -contains $Target
 $doPc = @("pc", "both", "all") -contains $Target
 $doAndroid = @("android", "all") -contains $Target
 Log "Building: $Target"
 
 $sdDir = $null
-if ($doSwitch -and -not $NoSd) {
+if (($doSwitch -or $doSwitch2) -and -not $NoSd) {
     if (-not $Sd) {
         if ($Yes) {
             Log "No -Sd given: the .nro stays in build\switch\ (copy it yourself)."
@@ -206,7 +208,7 @@ if ($doSwitch -and -not $NoSd) {
     if ($Sd) {
         if (-not (Test-Path -LiteralPath $Sd -PathType Container)) { Fail "SD card path not found: $Sd" }
         $sdRoot = (Resolve-Path -LiteralPath $Sd).Path
-        if ($sdRoot -match "\\switch\\sonicriders\\?$") { $sdRoot = Split-Path (Split-Path $sdRoot) }
+        if ($sdRoot -match "\\switch\\sonicriders(?:-switch2)?\\?$") { $sdRoot = Split-Path (Split-Path $sdRoot) }
         if (-not (Test-Path -LiteralPath (Join-Path $sdRoot "switch") -PathType Container) -and -not (Test-Path -LiteralPath (Join-Path $sdRoot "atmosphere"))) {
             $a = Ask "$sdRoot has no 'switch' folder. Is this really your Switch SD card? (y/n)" "n"
             if ($a -notmatch "^[yY]") { Fail "Stopped: pick the SD card's top folder (the one that contains 'switch' and 'atmosphere')." }
@@ -442,15 +444,20 @@ if ($rvzSrc) {
 }
 
 $dkp = $null
-if ($doSwitch) {
+if ($doSwitch -or $doSwitch2) {
     $dkpSpec = $tc.devkitpro
     $dkp = Join-Path $ToolsDir $dkpSpec.dir
-    $want = ($dkpSpec.packages | ForEach-Object { $_.sha256 }) -join ","
+    $packages = $dkpSpec.packages
+    if ($doSwitch2) {
+        $dkp += "-switch2"
+        $packages = @($packages | Where-Object { $_.url -match "devkita64-|switch-tools-" })
+    }
+    $want = ($packages | ForEach-Object { $_.sha256 }) -join ","
     $mark = Join-Path $dkp ".setup-ok"
     if (-not ((Test-Path $mark) -and ((Get-Content $mark -Raw).Trim() -eq $want))) {
         $stage = "$dkp.extract"
         if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-        foreach ($p in $dkpSpec.packages) {
+        foreach ($p in $packages) {
             $f = Download $p.url $p.sha256 $dkpSpec.user_agent
             Log "Extracting $([IO.Path]::GetFileName($f))"
             Extract $f $stage
@@ -462,6 +469,22 @@ if ($doSwitch) {
     }
     if (-not (Test-Path (Join-Path $dkp "devkitA64\bin\aarch64-none-elf-gcc.exe"))) { Fail "The Switch toolchain is incomplete in $dkp" "Delete that folder and run the setup again." }
     Log "Switch toolchain ready (devkitA64, libnx, deko3d, uam, switch-tools)."
+}
+$ounceSdk = $null; $glslc = $null
+if ($doSwitch2) {
+    if (-not $AcceptAndroidSdkLicense) {
+        Log "Switch 2 shaders use glslc from the pinned Android NDK (about 1 GB download)."
+        Log "License: https://developer.android.com/studio/terms"
+        if ($Yes) { Fail "Add -AcceptAndroidSdkLicense after reading the license, or run interactively." }
+        if ((Ask "Accept the Android SDK License for the shader compiler? (y/n)" "n") -notmatch "^[yY]") { Fail "Shader compiler license not accepted." }
+    }
+    $ounceSdk = Ensure-Tool $tc.switch2.sdk
+    $archive = Download $tc.switch2.sdk.url $tc.switch2.sdk.sha256
+    Copy-Item -LiteralPath $archive -Destination (Join-Path $ounceSdk "ounce-devkit-20261117.tar.xz") -Force
+    $ndk = Ensure-Tool $tc.android.ndk
+    $glslc = Join-Path $ndk "shader-tools\windows-x86_64\glslc.exe"
+    if (-not (Test-Path $glslc)) { Fail "Pinned NDK is missing glslc." }
+    Log "Native Switch 2 toolchain ready: ounce-devkit20261117, devkitA64, OunceVK and glslc."
 }
 $llvm = $null; $sdl = $null
 if ($HomeIcon -eq "yes" -and -not $doPc) {
@@ -494,12 +517,12 @@ if ($doAndroid) {
 }
 
 # ---------------------------------------------------------------- recompile
-$needGame = $doSwitch -or $doPc -or $doAndroid
+$needGame = $doSwitch -or $doSwitch2 -or $doPc -or $doAndroid
 if ($needGame) {
 Step "4/7  Extracting the game code from your disc image"
 # the build happens in one folder kept in the tools folder for every version (tools\build_workdir.py): an
 # update copies in only the changed files and rebuilds only what they touch, not the whole game again
-$Work = Join-Path $ToolsDir "build"
+$Work = Join-Path $ToolsDir $(if ($doSwitch2) { "build-switch2" } else { "build" })
 Log "Build folder (kept for updates): $Work"
 Run "copy this version's changed files to the build folder" $python @("-I", "tools\build_workdir.py", "sync", $Root, $Work)
 $RunDir = $Work
@@ -527,6 +550,18 @@ if ($doSwitch) {
     $builtNro = Copy-Built "build\switch\sonicriders.nro"
     if (-not $builtNro -or -not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
+}
+if ($doSwitch2) {
+    Run "configure (native Switch 2)" $python @("configure.py", "--target", "switch2", "--devkitpro", $dkp, "--ounce-sdk", $ounceSdk, "--glslc", $glslc, "--imgui", $imgui)
+    Run "build native Switch 2 homebrew" $ninja @("-j4")
+    $builtNro = Copy-Built "build\switch2\sonicriders-switch2.nro"
+    $buildInfo = Copy-Built "build\switch2\build-info.json"
+    if (-not $builtNro -or -not $buildInfo) { Fail "Native Switch 2 output is missing." }
+    $RunDir = $null
+    $ready = Join-Path $Root "build\switch2\sd\switch\sonicriders-switch2"
+    Run "prepare verified Switch 2 SD-ready layout" $python @("-I", "tools\switch2_install.py", "--nro", $builtNro, "--manifest", $buildInfo, "--destination", $ready)
+    Log "Native Switch 2 output: $builtNro; SD-ready folder: $ready" "Green"
+    $RunDir = $Work
 }
 $builtNsp = $null
 if ($doSwitch -and $HomeIcon -eq "yes") {
@@ -579,10 +614,14 @@ $RunDir = $null
 Step "7/7  Installing"
 if ($sdDir) {
     New-Item -ItemType Directory -Force -Path $sdDir | Out-Null
-    $nroDest = Join-Path $sdDir "sonicriders.nro"
+    if ($doSwitch2) {
+        Run "install native Switch 2 (preserve saves/settings/caches)" $python @("-I", "tools\switch2_install.py", "--nro", $builtNro, "--manifest", $buildInfo, "--destination", $sdDir)
+    }
+    $nroName = if ($doSwitch2) { "sonicriders-switch2.nro" } else { "sonicriders.nro" }
+    $nroDest = Join-Path $sdDir $nroName
     Copy-Item $builtNro $nroDest -Force
     if ((Get-FileHash $nroDest -Algorithm SHA256).Hash -ne (Get-FileHash $builtNro -Algorithm SHA256).Hash) { Fail "The copy on the SD card does not match the build (card full or failing?)." }
-    Log "Copied sonicriders.nro to $sdDir (verified)."
+    Log "Copied $nroName to $sdDir (verified)."
     $modsSrc = Join-Path $Root "mods"
     if (Test-Path -LiteralPath $modsSrc -PathType Container) {
         # mods\ (texture packs added in the installer) -> /switch/sonicriders/mods/; only new or changed files are copied

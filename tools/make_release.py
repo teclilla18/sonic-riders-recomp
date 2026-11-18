@@ -43,7 +43,7 @@ def git(*args):
 
 
 PLAT = {"switch": ("Switch", "switch"), "pc": ("PC", "pc"), "android": ("Android", "android"), "linux": ("Linux", "linux"),
-        "ios": ("iOS", "ios")}
+        "ios": ("iOS", "ios"), "switch2": ("Switch2", "switch2")}
 
 
 def launcher(flavor):
@@ -77,6 +77,25 @@ exit $rc
 
 
 def readme_first(flavor, version):
+    if flavor == "switch2":
+        return ("Sonic Riders Recomp - Switch 2 Alpha 1\r\n"
+                "EXPERIMENTAL: community bug reports, compatibility/performance/stress testing.\r\n"
+                "No game data is included. Build from your own validated USA GXEE8P rev0 ISO/GCM or RVZ/WIA.\r\n"
+                "Windows 10/11 x64; internet and at least 8 GB free for tools/builds.\r\n"
+                "Extract the entire ZIP, then run Install Sonic Riders (Switch2).exe.\r\n"
+                "Pick your disc and SD card (or keep local files for manual FTP). Accept the shader compiler license.\r\n"
+                "Command-line fallback: Install Sonic Riders (Switch2) - command line.bat -Iso <image> -NoSd -Yes -AcceptAndroidSdkLicense\r\n"
+                "Add -Sd <SD root> -CopyIso yes instead of -NoSd to install to SD.\r\n"
+                "Output: build/switch2/sd/switch/sonicriders-switch2/. Copy to /switch/sonicriders-switch2/ with your own image.\r\n"
+                "Existing saves/settings/caches/env are retained. Original Switch folders are separate.\r\n"
+                "Fresh default: 60 fps, no automatic exit. Hold Minus ~0.5s for menu; Quit Game and confirm returns to hbmenu.\r\n"
+                "Verified baseline: build7d1bc5fcd419/f05fd81; firmware23.0.1, kaiHEN20261117.1 via Seedsow.\r\n"
+                "Launch via hold-R on a native Switch 2 game; this is native homebrew, not Switch 1 compatibility mode.\r\n"
+                "Known: startup/cache-save hitches. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
+                "Experimental higher FPS caused a freeze and is excluded. No universal performance guarantee.\r\n"
+                "Report mode/clocks, firmware/loader, build ID, steps and runtime/lifecycle logs (review personal paths first).\r\n"
+                "Never share your ISO, NRO, extracted assets, saves or keys. See docs/SWITCH2-ALPHA.md for full instructions/credits.\r\n"
+                "LLM-assisted development; human hardware acceptance and cold installer validation are separate.\r\n").encode()
     if flavor == "linux":
         return readme_linux(version)
     if flavor == "ios":
@@ -315,11 +334,15 @@ def main():
     ap.add_argument("--version", default="dev", help="version in the zip name (default: dev)")
     ap.add_argument("--ref", default="HEAD", help="commit to package (default: HEAD)")
     ap.add_argument("--out", default=os.path.join("build", "release"), help="output folder")
-    ap.add_argument("--flavor", choices=["switch", "pc", "android", "linux", "ios", "source"], default="source")
+    ap.add_argument("--flavor", choices=["switch", "switch2", "pc", "android", "linux", "ios", "source"], default="source")
     args = ap.parse_args()
 
     root = git("rev-parse", "--show-toplevel").decode().strip()
     os.chdir(root)
+    full_commit = git("rev-parse", args.ref + "^{commit}").decode().strip()
+    if args.flavor == "switch2" and (git("status", "--porcelain").strip() or full_commit != git("rev-parse", "HEAD").decode().strip()):
+        print("make_release: Switch 2 alpha requires clean source at the exact packaged HEAD; no zip written.")
+        return 1
     commit = git("rev-parse", "--short=8", args.ref + "^{commit}").decode().strip()  # a tag: its commit
     if git("status", "--porcelain", "--untracked-files=no").strip():
         print("note: the working tree has uncommitted changes; only %s (%s) is packaged" % (args.ref, commit))
@@ -340,6 +363,16 @@ def main():
         return 1
 
     # the build id the port logs at startup (configure.py prefers it to git)
+    if args.flavor == "switch2":
+        import json
+        files.append(("SOURCE_COMMIT", (full_commit + "\n").encode()))
+        deps = json.loads(git("show", args.ref + ":setup/toolchain.json"))
+        metadata = {"version": args.version, "source_commit": full_commit,
+                    "runtime_baseline_commit": "f05fd81a6063fd6a0124f7c64fe6fbaa08cc3f7f",
+                    "accepted_baseline_build": "7d1bc5fcd419", "higher_fps_included": False,
+                    "sdk": deps["switch2"]["sdk"], "shader_compiler_ndk": deps["android"]["ndk"],
+                    "imgui": deps["imgui"], "devkitpro_packages": [p for p in deps["devkitpro"]["packages"] if "devkita64-" in p["url"] or "switch-tools-" in p["url"]]}
+        files.append(("release-metadata.json", (json.dumps(metadata, indent=2)+"\n").encode()))
     files.append(("VERSION", ("%s (%s)\n" % (args.version, commit)).encode()))
     if args.flavor == "source":
         top = "sonic-riders-recomp-%s" % args.version
@@ -348,6 +381,12 @@ def main():
         plat = PLAT[args.flavor][0]
         top = "SonicRiders-%s-%s" % (plat, args.version)
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
+        if args.flavor == "switch2":
+            import re
+            alpha = re.fullmatch(r"v0\.8\.6-switch2-alpha\.(\d+)", args.version)
+            label = "Alpha" + alpha.group(1) if alpha else args.version
+            top = "SonicRiders-Switch2-" + label
+            zipname = "SonicRiders-Switch2-Setup-" + label + ".zip"
         if args.flavor == "ios":
             app = build_mac_launcher(args.ref)
             if app is None:
@@ -367,7 +406,7 @@ def main():
         else:  # Switch, Android: the launcher in installer mode (chosen by its name) + the console setup as a fallback
             files = [(n, d) for n, d in files if n not in ("SonicRidersSetup.bat", "SonicRidersSetup.sh")]
             files.append(("Install Sonic Riders (%s) - command line.bat" % plat, launcher(args.flavor)))
-        if args.flavor in ("pc", "switch", "android"):
+        if args.flavor in ("pc", "switch", "switch2", "android"):
             exe = build_launcher(args.ref)
             if not exe:
                 return 1
@@ -394,6 +433,12 @@ def main():
             info.create_system = 3  # Unix, so the mode above is used
             z.writestr(info, data)
     os.replace(tmp, path)
+    if args.flavor == "switch2":
+        import hashlib
+        with open(path, "rb") as stream:
+            checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+        with open(path + ".sha256", "w", encoding="ascii") as stream:
+            stream.write(checksum + "  " + zipname + "\n")
     print("make_release: %s (%d files, %d bytes, commit %s)" % (path, len(files), os.path.getsize(path), commit))
     return 0
 

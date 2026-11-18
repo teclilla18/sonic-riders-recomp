@@ -20,7 +20,7 @@ import subprocess
 import sys
 
 # what configure.py and the build read from the release folder (not docs, the launcher or saves)
-INPUTS = ("configure.py", "VERSION", "android", "config", "runtime", "setup", "third_party", "tools")
+INPUTS = ("configure.py", "VERSION", "SOURCE_COMMIT", "diagnostics/switch2/dependencies.json", "android", "config", "runtime", "setup", "third_party", "tools")
 SKIP_DIRS = {"__pycache__", ".git"}
 MANIFEST = "synced_files.txt"
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.8.6-switch2-alpha.1 (experimental candidate; not published)
+
+- First dedicated native Switch 2 setup ZIP, using the existing GUI/PowerShell
+  installer and pinned toolchain. Local own-disc compilation, isolated SD path,
+  manual-transfer layout and preservation of saves/settings/caches.
+- Runtime source is the accepted f05fd81/7d1bc5fcd419 baseline. No higher-FPS
+  interpolation; its Player Entry freeze is preserved for separate investigation.
+- Manual exit/no time cap by default; persistent runtime/lifecycle diagnostics.
+  Startup/cache-save hitches remain known. Hardware acceptance covers one
+  reported environment/route; cold installer validation is a separate release gate.
+
 ## Unreleased (experimental Switch 2 branch)
 
 - Native player 1 uses the diagnostic-verified merged handheld/No1 input path;

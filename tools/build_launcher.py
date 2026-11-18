@@ -82,6 +82,8 @@ def main():
     subprocess.run([windres, rc, "-O", "coff", "-o", res], check=True)
     srcs.append(res)
     cmd = [cxx, "-std=c++17", "-O2", "-municode", "-mwindows", "-static", "-s",
+           "-ffile-prefix-map=" + ROOT + "=.", "-ffile-prefix-map=" + ROOT.replace("\\", "/") + "=.",
+           "-ffile-prefix-map=" + im + "=third_party/imgui", "-ffile-prefix-map=" + im.replace("\\", "/") + "=third_party/imgui",
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
            "-DIMGUI_USE_WCHAR32",  # emoji are above U+FFFF
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [

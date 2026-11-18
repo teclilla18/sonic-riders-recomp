@@ -200,7 +200,7 @@ def pack():
     if build_id not in (OUT / "gen/version.c").read_text():
         raise SystemExit("switch2: runtime version and source identity disagree; rebuild")
     manifest = {"format": "sonicriders-switch2-phase2-v1", "hardware_tested": False,
-                "base_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+                "base_commit": (ROOT / "SOURCE_COMMIT").read_text().strip() if (ROOT / "SOURCE_COMMIT").is_file() else subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
                 "compiler": versions[0],
                 "shader_compiler": versions[1],
                 "cpu_flags": c["flags"], "dependencies": c["dependency_lock"],

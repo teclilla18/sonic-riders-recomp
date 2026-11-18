@@ -31,9 +31,11 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAT = {"pc": "PC", "android": "Android"}
+PLAT = {"pc": "PC", "android": "Android", "switch2": "Switch2"}
 OUTPUT = {"pc": [r"build\host-mingw\sonicriders.exe"], "android": [r"build\android\sonicriders-arm64-v8a.apk"]}
+OUTPUT["switch2"] = [r"build\switch2\sonicriders-switch2.nro", r"build\switch2\build-info.json", r"build\switch2\sd\switch\sonicriders-switch2\env.txt"]
 EXTRA_ARGS = {"pc": ["-NoSd", "-Yes"], "android": ["-NoSd", "-Yes", "-AcceptAndroidSdkLicense", "-Install", "no"]}
+EXTRA_ARGS["switch2"] = ["-Yes", "-AcceptAndroidSdkLicense", "-Sd", r"C:\SR-Switch2TestSD", "-CopyIso", "no"]
 SANDBOX_EXE = r"C:\Windows\System32\WindowsSandbox.exe"
 
 # Runs inside the sandbox as WDAGUtilityAccount. C:\sr\run is this run's folder (read-only),
@@ -61,6 +63,10 @@ try {
     Copy-Item (Join-Path C:\sr\release $cfg.zip) $zip
     Set-Content -Path $zip -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nHostUrl=https://github.com/`r`n"
     P "zip copied and marked (ZoneId=3)"
+    if ($cfg.flavor -eq "switch2") {
+        New-Item -ItemType Directory -Force C:\SR-Switch2TestSD\switch\sonicriders | Out-Null
+        Set-Content C:\SR-Switch2TestSD\switch\sonicriders\original-switch-sentinel.txt "original Switch untouched"
+    }
     $i = 0
     foreach ($dest in $cfg.dests) {
         $i++
@@ -92,9 +98,11 @@ try {
                 param($src, $dst)
                 while ($true) { Start-Sleep -Seconds 30; try { Copy-Item $src $dst -Force } catch {} }
             }
-            if ($cfg.launcher) {
+            if ($cfg.launcher -and ($cfg.flavor -ne "switch2" -or $i -eq 1)) {
                 # README-FIRST's first way: the launcher's "Select disc..." + INSTALL AND PLAY (SR_LAUNCHER_INSTALL)
-                $exe = Join-Path $top "SonicRidersLauncher.exe"
+                $exeName = if ($cfg.flavor -eq "switch2") { "Install Sonic Riders (Switch2).exe" } else { "SonicRidersLauncher.exe" }
+                $exe = Join-Path $top $exeName
+                if ($cfg.flavor -eq "switch2") { $env:SR_INSTALLER_SD = "C:\SR-Switch2TestSD" }
                 $motw = [bool](Get-Item $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue)
                 P "run ${i}: launcher install instead (mark-of-the-web on the exe: $motw)"
                 $env:SR_LAUNCHER_INSTALL = $iso
@@ -107,6 +115,7 @@ try {
                     FileName = "cmd.exe"; Arguments = "/d /s /c `"$line`""; UseShellExecute = $false }))
             }
             $p.WaitForExit()
+            $env:SR_INSTALLER_SD = $null
             Stop-Job $logJob; Remove-Job $logJob -Force
             $code = $p.ExitCode
             $rep = Join-Path $top "launcher_test.txt"
@@ -114,7 +123,36 @@ try {
             $missing = @($cfg.outputs | Where-Object { -not (Test-Path (Join-Path $top $_)) })
             if ($code -ne 0) { $why = "setup exit code $code" }
             elseif ($missing.Count) { $why = "exit code 0 but missing: $($missing -join ', ')" }
-            else { $r = "PASS"; $why = "exit code 0, " + ($cfg.outputs -join ", ") + " present" }
+            else {
+                if ($cfg.flavor -eq "switch2") {
+                    $nro = [IO.File]::ReadAllBytes((Join-Path $top "build\switch2\sonicriders-switch2.nro"))
+                    $head = [Text.Encoding]::ASCII.GetString($nro,0,[Math]::Min(4096,$nro.Length))
+                    $off = $head.IndexOf("OUN0")
+                    if ([Text.Encoding]::ASCII.GetString($nro,16,4) -ne "NRO0" -or $off -lt 0 -or
+                        [BitConverter]::ToUInt32($nro,$off+4) -ne 2 -or [BitConverter]::ToUInt32($nro,$off+8) -ne 1) { throw "Not native Switch 2 platform2/version1" }
+                    $info = Get-Content (Join-Path $top "build\switch2\build-info.json") -Raw | ConvertFrom-Json
+                    if ($info.base_commit -ne (Get-Content (Join-Path $top "SOURCE_COMMIT") -Raw).Trim()) { throw "Source commit mismatch" }
+                    $sd = "C:\SR-Switch2TestSD\switch\sonicriders-switch2"
+                    foreach ($file in @("sonicriders-switch2.nro","build-info.json","env.txt")) {
+                        if (-not (Test-Path (Join-Path $sd $file))) { throw "SD layout missing $file" }
+                    }
+                    if ((Get-Content (Join-Path $sd "env.txt") -Raw) -notmatch '(?m)^SR_SWITCH2_FRAMES=0\s*$') { throw "Default frame cap is not zero" }
+                    if ((Get-FileHash (Join-Path $sd "sonicriders-switch2.nro")).Hash -ne (Get-FileHash (Join-Path $top "build\switch2\sonicriders-switch2.nro")).Hash) { throw "SD NRO differs" }
+                    if ((Get-Content C:\SR-Switch2TestSD\switch\sonicriders\original-switch-sentinel.txt -Raw).Trim() -ne "original Switch untouched") { throw "Original Switch data changed" }
+                    if ($i -eq 1) {
+                        New-Item -ItemType Directory -Force "$sd\saves" | Out-Null
+                        Set-Content "$sd\settings.ini" "alpha settings sentinel"
+                        Set-Content "$sd\saves\sentinel.txt" "alpha save sentinel"
+                        Set-Content "$sd\vk_pipeline_cache.bin" "alpha cache sentinel"
+                        $preserved = @{}
+                        foreach ($file in @("env.txt","settings.ini","saves\sentinel.txt","vk_pipeline_cache.bin")) { $preserved[$file] = (Get-FileHash (Join-Path $sd $file)).Hash }
+                    } else {
+                        foreach ($file in $preserved.Keys) { if ((Get-FileHash (Join-Path $sd $file)).Hash -ne $preserved[$file]) { throw "Update changed $file" } }
+                    }
+                    P "run ${i}: native platform/source/SD layout verified; user data preserved; no hardware execution"
+                }
+                $r = "PASS"; $why = "exit code 0, " + ($cfg.outputs -join ", ") + " present"
+            }
         } catch {
             $why = "script error: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
         } finally {
@@ -226,7 +264,7 @@ def main():
     dests = [r"C:\SonicRiders"] + ([r"C:\Sonic Riders Test"] if a.space else [])
     cfg = {"flavor": a.flavor, "zip": os.path.basename(zp), "top": top, "bat": bat, "files": len(names),
            "iso": os.path.basename(iso), "args": EXTRA_ARGS[a.flavor], "outputs": OUTPUT[a.flavor],
-           "dests": dests, "cache": bool(a.cache), "shutdown": not a.keep_open, "launcher": a.launcher}
+           "dests": dests, "cache": bool(a.cache), "shutdown": not a.keep_open, "launcher": a.launcher or a.flavor == "switch2"}
     with open(os.path.join(rundir, "config.json"), "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=1)
     with open(os.path.join(rundir, "sandbox_logon.ps1"), "w", encoding="utf-8-sig", newline="\r\n") as f:
