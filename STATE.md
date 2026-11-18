@@ -1,27 +1,30 @@
-# Native audio/pump diagnostics (2026-11-18)
+# Experimental native logging-stall fix (2026-11-18)
 
-Branchcodex/switch2-stall-diag. Sixrace scheduler-fixcheckpoint5db73f5/4a6ead
-preserved, plus3more67582races withoutselectionfreeze; promising, not permanent
-elimination. Validatedrelease64e8316 ZIP unchanged, no publication.
+Branchcodex/switch2-stall-diag; release64e8316 ZIP unchanged, sixrace scheduler
+checkpoint5db73f5 preserved. Subsequenttests still noselectionfreezes; notproof
+permanentelimination. Keep2x/livechangesdisabled/frames0 and alluserdata.
 
-67582race1 hitchlocalizedinput/eventpump694ms, subsequent350/224/141ms;
-voicePCMcountsfallthenreturn, loaderthreads laterresume. Music/announceruserloss
-persists whilegameplayrecovers: identity/decoderfailureNOTestablished. NoGPUloss
-or permanentguestdeadlock shown. SharedlogIOblocking possible, unmeasured.
-Evidence build/alpha/audio67582-hw1/focused-analysis.md; allrawlogspreserved.
+3e551results/menu stutterconfirmedsharedlogwrite/flush:118/817/982/4162ms
+heartbeat stalls correlate matchinglogIOduration, pads/overlay/applets0ms.
+PCMstereo stops/reuses; mono laterrecoversandstopswithoutbigstutter. Logging
+fixdoesnotestablishmusic/announcerrootcause; no decoder/forcedrestartfix.
+Evidence build/alpha/audio3e551-hw1/focused-analysis.md +allrawlogs.
 
-Implemented3e551c8bf7f3 diagnosticsONLY: preciseapplet/drawable/inputpumpsplit,
-pad/overlay/heartbeat split, sharedstderrwrite/flushmaxlatency counters, PCM
-voiceprioritysnapshot inclstopped (8PCM+8other) for before/aftercomparison.
-No speculativefix/audio-rate/FPS/cache/rendererrefactor. Retains successful
-schedulerfix,2x,livecontrolsdisabled,frames0. OriginalSwitchpreprocessing and
-Androidsyntax, schedulerregression, nativeartifactsourcefreshness/linkchecksPASS.
-Bytes29468621 SHAcd7851aafbb9bac6fca662e3d2e5e8b24966af217740cb1730c29db0dce632a9.
-Deploymentstatus in handoff and build/switch2/audio2-deployment.json.
+Implementednativeboundedroutine-logqueue with nonblockingproducer(dropful/
+contention), FIFOwriter awayguest/rendercores. Writeroutlivesmanagedworkers;
+checkpoint/fatal/shutdownflushbarrierspreserveacceptedrecordorder. Persistent
+logsretain backgroundIOtiming and visible drops. No SDIO underqueuelock.
+Loggingmaydropdiagnosticrecords underpressure ratherthanblockgameplay.
 
-Next: normalentry same races; noteexactelapsedtimefirstmusic/announcerloss and
-stutter. Capture logs before relaunch. Correlatelog2/pump2/input2-time with
-voice2PCMtransitions and stream2/workerqueueprogress. No timingnumbers from
-softwaretests representhardware; snapshots asynchronous/perturbationpossible.
-NoZIPregeneration/coldtest until actualfixhardwareaccepted. Preserve allrollback
-branches/artifacts and isolateddata. No externalreplies/push/merge/publication.
+Buildc8c06fdda996 bytes29468857 SHA
+1a9fc3aa7ad2f072eeac4d6a10110c17c6617c8f6611084f4b97352d9af992a2.
+LocalqueueFIFO/capacity/wrap/truncation/seqtestsPASS; schedulerregressionPASS;
+originalSwitchpreprocessing/AndroidsyntaxPASS; nativeartifactsource/linkPASS.
+Hardwareacceptancepending includingflush/cleanshutdown. Deploymentstatus recorded
+in AIhandoff/build/switch2/logfix-deployment.json. Neverclaimmusicfixedyet.
+
+Nexthardware: results/menu same route, characterselect/back; announcerrecovery
+andlaterloss. Report stutter/audioeventtimes. Quitnormallyandreturnlogs. Lookfor
+[log2-queue]startupenabled anddrops, backgroundlogIOslow vs inputpumpfast,
+PCMreuse/gueststreamstate. If writerfallbacklog appears, reportit. Testreturnto
+hbmenu/relaunch. No releaseZIPregeneration/coldtest/publication beforeapproval.

@@ -14,10 +14,16 @@
 #endif
 
 #ifdef __SWITCH2__
+int switch2_log_enqueue(const char*);
+void switch2_log_flush(void);
 static _Atomic uint64_t g_log_write_max, g_log_flush_max, g_log_slow;
 static void log_max(_Atomic uint64_t* value, uint64_t n) {
     uint64_t old = atomic_load_explicit(value, memory_order_relaxed);
     while (n > old && !atomic_compare_exchange_weak_explicit(value, &old, n, memory_order_relaxed, memory_order_relaxed)) {}
+}
+void switch2_log_write_done(uint64_t write_ns, uint64_t flush_ns) {
+    log_max(&g_log_write_max, write_ns); log_max(&g_log_flush_max, flush_ns);
+    if (write_ns > 50000000ULL || flush_ns > 50000000ULL) atomic_fetch_add(&g_log_slow, 1);
 }
 void switch2_log_stats(uint64_t* write_ns, uint64_t* flush_ns, uint64_t* slow) {
     *write_ns = atomic_exchange(&g_log_write_max, 0);
@@ -31,6 +37,12 @@ void rt_log(const char* fmt, ...) {
 #endif
     va_list ap;
     va_start(ap, fmt);
+#ifdef __SWITCH2__
+    char record[1024];
+    va_list copy; va_copy(copy, ap);
+    vsnprintf(record, sizeof record, fmt, copy); va_end(copy);
+    if (switch2_log_enqueue(record)) { va_end(ap); return; }
+#endif
 #ifdef __ANDROID__
     {   /* also to logcat (tag "sonicriders"): adb logcat follows the game live */
         char buf[1024];
@@ -102,6 +114,9 @@ _Noreturn void rt_fatal(const char* fmt, ...) {
         fputc('\n', stdout);
         fflush(stdout);
     }
+#endif
+#ifdef __SWITCH2__
+    switch2_log_flush();
 #endif
     fputs("FATAL: ", stderr);
     vfprintf(stderr, fmt, ap);

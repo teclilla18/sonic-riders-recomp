@@ -75,7 +75,7 @@ void userAppExit(void) {
 
 void switch2_checkpoint(const char* message) {
     rt_log("[switch2] %s", message);
-    fflush(stderr);
+    switch2_log_flush();
     fsync(fileno(stderr));
     life_write(message);
     life_write("\n");
@@ -84,7 +84,7 @@ void switch2_checkpoint(const char* message) {
 static void applet_hook(AppletHookType type, void* arg) {
     (void)arg;
     rt_log("[switch2] applet event=%d focus=%d operation_mode=%d", type, appletGetFocusState(), appletGetOperationMode());
-    fflush(stderr);
+    switch2_log_flush();
 }
 
 int timespec_get(struct timespec* ts, int base) {
@@ -282,7 +282,7 @@ void switch2_stop_workers(void) {
         Worker* w = g_workers[i];
         if (!w) continue;
         rt_log("[switch2] joining worker%u/%u", i, count);
-        fflush(stderr);
+        switch2_log_flush();
         Result rc;
         for (;;) {
             /* An IRQ already being delivered can clear the polling flag.
@@ -344,6 +344,7 @@ void switch2_shutdown(void) {
     if (g_reservation) { virtmemLock(); virtmemRemoveReservation(g_reservation); virtmemUnlock(); g_reservation = NULL; }
     appletUnhook(&g_hook);
     switch2_checkpoint("PRE_LIBC_SHUTDOWN_COMPLETE; awaiting filesystem EXIT_HOOK and tester hbmenu confirmation");
+    switch2_log_stop();
 }
 void profile_register_thread(void) {}
 /* Adapt the original Switch stall monitor, without enabling per-entry tracing
@@ -398,7 +399,7 @@ static int stall_thread(void* arg) {
         reported = 1;
         rt_log("[stall2] no GX progress for %u samples frame=%llu retrace=%u guest_fn=%08X lr=%08X ns=%llu; observational snapshot",
                still, frames, vi_field_count(), g_ppc_cur_fn, g_ppc_cur_lr, (unsigned long long)platform_now_ns());
-        fflush(stderr);
+        switch2_log_flush();
         if (mutexTryLock(&g_workers_lock)) {
             for (unsigned i = 0; i < g_nworkers; i++) {
                 Worker* w = g_workers[i];
@@ -411,17 +412,18 @@ static int stall_thread(void* arg) {
             }
             mutexUnlock(&g_workers_lock);
         } else rt_log("[stall2] worker registry busy (not blocked for dump)");
-        fflush(stderr);
+        switch2_log_flush();
         /* Existing best-effort dump is intentionally unlocked, just as on
          * Switch1. Scheduler state may change during a snapshot. */
         mmio_dump();
         sched_dump();
         rt_log("[stall2] snapshot complete");
-        fflush(stderr);
+        switch2_log_flush();
     }
     return 0;
 }
 void profile_start(void) {
+    switch2_log_start();
     rt_log("[stall2] experimental no-progress diagnostics: 8s/16s samples; no guest trace or forced exit");
     rt_thread_start(stall_thread, NULL);
 }

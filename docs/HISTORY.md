@@ -1715,3 +1715,13 @@ PCMvoicecountsdropthenreturn, guestloaderthreads laterresume. Musicidentity/
 rootcauseunconfirmed. Do not claim globalmute/deaddecoder. Refined native
 applet/HID/logIOtiming plus dedicatedPCM/stoppedvoice snapshots; scheduler
 fixretained. Regression/platform/artifactchecksPASS. No speculativeaudiofix.
+
+
+## 2026-11-18: confirmed native logging stutter; bounded writer fix
+
+Native heartbeat4162ms matches sharedlogflush4161.99ms; other118/817/982ms
+stalls correlate too. Move routine native logging behind bounded nonblocking
+FIFO/backgroundwriter, retain explicitflush/stopbarriers and dropvisibility.
+Queue/regression/platform/artifact checks pass; hardware cleanup/behaviorpending.
+PCMvoicesstop/recycle, mono resumes/laterstops withoutbigstutter; music/announcer
+rootcause not established. No decoderfix or releaseZIPchanges.
