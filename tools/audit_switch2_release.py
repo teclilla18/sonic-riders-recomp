@@ -32,7 +32,11 @@ def audit(path):
             data=z.read(name)
             if n=='Install Sonic Riders (Switch2).exe':
                 assert data[:2]==b'MZ' and data==(ROOT/'build/launcher/SonicRidersLauncher.exe').read_bytes()
-                assert not guard.HOME_PATH.search(data.decode('latin1')), 'Private home path embedded in installer'
+                # Apply the existing guard's exact personal-path policy. Its
+                # public CI placeholder /home/runner is used by llvm-mingw's
+                # static libc++abi, and is not a developer's private home path.
+                for text in [data.decode('latin1'), data.decode('utf-16le', errors='ignore')]:
+                    assert not any(not guard.HOME_OK.search(m.group(0)) for m in guard.HOME_PATH.finditer(text)), 'Private home path embedded in installer'
                 continue
             if n!='tools/check_no_game_data.py': assert not guard.check(n,data), (n,guard.check(n,data))
             if n in tracked:
