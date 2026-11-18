@@ -1768,3 +1768,28 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
 - User prior-build test confirms2P GUI problem,3P/4P mostly fine; returned screenshots/log retrieved read-only.
   Investigations of2P timer/group overlap and finished-phase repeatedLv5 bookkeeping proceed on public local
   review branch. This native balance build includes neither fix. No push/publish/public asset change.
+
+
+### 2026-11-18 -2P timer, finished Lv5 effects and universal native icon
+- [confirmed]2P shared timer had player0 ownership and merged with adjacent artwork; a shallow backing also
+  failed to join its panel. Reserve clock before grouping and allow the actual small gap only in halves.
+  Actual-source tall/compact/five-aspect regressions and PC16:9/32:9 traces pass; all clock draws stay0 while
+  ring/boost panels move together. Exact3P/4P control RAM/active/pause PNGs remain identical.
+- [confirmed] Finished-phase retirement/application gates disagreed, causing stat restore/reapply and native
+  feedback rearming. Share one guest-state gate and retire before consumption. Original actual guest effect
+  probe now sees0 finished-phase entries vs230 before, and no repeat Lv5 events. Active balance/mod/reset,
+  standard/Super pending-feedback and100-repeat regressions pass. Both own-views match6,701 hash steps,
+  completeRAM and active/pause PNGs. No protocol/timing/Unlimited/vanilla-stat changes.
+- Native permanent icon pipeline initially used launcher art, then was corrected at user direction to direct
+  setup/icon_256.jpg (cedry2kio universal game artwork). Track JPEG in Ninja/identity/manifest and validate
+  baseline256x256 + exact ASET bytes every pack. Remove conversion/Pillow/PowerShell image dependencies.
+  Three icon tests and actual NRO verification pass. No tracked image changes.
+- Native0d995f3def88 from80304ca deployed through OunceMTP; stages and installed pair match SHA256.
+  Previousdb4pair backed up/read twice locally and retained on SD. Unlimited remains enabled; config/env,
+  pipeline cache and memory-card save byte-identical; unrelated entries preserved. Rollback plan validated.
+- First corrected-icon stage lost USB before promotion. User reopened OunceMTP; installed hashes reconciled
+  unchanged, no orphan stage found; new journal/backup succeeded. FTP fallback timed out, no FTP writes.
+- New fixes/icon are implemented, PC-tested, built/deployed, not yet hardware-accepted or released. No agent
+  console launch; native binary cannot be smoke-tested in Eden. All10 deployment regressions pass.
+- Full/staged data guards + ignored-status/hooks preserved for local checkpoints. No push/publish/release/
+  asset change or external reply. Inbox unchanged (32closed/6open). Local handoff owns exact backups/paths.

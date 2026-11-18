@@ -2,9 +2,14 @@
 
 ## Local development test — not published
 
+- Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
+- Stop finished-race Lv5 stat reapplication and repeated native level-up effect-path entries.
+- Native Switch2 builds permanently embed the universal game icon from setup/icon_256.jpg, with
+  tracked dependencies/resource identity and exact asset validation. Latest local test build deployed.
+
 - Riders Plus Super balance: Base195/270/110, Lv4 220/300/125, Lv5 240/330/140 km/h
   top/boost/drift, preserving captured stat mods without compounding. Native test build installed with
-  verified OunceMTP backups/readbacks; settings/Unlimited/data preserved. No HUD/bookkeeping fix included.
+  verified OunceMTP backups/readbacks; settings/Unlimited/data preserved. The following fixes are included in the latest local build.
 
 ## v0.8.6-switch2-alpha.1 (experimental candidate; not published)
 

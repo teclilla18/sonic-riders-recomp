@@ -1,5 +1,11 @@
 # Riders Plus Super Sonic and local HUD (2026-11-18)
 
+Current: both2P clock and finished-phase defects are now fixed/tested on PC and deployed in0d995f3def88.
+The permanent icon is setup/icon_256.jpg (universal game art), superseding launcher conversion. Runtime source
+797d8be, icon source80304ca; see STATE.md and docs/notes/switch2-icon.md. Historical checkpoints below predate
+these fixes; canonical excluded handoff has current verified installation/rollback.
+
+
 Latest native follow-up: Super-only Plus active top/boost/drift targets195/270/110 Base,
 220/300/125 Lv4 and240/330/140 Lv5. Applied ownership includes Base; ratios preserve stat mods.
 Actual-source regressions and minimized PC on/off exact-stat routes pass. Native7a05aa6f5f02 from4459752
