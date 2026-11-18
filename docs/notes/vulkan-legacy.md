@@ -211,3 +211,27 @@ It checks fresh logcat/fatal signals plus the matching ApplicationExitInfo and b
 cleanup markers. Optional `--background-resume` exercises Home/resume before menu
 quit. A previous-run crash dialog is preserved in logs and dismissed before taps.
 No release, merge, issue closure or external reply is authorized.
+
+
+## Reporter shutdown verification and Android asset update (2026-11-18)
+
+The [Splash Canyon/Amy follow-up](https://github.com/teclilla18/sonic-riders-recomp/issues/32#issuecomment-6991852326)
+and [Green Cave/Tails follow-up](https://github.com/teclilla18/sonic-riders-recomp/issues/32#issuecomment-6992322743)
+both use source 90868613 on Mali-G57 MC3 / Vulkan 1.1.177 with automatic legacy,
+separate alpha and descriptor-pool fallback. **Reporter-tested [confirmed]:** both
+logs complete all cleanup/application-handler phases, terminating status 0, without
+another signal or post-quit fault. This verifies the updated shutdown behaviour on
+the reporter's device; it does not map the original faulting vendor PC.
+
+The Green Cave post-race loading hang keeps rendering near 60 fps with GPU around
+7 ms and negligible render wait; no Vulkan error or device loss. It is a separate
+loading-progress investigation, consistent with #6 but missing the watchdog state
+needed for exact attribution. See [loading-hang.md](loading-hang.md) for provenance,
+comparison with the old CRI/DI findings and next diagnostics. No speculative loader
+fix is included in the Android update.
+
+Current authorization supersedes the experimental-only publication limits above:
+update only the existing v0.8.6 Android source/setup ZIP after cold setup checks.
+The runtime remains the tested 90868613 implementation; this follow-up changes
+documentation only. No new tag, main merge, other platform asset replacement,
+issue closure or external issue reply is authorized. Real MoltenVK remains untested.

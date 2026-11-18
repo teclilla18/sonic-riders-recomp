@@ -30,11 +30,14 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
   Full Khronos race/natural quits, simulated recovery/menu resume and 5-second holds pass both
   paths without validation errors/fatals. Normal signed APK exits pass without delay.
   Windows/ARM64 concurrency/exit-handler tests and x86_64 Android syntax pass. Details in the note.
-- **Uncertain:** exact original Mali SIGSEGV attribution; reporter must retest updated package.
-  Not released; real iOS/MoltenVK, real GPU reset, exhaustive alpha/depth overlaps,
-  all stages and long-session memory pressure remain unproven.
-- Prepare standard experimental Android source/setup ZIP only; no generated APK sharing, public
-  release, main merge, issue reply or closure authorized. Details: docs/notes/vulkan-legacy.md.
+- **Reporter-tested [confirmed]:** both new Mali logs on 90868613 complete all shutdown and
+  application-handler phases with no subsequent signal. Quit fix verified in supplied logs.
+- **Separate investigation:** Green Cave/Tails post-race loading stall keeps drawing near60fps;
+  no GPU block/device loss evidenced. Consistent with #6; exact cause unproven without watchdog
+  state. Evidence/provenance: docs/notes/loading-hang.md. No speculative loader changes.
+- User authorizes replacing only the existing v0.8.6 Android source/setup ZIP after cold tests;
+  validation/publication pending. Keep tag/other assets/main unchanged; no issue closure/replies.
+  Real iOS/MoltenVK, real GPU reset, exhaustive overlap/stages/long sessions remain unproven.
 - Separate pacing audit **tested [confirmed]**: matched-capture runs used SR_DETCLOCK, which
   intentionally bypasses adaptive pacing. Normal Auto at 2x/effects keeps 59.94-59.95 steps/s:
   dynamic 44.56/52.64 fps, legacy 42.93/51.76 fps (1P/2P). GPU waits reduce rendering, while
@@ -89,9 +92,9 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
 ## Next checks
 
-- Reporter retest of updated shutdown package; require completed cleanup and no fatal signal.
-  Original Mali fault PC is unmapped; do not claim that exact crash fixed before confirmation.
-  Keep #32 open and branch unmerged for user decision.
+- Complete authorized v0.8.6 Android asset update after cold PC/Android setup checks.
+- Investigate #6 separately using preserved Green Cave log plus a watchdog reproduction;
+  exact historical CRI/DI signature is unconfirmed. Keep #32/#6 open and source branch unmerged.
 - Real Mac/iOS/MoltenVK build/test before integrating/releasing shared renderer changes.
 - Any further normal-play slowdown needs logs with SR_DETCLOCK off and the selected mode stated.
 - Switch pack worker: three stages/full pack, memory/hitches; installer SD copy end to end.

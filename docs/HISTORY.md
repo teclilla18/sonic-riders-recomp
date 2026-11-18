@@ -1680,3 +1680,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Full S23 Ultra / Adreno740 / Vulkan1.3.128 Khronos validation routes pass natural quit: dynamic1P59.95steps/s51.09fps,2P59.95/56.38; legacy/no-dual/no-push1P59.83/26.59,2P59.97/55.27 (1800steps each). Zero validation warnings/errors/VUIDs/fatals; 500 ms post-cleanup holds pass. Validation runs are not release performance comparisons [confirmed].
 - Both paths also pass simulated loss/rebuild at31, Home/resume and menu rendering59.9fps, then clean exit after5s hold. Menu resume only, not mid-race or real GPU reset. Normal signed APK menu quits pass without delay; validation settings restored [confirmed].
 - Windows/ARM64 actual-helper concurrency and exit-handler regressions pass; Android x86_64 syntax passes. Floor shaders/compatibility/pacing behaviour preserved. Real MoltenVK and exact Mali shutdown retest remain unproven. Updated source/setup package prepared experimentally; no merge/release/issue closure/reply.
+
+
+## 2026-11-18: #32 Mali shutdown verified; separate Green Cave loading evidence
+
+- Reviewed the two latest reporter comments and attachments35054029/35054699 [confirmed]. Both are90868613,Mali-G57MC3,Vulkan1.1.177,automaticlegacy,separatealpha,descriptorpool; all shutdown/application-handler phases finish,status0,no subsequent signal. Updated shutdown verified in both supplied logs.
+- Green Cave/Tails completes race then stalls on loading for~130s while four-draw frames and simulation stay~59.9/s,GPU~7ms,renderwait0.04-0.05ms,disc54MB/0furthercompletions. No Vulkanerror/device-loss/GPUblock evidenced [confirmed]. Separate guestloading/game-state progress failure likely; exact#6CRI/DI signature uncertain without watchdog/IRQ/threads. No speculativefix; disc/scheduler/OS/frame_pacing source unchanged by#32.
+- Preserved both raw logs locally with hashes/provenance; docs/notes/loading-hang.md links original attachments and compares historical PC/Eden CRI/filetail/loader-resume research. Keep#6open for a targeted watchdog reproduction.
+- User conditionally authorizes existingv0.8.6Android asset update and explicitly authorizes cold PC/Android Sandbox checks. Source/setup ZIP only; tag/main/otherplatformassets/issues remain unchanged. Publication results follow separately.

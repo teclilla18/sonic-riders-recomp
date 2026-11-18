@@ -10,6 +10,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [SWITCH2-ALPHA.md](SWITCH2-ALPHA.md) | Guide | Separate native Switch 2 alpha download, compatibility, installation, manual updates and known issues |
 | [notes/android.md](notes/android.md) | Reference | Android build, install, test, touch controls, app icon, triggers, phone facts |
 | [notes/vulkan-legacy.md](notes/vulkan-legacy.md) | Experimental | #32 Vulkan 1.1 fallback, feature negotiation, resource lifetime, alpha/floor fix, tests and unproven devices |
+| [notes/loading-hang.md](notes/loading-hang.md) | Investigation | #6 historical CRI/DI evidence, Green Cave/Tails Mali report and remaining diagnostic work |
 | [notes/debug-variables.md](notes/debug-variables.md) | Reference | every `SR_*` debug variable, `RECOMP_*` switches |
 | [notes/game-addresses.md](notes/game-addresses.md) | Reference | game addresses (modes, players, gear, SDK map pointers) |
 | [notes/gear-stats.md](notes/gear-stats.md) | Reference | vanilla top speed / boost per gear and level (GameFAQs guide numbers) |

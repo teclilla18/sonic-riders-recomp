@@ -1,6 +1,6 @@
 # Changelog
 
-## Experimental, unreleased — Android Vulkan 1.1 (#32)
+## Android download update — v0.8.6 (#32, 2026-11-18)
 
 - Automatically use traditional render passes on drivers without dynamic rendering;
   preserve the existing path on supported devices. Tested on the S23 by forcing both paths;
@@ -9,7 +9,9 @@
   the solid-floor destination-alpha fix on devices without dual-source blending.
 - Shut down Android renderer/audio workers and Vulkan/SDL resources in order. Preserve save/record
   handlers while avoiding a reproduced library-finalizer race with Android graphics threads.
-  S23 clean-exit tests pass; the reporter's exact Mali quit-time fault still needs retesting.
+  S23 tests pass and both updated Mali logs complete clean shutdown without another signal.
+- The separately reported Green Cave/Tails loading hang remains under investigation (#6);
+  no speculative loading/loader change is included.
 - Diagnostic `SR_VK_FORCE_LEGACY=1`; technical details in `docs/notes/vulkan-legacy.md`.
 
 ## Documentation — Switch 2 Alpha 1
