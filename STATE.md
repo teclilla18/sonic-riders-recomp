@@ -1,3 +1,37 @@
+# Experimental native condition-wait fix (2026-11-18)
+
+# 5c449 hardware comparison and targeted wait fix
+
+One successful race with audible music, followed by second identical selection
+freeze. Bothsnapshots8.612s apart atframe10568: selected guest81A93E80 maps
+host0xd850d0000/cv0xd850d0008 toworker17, phase4, switches969, waits1001,
+waitage14378->22990ms fixed. Main801B3610 phase4 target81A93E80. Allguesthosts
+phase4 with unchanged switchcounts; scheduler/IRQmutexesavailable, irq_running0,
+preempt1, nativequeuehead145210/tail145211. VI+516; renderpendingNULL/free1;
+noGPUdevice-loss. DVDexecutingNULL unlike preceding run, DIcompleted. Audio
+all89summaries zeroerrors/drops; usermusicworked. No evidence of sharedmusiccause.
+
+Confirmed source defect: native shutdown wrapper converts indefinite waits into
+50ms timed waits but hides ETIMEDOUT by looping internally. POSIX timeout/signal
+race may consume the signal while the mutex is being reacquired, after another
+thread sets the predicate. Wrapper then waits again without caller predicate
+check, leaving selected guest parked. Allruntime indefinite waits use loops/
+continue; stdcondition_variable predicatewait also rechecks. Targeted native
+fix returns0 on internal timeout withoutdeadline (legal spuriouswake with mutex
+stillheld), so caller rechecks. Explicitdeadline and unmanageddriverpath unchanged.
+This defect is consistent with snapshots, but exact race/hardwarefix acceptance
+requires physical testing; not proof musicdropout sharescause.
+
+Regression test extracts actualwait_cond and deterministically injects expired
+wait concurrent with ready predicate/no later signal. FAILbefore, PASSafter;
+alsotests intermediate/finaldeadline, errors and driver bypass. Native build/
+artifact/sourcechecks and originalSwitchpreprocess/Androidsyntax PASS.
+Build4a6ead9bbb02 SHA5e224e9a905c9839aed2fcce57840da5771391feb00c1a123e8b70aaa134d74b.
+NoFPS/cache/renderpolicy changes. Live resolution staysdisabled. Deployment2x
+peruser, otherdataretained. Validatedrelease ZIP and rollbackcheckpointspreserved.
+
+## Historical diagnostics
+
 # Refined native stall diagnostics (2026-11-18)
 
 # Diagnostic20e0 hardware result (2026-11-18)

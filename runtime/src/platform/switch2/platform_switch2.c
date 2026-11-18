@@ -249,6 +249,12 @@ static int wait_cond(pthread_cond_t* cond, pthread_mutex_t* mutex, const struct 
         if (atomic_load(&g_self->wait_kind) != 2) worker_wait(2, cond);
         int rc = __real_pthread_cond_timedwait(cond, mutex, &slice);
         if (g_self && switch2_stopping()) { pthread_mutex_unlock(mutex); switch2_thread_checkpoint(); }
+        /* A timed wait can consume a signal racing its timeout while it
+         * reacquires the mutex. Never hide that timeout from an indefinite
+         * wait's predicate loop: the selected guest may already be runnable.
+         * pthread/cnd waits permit spurious wakes, with the mutex still held.
+         * Explicit timed waits retain their original caller deadline. */
+        if (rc == ETIMEDOUT && !deadline) { worker_wait(0, NULL); return 0; }
         if (rc != ETIMEDOUT || final) { worker_wait(0, NULL); return rc; }
     }
 }

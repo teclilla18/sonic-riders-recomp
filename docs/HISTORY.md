@@ -1684,3 +1684,14 @@ DVD completion recorded with guestcommand still executing and IRQqueued.
 No rootcause established. Added native-only guestctx-to-hostcondvar mapping,
 handoff phase/target and scheduler/IRQ queue/lock snapshots for next hardware
 test. Music-only dropout shared cause unconfirmed. Release ZIP unchanged.
+
+
+## 2026-11-18: selected guest remains parked; targeted native wait fix
+
+New snapshots map selected guest to an indefinite host wait, no permanent mutex
+contention, empty renderer and one pending IRQ. DVD no longer executing. Native
+50ms wait wrapper hid timeout returns from the caller predicate; timeout/signal
+race can consume a wake then park forever. Return legal spurious success for
+internal indefinite timeouts, preserve explicit deadlines/driver waits. Actual
+wrapper regression fails before/passes after. Native build/artifact and platform
+checks pass; physical acceptance pending, no claimed music fix.
