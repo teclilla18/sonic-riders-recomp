@@ -1,5 +1,9 @@
 # Riders Plus Super Sonic and local HUD (2026-11-18)
 
+Current follow-up implements the two defects investigated below:2P clock reservation/panel grouping and
+finished-phase retirement before application/feedback. See the final section for tests and deployment.
+Historical "not fixed" statements describe the prior balance-only build7a05aa6f5f02.
+
 Implemented on the local review branch `codex/riders-plus-local-hud`, from public main `bf9f723`.
 Not released or user-accepted. Keep source local: no merge, push, release changes or issue replies. The user
 subsequently authorized a Switch 2 FTP deployment for a personal playtest; use an isolated native checkout,
@@ -197,3 +201,31 @@ tests validate stat/cap paths and selected Metal City routes, not all gameplay o
 Long-race results, later story scenes/movies, Tag/Survival, real network peers, physical Switch performance,
 Android rendering and iOS remain outside this task's actual runtime coverage. Preserve the existing 32:9 speed-blur
 outline limitation. Do not treat local tests as user acceptance or permission to publish.
+
+
+## Current runtime fixes and corrected native icon (2026-11-18)
+
+Implemented public731fd32 / native797d8be: reserve the centred shallow upper clock backing as shared before
+player grouping in halves. The existing horizontal-contained shared reservation collects its digits without
+joining overlapping P1 art. Halves-only near-gap tolerance joins the shallow boost backing to its ring panel;
+quarter tolerances are unchanged. No vertex sizes, guest RAM, scissors/copies, perspective or online view
+policy changed. Actual tall/compact overlap tests across all five aspects now pass.
+
+Level application now uses the same deterministic guest mode/phase predicate as frame retirement. Inactive
+native hooks restore still-owned fields once and clear pending extension/feedback before either normal or
+Super consumption. Active progression/mods/constructor hooks and the latest balance are unchanged.
+
+PC2P16:9/32:9 confirms all13 ring/boost pieces share movement and all eight timer draws stay0. Exact prior
+balance3P/4P controls with identical capture schedules have byte-identical fullRAM/active/pause images.
+Both online own-view routes retain all6,701 checksum steps, fullRAM and active/pause pixels. These are offline
+deterministic controls, not a live-peer hardware test. Original phaseA reproduction now records0 repeated
+Lv5 events and0 native effect-branch entries, vs230 before; three ordinary entries occur before finishing.
+All temporary probes were removed from tracked/generated source; the clean PC executable was rebuilt.
+
+Native80304ca supersedes the initial launcher icon with setup/icon_256.jpg, the universal game artwork by
+cedry2kio. Direct Ninja dependencies, build identity, manifest provenance and exact NRO ASET validation make
+it permanent. No conversion is needed. Three focused icon tests pass; artwork bytes are unchanged.
+Native0d995f3def88 is installed, with fresh local/SD backups and staged/installed SHA256 readbacks. Unlimited,
+settings/env/cache/save bytes are preserved; rollback plan validates. Initial USB loss occurred before any
+promotion and was reconciled after user reconnect before a fresh transaction. Exact journal/paths/hashes are
+in excluded AI_HANDOFF.md. New physical play/icon acceptance remains pending. No publication.

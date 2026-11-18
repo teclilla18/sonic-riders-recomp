@@ -2,6 +2,11 @@
 
 ## Unreleased — local review
 
+- Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
+- Stop finished-race Lv5 stat reapplication and repeated native level-up effect-path entries.
+- Native Switch2 builds permanently embed the universal game icon from setup/icon_256.jpg, with
+  tracked dependencies/resource identity and exact asset validation. Latest local test build deployed.
+
 - Riders Plus Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
   Lv.5 240/330/140 km/h, scaled from unmodified fields to preserve stat mods without compounding.
   Standard characters and Plus-off Super retain their existing stats. Local test builds only.

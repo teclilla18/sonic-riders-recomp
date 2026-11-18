@@ -204,7 +204,7 @@ already unpacked. Download the pack yourself (we don't host packs), then:
 
 ## Status
 
-<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 76% done"></p>
+<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 77% done"></p>
 
 <details>
 <summary><b>What v1.0 means, and what each bar still needs</b></summary>
@@ -220,7 +220,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
 | Online play | 55 % | PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings |
-| Features and polish | 70 % | Custom music, right-stick camera, code mods, new characters from mods (local/unreleased: Super Sonic balance PC tested, USB transfers verified; split HUD hardware report has 2P issues, 3P/4P mostly fine; new balance hardware test pending; done: Riders Plus v0.8.2, in-app updates v0.8.3, texture packs v0.8.6 with Switch loading freezes, easier stat mods v0.8.5) |
+| Features and polish | 71 % | Custom music, right-stick camera, code mods, new characters from mods (local/unreleased: Super balance,2P clock and finished-level fixes PC tested;3P/4P and own-view controls unchanged; universal native icon embedded, USB deployment verified; hardware acceptance pending; texture-pack loading still freezes on Switch) |
 
 </details>
 
