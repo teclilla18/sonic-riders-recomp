@@ -1682,3 +1682,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Later user steering authorizes Switch2 FTP deployment for playtest, retaining source local/no push or merge.
   Native integration will use a separate checkout based on the installed personal build, matching NRO/manifest
   backups and readback verification; it does not authorize publishing native/private experiments.
+- Authorized native playtest follow-up deployed from a separate local checkout based on the installed personal
+  baseline. Full native build/scheduler/Unlimited regressions pass; staged/final NRO/manifest hashes verified,
+  old pair backed up locally/onSD, settings/env byte-identical and saves/ISO/caches untouched. No agent launch;
+  user hardware gameplay/acceptance pending. No push/merge/release/replies; exact build/rollback inlocalhandoff.

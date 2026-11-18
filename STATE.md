@@ -27,7 +27,8 @@ Durable references: docs/REFERENCE.md; code map: docs/MAP.md. Preserve dirty sr-
   all 48 Switch DKSH files scratch 0. No physical console/phone/iOS deployment or user acceptance.
 - **Not released/accepted.** Keep source local: no push, merge, publication, release asset replacement or replies.
   User subsequently authorized deploying these fixes to Switch 2 over FTP. Prepare a separate native checkout
-  from the currently installed personal baseline, back up NRO/manifest, preserve data/settings and verify readbacks.
+  from the installed personal baseline. Native test build is now deployed with matching NRO/manifest readbacks,
+  local/SD backups and byte-identical settings/env. Manual play/acceptance pending; exact details in local handoff.
   Details: docs/notes/riders-plus-local-hud.md; ignored evidence: build/.
 - Before release: manual collection/boost/drift/damage/fall/capsules, consecutive races/gear changes, sound,
   results/story/other modes, real peers and physical hardware. Matrix captures do not establish full gameplay.

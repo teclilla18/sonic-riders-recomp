@@ -5,6 +5,10 @@ Not released or user-accepted. Keep source local: no merge, push, release change
 subsequently authorized a Switch 2 FTP deployment for a personal playtest; use an isolated native checkout,
 back up the installed NRO/manifest, preserve data/settings and verify uploaded readbacks.
 
+That personal native follow-up is now deployed from an isolated checkout: full pinned-SDK build and native
+scheduler/Unlimited regressions pass; staged/installed NRO/manifest readbacks match, settings/env unchanged,
+previous pair backed up locally/on SD. This is deployment verification; physical play/acceptance is pending.
+
 ## Super Sonic: confirmed causes and implementation
 
 - The old extended-level check required native level 2 and wrote block `+0x94C`. Super Sonic remains at native
