@@ -133,6 +133,20 @@ static VkImageView g_sview[8];
 static VkImageLayout g_slayout[8];
 static VkSemaphore g_sdone[8];
 static int g_swap_can_read;
+#ifdef __SWITCH2__
+static VkPresentModeKHR g_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+#include "platform/switch2/render_present.h"
+
+static void native_display_rate(int target) {
+    /* Request only rates the OS/display support. Zero means every refresh;
+     * default/30 mode retains the accepted 60 Hz window interval. */
+    unsigned fps = target > 0 ? (unsigned)target : 0;
+    Result rc = target ? nwindowSetFrameRates(nwindowGetDefault(), fps, fps, true)
+                       : nwindowSetSwapInterval(nwindowGetDefault(), 1);
+    rt_log("[vk2-rate] window request=%d (0=default, -1=every refresh) rc=%08X", target, rc);
+}
+
+#endif
 static int g_swap_bad;  /* needs making again before the next present */
 /* VK_ERROR_DEVICE_LOST seen (the GPU was reset): the frame is dropped and execute() rebuilds the device first.
  * Seen on Adreno while the screen is recorded (docs/notes/android.md "Open: device lost"). */
@@ -727,9 +741,34 @@ static int swap_create(void) {
     const char* si_env = getenv("SR_VK_SWAPIMAGES");  /* test: swapchain length */
     if (si_env && atoi(si_env) >= (int)caps.minImageCount && atoi(si_env) <= 8) n = (uint32_t)atoi(si_env);
     g_swap_can_read = (caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0;
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+#ifdef __SWITCH2__
+    /* Preserve default VSync. Other PC render presets remove the software
+     * presentation lock where the surface supports it; never assume a refresh
+     * rate or request an unsupported mode. MAILBOX still displays at refresh.
+     * FIFO fallback can back-pressure rendering even with Unlimited selected. */
+    uint32_t nmodes = 0;
+    VKC(vkGetPhysicalDeviceSurfacePresentModesKHR(g_pd, g_surf, &nmodes, NULL));
+    VkPresentModeKHR* modes = malloc(nmodes * sizeof *modes);
+    if (!modes && nmodes) rt_fatal("[vk2] present modes allocation failed");
+    VKC(vkGetPhysicalDeviceSurfacePresentModesKHR(g_pd, g_surf, &nmodes, modes));
+    u16 interval_n = 0, interval_d = 0;
+    Result interval_rc = nwindowGetPresentInterval(nwindowGetDefault(), &interval_n, &interval_d);
+    int target = g_settings.framerate == FR_30 ? 0 : g_settings.pc_fps;
+    present_mode = native_present_mode(modes, nmodes, target,
+                                     R_SUCCEEDED(interval_rc) ? interval_n : 0, interval_d);
+    rt_log("[vk2-rate] effective presentation interval=%u/%u s rc=%08X", interval_n, interval_d, interval_rc);
+    for (uint32_t i = 0; i < nmodes; i++) rt_log("[vk2-rate] supported presentation mode=%d", (int)modes[i]);
+    free(modes);
+    g_present_mode = present_mode;
+    rt_log("[vk2-rate] presentation=%s; render limit=%d; display refresh remains system-controlled",
+           present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR ? "IMMEDIATE (tearing possible)" :
+           present_mode == VK_PRESENT_MODE_MAILBOX_KHR ? "MAILBOX (refresh-limited display)" :
+           "FIFO (VSync, acquire may limit render rate)", g_settings.pc_fps);
+#endif
     VkSwapchainCreateInfoKHR ci = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0, g_surf, n, fmt.format, fmt.colorSpace, iext, 1,
                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (g_swap_can_read ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
-                                   VK_SHARING_MODE_EXCLUSIVE, 0, NULL, tf, ca, VK_PRESENT_MODE_FIFO_KHR, VK_TRUE, VK_NULL_HANDLE};
+                                   VK_SHARING_MODE_EXCLUSIVE, 0, NULL, tf, ca, present_mode, VK_TRUE, VK_NULL_HANDLE};
     if (vkCreateSwapchainKHR(g_dev, &ci, NULL, &g_swap) != VK_SUCCESS) return 0;
     g_ext = ext;
     g_img_ext = iext;
@@ -1916,6 +1955,10 @@ static void device_recover(void) {
            (platform_now_ns() - t_dev) / 1e6, g_pw_running ? " (prewarm still running)" : "");
 }
 
+#ifdef __SWITCH2__
+#include "platform/switch2/frame_interpolation.h"
+#endif
+
 static void execute(GxFrame* f) {
     uint64_t t_start = platform_now_ns();
     g_fr_pipe_ns = g_fr_wait_ns = g_fr_img_ns = g_fr_acq_ns = 0;
@@ -1955,11 +1998,15 @@ static void execute(GxFrame* f) {
     memcpy(cpu + ioff, f->idx, (size_t)ncopy * 4);
     /* XF memory images, one per chunk table (as render_deko.c) */
     uint32_t nximg = f->nxtabs < SLOT_XFI / XF_IMAGE_BYTES ? f->nxtabs : SLOT_XFI / XF_IMAGE_BYTES;
+    const uint32_t* chunks = f->xchunks;
+#ifdef __SWITCH2__
+    if (g_ip_on) chunks = ip_chunks(f);
+#endif
     for (uint32_t t = 0; t < nximg; t++) {
         uint8_t* dst = cpu + OFF_XFI + (size_t)t * XF_IMAGE_BYTES;
         for (int k = 0; k < XF_IMAGE_CHUNKS; k++) {
             uint32_t pc = f->xtabs[t].xtab[k_xf_image_chunks[k]];
-            if (pc < f->nxchunks) memcpy(dst + k * GX_XFM_CHUNK * 4, f->xchunks + (size_t)pc * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
+            if (pc < f->nxchunks) memcpy(dst + k * GX_XFM_CHUNK * 4, chunks + (size_t)pc * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
             else memset(dst + k * GX_XFM_CHUNK * 4, 0, GX_XFM_CHUNK * 4);
         }
     }
@@ -1970,6 +2017,10 @@ static void execute(GxFrame* f) {
     int ubo_ok = f->nunis * ustride <= SLOT_UBO;
     if (ubo_ok)
         for (uint32_t i = 0; i < f->nunis; i++) memcpy(cpu + OFF_UBO + i * ustride, &f->unis[i], sizeof(GxUniforms));
+
+#ifdef __SWITCH2__
+    if (ubo_ok && g_ip_on) ip_states(cpu + OFF_UBO, ustride);
+#endif
 
     /* textures this frame uses, before any rendering */
     for (uint32_t i = 0; i < f->ncmds; i++)
@@ -2144,9 +2195,11 @@ static void execute(GxFrame* f) {
         g_shot_pending = 0;
         rt_thread_start(shot_thread, sh);
     }
+#ifndef __SWITCH2__
     g_retired[g_slot] = realloc(g_retired[g_slot], (f->nretired ? f->nretired : 1) * sizeof(int));
     memcpy(g_retired[g_slot], f->retired, f->nretired * sizeof(int));
     g_nretired[g_slot] = f->nretired;
+#endif
     g_slot ^= 1;
 #ifdef __SWITCH2__
     uint64_t native_cache_start = platform_now_ns();
@@ -2199,8 +2252,13 @@ static void execute(GxFrame* f) {
 /* ---------------------------------------------------------------- frame queue, events, thread */
 static mtx_t g_lock;
 static cnd_t g_cv;
-static GxFrame g_frames[2];
-static GxFrame* g_free[2];
+#ifdef __SWITCH2__
+#define CPU_FRAMES 4
+#else
+#define CPU_FRAMES 2
+#endif
+static GxFrame g_frames[CPU_FRAMES];
+static GxFrame* g_free[CPU_FRAMES];
 static int g_nfree;
 static GxFrame* g_pending;
 static volatile int g_quit;
@@ -2316,6 +2374,10 @@ static void pump(void) {
 void ios_attach_window(SDL_Window* win);
 #endif
 
+#ifdef __SWITCH2__
+#include "platform/switch2/render_rate.h"
+#endif
+
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
@@ -2345,6 +2407,10 @@ static int render_thread(void* arg) {
 #ifdef __SWITCH2__
     switch2_checkpoint("VULKAN_RENDERER_READY; waiting for recompiled-core frames");
 #endif
+#ifdef __SWITCH2__
+    while (!g_quit) ip_round(ip_target());
+    ip_release();
+#else
     for (;;) {
         mtx_lock(&g_lock);
         while (!g_pending) {
@@ -2386,6 +2452,7 @@ static int render_thread(void* arg) {
 #endif
         }
     }
+#endif
 #ifdef __SWITCH2__
     /* Stop producers and pipeline helpers before destroying their GPU/memory. */
     switch2_stop_workers();
@@ -2404,9 +2471,8 @@ static int render_thread(void* arg) {
 void render_start(void) {
     mtx_init(&g_lock, mtx_plain);
     cnd_init(&g_cv);
-    g_free[0] = &g_frames[0];
-    g_free[1] = &g_frames[1];
-    g_nfree = 2;
+    for (int i = 0; i < CPU_FRAMES; i++) g_free[i] = &g_frames[i];
+    g_nfree = CPU_FRAMES;
 #ifndef __SWITCH2__
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) rt_fatal("SDL_Init: %s", SDL_GetError());
 #endif

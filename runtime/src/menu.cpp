@@ -562,10 +562,24 @@ void tab_performance() {
         int m = order[k];
         if (radio(settings_framerate_name(m), g_settings.framerate == m, tips[m])) {
             g_settings.framerate = m;
+#ifdef __SWITCH2__
+            if (m == FR_30) g_settings.pc_fps = 0;
+#endif
             settings_apply();
         }
     }
     note("All three keep the game at its real speed. If Auto looks uneven, 60 fps or 30 fps is steadier.");
+#ifdef __SWITCH2__
+    heading("Personal rendering option");
+    int unlimited = g_settings.pc_fps == PC_FPS_UNLIMITED;
+    if (check("Unlimited rendering (experimental)", &unlimited,
+              "Removes the software render cap using in-between pictures. Game timing remains unchanged. Display refresh, presentation mode and GPU speed can still limit output.")) {
+        g_settings.pc_fps = unlimited ? PC_FPS_UNLIMITED : 0;
+        if (unlimited) g_settings.framerate = FR_AUTO;
+        settings_apply();
+    }
+    note("Off keeps the normal game frame rate (default 60). This personal feature is unvalidated on hardware; immediate presentation may tear.");
+#endif
 #endif
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))

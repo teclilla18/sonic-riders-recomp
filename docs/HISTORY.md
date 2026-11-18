@@ -1734,3 +1734,12 @@ asynchronous logging fixes. Latesttwo races noselectfreeze; temporary stalls/
 distortion and audio dropouts remainknownissues. Logs preserved withoutanalysis.
 Stop furtherdebugging; package Switch2only with default2x/60/noexitlimit and
 disabledlivechanges, audit and finalcoldSandbox, prepare forapproval.
+
+
+## 2026-11-18: personal Unlimited rendering build
+
+User requested a personal-only Unlimited toggle. Reuse existing Vulkan
+interpolation/ownership/presentation implementation atop released scheduler and
+logging fixes, keeping game timing and normal60 default. Local rate/ownership/
+regression/platform/native checks pass; physical acceptance pending. No changes
+to published ZIP/tag/main. Personal rollback backup preserved on deployment.

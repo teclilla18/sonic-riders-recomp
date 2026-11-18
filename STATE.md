@@ -1,27 +1,22 @@
-# Switch 2 Alpha 1 final publication candidate (2026-11-18)
+# Personal Switch 2 Unlimited FPS experiment (2026-11-18)
 
-User priority: playable alpha released ASAP, not bug-free. STOP optional fixes,
-features, optimization and extensive diagnostics. No publication before approval.
-Branch codex/switch2-alpha1-final from tested fa2ec57/c8c06fdda996. Runtime/config
-must match that baseline exactly. Experimental branches/checkpoints preserved.
+Branchcodex/personal-switch2-unlimited from published1df03e0. User requested
+personalUnlimitedoption only; no publicrelease/source/main/tag changes.
+Reuse priorb381 render interpolation/safe4frameownership and fence retirement,
+retaining currenttested scheduler/asynclogging fixes. Native overlay adds only
+Unlimited rendering toggle inPerformance; defaultsOff/normal60, savedpc_fps=-1
+whenenabled. Selecting30 clearsUnlimited. Game/retrace/audio clocksunchanged.
+No live resolution changes;2x andframes0/userconfigpreserved. Supported
+presentationmode/refresh/GPU can cap visible rate; Unlimited removes software
+renderwait, not a promise ofunlimitedphysicalrefresh. Immediate cantear.
 
-Hardware: scheduler wakeup fix plus bounded asynchronous logger tested across
-consecutive races without selectionfreeze; permanent elimination not claimed.
-Latest2races: first two temporary stalls/recoverable distortion, second otherwise
-flawless/minor selection audio glitch. Logs preserved build/alpha/logfix-c8c06-latest
-ONLY; no investigation. Known intermittent stutter, music/announcer dropout,
-temporary distortion and startup/cache-save hitches remain documented.
-
-Fresh2x/60fps/no automatic exit, live resolution controls disabled. Preserve
-settings, ISO, saves and caches. HigherFPS remains separate/excluded. Runtime
-unchanged; update release notes/metadata/audit to latest tested baseline.
-
-Regenerate ONLY Switch2 setup ZIP using tools/make_release.py from clean guarded
-source; audit every entry with tools/audit_switch2_release.py, exact runtime
-fa2ec57 comparison. Final cold Sandbox --flavor switch2 --space, no --cache,
-GUI thenCLI through exactZIP/MOTW/Explorer, ownISO readonly, results-only writable.
-Existing approval covers validation/retest; minimized established workflow.
-Record exact sourcecommit/size/checksum/results in final handoff/candidate record.
-Do not repeat prior research or optional tests. No other platform packages,
-stable-release changes, push/merge/remote tag/upload/announcement before approval.
-Easy-read public artifact republish needs external access; local guides updated.
+Local actualscheduler/rate/pairing/retirement/transition tests PASS. Native
+build/link/manifest/sourcefreshness andexistingplatformcompatibilityPASS.
+Personalbuild674d9c409e12,29477417bytes SHA
+c6a8a6b92edacfdc4410f4f0b316195672f0eae18e75d5f4cb2635bbbea61362.
+Hardwareexperiment pending; earlierFPSwork was not validated after scheduler
+fix, so do notclaimaccepted. Published Alpha1ZIP and all rollbackspreserved.
+FTPdeploymentresult inhandoff/build/switch2/personal-deployment.json.
+Next: toggleUnlimited duringrace, verifygame speed/input/audio, return60 and
+Quit/relaunch persistence; reportmode/clocks. RevertNRO via backedupAlpha1pair
+ifissues; setpc_fps0 if reverting. No publication/remote pushes.
