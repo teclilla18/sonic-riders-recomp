@@ -1648,3 +1648,12 @@ note with implementation inventory, input/audio findings, dependency pins, sourc
 map, regression chronology, cache measurements and resume gates [confirmed existing
 records]. Audio causes and permanent freeze elimination remain unproven. No runtime
 edits, builds, log deletion, rollout or release changes during this handoff.
+
+## 2026-11-18: experimental Android Vulkan 1.1 fallback (#32)
+
+- Implemented feature/dependency negotiation and automatic legacy render passes in the shared Vulkan renderer; supported devices retain dynamic rendering. Framebuffers follow existing view retirement/fences/resize/swapchain/device recovery; prewarm-safe compatible passes and separate caches [confirmed, source/tests].
+- Corrected depth-clear image usage, checked formats/limits, capped the image pool and added dedicated spills. Audited shaders; single-source variants and separate alpha writes preserve the historical solid-floor TEV-alpha distinction (0c00ba4), including on no-dual-source devices.
+- Tested S23 Ultra / Adreno 740 / Vulkan 1.3.128: full 1P/2P effects routes dynamic 50.283/56.734 fps, legacy 49.650/56.240 fps, each 1800 measured steps. Sequential runs do not establish a speed regression. Captures match closely; displayed FPS and simulation speed both fall together [confirmed].
+- Khronos validation found invalid internal ALL_COMMANDS subpass masks; corrected to attachment graphics stages. Corrected legacy/no-dual/no-push race + simulated device recovery and dynamic recovery have zero validation warnings/errors/VUIDs. Legacy background/resume continues rendering [confirmed].
+- Source-extracted helper tests run on Windows and ARM64; Vulkan 1.1 SPIR-V validation and Switch zero-scratch checks pass. Experimental branch only; no public release, main merge, issue reply or closure. Mali and real MoltenVK execution, real GPU reset and exhaustive alpha/depth overlap remain unproven.
+- User observed slow-motion below 60 fps. Frame-pacing audit is a separate follow-up after #32; do not change simulation/pacing as part of the renderer fix. Details: docs/notes/vulkan-legacy.md.

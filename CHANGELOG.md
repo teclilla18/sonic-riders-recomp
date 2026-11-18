@@ -1,5 +1,14 @@
 # Changelog
 
+## Experimental, unreleased — Android Vulkan 1.1 (#32)
+
+- Automatically use traditional render passes on drivers without dynamic rendering;
+  preserve the existing path on supported devices. Tested on the S23 by forcing both paths;
+  the reporter's Mali-G57 and iOS/MoltenVK still require testing.
+- Check optional features, format/allocation limits and depth-clear usage. Preserve
+  the solid-floor destination-alpha fix on devices without dual-source blending.
+- Diagnostic `SR_VK_FORCE_LEGACY=1`; technical details in `docs/notes/vulkan-legacy.md`.
+
 ## Documentation — Switch 2 Alpha 1
 
 - Announce the separate experimental Switch 2 release with Lanmana banner/credit,

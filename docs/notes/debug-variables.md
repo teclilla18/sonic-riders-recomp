@@ -2,6 +2,10 @@
 
 **Reference.** Moved from docs/REFERENCE.md on 2026-11-03 (content unchanged). Index: [REFERENCE.md](../REFERENCE.md).
 
+Android/iOS Vulkan compatibility: `SR_VK_FORCE_LEGACY=1` forces traditional render passes;
+`SR_VK_NODUALSRC=1` tests single-source colour/separate alpha writes. Both are diagnostic only;
+see [vulkan-legacy.md](vulkan-legacy.md) for path selection, cache handling and validation.
+
 Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not proven; **[uncertain]** = guess / needs work.
 
 ## Debug variables (SR_*): full list

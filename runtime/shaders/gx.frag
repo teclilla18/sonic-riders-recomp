@@ -33,7 +33,11 @@ SAMPLER(5) uniform sampler2D u_tex5;
 SAMPLER(6) uniform sampler2D u_tex6;
 SAMPLER(7) uniform sampler2D u_tex7;
 layout(location = 0) out vec4 o_color;            // color, and the alpha the EFB stores
+#ifdef GX_SINGLE_SOURCE
+vec4 o_blend;  // no dualSrcBlend feature: dead private output, removed by the SPIR-V compiler
+#else
 layout(location = 0, index = 1) out vec4 o_blend;  // .a: the TEV alpha the blend factors use
+#endif
 vec3 coord(uint i) {
   return i == 0u ? v_tex0 : i == 1u ? v_tex1 : i == 2u ? v_tex2 : i == 3u ? v_tex3 :
          i == 4u ? v_tex4 : i == 5u ? v_tex5 : i == 6u ? v_tex6 : v_tex7;
@@ -291,7 +295,9 @@ void main() {
      alpha the EFB stores. (The backends read DSTALPHA as 1 when the EFB format has no alpha.) */
   o_blend = vec4(0.0, 0.0, 0.0, o.a);
   uint cm1 = BP(0x42);
+#if !defined(GX_SINGLE_SOURCE) || defined(GX_ALPHA_PASS)
   if (bits(CBP(0x42), 8, 1) != 0u) o.a = float(bits(cm1, 0, 8)) / 255.0;
+#endif
   if (DEBUG_TEV == 8 && bits(XR(0x0F), 1, 1) != 0u) { o = vec4(clamp(v_col1.rgb, 0.0, 1.0), 1.0); o_blend = vec4(1.0); }  /* debugging: lit colour 1, where it is lit */
   if (DEBUG_TEV == 1) { o = vec4(clamp(v_col0.rgb, 0.0, 1.0), 1.0); o_blend = vec4(1.0); }  /* debugging: lit colour 0 */
   if (DEBUG_SHOW_ALPHA != 0) { o = vec4(vec3(clamp(r0.a, 0.0, 1.0)), 1.0); o_blend = vec4(1.0); }  /* the TEV alpha as gray */

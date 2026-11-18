@@ -6,7 +6,7 @@
  * staging) reused once their fence has passed.
  *
  * Vulkan specifics:
- *   - dynamic rendering (no render pass objects); one pipeline per fixed-function state (blend, colour
+ *   - dynamic rendering when supported, otherwise Vulkan 1.1 render passes; one pipeline per fixed-function state (blend, colour
  *     mask, depth, cull, primitive, shader), cached in memory and on disk (vk_pipeline_cache.bin);
  *   - set 0 = the register block and the state's XF image (dynamic uniform offsets), set 1 = 8 textures
  *     (push descriptors when the driver has them, else a per-frame pool);
@@ -66,8 +66,9 @@ static float g_k = 1.0f;
 #define XF_IMAGE_BYTES (XF_IMAGE_CHUNKS * GX_XFM_CHUNK * 4)
 static const uint8_t k_xf_image_chunks[XF_IMAGE_CHUNKS] = {0, 1, 2, 3, 16, 17, 20, 21, 22, 23, 24, 25};
 #define IMAGE_POOL (384u << 20)
-#define PIPE_CACHE_FILE "vk_pipeline_cache.bin"
-#define PIPE_KEYS_FILE "vk_pipeline_keys.bin"  /* every pipeline key seen, prebuilt at boot (prewarm_thread) */
+#define PIPE_CACHE_FILE (g_dual_src ? (g_dynamic ? "vk_pipeline_cache.bin" : "vk_pipeline_cache_legacy.bin") : \
+                        (g_dynamic ? "vk_pipeline_cache_single_v1.bin" : "vk_pipeline_cache_legacy_single_v1.bin"))
+#define PIPE_KEYS_FILE (g_dual_src ? "vk_pipeline_keys.bin" : "vk_pipeline_keys_single_v1.bin")
 #define PIPE_KEYS_MAGIC 0x314B5056u            /* "VPK1" */
 
 #define VKC(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) rt_fatal("[vk] %s failed: %d", #x, (int)r_); } while (0)
@@ -87,6 +88,8 @@ static PFN_vkCmdEndRenderingKHR p_end_rendering;
 static PFN_vkCmdPushDescriptorSetKHR p_push_desc;
 static VkFormat g_depth_fmt;
 static int g_core13;  /* Vulkan 1.3 core on both sides (else the dynamic rendering extension) */
+static int g_dynamic, g_dr_deps;  /* selected path; 1.1 extension dependencies needed */
+static VkDeviceSize g_max_alloc;
 
 /* ---- swapchain ---- */
 static VkSurfaceKHR g_surf;
@@ -144,6 +147,7 @@ static uint32_t g_stage_off;
 static VkDescriptorSetLayout g_dsl_ubo, g_dsl_tex, g_dsl_one;
 static VkPipelineLayout g_pl_gx, g_pl_quad;
 static VkShaderModule g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch;
+static VkShaderModule g_sm_fs_alpha, g_sm_fs_ind_alpha;
 static VkShaderModule g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas;  /* picture options */
 /* Specialized fragment shaders (as on the Switch): one per recorded state key, with the TEV setup folded
  * into constants. A GX pipeline key carries SPEC_FLAG and the low 24 bits of the state's key hash in
@@ -151,7 +155,10 @@ static VkShaderModule g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas; 
  * folder for the next build (tools/gen_shaders.py, build/shaderkeys/). SR_NOSPEC=1: ubershader only. */
 #define SPEC_FLAG (1ull << 60)
 #define SPEC_SHIFT 36
+#define ALPHA_PASS_FLAG (1ull << 61)
+#define CONST_ALPHA_FLAG (1ull << 62)
 static VkShaderModule g_spec_sm[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];
+static VkShaderModule g_spec_alpha_sm[GX_SPEC_COUNT > 0 ? GX_SPEC_COUNT : 1];
 static int g_spec_on = 1;
 static unsigned long long g_spec_hits, g_spec_misses;  /* states, for the log */
 static VkPipelineCache g_pcache;
@@ -189,6 +196,106 @@ static int g_tex_cap;
 static unsigned g_ov_version = ~0u;
 static int g_ov_box[4];
 static unsigned g_presented, g_frames_done;
+
+/* ---- legacy rendering objects ----
+ * Render passes outlive pipelines, including background prewarm. Only this cache is shared with
+ * prewarm; framebuffers belong to the render thread and follow the lifetime of their image views.
+ * LOAD and CLEAR passes are compatible (same formats/sample counts/subpass references). */
+typedef struct LegacyPass {
+    VkFormat color, depth;
+    int clear;
+    VkRenderPass pass;
+    struct LegacyPass* next;
+} LegacyPass;
+typedef struct LegacyFramebuffer {
+    VkImageView color, depth;
+    uint32_t w, h;
+    VkFramebuffer fb;
+    struct LegacyFramebuffer* next;
+} LegacyFramebuffer;
+static LegacyPass* g_legacy_passes;
+static LegacyFramebuffer* g_legacy_fbs;
+static mtx_t g_pass_lock;
+
+static VkRenderPass legacy_pass(VkFormat color, VkFormat depth, int clear) {
+    mtx_lock(&g_pass_lock);
+    for (LegacyPass* p = g_legacy_passes; p; p = p->next)
+        if (p->color == color && p->depth == depth && p->clear == clear) {
+            mtx_unlock(&g_pass_lock);
+            return p->pass;
+        }
+    VkAttachmentDescription a[2] = {
+        {0, color, VK_SAMPLE_COUNT_1_BIT, clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+         VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        {0, depth, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}};
+    VkAttachmentReference c = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkAttachmentReference d = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+    VkSubpassDescription sub = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, NULL, 1, &c, NULL,
+                                depth != VK_FORMAT_UNDEFINED ? &d : NULL, 0, NULL};
+    /* Also order LOAD after an earlier pass with the same layout (to_layout is then a no-op).
+     * Layout changes and transfer/sample hazards remain in barrier()/to_layout(), outside the pass. */
+    VkPipelineStageFlags stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    VkAccessFlags reads = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    VkAccessFlags writes = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    VkSubpassDependency deps[2] = {
+        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, stages,
+         VK_ACCESS_MEMORY_WRITE_BIT, reads | writes, 0},
+        {0, VK_SUBPASS_EXTERNAL, stages, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+         writes, VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, 0}};
+    VkRenderPassCreateInfo ci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, NULL, 0,
+                                depth != VK_FORMAT_UNDEFINED ? 2u : 1u, a, 1, &sub, 2, deps};
+    LegacyPass* p = calloc(1, sizeof *p);
+    VKC(vkCreateRenderPass(g_dev, &ci, NULL, &p->pass));
+    p->color = color; p->depth = depth; p->clear = clear;
+    p->next = g_legacy_passes; g_legacy_passes = p;
+    mtx_unlock(&g_pass_lock);
+    return p->pass;
+}
+
+static VkFramebuffer legacy_framebuffer(VkRenderPass pass, VkImageView color, VkImageView depth,
+                                        uint32_t w, uint32_t h) {
+    for (LegacyFramebuffer* f = g_legacy_fbs; f; f = f->next)
+        if (f->color == color && f->depth == depth && f->w == w && f->h == h) return f->fb;
+    VkImageView views[2] = {color, depth};
+    VkFramebufferCreateInfo ci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, NULL, 0, pass,
+                                 depth ? 2u : 1u, views, w, h, 1};
+    LegacyFramebuffer* f = calloc(1, sizeof *f);
+    VKC(vkCreateFramebuffer(g_dev, &ci, NULL, &f->fb));
+    f->color = color; f->depth = depth; f->w = w; f->h = h;
+    f->next = g_legacy_fbs; g_legacy_fbs = f;
+    return f->fb;
+}
+
+/* Called only when the image's existing fence/idle retirement permits destroying its view.
+ * A null view drops every framebuffer at device teardown, after prewarm and GPU work have stopped. */
+static void legacy_forget_view(VkImageView view) {
+    for (LegacyFramebuffer** pp = &g_legacy_fbs; *pp;) {
+        LegacyFramebuffer* f = *pp;
+        if (!view || f->color == view || f->depth == view) {
+            vkDestroyFramebuffer(g_dev, f->fb, NULL);
+            *pp = f->next; free(f);
+        } else pp = &f->next;
+    }
+}
+
+static void legacy_teardown(void) {
+    legacy_forget_view(VK_NULL_HANDLE);
+    while (g_legacy_passes) {
+        LegacyPass* p = g_legacy_passes;
+        vkDestroyRenderPass(g_dev, p->pass, NULL);
+        g_legacy_passes = p->next; free(p);
+    }
+}
+
+static void rendering_end(void) {
+    if (g_dynamic) p_end_rendering(g_cmd);
+    else vkCmdEndRenderPass(g_cmd);
+}
+/* ---- end legacy rendering objects ---- */
 
 /* ---------------------------------------------------------------- small helpers */
 static uint32_t mem_type(uint32_t bits, VkMemoryPropertyFlags want, VkMemoryPropertyFlags prefer) {
@@ -232,7 +339,7 @@ static uint32_t pool_alloc(uint32_t size, uint32_t align) {
     for (Block** pp = &g_free_list; *pp; pp = &(*pp)->next) {
         Block* b = *pp;
         uint32_t start = (b->off + align - 1) & ~(align - 1);
-        if (start + size > b->off + b->size) continue;
+        if (start < b->off || size > b->size || start - b->off > b->size - size) continue;
         uint32_t end = start + size, b_end = b->off + b->size;
         if (start > b->off) {
             b->size = start - b->off;
@@ -249,7 +356,7 @@ static uint32_t pool_alloc(uint32_t size, uint32_t align) {
         }
         return start;
     }
-    rt_fatal("image pool exhausted (%u bytes)", size);
+    return UINT32_MAX;  /* fragmented/full: give this image its own allocation */
 }
 
 static void pool_free(uint32_t off, uint32_t size) {
@@ -273,18 +380,24 @@ static void pool_free(uint32_t off, uint32_t size) {
 static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUsageFlags usage, int in_pool) {
     uint64_t t0 = platform_now_ns();
     memset(t, 0, sizeof *t);
+    VkImageFormatProperties fp;
+    VkResult supported = vkGetPhysicalDeviceImageFormatProperties(g_pd, fmt, VK_IMAGE_TYPE_2D,
+                                                                  VK_IMAGE_TILING_OPTIMAL, usage, 0, &fp);
+    if (supported != VK_SUCCESS || w > fp.maxExtent.width || h > fp.maxExtent.height)
+        rt_fatal("[vk] unsupported image: format %d usage %X extent %ux%u (result %d)", fmt, usage, w, h, supported);
     VkImageCreateInfo ci = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, NULL, 0, VK_IMAGE_TYPE_2D, fmt, {w, h, 1}, 1, 1,
                             VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, usage, VK_SHARING_MODE_EXCLUSIVE, 0, NULL,
                             VK_IMAGE_LAYOUT_UNDEFINED};
     VKC(vkCreateImage(g_dev, &ci, NULL, &t->img));
     VkMemoryRequirements mr;
     vkGetImageMemoryRequirements(g_dev, t->img, &mr);
-    if (in_pool) {
-        if (!(mr.memoryTypeBits & (1u << g_pool_type))) rt_fatal("[vk] an image cannot live in the image pool's memory");
+    if (mr.size > g_max_alloc) rt_fatal("[vk] image allocation exceeds device limit (%llu bytes)", (unsigned long long)mr.size);
+    if (in_pool && (mr.memoryTypeBits & (1u << g_pool_type)) && mr.size <= UINT32_MAX && mr.alignment <= UINT32_MAX) {
         t->size = (uint32_t)mr.size;
         t->off = pool_alloc(t->size, (uint32_t)mr.alignment);
-        VKC(vkBindImageMemory(g_dev, t->img, g_pool_mem, t->off));
-    } else {
+    } else t->off = UINT32_MAX;
+    if (t->off != UINT32_MAX) VKC(vkBindImageMemory(g_dev, t->img, g_pool_mem, t->off));
+    else {
         VkMemoryAllocateInfo ai = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, mr.size,
                                    mem_type(mr.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0)};
         VkDeviceMemory m;
@@ -293,8 +406,10 @@ static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUs
         t->mem = m;
     }
     int depth = fmt == g_depth_fmt && (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    VkImageAspectFlags aspect = depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    if (depth && fmt != VK_FORMAT_D32_SFLOAT) aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
     VkImageViewCreateInfo vi = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, NULL, 0, t->img, VK_IMAGE_VIEW_TYPE_2D, fmt,
-                                {0, 0, 0, 0}, {depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+                                {0, 0, 0, 0}, {aspect, 0, 1, 0, 1}};
     VKC(vkCreateImageView(g_dev, &vi, NULL, &t->view));
     t->layout = VK_IMAGE_LAYOUT_UNDEFINED;
     t->w = w;
@@ -307,9 +422,11 @@ static void image_make(VkImg* t, uint32_t w, uint32_t h, VkFormat fmt, VkImageUs
 
 static void image_free(VkImg* t) {
     if (!t->live) return;
+    legacy_forget_view(t->view);
     vkDestroyImageView(g_dev, t->view, NULL);
     vkDestroyImage(g_dev, t->img, NULL);
-    pool_free(t->off, t->size);
+    if (t->mem) vkFreeMemory(g_dev, t->mem, NULL);
+    else pool_free(t->off, t->size);
     t->live = 0;
 }
 
@@ -422,8 +539,9 @@ static VkPipeline pipe_build(VkShaderModule vs, VkShaderModule fs, VkPipelineLay
     VkPipelineRenderingCreateInfoKHR ri = {VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR, NULL, 0, 1, &cf,
                                            target == TGT_EFB ? g_depth_fmt : VK_FORMAT_UNDEFINED, VK_FORMAT_UNDEFINED};
     VkPipelineDepthStencilStateCreateInfo no_ds = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-    VkGraphicsPipelineCreateInfo gi = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &ri, 0, 2, st, &vi, &ia, NULL, &vp, &rs, &ms,
-                                       target == TGT_EFB ? (ds ? ds : &no_ds) : NULL, &cb, &dy, layout, VK_NULL_HANDLE, 0,
+    VkRenderPass pass = g_dynamic ? VK_NULL_HANDLE : legacy_pass(cf, target == TGT_EFB ? g_depth_fmt : VK_FORMAT_UNDEFINED, 0);
+    VkGraphicsPipelineCreateInfo gi = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, g_dynamic ? &ri : NULL, 0, 2, st, &vi, &ia, NULL, &vp, &rs, &ms,
+                                       target == TGT_EFB ? (ds ? ds : &no_ds) : NULL, &cb, &dy, layout, pass, 0,
                                        VK_NULL_HANDLE, -1};
     VkPipeline p;
     uint64_t t0 = platform_now_ns();
@@ -443,6 +561,7 @@ static VkBlendFactor src1_ok(VkBlendFactor f) {  /* without dual-source blending
 
 /* the pipeline for a GX state: key bits (see gx_pipe) */
 static VkPipeline gx_pipe_make(uint64_t key) {
+    int alpha_pass = (key & ALPHA_PASS_FLAG) != 0;
     int ind = key & 1, blend_on = (key >> 1) & 1, revsub = (key >> 2) & 1;
     VkPipelineColorBlendAttachmentState b = {0};
     b.blendEnable = blend_on;
@@ -452,17 +571,27 @@ static VkPipeline gx_pipe_make(uint64_t key) {
     b.dstAlphaBlendFactor = src1_ok((VkBlendFactor)((key >> 18) & 31));
     b.colorBlendOp = b.alphaBlendOp = revsub ? VK_BLEND_OP_REVERSE_SUBTRACT : VK_BLEND_OP_ADD;
     b.colorWriteMask = (VkColorComponentFlags)((key >> 23) & 15);
+    if (alpha_pass) b.colorWriteMask = VK_COLOR_COMPONENT_A_BIT;
+    else if (key & CONST_ALPHA_FLAG) b.colorWriteMask &= ~VK_COLOR_COMPONENT_A_BIT;
     VkPipelineDepthStencilStateCreateInfo ds = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
     ds.depthTestEnable = (key >> 27) & 1;
     ds.depthWriteEnable = (key >> 28) & 1;
     ds.depthCompareOp = (VkCompareOp)((key >> 29) & 7);
+    if (alpha_pass) {
+        /* Re-test exactly the fragments the colour draw wrote, without writing depth twice. */
+        if (ds.depthTestEnable && ds.depthWriteEnable && ds.depthCompareOp != VK_COMPARE_OP_NEVER)
+            ds.depthCompareOp = VK_COMPARE_OP_EQUAL;
+        ds.depthWriteEnable = VK_FALSE;
+    }
     VkCullModeFlags cull = (VkCullModeFlags)((key >> 32) & 3);
     VkPrimitiveTopology topo = (VkPrimitiveTopology)((key >> 34) & 3);
-    VkShaderModule fs = ind ? g_sm_fs_ind : g_sm_fs;
+    VkShaderModule fs = alpha_pass ? (ind ? g_sm_fs_ind_alpha : g_sm_fs_alpha) : (ind ? g_sm_fs_ind : g_sm_fs);
     if (key & SPEC_FLAG) {  /* a key from an older table that no longer matches keeps the ubershader */
         uint32_t tag = (uint32_t)(key >> SPEC_SHIFT) & 0xFFFFFFu;
         for (int i = 0; i < GX_SPEC_COUNT; i++)
-            if ((uint32_t)(k_spec_keys[i] & 0xFFFFFFu) == tag && g_spec_sm[i]) { fs = g_spec_sm[i]; break; }
+            if ((uint32_t)(k_spec_keys[i] & 0xFFFFFFu) == tag && g_spec_sm[i]) {
+                fs = alpha_pass ? g_spec_alpha_sm[i] : g_spec_sm[i]; break;
+            }
     }
     return pipe_build(g_sm_vs, fs, g_pl_gx, 1, topo, &b, &ds, cull, TGT_EFB);
 }
@@ -502,7 +631,7 @@ static VkPipeline quad_pipe_make(uint64_t key) {
 static mtx_t g_pw_lock;
 static PipeEntry* g_pw_done;
 static uint32_t g_pw_ndone, g_pw_cap;
-static volatile int g_pw_running;
+static _Atomic int g_pw_running;  /* the render thread waits for all pass/pipeline users before teardown */
 
 static VkPipeline pipe_make(uint64_t key) { return (key >> 63) ? quad_pipe_make(key) : gx_pipe_make(key); }
 
@@ -534,6 +663,20 @@ static void pipe_drain(void) {  /* render thread: take the helper's finished pip
     }
     g_pw_ndone = 0;
     mtx_unlock(&g_pw_lock);
+}
+
+/* swap_destroy has waited for GPU work. Stop the producer before changing the format it reads,
+ * then discard incompatible pipelines. Disk keys describe states, not handles, and remain useful. */
+static void pipelines_invalidate(void) {
+    while (g_pw_running) {
+        struct timespec ts = {0, 2000000};
+        thrd_sleep(&ts, NULL);
+    }
+    pipe_drain();
+    for (uint32_t i = 0; i < g_pipes_cap; i++)
+        if (g_pipes[i].p) vkDestroyPipeline(g_dev, g_pipes[i].p, NULL);
+    if (g_pipes) memset(g_pipes, 0, g_pipes_cap * sizeof *g_pipes);
+    g_pipes_total = 0;
 }
 
 static uint64_t* g_pw_keys;  /* the helper's own copy of the recorded keys */
@@ -630,6 +773,7 @@ static void swap_destroy(void) {
     if (!g_swap) return;
     vkDeviceWaitIdle(g_dev);
     for (uint32_t i = 0; i < g_nimg; i++) {
+        legacy_forget_view(g_sview[i]);
         vkDestroyImageView(g_dev, g_sview[i], NULL);
         vkDestroySemaphore(g_dev, g_sdone[i], NULL);
     }
@@ -652,8 +796,10 @@ static int swap_create(void) {
             fmt = fmts[i];
             break;
         }
-    if (g_swap_fmt != VK_FORMAT_UNDEFINED && fmt.format != g_swap_fmt)
-        rt_log("[vk] the screen's format changed (%d -> %d)", g_swap_fmt, fmt.format);  /* pipelines are per format */
+    if (g_swap_fmt != VK_FORMAT_UNDEFINED && fmt.format != g_swap_fmt) {
+        rt_log("[vk] the screen's format changed (%d -> %d): invalidating pipelines", g_swap_fmt, fmt.format);
+        pipelines_invalidate();
+    }
     g_swap_fmt = fmt.format;
     VkExtent2D ext = caps.currentExtent;
     if (ext.width == UINT32_MAX || !ext.width) {
@@ -734,6 +880,12 @@ static int swap_recreate(void) {
 }
 
 static void device_setup(void);
+/* Vulkan 1.1 supplies multiview/maintenance2, but not renderpass2/depth-stencil-resolve.
+ * Advertising the extension (or 1.3) alone is insufficient: query its feature too. */
+static int dynamic_supported(uint32_t api, int extension, int resolve, int renderpass2, int feature) {
+    return feature && (api >= VK_API_VERSION_1_3 ||
+                       (extension && (api >= VK_API_VERSION_1_2 || (resolve && renderpass2))));
+}
 #ifdef __APPLE__
 /* MoltenVK (iOS): a "portability" implementation; the spec requires enabling VK_KHR_portability_subset
  * when the device lists it */
@@ -748,33 +900,61 @@ static void vk_setup(void) {
     SDL_Vulkan_GetInstanceExtensions(g_win, &n, ie);
     uint32_t iv = VK_API_VERSION_1_1;
     vkEnumerateInstanceVersion(&iv);
+    if (iv < VK_API_VERSION_1_1) rt_fatal("[vk] Vulkan 1.1 or newer is required");
     VkApplicationInfo app = {VK_STRUCTURE_TYPE_APPLICATION_INFO, NULL, "sonicriders", 1, "sonicriders", 1,
-                             iv >= VK_API_VERSION_1_3 ? VK_API_VERSION_1_3 : VK_API_VERSION_1_1};
+                             iv >= VK_API_VERSION_1_3 ? VK_API_VERSION_1_3 : iv};
     VkInstanceCreateInfo ici = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, NULL, 0, &app, 0, NULL, n, ie};
     VKC(vkCreateInstance(&ici, NULL, &g_inst));
     uint32_t npd = 1;
     VkResult er = vkEnumeratePhysicalDevices(g_inst, &npd, &g_pd);
     if ((er != VK_SUCCESS && er != VK_INCOMPLETE) || !npd) rt_fatal("[vk] no GPU");
     vkGetPhysicalDeviceProperties(g_pd, &g_props);
+    uint32_t api = g_props.apiVersion < app.apiVersion ? g_props.apiVersion : app.apiVersion;
+    if (api < VK_API_VERSION_1_1) rt_fatal("[vk] this GPU requires Vulkan 1.1 or newer");
     vkGetPhysicalDeviceMemoryProperties(g_pd, &g_mem);
+    VkPhysicalDeviceMaintenance3Properties m3 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES};
+    VkPhysicalDeviceProperties2 props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &m3};
+    vkGetPhysicalDeviceProperties2(g_pd, &props2);
+    g_max_alloc = m3.maxMemoryAllocationSize;
+    if (g_props.limits.maxUniformBufferRange < sizeof(GxUniforms) ||
+        g_props.limits.maxUniformBufferRange < XF_IMAGE_BYTES ||
+        g_props.limits.maxPushConstantsSize < 80 || g_props.limits.maxVertexInputAttributes < 10 ||
+        g_props.limits.maxVertexInputBindingStride < sizeof(GxVertex) ||
+        g_props.limits.maxPerStageDescriptorSamplers < 8 || g_props.limits.maxPerStageDescriptorSampledImages < 8 ||
+        g_props.limits.maxDescriptorSetUniformBuffersDynamic < 2)
+        rt_fatal("[vk] GPU limits cannot support the GX shader bindings");
     VkPhysicalDeviceFeatures f;
     vkGetPhysicalDeviceFeatures(g_pd, &f);
     g_dual_src = f.dualSrcBlend;
+    if (getenv("SR_VK_NODUALSRC")) g_dual_src = 0;  /* validate optional-feature shader variants */
     uint32_t nde = 0;
     vkEnumerateDeviceExtensionProperties(g_pd, NULL, &nde, NULL);
     VkExtensionProperties* de = calloc(nde ? nde : 1, sizeof *de);
     vkEnumerateDeviceExtensionProperties(g_pd, NULL, &nde, de);
-    int has_dr = 0;
+    int has_dr = 0, has_resolve = 0, has_rp2 = 0;
     for (uint32_t i = 0; i < nde; i++) {
         if (!strcmp(de[i].extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME)) g_push_desc = 1;
         if (!strcmp(de[i].extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) has_dr = 1;
+        if (!strcmp(de[i].extensionName, VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME)) has_resolve = 1;
+        if (!strcmp(de[i].extensionName, VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME)) has_rp2 = 1;
 #ifdef __APPLE__
         if (!strcmp(de[i].extensionName, "VK_KHR_portability_subset")) g_portability = 1;
 #endif
     }
     free(de);
-    int core13 = g_core13 = g_props.apiVersion >= VK_API_VERSION_1_3 && iv >= VK_API_VERSION_1_3;
-    if (!core13 && !has_dr) rt_fatal("[vk] this GPU's driver has no dynamic rendering (Vulkan 1.3 or VK_KHR_dynamic_rendering)");
+    g_core13 = api >= VK_API_VERSION_1_3;
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR drf = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR};
+    if (g_core13 || has_dr) {
+        VkPhysicalDeviceFeatures2 features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &drf};
+        vkGetPhysicalDeviceFeatures2(g_pd, &features);
+    }
+    const char* force = getenv("SR_VK_FORCE_LEGACY");
+    int forced = force && atoi(force) == 1;
+    g_dynamic = !forced && dynamic_supported(api, has_dr, has_resolve, has_rp2, drf.dynamicRendering);
+    g_dr_deps = api < VK_API_VERSION_1_2;
+    rt_log("[vk] rendering path: %s%s (dynamic feature %u, extension %d, 1.1 dependencies %d/%d)",
+           g_dynamic ? "dynamic" : "legacy render passes", forced ? " (SR_VK_FORCE_LEGACY=1)" : "",
+           drf.dynamicRendering, has_dr, has_resolve, has_rp2);
     if (getenv("SR_VK_NOPUSH")) g_push_desc = 0;
     g_one_pipe = getenv("SR_VK_ONEPIPE") != NULL;
     if (getenv("SR_VK_DRAWS")) {
@@ -795,6 +975,7 @@ static void vk_setup(void) {
     }
     if (g_qfi == UINT32_MAX) rt_fatal("[vk] no graphics queue that can present");
     mtx_init(&g_pw_lock, mtx_plain);
+    mtx_init(&g_pass_lock, mtx_plain);
     device_setup();
     prewarm_start();
 }
@@ -804,43 +985,61 @@ static void device_setup(void) {
     int core13 = g_core13;
     float prio = 1.0f;
     VkDeviceQueueCreateInfo qci = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, NULL, 0, g_qfi, 1, &prio};
-    const char* dext[5];
+    const char* dext[7];
     uint32_t ndx = 0;
     dext[ndx++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 #ifdef __APPLE__
     if (g_portability) dext[ndx++] = "VK_KHR_portability_subset";
 #endif
     if (g_push_desc) dext[ndx++] = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
-    if (!core13) {
+    if (g_dynamic && !core13) {
         dext[ndx++] = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
-        dext[ndx++] = VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME;  /* required by it on 1.1 (with create_renderpass2) */
+        if (g_dr_deps) {
+            dext[ndx++] = VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME;
+            dext[ndx++] = VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME;
+        }
     }
     VkPhysicalDeviceDynamicRenderingFeaturesKHR drf = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR, NULL, VK_TRUE};
     VkPhysicalDeviceFeatures want = {0};
     want.dualSrcBlend = g_dual_src;
-    VkDeviceCreateInfo dci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, &drf, 0, 1, &qci, 0, NULL, ndx, dext, &want};
+    VkDeviceCreateInfo dci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, g_dynamic ? &drf : NULL, 0, 1, &qci, 0, NULL, ndx, dext, &want};
     VKC(vkCreateDevice(g_pd, &dci, NULL, &g_dev));
     vkGetDeviceQueue(g_dev, g_qfi, 0, &g_q);
-    p_begin_rendering = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdBeginRendering" : "vkCmdBeginRenderingKHR");
-    p_end_rendering = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdEndRendering" : "vkCmdEndRenderingKHR");
+    p_begin_rendering = g_dynamic ? (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdBeginRendering" : "vkCmdBeginRenderingKHR") : NULL;
+    p_end_rendering = g_dynamic ? (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdEndRendering" : "vkCmdEndRenderingKHR") : NULL;
     if (g_push_desc) p_push_desc = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(g_dev, "vkCmdPushDescriptorSetKHR");
-    if (!p_begin_rendering || !p_end_rendering) rt_fatal("[vk] dynamic rendering entry points missing");
+    if (g_dynamic && (!p_begin_rendering || !p_end_rendering)) rt_fatal("[vk] dynamic rendering entry points missing");
     if (g_push_desc && !p_push_desc) g_push_desc = 0;
     rt_log("[vk] %s, Vulkan %u.%u.%u, driver %08X; dual-source blending %s, push descriptors %s", g_props.deviceName,
            VK_VERSION_MAJOR(g_props.apiVersion), VK_VERSION_MINOR(g_props.apiVersion), VK_VERSION_PATCH(g_props.apiVersion),
-           g_props.driverVersion, g_dual_src ? "yes" : "NO (approximated)", g_push_desc ? "yes" : "no (descriptor pool)");
+           g_props.driverVersion, g_dual_src ? "yes" : "no (separate alpha pass)", g_push_desc ? "yes" : "no (descriptor pool)");
 
     static const VkFormat depths[3] = {VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT};
     for (int i = 0; i < 3 && g_depth_fmt == VK_FORMAT_UNDEFINED; i++) {
         VkFormatProperties fp;
         vkGetPhysicalDeviceFormatProperties(g_pd, depths[i], &fp);
-        if (fp.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) g_depth_fmt = depths[i];
+        VkImageFormatProperties ip;
+        if ((fp.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
+            vkGetPhysicalDeviceImageFormatProperties(g_pd, depths[i], VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0, &ip) == VK_SUCCESS &&
+            ip.maxExtent.width >= EFB_W && ip.maxExtent.height >= EFB_H) g_depth_fmt = depths[i];
     }
+    if (g_depth_fmt == VK_FORMAT_UNDEFINED) rt_fatal("[vk] no supported depth attachment/clear format");
+    VkFormatProperties rgba;
+    vkGetPhysicalDeviceFormatProperties(g_pd, VK_FORMAT_R8G8B8A8_UNORM, &rgba);
+    VkFormatFeatureFlags needed = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT |
+        VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
+    if ((rgba.optimalTilingFeatures & needed) != needed) rt_fatal("[vk] RGBA8 lacks required render/sample/blit support");
 
     /* shaders */
     g_sm_vs = shader(k_gx_vert_spv, sizeof k_gx_vert_spv);
-    g_sm_fs = shader(k_gx_frag_spv, sizeof k_gx_frag_spv);
-    g_sm_fs_ind = shader(k_gx_frag_ind_spv, sizeof k_gx_frag_ind_spv);
+    g_sm_fs = g_dual_src ? shader(k_gx_frag_spv, sizeof k_gx_frag_spv) : shader(k_gx_frag_single_spv, sizeof k_gx_frag_single_spv);
+    g_sm_fs_ind = g_dual_src ? shader(k_gx_frag_ind_spv, sizeof k_gx_frag_ind_spv) : shader(k_gx_frag_ind_single_spv, sizeof k_gx_frag_ind_single_spv);
+    if (!g_dual_src) {
+        g_sm_fs_alpha = shader(k_gx_frag_alpha_spv, sizeof k_gx_frag_alpha_spv);
+        g_sm_fs_ind_alpha = shader(k_gx_frag_ind_alpha_spv, sizeof k_gx_frag_ind_alpha_spv);
+    }
     g_sm_qvs = shader(k_vk_quad_vert_spv, sizeof k_vk_quad_vert_spv);
     g_sm_tex = shader(k_vk_tex_frag_spv, sizeof k_vk_tex_frag_spv);
     g_sm_fill = shader(k_vk_fill_frag_spv, sizeof k_vk_fill_frag_spv);
@@ -854,7 +1053,10 @@ static void device_setup(void) {
     for (int i = 0; i < GX_SPEC_COUNT; i++) {
         int dup = 0;  /* two keys with the same low 24 bits: the second is left out */
         for (int j = 0; j < i; j++) dup |= (k_spec_keys[j] & 0xFFFFFFu) == (k_spec_keys[i] & 0xFFFFFFu);
-        if (!dup) g_spec_sm[i] = shader(k_spec_spv + k_spec_off[i], (size_t)k_spec_words[i] * 4);
+        if (!dup) g_spec_sm[i] = g_dual_src ? shader(k_spec_spv + k_spec_off[i], (size_t)k_spec_words[i] * 4)
+            : shader(k_spec_single_spv + k_spec_single_off[i], (size_t)k_spec_single_words[i] * 4);
+        if (!dup && !g_dual_src) g_spec_alpha_sm[i] =
+            shader(k_spec_alpha_spv + k_spec_alpha_off[i], (size_t)k_spec_alpha_words[i] * 4);
     }
     rt_log("[vk] %d specialized fragment shaders%s", GX_SPEC_COUNT, g_spec_on ? "" : " (off: SR_NOSPEC)");
 
@@ -983,20 +1185,32 @@ static void device_setup(void) {
         vkGetImageMemoryRequirements(g_dev, probe.img, &mr);
         vkDestroyImage(g_dev, probe.img, NULL);
         g_pool_type = mem_type(mr.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-        VkMemoryAllocateInfo ai = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, IMAGE_POOL, g_pool_type};
-        VKC(vkAllocateMemory(g_dev, &ai, NULL, &g_pool_mem));
+        VkDeviceSize pool_size = IMAGE_POOL;
+        if (pool_size > g_max_alloc) pool_size = g_max_alloc;
+        VkDeviceSize heap_size = g_mem.memoryHeaps[g_mem.memoryTypes[g_pool_type].heapIndex].size;
+        if (pool_size > heap_size) pool_size = heap_size;
+        VkMemoryAllocateInfo ai = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, pool_size, g_pool_type};
+        VkResult allocated;
+        while ((allocated = vkAllocateMemory(g_dev, &ai, NULL, &g_pool_mem)) != VK_SUCCESS && ai.allocationSize > (32u << 20)) {
+            if (allocated != VK_ERROR_OUT_OF_DEVICE_MEMORY && allocated != VK_ERROR_OUT_OF_HOST_MEMORY) break;
+            ai.allocationSize /= 2;
+        }
+        if (allocated != VK_SUCCESS) rt_fatal("[vk] image pool allocation failed: %d", allocated);
+        rt_log("[vk] image pool %llu MiB (allocation limit %llu MiB); dedicated spill allocations enabled",
+               (unsigned long long)(ai.allocationSize >> 20), (unsigned long long)(g_max_alloc >> 20));
         while (g_free_list) {  /* after a device loss: the old pool's free list */
             Block* b = g_free_list;
             g_free_list = b->next;
             free(b);
         }
         g_free_list = malloc(sizeof *g_free_list);
-        g_free_list->off = 0; g_free_list->size = IMAGE_POOL; g_free_list->next = NULL;
+        g_free_list->off = 0; g_free_list->size = (uint32_t)ai.allocationSize; g_free_list->next = NULL;
     }
     image_make(&g_efb, EFB_W, EFB_H, VK_FORMAT_R8G8B8A8_UNORM,
                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                    VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
-    image_make(&g_depth, EFB_W, EFB_H, g_depth_fmt, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0);
+    image_make(&g_depth, EFB_W, EFB_H, g_depth_fmt,
+               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_ov, OVERLAY_W, OVERLAY_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_dummy, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_icons, TOUCH_ATLAS_W, TOUCH_ATLAS_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
@@ -1039,7 +1253,7 @@ static void device_setup(void) {
         VkQueryPoolCreateInfo qi = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, NULL, 0, VK_QUERY_TYPE_TIMESTAMP, 4, 0};
         if (vkCreateQueryPool(g_dev, &qi, NULL, &g_qpool) != VK_SUCCESS) g_qpool = VK_NULL_HANDLE;
     }
-    rt_log("[vk] ready: EFB %dx%d, depth format %d, image pool %u MiB", EFB_W, EFB_H, g_depth_fmt, IMAGE_POOL >> 20);
+    rt_log("[vk] ready: EFB %dx%d, depth format %d", EFB_W, EFB_H, g_depth_fmt);
 }
 
 /* ---------------------------------------------------------------- recording state */
@@ -1072,7 +1286,13 @@ static void efb_begin(void) {
     if (full) aw = EFB_W, ah = EFB_H;
     VkRenderingInfoKHR ri = {VK_STRUCTURE_TYPE_RENDERING_INFO_KHR, NULL, 0, {{0, 0}, {aw < EFB_W ? aw : EFB_W, ah < EFB_H ? ah : EFB_H}},
                              1, 0, 1, &ca, &da, NULL};
-    p_begin_rendering(g_cmd, &ri);
+    if (g_dynamic) p_begin_rendering(g_cmd, &ri);
+    else {
+        VkRenderPass pass = legacy_pass(VK_FORMAT_R8G8B8A8_UNORM, g_depth_fmt, 0);
+        VkRenderPassBeginInfo bi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, NULL, pass,
+            legacy_framebuffer(pass, g_efb.view, g_depth.view, EFB_W, EFB_H), ri.renderArea, 0, NULL};
+        vkCmdBeginRenderPass(g_cmd, &bi, VK_SUBPASS_CONTENTS_INLINE);
+    }
     g_passes++;
     g_in_efb = 1;
     g_bound = VK_NULL_HANDLE;
@@ -1081,7 +1301,7 @@ static void efb_begin(void) {
 
 static void efb_end(void) {
     if (!g_in_efb) return;
-    p_end_rendering(g_cmd);
+    rendering_end();
     g_in_efb = 0;
 }
 
@@ -1092,7 +1312,17 @@ static void target_begin(VkImageView v, uint32_t w, uint32_t h, int clear) {
                                        clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
                                        {{{0, 0, 0, 1}}}};
     VkRenderingInfoKHR ri = {VK_STRUCTURE_TYPE_RENDERING_INFO_KHR, NULL, 0, {{0, 0}, {w, h}}, 1, 0, 1, &ca, NULL, NULL};
-    p_begin_rendering(g_cmd, &ri);
+    if (g_dynamic) p_begin_rendering(g_cmd, &ri);
+    else {
+        VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+        for (uint32_t i = 0; i < g_nimg; i++)
+            if (g_sview[i] == v) { format = g_swap_fmt; break; }
+        VkRenderPass pass = legacy_pass(format, VK_FORMAT_UNDEFINED, clear);
+        VkClearValue black = {{{0, 0, 0, 1}}};
+        VkRenderPassBeginInfo bi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, NULL, pass,
+            legacy_framebuffer(pass, v, VK_NULL_HANDLE, w, h), ri.renderArea, clear ? 1u : 0u, clear ? &black : NULL};
+        vkCmdBeginRenderPass(g_cmd, &bi, VK_SUBPASS_CONTENTS_INLINE);
+    }
 }
 
 /* one screen-space quad (vk_quad.vert); rect in pixels of a w x h target */
@@ -1178,6 +1408,7 @@ static uint64_t state_key(const GxUniforms* u, int prim) {
     }
     uint64_t mask = ((cm >> 3) & 1 ? (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT) : 0) |
                     ((cm >> 4) & 1 ? VK_COLOR_COMPONENT_A_BIT : 0);
+    uint64_t alpha_pass = !g_dual_src && const_alpha && (mask & VK_COLOR_COMPONENT_A_BIT) ? CONST_ALPHA_FLAG : 0;
     static const VkCompareOp zf[8] = {VK_COMPARE_OP_NEVER, VK_COMPARE_OP_LESS, VK_COMPARE_OP_EQUAL, VK_COMPARE_OP_LESS_OR_EQUAL,
                                       VK_COMPARE_OP_GREATER, VK_COMPARE_OP_NOT_EQUAL, VK_COMPARE_OP_GREATER_OR_EQUAL, VK_COMPARE_OP_ALWAYS};
     uint32_t z = u->bp[0x40];
@@ -1200,7 +1431,7 @@ static uint64_t state_key(const GxUniforms* u, int prim) {
     if ((force & 32) && !zt) zt = 1, zc = VK_COMPARE_OP_ALWAYS;  /* test off = test on, always passing */
     if (force & 4) blend = 1, revsub = 0, s = sa = VK_BLEND_FACTOR_SRC_ALPHA, d = dA = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, mask = 15;
     return ind | blend << 1 | revsub << 2 | s << 3 | d << 8 | sa << 13 | dA << 18 | mask << 23 | zt << 27 | zw << 28 | zc << 29 |
-           cv << 32 | topo << 34;
+           cv << 32 | topo << 34 | alpha_pass;
 }
 
 static void apply_dynamic(const GxUniforms* u) {
@@ -1341,7 +1572,7 @@ static void blur_pass(VkImg* s, float sw, float sh, VkImg* d, float dw, float dh
     float px[4] = {0, 0, dw, dh}, uv[4] = {0, 0, sw / s->w, sh / s->h};
     float col[4] = {dirx / s->w, diry / s->h, 1, 0}, shape[4] = {0, 0, (sw - 0.5f) / s->w, (sh - 0.5f) / s->h};
     quad(Q_BLUR, TGT_TEX, 15, s->view, g_samp_lin, dw, dh, px, uv, col, shape);
-    p_end_rendering(g_cmd);
+    rendering_end();
 }
 
 static void post_process(int in_race) {
@@ -1374,7 +1605,7 @@ static void post_process(int in_race) {
         float step[4] = {(float)uw / bw[0] / EFB_W / 4.0f, (float)uh / bh[0] / EFB_H / 4.0f, 0, 0};
         float clampuv[4] = {0, 0, ((float)uw - 0.5f) / EFB_W, ((float)uh - 0.5f) / EFB_H};
         quad(Q_BRIGHT, TGT_TEX, 15, g_efb.view, g_samp_lin, bw[0], bh[0], bpx, uv, step, clampuv);
-        p_end_rendering(g_cmd);
+        rendering_end();
         for (int l = 0; l < 2; l++) {
             VkImg* t = &g_bl[2 * l];
             if (l) blur_pass(&g_bl[0], bw[0], bh[0], t, bw[1], bh[1], 0, 0);  /* the 1/8 level from the 1/4 */
@@ -1438,7 +1669,7 @@ static int fsr_present(uint32_t sx, uint32_t sy, uint32_t sw, uint32_t sh, float
         float uv[4] = {(float)sx / EFB_W, (float)sy / EFB_H, (float)(sx + sw) / EFB_W, (float)(sy + sh) / EFB_H};
         quad(Q_TEX_OPAQUE, TGT_TEX, 15, g_efb.view, g_samp_lin, (float)dw, (float)dh, opx, uv, NULL, NULL);
     }
-    p_end_rendering(g_cmd);
+    rendering_end();
     to_layout(&g_fsr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 1);
@@ -1446,7 +1677,7 @@ static int fsr_present(uint32_t sx, uint32_t sy, uint32_t sw, uint32_t sh, float
     float sharp[4] = {exp2f(-(float)(100 - g_settings.sharpness) / 50.0f), 0, 0, 0};
     float last[4] = {0, 0, (float)(dw - 1), (float)(dh - 1)};
     quad(Q_RCAS, TGT_SWAP, 15, g_fsr.view, g_samp_near, (float)g_ext.width, (float)g_ext.height, px, opx, sharp, last);
-    p_end_rendering(g_cmd);
+    rendering_end();
     to_layout(&g_efb, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     return 1;
 }
@@ -1470,7 +1701,7 @@ static void present_picture(const GxCmd* c) {
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 1);
     quad(Q_TEX_OPAQUE, TGT_SWAP, 15, g_efb.view, g_samp_lin, (float)g_ext.width, (float)g_ext.height, px, uv, NULL, NULL);
-    p_end_rendering(g_cmd);
+    rendering_end();
     to_layout(&g_efb, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
@@ -1530,7 +1761,7 @@ static void draw_overlay_and_touch(void) {
         float shape[4] = {(float)ts[i].kind, (float)ts[i].icon, (float)ts[i].pressed, 1.0f};
         quad(Q_TOUCH, TGT_SWAP, 15, NULL, NULL, W, H, px, NULL, col, shape);
     }
-    p_end_rendering(g_cmd);
+    rendering_end();
 }
 
 /* ---------------------------------------------------------------- screenshots (SR_SCREENSHOT / SR_SHOTS / the menu) */
@@ -1671,7 +1902,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 target_begin(t->view, t->w, t->h, 0);
                 float px[4] = {0, 0, (float)t->w, (float)t->h}, one[4] = {0, 0, 0, 1};
                 quad(Q_FILL, TGT_TEX, VK_COLOR_COMPONENT_A_BIT, NULL, NULL, (float)t->w, (float)t->h, px, NULL, one, NULL);
-                p_end_rendering(g_cmd);
+                rendering_end();
             }
             to_layout(t, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             g_tex_valid = 0;
@@ -1729,6 +1960,7 @@ static int fake_lost_due(void) {
 
 static void img_destroy(VkImg* t) {  /* an image outside the pool, or (pool gone) one inside it */
     if (!t->live) return;
+    legacy_forget_view(t->view);
     vkDestroyImageView(g_dev, t->view, NULL);
     vkDestroyImage(g_dev, t->img, NULL);
     if (t->mem) vkFreeMemory(g_dev, t->mem, NULL);
@@ -1742,6 +1974,7 @@ static void device_teardown(void) {
         if (g_pipes[i].p) vkDestroyPipeline(g_dev, g_pipes[i].p, NULL);
     if (g_pipes) memset(g_pipes, 0, g_pipes_cap * sizeof *g_pipes);
     g_pipes_total = 0;
+    legacy_teardown();
     for (int i = 0; i < g_tex_cap; i++) img_destroy(&g_tex[i]);
     for (int s = 0; s < 2; s++) {  /* textures waiting for their slot's fence: nothing on the GPU any more */
         for (uint32_t i = 0; i < g_nretired[s]; i++) gx_texture_free(g_retired[s][i]);
@@ -1788,10 +2021,14 @@ static void device_teardown(void) {
     vkDestroyDescriptorSetLayout(g_dev, g_dsl_one, NULL);
     for (int i = 0; i < GX_SPEC_COUNT; i++)
         if (g_spec_sm[i]) vkDestroyShaderModule(g_dev, g_spec_sm[i], NULL);
+    for (int i = 0; i < GX_SPEC_COUNT; i++)
+        if (g_spec_alpha_sm[i]) vkDestroyShaderModule(g_dev, g_spec_alpha_sm[i], NULL);
     memset(g_spec_sm, 0, sizeof g_spec_sm);
-    VkShaderModule sm[12] = {g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch,
-                             g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas};
-    for (int i = 0; i < 12; i++) vkDestroyShaderModule(g_dev, sm[i], NULL);
+    memset(g_spec_alpha_sm, 0, sizeof g_spec_alpha_sm);
+    VkShaderModule sm[14] = {g_sm_vs, g_sm_fs, g_sm_fs_ind, g_sm_qvs, g_sm_tex, g_sm_fill, g_sm_touch,
+                             g_sm_bright, g_sm_blur, g_sm_grade, g_sm_easu, g_sm_rcas, g_sm_fs_alpha, g_sm_fs_ind_alpha};
+    for (int i = 0; i < 14; i++) vkDestroyShaderModule(g_dev, sm[i], NULL);
+    g_sm_fs_alpha = g_sm_fs_ind_alpha = VK_NULL_HANDLE;
     vkDestroyDevice(g_dev, NULL);
     g_dev = VK_NULL_HANDLE;
     /* per-frame state that pointed at the old objects */
@@ -1990,7 +2227,17 @@ static void execute(GxFrame* f) {
             }
             apply_dynamic(cur);
             bind_textures(c, cur);
-            if (draws >= g_draw_lo && draws < g_draw_hi) vkCmdDrawIndexed(g_cmd, c->b, 1, c->a, 0, 0);
+            if (draws >= g_draw_lo && draws < g_draw_hi) {
+                vkCmdDrawIndexed(g_cmd, c->b, 1, c->a, 0, 0);
+                if (key & CONST_ALPHA_FLAG) {
+                    /* Blend colour with TEV alpha, then store BP42's alpha separately:
+                     * preserve the floor-opacity fix without dual-source blend hardware. */
+                    vkCmdBindPipeline(g_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gx_pipe(key | ALPHA_PASS_FLAG));
+                    g_fr_binds++;
+                    vkCmdDrawIndexed(g_cmd, c->b, 1, c->a, 0, 0);
+                    g_bound = VK_NULL_HANDLE;
+                }
+            }
             draws++;
             break;
         }
