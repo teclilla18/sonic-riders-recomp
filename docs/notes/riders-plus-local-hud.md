@@ -9,6 +9,13 @@ That personal native follow-up is now deployed from an isolated checkout: full p
 scheduler/Unlimited regressions pass; staged/installed NRO/manifest readbacks match, settings/env unchanged,
 previous pair backed up locally/on SD. This is deployment verification; physical play/acceptance is pending.
 
+Latest user steering: that installed build has now been played. The user reports a 2P GUI issue, with 3P/4P
+mostly fine. The returned 2P in-game screenshot confirms the issue; the 4P screenshot is partly obscured by
+the settings overlay. Keep HUD code unchanged in this balance task. No further installed replacement is
+authorized at that checkpoint. The user subsequently granted standing development/test deployment permission
+and authorized installing the balance build, then investigating2P placement and repeatedLv5 bookkeeping.
+OunceMTP backups, apply/readback and rollback are documented in [switch2-mtp.md](switch2-mtp.md).
+
 ## Super Sonic: confirmed causes and implementation
 
 - The old extended-level check required native level 2 and wrote block `+0x94C`. Super Sonic remains at native
@@ -18,13 +25,18 @@ previous pair backed up locally/on SD. This is deployment verification; physical
   and `818160C8` otherwise limit it to 100. Extend only their ceiling to `max_air * ring_cap / 100`, preserving
   the denominator, all native drains/boost costs and the stat's max-air value. Ring-word-only pokes disappear
   on the next native update; resource tests must change both the fuel and mirror coherently.
-- Scale the appropriate live block from its own baseline with the existing multipliers, at 200/300 rings.
-  Observed unmodified Super top/drift/boost: 182/100/250; Lv.4 202.222/110/275; Lv.5 217.389/125/300.
-  These are block values, not maximum road speeds in every terrain/state. No Faster Super Sonic option.
+- Super-only balance, Riders Plus on: Base top/boost/drift 195/270/110, Lv.4 220/300/125 at 200 rings,
+  Lv.5 240/330/140 at 300 rings (km/h). Multiply each captured unscaled live field by its target / vanilla
+  baseline (top182, boost250, drift100), so existing stat mods retain their proportional changes.
+  These are active-block values, not maximum road speeds in every terrain/state. Vanilla Super is unchanged.
 - `LvRacer` tracks the block, character/gear identity and each field's baseline/written bits separately.
   A partial stat rebuild cannot compound unchanged fields. Restore only still-owned fields. Clear ownership
   before race initialization and the actual stat constructor `818F2008` (caller `81817150`), so a new gear's
   baseline cannot be confused with the previous gear's numerically identical raised value.
+- Explicit applied ownership includes Super's Base tier, where the extended level is zero. Repeated frames
+  and tier changes never recapture our own scaled fields; disable/constructor/identity/race resets restore them.
+  Only the three speed fields change. Fuel conversion/costs, 999 cap, native level byte, feedback, acceleration,
+  animations, board visibility and HUD are unchanged by this small balance update. No larger overhaul.
 - Ring-powered racers can skip native level checks. `lv_racers_frame` runs on the game thread at each simulation
   step, maintaining their extension and retiring pending writes on disable/results. Standard racer hooks remain.
 - Super feedback enters the existing effect/sound/panel branch at `818360E4`, after all native level, max-speed
@@ -102,6 +114,82 @@ Focused tests: `tests/test_game_levels.c`, `tests/test_local_hud.c`, `tests/test
 history, changelog, source map, address/gear/roster/debug/wide/online notes and progress documentation are updated.
 
 ## Limits before release
+
+### Small balance follow-up (2026-11-18)
+
+Actual-source regressions pass: all ring thresholds and decreases, 100 updates per tier, partial stat mods,
+Base ownership/reset/disable, standard-racer controls and all eight racers. A whole-racer comparison permits
+only the three speed fields to change during Super's updates. Fuel, ring/native-level bytes and other fields
+remain identical. The unchanged actual-source HUD regression matrix also passes; this does not resolve the
+new physical 2P report.
+
+Two minimized PC Metal City routes completed six captures each. Plus on snapshots show top/boost/drift
+220/300/125 at 202 rings, 240/330/140 at 302 and near999, then 195/270/110 below200 and at zero. Native byte
+stays0; log-reader finds exactly two Super feedback events, refill0, no repeated-level spam. Plus off stays
+182/250/100 with no extended feedback. Snapshot assertions pass. Both processes were intentionally stopped
+after the last capture; manual feel, sound and the new balance on hardware remain untested.
+
+Native local test build `7a05aa6f5f02`, source checkpoint `4459752`, passes NRO0/OUN0 platform/version,
+embedded identity, manifest source hashes and SHA-256 sidecar validation. It was then deployed through
+OunceMTP with verified stages/installed readbacks and old pair retained locally/onSD. Unlimited/config/env/cache
+remain unchanged, saves/unrelated entries preserved. Rollback plan validates against the previous pair.
+Eden cannot validate a native Switch 2 binary; no emulator or
+physical balance run is claimed. The larger Super overhaul remains deferred.
+
+The returned older hardware log contains repeated Lv.5 bookkeeping at rings548/568; no feedback diagnostic
+proves repeated visual effects. Preserve that separate finding for investigation. Normal shutdown completed.
+Mode/clocks are incomplete, so screenshot counters/log timings are not qualified hardware benchmarks.
+
+### 2P HUD investigation after deployment
+
+[confirmed] `hud_owner` assigns the global timer to player0 in the halves layout: its entire rectangle is
+inside the top half, unlike the central shared map. The shared-reservation pass skips seeds already assigned
+to a player, so it does not protect this timer. Its backing overlaps adjacent player artwork by roughly three
+source pixels, uses the same atlas, and `hud_join` merges it into player0's component.
+
+Actual PC traces reproduce both states: at6500, all eight timer draws move left with player0; at6250 the
+timer stays centred but the adjacent top-only backing stays with it while the ring panel/digits and bottom
+counterpart move left. The hardware screenshot shows the more pronounced inward displacement of the top HUD.
+
+Two isolated reproductions using the actual renderer confirm the structural error. With the observed timer
+overlap and a tall connected column, the timer projection moves -1/3 instead of0 at16:9. With the rank column
+separate, the compact top cluster moves0 instead of-1/3, reproducing inward placement. The group-height
+dependent anchor makes the result change with draw/group composition. Prior synthetic tests omitted the
+actual overlapping backing, explaining their pass. This is a shared-owner/grouping issue, not native-backend
+evidence. The exact hardware draw sequence was not captured, so attribution of every displaced piece remains
+[likely]. No HUD fix has been implemented in this investigation.
+
+Next small correction: reserve the shared timer before player grouping in halves, keeping its complete run
+separate even when adjacent player artwork overlaps. Verify both timer-centred and whole-player-group edge
+invariants at boost/notification states, all aspect layouts and original4:3/online own-view.
+
+### Repeated Lv5 bookkeeping investigation after deployment
+
+[confirmed] The returned old hardware log's1,003 repeated Lv5 events occur at stable548/568 rings, almost
+entirely during phaseA (finished), all racer0. It lacks gear/native/feedback diagnostics.
+
+The current code clears ownership via `lv_racers_frame` while finished; `lv_racer_update` lacks that phase
+guard and can reapply levels through native hooks. A synthetic actual-source reproduction produces100
+clear/reapply cycles,600 speed-field stores (three restore plus three apply per cycle), with feedback pending
+rearmed each time. Thus this is redundant stat work, not merely duplicate log output.
+
+An instrumented minimized PC2P route sets a normal racer to568 rings and forces phaseA at6500. BeforeA:
+one apply/one feedback; afterA:229 race resets,228 raised-stat applications and228 normal feedback hooks,
+all armed with native2. Zero constructor resets occur. The extra unpaired reset is at intentional termination.
+The normal feedback hook forces native2 to1 repeatedly; further effect-branch evidence is recorded below.
+Temporary source/patch instrumentation and executable remain ignored; reviewed balance source is restored.
+
+A second PC run instruments the actual guest effect branch at818360E4. BeforeA it records three entries
+(two native levels, one extended feedback). DuringA it records230 effect-branch entries, matching230 armed
+normal-feedback calls and stat reapplications;231 resets include the final unpaired termination reset.
+All concern racer0/native2; first fuel199104, then200000 with refill target200000. This directly confirms
+repeated native effect-path execution, not just bookkeeping. Visible animation, sound (muted in PC tests)
+and individual refill stores were not directly measured. The hardware log lacks that instrumentation, so
+the exact hardware effect count is unproven. Temporary probes do not change the installed balance build.
+
+Next small correction: gate stat application and feedback consistently with finished/outside-race ownership
+retirement, restore once and stop rearming. Verify regular level-up/down, mods, races/gears and all player
+counts. No finished-phase behavior fix has been implemented in this investigation.
 
 Manual play should confirm audible feedback, natural collection to 999, boost/drift feel, damage/falling/capsules,
 consecutive race/gear changes and every stage/layout (including players finishing at different times). Automated

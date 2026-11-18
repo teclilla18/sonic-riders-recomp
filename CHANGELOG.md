@@ -2,6 +2,11 @@
 
 ## Unreleased — local review
 
+- Riders Plus Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
+  Lv.5 240/330/140 km/h, scaled from unmodified fields to preserve stat mods without compounding.
+  Standard characters and Plus-off Super retain their existing stats. Local test builds only.
+- Add a local Windows OunceMTP deployment utility: read-only detection/backups, temporary transfer probes,
+  staged NRO/manifest deployment with explicit apply/current-hash gates, SHA-256 readback and FTP fallback.
 - Riders Plus supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own
   live stats, while retaining his native level, ring costs and transformation. Extended feedback skips air refill.
 - Wide local split-screen HUD groups follow each player's view edges, keeping their size, shared timer/map,

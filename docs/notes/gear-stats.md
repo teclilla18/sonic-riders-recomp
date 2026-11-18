@@ -12,7 +12,8 @@ Blue Star in RAM: +0x08 162/162/180, +0x34 200/230/250, +0x30 (drift dash) 50/80
 Super Sonic (Chaos Emerald, internal gear 18) uses the first live block and stays at native level 0.
 Unmodified baseline measured on PC: top 182, drift dash 100, boost 250; max-air/fuel scale 110000.
 Riders Plus multiplies these live values, including stat mods, rather than substituting the gear-table row:
-Lv. 4 top 202.222, drift 110, boost 275; Lv. 5 top 217.389, drift 125, boost 300.
+Local balance targets, top/boost/drift km/h: Base195/270/110; Lv.4 220/300/125; Lv.5 240/330/140.
+Each field uses target/vanilla-baseline ratios; Base ownership also restores original stats when disabled.
 The fuel ceiling is max-air × 999/100; the ring conversion denominator and costs remain original.
 These are live block values, not a claim that every terrain/state reaches that road speed.
 See [implementation and validation](riders-plus-local-hud.md).

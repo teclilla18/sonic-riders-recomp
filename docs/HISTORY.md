@@ -1686,3 +1686,47 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   baseline. Full native build/scheduler/Unlimited regressions pass; staged/final NRO/manifest hashes verified,
   old pair backed up locally/onSD, settings/env byte-identical and saves/ISO/caches untouched. No agent launch;
   user hardware gameplay/acceptance pending. No push/merge/release/replies; exact build/rollback inlocalhandoff.
+
+### 2026-11-18 - Local Super balance and OunceMTP workflow
+
+- [confirmed] Super-only Riders Plus active top/boost/drift targets: Base195/270/110, Lv4 220/300/125,
+  Lv5 240/330/140 km/h. Ratios from captured baselines preserve stat mods; applied ownership includes Base.
+  No fuel/cost/cap/native-level/feedback/HUD/acceleration/animation/board changes in this follow-up.
+- [confirmed] Actual-source regressions pass, including100 updates/tier, whole-racer non-speed isolation,
+  partial mods, Base reset/disable and standard/eight-racer controls. Minimized PC on/off routes each reach
+  six captures; exact target snapshots/native0, two on feedback events/refill0, no off feedback or spam.
+- [confirmed] Native local build7a05aa6f5f02 from4459752 validates header/identity/source hashes/sidecar;
+  hardware balance play/acceptance remains untested. Prior installedda8da376c5f4 stays unchanged.
+- [confirmed] Windows Shell COM/WPD enumerate OunceMTP SD.65,537-byte Shell and33,554,449-byte WPD SHA-256
+  roundtrips, rename/delete/overwrite refusal pass; final wrapper1,048,593-byte probe passes with cleanup.
+  Installed NRO/manifest downloaded twice/match known hashes, screenshots/log retrieved read-only.
+- Own-source local utility implements backup, temporary probe and explicitly gated NRO/manifest staging,
+  retained SD backups, SHA-256 readbacks and recovery journal. Eight fake-transport tests pass, including
+  mismatch/disconnect/no-apply gates; real installed promotion and FTP adapter not exercised this session.
+- User reports prior-build2P GUI problem,3P/4P mostly fine. Returned2P capture confirms issue;4P overlay
+  limits inspection. Log-reader finds repeated Lv5 bookkeeping at548/568 rings, no proof of repeated effects;
+  normal shutdown. No hardware benchmark claim without mode/clocks. Keep HUD unchanged in this task.
+- No installed replacement, push, merge, publish, release or external reply. Separate Issue32 owner handles
+  new Amy/Splash Canyon and Tails/Green Cave loading-hang reports. Generic workflow in notes/switch2-mtp.md;
+  exact machine paths/backups/builds in excluded canonical handoff. Progress remains76%, polish70%.
+
+#### Authorized deployment and investigation follow-up
+- User granted standing connected-device development/test deployment permission, recorded only in excluded
+  local AGENTS.md/AI_HANDOFF.md. Public release/public asset changes still require explicit approval.
+- [confirmed] Installed7a05aa6f5f02 through new OunceMTP utility: local twice-read backup of previousda8pair,
+  verified stages, retained SD pair, final NRO/manifest SHA256 readbacks. Unlimitedpc_fps=-1, settings/env/cache
+  byte-identical; saves/unrelated entries preserved. Rollback plan validates; rollback not applied. User notified.
+- [confirmed]2P actual trace assigns sharedtimer toplayer0; timer/adjacent HUD backing overlap about3source
+  pixels in sameatlas. Actual-renderer probes show shared timer pulled left with a tall group, compact P1 HUD
+  pulled inward when tall column is separate. Existing synthetic tests omitted this overlap. Hardware exact
+  command sequence remains unproven; no HUD behavior fix in this investigation/installedbuild.
+- [confirmed] Finished phaseA clears ownership each frame, but nativehooks reapply Lv5. Actual-source probe:
+  100cycles/600speed stores. Instrumented PC normal2P racer568rings: race resets, no constructor resets;
+  repeatedstatapply/native2->1 feedback rearming. Actual guestbranch818360E4 counter confirms230effect-path
+  entries during phaseA, matching230armedfeedback/statapplies. Visible animation/sound/individualrefillstores
+  not measured. This is more than log spam. Small consistent phasegate is next; no behavioralfiximplemented.
+- Temporary source/patch instrumentation saved only in ignoredbuild; reviewed balance sources restored equal
+  across public/native, regenerated outputs contain no counter, final Windows artifact rebuilt. All10utility
+  and actual-source gameplay/HUD regressions pass. Progress unchanged pending fixes/hardwareacceptance.
+- Final inbox: separate Android agent closed32 and linked GreenCave/Tails loadinghang to open6. No replies,
+  push, publish or publicasset modification by this task. Native local docs checkpoint5f688ab preserves code4459752.
