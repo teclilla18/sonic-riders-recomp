@@ -257,3 +257,65 @@ The v0.8.6 tag, release identity and PC/Switch/Linux asset IDs/digests are uncha
 No main merge, new tag, public APK, issue reply or closure. Original Android asset
 and before/after publication audits remain backed up locally. Newer documentation
 commits do not require repackaging this verified runtime/source artifact.
+
+
+## Main integration and reproducible source (2026-11-18)
+
+The user authorized main integration after publication and Mali verification.
+Remote main was an ancestor of the released-fix branch: merge-tree verification
+produced the same tree, with no conflicts. Integration preserves all published
+runtime/shader behaviour. The separate dirty main worktree and other agents' local
+branches remain untouched; canonical excluded handoff explains their synchronization.
+Issue #6 stays a separate open investigation. No release/tag/asset changes accompany
+this source integration.
+
+The current public installer is pinned independently of future main commits:
+
+| Item | Exact identity |
+|---|---|
+| Package source | `faab3dd43fd5f5e9f4e64674694ac66016496cb5` |
+| Runtime fix | `90868613bba4180abd9b46b88cc15d3b9aeb49e9` |
+| Embedded VERSION | `v0.8.6 (faab3dd4)` |
+| Artifact SHA-256 | `fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e` |
+| Entries / bytes | 249 / 8,210,435 |
+
+[The machine-readable manifest](../releases/v0.8.6-android-20261118.json) also records
+the installer executable hash, original PE timestamp and dependency-manifest hash.
+The existing v0.8.6 tag continues to identify the original multi-platform release;
+it was not moved to identify the later Android-only asset update.
+
+To reproduce the source/setup ZIP, use a **clean checkout at the exact package
+source above**, with the project's pinned Windows LLVM-MinGW 20261006 and ImGui
+1.92.9b installed as described by that revision's setup/toolchain.json:
+
+```text
+py -3 tools/make_release.py --flavor android --version v0.8.6 --ref faab3dd43fd5f5e9f4e64674694ac66016496cb5 --out build/android-reproduction
+```
+
+No disc image or generated game code is needed to package the source/own-source
+installer. Building the playable app afterward requires the player's own disc.
+
+A fresh local rebuild verified all **245 committed source entries and three
+generated text entries** against the public ZIP. Only two bytes in the launcher's
+PE linker timestamp differed. No code/data section differed. To reproduce the
+published bytes, use the verifier from a current main checkout and a separate
+output archive:
+
+```text
+py -3 "<main-checkout>/tools/verify_android_release.py" "<source-checkout>/build/android-reproduction/SonicRiders-Android-Setup-v0.8.6.zip" --normalized-out "<source-checkout>/build/android-reproduction/verified-original.zip"
+```
+
+The verifier restores only the recorded PE timestamp, checks the complete launcher
+hash, rebuilds ZIP metadata exactly as make_release.py does, and requires the final
+archive hash above. This succeeded byte-for-byte locally. Different toolchain or
+Python/zlib versions may fail that check; do not silently accept a different hash.
+It never writes to the input archive or publishes anything. To verify a downloaded
+public artifact without normalization:
+
+```text
+py -3 tools/verify_android_release.py "<download>/SonicRiders-Android-Setup-v0.8.6.zip"
+```
+
+Do not regenerate the public installer from current HEAD to record documentation
+updates: package source, runtime source and integration/documentation commits are
+separate identities. The current public asset remains the verified faab3dd4 artifact.

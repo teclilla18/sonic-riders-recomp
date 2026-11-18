@@ -1,11 +1,11 @@
 # State (2026-11-18)
 
 Read this first, then canonical excluded AI_HANDOFF.md for ownership/deployments.
-This checkpoint is on `codex/issue32-vulkan-legacy`, not main. Preserve other sessions'
-dirty sr-main work and other branches. Keep this experiment isolated from main.
+Public main now includes the released Android fixes. Preserve other sessions' dirty
+worktrees and unmerged branches; canonical handoff records exact ownership and deployments.
 References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
-## Issue #32: experimental Vulkan 1.1 compatibility
+## Issue #32: released Android compatibility and shutdown fixes
 
 - **Implemented:** automatic traditional render-pass/framebuffer fallback when queried dynamic
   rendering or its dependencies are missing. Existing supported-device dynamic path retained.
@@ -37,7 +37,10 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
   state. Evidence/provenance: docs/notes/loading-hang.md. No speculative loader changes.
 - **Released:** existing v0.8.6 Android source/setup ZIP updated from faab3dd4 (runtime90868613).
   Cold PC/Android installs pass in normal/space paths; downloaded public asset SHA-256 verified.
-  Tag/other assets/main unchanged by this task; no issue closure/replies.
+  Manifest docs/releases/v0.8.6-android-20261118.json pins source/hash/build metadata.
+  Rebuild reproduces public bytes after recorded PE timestamp normalization; verifier included.
+  Existing tag and all assets stay fixed during source integration. Fixes integrated into main;
+  user-authorized #32 closure/reporter reply and #6 evidence comment follow integration.
   Real iOS/MoltenVK, real GPU reset, exhaustive overlap/stages/long sessions remain unproven.
 - Separate pacing audit **tested [confirmed]**: matched-capture runs used SR_DETCLOCK, which
   intentionally bypasses adaptive pacing. Normal Auto at 2x/effects keeps 59.94-59.95 steps/s:
@@ -94,8 +97,8 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 ## Next checks
 
 - Investigate #6 separately using preserved Green Cave log plus a watchdog reproduction;
-  exact historical CRI/DI signature is unconfirmed. Keep #32/#6 open and source branch unmerged.
-- Real Mac/iOS/MoltenVK build/test before integrating/releasing shared renderer changes.
+  exact historical CRI/DI signature is unconfirmed. Keep #6 open; no speculative loader fix.
+- Real Mac/iOS/MoltenVK build/test before an iOS release of the shared renderer changes.
 - Any further normal-play slowdown needs logs with SR_DETCLOCK off and the selected mode stated.
 - Switch pack worker: three stages/full pack, memory/hitches; installer SD copy end to end.
 - Room-wide 30 fps switch on two consoles; stock-clock swapchain/performance comparison.
