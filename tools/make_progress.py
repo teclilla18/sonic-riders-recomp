@@ -7,7 +7,7 @@ what each area still needs; keep the two in step.
 """
 from pathlib import Path
 
-VERSION = "v0.8.6 Android update"
+VERSION = "v0.8.6 / #32 resolved"
 UPDATED = "2026-11-18"
 
 # (label, weight, percent done)

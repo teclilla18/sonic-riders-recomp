@@ -57,3 +57,11 @@ loading hang as a separate open investigation; its exact attribution is pending.
    concrete invariant failure before changing disc/loader/scheduler behaviour.
 4. Preserve saves and raw captures locally. A non-reproduction or clean quit is
    not evidence that the loading hang is fixed.
+
+
+## Issue tracking
+
+The [findings and original log reference were added to #6](https://github.com/teclilla18/sonic-riders-recomp/issues/6#issuecomment-6993712013)
+on 2026-11-18. This issue remains open. #32 was closed after the reporter's verified
+compatibility/shutdown fixes were released and integrated into main; closure does
+not claim the loading hang fixed or establish its exact cause.

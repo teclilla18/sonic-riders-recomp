@@ -230,11 +230,11 @@ needed for exact attribution. See [loading-hang.md](loading-hang.md) for provena
 comparison with the old CRI/DI findings and next diagnostics. No speculative loader
 fix is included in the Android update.
 
-Current authorization supersedes the experimental-only publication limits above:
-update only the existing v0.8.6 Android source/setup ZIP after cold setup checks.
-The runtime remains the tested 90868613 implementation; this follow-up changes
-documentation only. No new tag, main merge, other platform asset replacement,
-issue closure or external issue reply is authorized. Real MoltenVK remains untested.
+At the Android asset update, authorization superseded the experimental-only limits
+above for that existing asset, after cold setup checks. Runtime stayed the tested
+90868613 implementation. Main integration and issue updates were authorized later,
+as recorded below. No new tag or other platform asset replacement. Real MoltenVK
+remains untested.
 
 
 ### Publication result
@@ -254,8 +254,9 @@ checks; gameplay validation is the earlier S23 and reporter evidence above.
 The published Android ZIP was downloaded and hash-verified. Original release notes
 were preserved and an Android update/source/checksum/known-hang section appended.
 The v0.8.6 tag, release identity and PC/Switch/Linux asset IDs/digests are unchanged.
-No main merge, new tag, public APK, issue reply or closure. Original Android asset
-and before/after publication audits remain backed up locally. Newer documentation
+No main merge, new tag, public APK, issue reply or closure occurred during that
+asset replacement. Source integration and issue updates followed separately. Original
+Android asset and before/after publication audits remain backed up locally. Newer documentation
 commits do not require repackaging this verified runtime/source artifact.
 
 
@@ -319,3 +320,9 @@ py -3 tools/verify_android_release.py "<download>/SonicRiders-Android-Setup-v0.8
 Do not regenerate the public installer from current HEAD to record documentation
 updates: package source, runtime source and integration/documentation commits are
 separate identities. The current public asset remains the verified faab3dd4 artifact.
+
+
+After the guarded fast-forward into main, [the reporter was thanked and #32 closed
+as resolved](https://github.com/teclilla18/sonic-riders-recomp/issues/32#issuecomment-6993712427).
+[Issue #6 remains open with the Green Cave findings and original log reference](https://github.com/teclilla18/sonic-riders-recomp/issues/6#issuecomment-6993712013).
+No release, release-body edit, tag move or asset replacement accompanied integration.

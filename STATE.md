@@ -5,7 +5,7 @@ Public main now includes the released Android fixes. Preserve other sessions' di
 worktrees and unmerged branches; canonical handoff records exact ownership and deployments.
 References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
-## Issue #32: released Android compatibility and shutdown fixes
+## Issue #32 resolved: released Android compatibility and shutdown fixes
 
 - **Implemented:** automatic traditional render-pass/framebuffer fallback when queried dynamic
   rendering or its dependencies are missing. Existing supported-device dynamic path retained.
@@ -39,8 +39,8 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
   Cold PC/Android installs pass in normal/space paths; downloaded public asset SHA-256 verified.
   Manifest docs/releases/v0.8.6-android-20261118.json pins source/hash/build metadata.
   Rebuild reproduces public bytes after recorded PE timestamp normalization; verifier included.
-  Existing tag and all assets stay fixed during source integration. Fixes integrated into main;
-  user-authorized #32 closure/reporter reply and #6 evidence comment follow integration.
+  Fixes integrated into main with no conflicts. Reporter thanked; #32 closed as resolved.
+  #6 stays open with findings/original log linked; tag and all release assets unchanged.
   Real iOS/MoltenVK, real GPU reset, exhaustive overlap/stages/long sessions remain unproven.
 - Separate pacing audit **tested [confirmed]**: matched-capture runs used SR_DETCLOCK, which
   intentionally bypasses adaptive pacing. Normal Auto at 2x/effects keeps 59.94-59.95 steps/s:
@@ -50,7 +50,7 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 ## Switch 2 continuity (preserved)
 
 - **Released:** separate native prerelease v0.8.6-switch2-alpha.1, source 1df03e0, runtime
-  c8c06fdda996. Default 2x/60; live resolution controls disabled. Stable release untouched.
+  c8c06fdda996. Default 2x/60; live resolution controls disabled. Stable untouched by that prerelease.
 - Scheduler wait and async logger fixes have hardware regression evidence; permanent freeze
   elimination and music/announcer-loss causes remain unproven. No native edits in this task.
 - Personal Unlimited experiment stays private, isolated and not hardware-accepted. Preserve
