@@ -75,6 +75,12 @@ static int super_racer(uint32_t racer) {
            ld8(racer + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
 }
 
+static int active_race(void) {
+    uint32_t mode = ld32(GAME_TOP_MODE);
+    return (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) &&
+           ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
+}
+
 /* The native ring-powered path mirrors floor(fuel * 100 / max_air) into the ring word.
  * Keep that denominator and all costs intact; only extend the fuel clamp. Raising max_air itself
  * would dilute each ring and would still leave the mirror bounded to 100. */
@@ -127,6 +133,12 @@ void lv_racer_update(uint32_t racer) {
     int i = racer_index(racer);
     if (i < 0) return;
     LvRacer* r = &g_lv[i];
+    /* Native racer/feedback hooks still run after finishing. Retire before any application,
+     * using the same guest-state gate as frame retirement, or each frame rearms Lv.5 effects. */
+    if (!active_race()) {
+        if (r->valid) lv_racer_reset(racer);
+        return;
+    }
     int super = super_racer(racer);
     uint32_t block = super ? 0x8DCu : BLK3;
     uint32_t identity = ld8(racer + GAME_RACER_GEAR) | (uint32_t)ld8(racer + GAME_RACER_CHARACTER) << 8 |
@@ -155,9 +167,7 @@ void lv_racer_update(uint32_t racer) {
 /* Game thread, once per simulation step. Ring-powered racers can skip the native level checks;
  * also retire outstanding writes when toggled off, including a player whose native check is suspended. */
 void lv_racers_frame(void) {
-    uint32_t mode = ld32(GAME_TOP_MODE);
-    if ((mode != GAME_TOP_MODE_RACE && mode != GAME_TOP_MODE_MULTIPLAYER) ||
-        ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED) {
+    if (!active_race()) {
         lv_race_reset();
         return;
     }

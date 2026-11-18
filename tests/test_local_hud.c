@@ -46,6 +46,36 @@ static void rect(GxFrame* f, float x0, float x1, float y0, float y1, int tex) {
 static void dispose(GxFrame* f) {
     free(f->cmds); free(f->unis); free(f->idx); free(f->verts); free(f->xtabs); free(f->xchunks);
 }
+static void timer_overlap(float k, int tall) {
+    GxFrame f = {.wide_k = k};
+    f.unis = calloc(8, sizeof *f.unis); f.cap_unis = 8; f.nunis = 3;
+    for (int j = 0; j < 2; j++) f.unis[j] = view(hud_player_view(j, 0), 0);
+    f.unis[2] = view((HudView){0,0,1,1}, 1);
+    f.xtabs = calloc(1, sizeof *f.xtabs); f.nxtabs = f.cap_xtabs = 1;
+    f.xchunks = calloc(GX_XFM_CHUNK, sizeof *f.xchunks); f.nxchunks = f.cap_xchunks = 1;
+    f.xchunks[0] = f.xchunks[5] = ubits(1);
+    command(&f, (GxCmd){.type = GXC_STATE, .a = 2});
+    rect(&f, -.35f, .35f, .7667f, .8208f, 10); /* shared backing */
+    rect(&f, -.25f, .25f, .6542f, .7667f, 10); /* shared clock digits */
+    rect(&f, -.8656f, -.5437f, .6542f, .8292f, 10);
+    rect(&f, -.5344f, -.3406f, .7625f, .8208f, 10); /* actual 3px overlap */
+    if (tall) rect(&f, -.863f, -.716f, .108f, .608f, 10);
+    rect(&f, -.8656f, -.5437f, -.3458f, -.1708f, 10);
+    rect(&f, -.5344f, -.3406f, -.2375f, -.1792f, 10);
+    local_hud_frame(&f);
+    int state = -1, draw = 0;
+    for (uint32_t i = 0; i < f.ncmds; i++) {
+        const GxCmd* c = &f.cmds[i];
+        if (c->type == GXC_STATE) state = (int)c->a;
+        if (c->type != GXC_DRAW) continue;
+        float move = fbits(f.unis[state].xfr[0x21]);
+        if (fabsf(move - (draw < 2 ? 0 : -(k - 1))) >= .0001f)
+            fprintf(stderr, "timer overlap k=%f tall=%d draw=%d move=%f\n", k, tall, draw, move);
+        assert(fabsf(move - (draw < 2 ? 0 : -(k - 1))) < .0001f);
+        draw++;
+    }
+    dispose(&f);
+}
 static void check(float k, int players) {
     int quad = players >= 3;
     GxFrame f = {.wide_k = k};
@@ -119,6 +149,9 @@ int main(void) {
     st32(GAME_TOP_MODE, GAME_TOP_MODE_MULTIPLAYER); g_settings.screen = SCREEN_FIT;
     const float ratios[] = {1, 4.0f/3, 1.2f, 1.75f, 8.0f/3};
     for (int p = 2; p <= 4; p++) for (unsigned k = 0; k < sizeof ratios/sizeof ratios[0]; k++) check(ratios[k], p);
+    for (unsigned k = 0; k < sizeof ratios/sizeof ratios[0]; k++) {
+        timer_overlap(ratios[k], 0); timer_overlap(ratios[k], 1);
+    }
     puts("local_hud: complete frames, 2/3/4P x five aspects, shared timer/map, centred notification, silhouette, group spacing, clipping and state isolation PASS");
     free(ppc_mem_base_var);
 }

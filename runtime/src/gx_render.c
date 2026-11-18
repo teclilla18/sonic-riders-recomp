@@ -976,7 +976,7 @@ static uint32_t hud_root(HudDraw* d, uint32_t i) {
     while (d[i].group != i) { d[i].group = d[d[i].group].group; i = d[i].group; }
     return i;
 }
-static int hud_join(const float a[4], const float b[4]) {
+static int hud_join(const float a[4], const float b[4], int quad) {
     float xo = fminf(a[1], b[1]) - fmaxf(a[0], b[0]);
     float yo = fminf(a[3], b[3]) - fmaxf(a[2], b[2]);
     float ha = a[3] - a[2], hb = b[3] - b[2];
@@ -986,7 +986,9 @@ static int hud_join(const float a[4], const float b[4]) {
      * beside a tall gauge is a separate group unless their pictures actually overlap. */
     if (xo >= 0.25f * fminf(a[1] - a[0], b[1] - b[0]) && yo >= -0.05f) return 1;
     return xo >= -0.04f && yo >= 0.35f * fminf(ha, hb) &&
-           (xo >= -0.006f || fminf(ha, hb) >= 0.5f * fmaxf(ha, hb));
+           /* The halves boost backing is shallow and has a small gap from its ring panel.
+            * Join that complete panel even when their heights differ; retain quarter tolerances. */
+           (xo >= (quad ? -0.006f : -0.0125f) || fminf(ha, hb) >= 0.5f * fmaxf(ha, hb));
 }
 static void local_hud_frame(GxFrame* f) {
     if (!(f->wide_k > 1.0f)) return;
@@ -1027,6 +1029,18 @@ static void local_hud_frame(GxFrame* f) {
         d->cover = hud_cover(d->b, quad);
         d->owner = d->cover ? -1 : hud_owner(d->b, mask, quad);
     }
+    /* In halves the shared clock fits entirely inside P1, so containment alone gives it the wrong
+     * owner. Seed its centred, shallow upper backing as shared before reserving its digit run.
+     * Use original clip bounds, independent of output aspect; quarter layouts already straddle it.
+     * Neighbouring P1 art overlaps this backing, but extends outside its horizontal bounds. */
+    if (!quad) for (uint32_t i = 0; i < n; i++) {
+        HudDraw* d = &draws[i];
+        float height = d->b[3] - d->b[2];
+        if (d->owner == 0 && !d->cover && hud_near(d->source.hy, 1.0f) &&
+            fabsf(d->b[0] + d->b[1]) < 0.03f && d->b[0] < -0.2f && d->b[1] > 0.2f &&
+            d->b[2] > 0.7f && d->b[3] < 0.95f && height > 0 && height < 0.12f)
+            d->owner = -1;
+    }
     /* Map/fade draws straddle splits. Reserve the whole map, including marker draws, and the global
      * timer's line below its centred backing. Only horizontally contained neighbours join a shared
      * line: the timer backing overlaps the edge of the adjacent player's boost label. */
@@ -1061,7 +1075,7 @@ static void local_hud_frame(GxFrame* f) {
         if (draws[i].owner < 0) continue;
         for (uint32_t j = 0; j < i; j++)
             if (draws[i].owner == draws[j].owner && draws[i].layer == draws[j].layer &&
-                draws[i].tex == draws[j].tex && hud_join(draws[i].b, draws[j].b))
+                draws[i].tex == draws[j].tex && hud_join(draws[i].b, draws[j].b, quad))
                 draws[hud_root(draws, i)].group = hud_root(draws, j);
     }
     for (uint32_t i = 0; i < n; i++) {
