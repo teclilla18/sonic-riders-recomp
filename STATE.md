@@ -1,62 +1,56 @@
 # Experimental Switch 2 state (2026-11-17)
 
-This records feature/switch2-native. The public main worktree and its roadmap
-remain untouched. Do not push, merge, publish or release this branch.
+This records feature/switch2-native. Public main/private worktrees remain untouched.
+Do not push, merge, publish or release this branch.
 
-## Current objective
+## Accepted checkpoint
 
-Phase 1 is hardware-tested. Phase 2 adds the isolated native build target and
-existing recompilation core; next is the user's integrated first-boot test.
-See docs/notes/switch2.md for architecture, commands and validation limits.
+Build 7d1bc5fcd419 is hardware-tested and accepted for the user's tried gameplay,
+input, graphics, music/sound, overlay, aspect settings, bloom and enhancements.
+Preserve this exact binary. No runtime code or SDK changed during this review.
+Firmware 23.0.1, handheld (mode 0), clocks unrecorded. No universal FPS guarantee.
 
-## Implemented
+## Confirmed diagnostics
 
-- SR2Diag: staged native NRO with flushed per-run SD logs, system services,
-  timing, worker/TLS/affinity, controller, audio, sparse memory and Vulkan tests.
-- configure.py --target switch2; tools/switch2_build.py; isolated output under
-  build/switch2 using checksum-verified ounce-devkit20261117, devkitA64 and glslc.
-- Existing guest core and shared Vulkan rendering, native NWindow presentation,
-  existing audout resampler and HID input. No SDL, deko3d or Switch1 power profiles
-  in the new target. Guest-base register optimization is initially disabled.
-- Separate SD data under /switch/sonicriders-switch2/; worker stop/join precedes
-  GPU/audio/memory destruction. FsFile lifecycle log survives stdio teardown.
-- SR_SWITCH2_FRAMES=N provides a bounded presented-frame exit for bring-up.
+- Raw handheld A maps to GC 0x0100 and is delivered through SI INBUF. The merged
+  No1/Handheld reader works; retain input and overlay behavior.
+- All 85 audio summaries: 48 kHz stereo PCM16, zero dropped samples/delivery
+  errors. Final append/release balance leaves one queued buffer. Startup feed
+  gaps exist; steady audible operation is user-confirmed. Exact cause of the
+  previous garbling is not uniquely established by these logs.
+- Worker, Vulkan, audio and memory cleanup and filesystem EXIT_HOOK complete.
+  User confirms hbmenu return, relaunch and OunceShell.
+- Warm startup prewarms 44/44 pipelines in 1 ms. A frame spends 6736.22 ms in
+  synchronous cache saving with zero new pipelines and 0.03 ms actual present.
+  Later cache saves and genuinely new pipelines cause smaller hitches.
+- Cache-save timer includes serialization and SD writes; their split is unknown.
+  Cached prewarm marks pipeline creation dirty and triggers render-thread saving.
+  No loading optimization has been implemented or authorized in this review.
 
-## Tested evidence
+## Preserved artifacts
 
-- [confirmed] SR2Diag48b77e581423 on physical Switch2, firmware23.0.1,
-  Seedsow/kaiHEN reported20261117.1, handheld(mode0), clocks not recorded.
-  Startup, services/SD/RomFS, timing, workers/TLS/all permitted cores, controls,
-  audible audio, stack mapping and tester-confirmed Vulkan colors PASS.
-- [confirmed] Exact guest layout: reserve0x20010000 bytes VA, back28MiB and64KiB
-  at offsets0 and0x20000000, RW, page-test and unmap. Static recompilation executes
-  host text and needs no executable guest RAM. Stack mapping meets this contract.
-- [confirmed] Process handle valid; code-map test automatically SKIPPED because
-  at least one required syscall hint was absent. Which bit was not logged.
-  It is an optional mapping alternative, not a core requirement.
-- [confirmed] Diagnostic workers, audio, mappings, Vulkan objects and console
-  explicitly clean up; second run reaches main. Final EXIT_HOOK is absent:
-  [likely] stdio closed before the FILE logger, not a proved resource failure.
-  Native integration now logs lifecycle through FsFile; hardware check pending.
-- [confirmed] Integrated native compilation/link/NRO packaging succeeds locally.
-  Original Switch preprocessing unchanged for entry/scheduler/menu. Android
-  renderer syntax passes. These are build checks, not runtime/gameplay tests.
+Exact accepted NRO SHA256:
+ffa5034b038542e4da6b2530892642d3b1cee20d3bd1a9b69f5789825c7730a4
 
-## Still unproven
+Local binary, manifest, env and downloaded logs:
+build/switch2/accepted-7d1bc5fcd419/ (ignored/private, never upload or commit).
+Existing build/switch2/sonicriders-switch2.nro remains byte-identical.
+The console env.txt remains SR_SWITCH2_FRAMES=9000; no FTP writes or rebuild.
+Old ZIP packages contain stale configuration; do not deploy them.
 
-Integrated Switch2 boot, GX shaders, intro/menu/race correctness, sound pacing,
-cooperative shutdown/hbmenu return, relaunch, memory use and performance.
-No accepted or released native Switch2 game build. No FPS/resolution promise.
-Docking/sleep, multiplayer, network sessions, texture packs and long sessions
-wait until basic correctness. Existing platforms were not fully replay-tested.
+## Next steps and remaining limits
 
-## Next hardware checks
+No critical correctness issue is shown before controlled extended play on this
+accepted build. Preserve caches for warm comparisons. Keep input/audio/graphics
+unchanged. Before a startup fix, measure cache serialization versus file I/O,
+then consider reducing/deferred saves or prewarm-only dirty bookkeeping.
+Report findings and recommendations before implementing such a change.
 
-- Use the already-tested native-game hold-R route and normal power policy.
-- Install build/switch2/sonicriders-switch2.nro in /switch/sonicriders-switch2/.
-  Supply own vanilla USA GXEE8P ISO/GCM there; no game data is included separately.
-- First run with SR_SWITCH2_FRAMES=300; look for intro/title/menu, sound and input.
-- Confirm automatic exit/hbmenu, relaunch, then OunceShell. Check lifecycle log
-  for PRE_LIBC_SHUTDOWN_COMPLETE and EXIT_HOOK; return both runtime/lifecycle logs.
-- Then remove frame bound and play a complete race. State mode and known clocks
-  or stock policy/clocks unmeasured with every hardware report.
+Existing 9000-frame cap limits session length; the user can adjust it when ready
+for longer sessions. Leave it unchanged unless requested. Other stages/story,
+multiplayer, docking, sleep/resume, long-run stability and settings persistence
+still need coverage. Use log-reader for future logs and record mode/clocks.
+
+Architecture and build commands: docs/notes/switch2.md. The verified SDK is
+ounce-devkit20261117. Do not rebuild the accepted artifact just to refresh a Git
+version string. Source hashes link it to the local checkpoint independently.

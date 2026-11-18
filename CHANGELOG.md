@@ -2,6 +2,11 @@
 
 ## Unreleased (experimental Switch 2 branch)
 
+- Native player 1 uses the diagnostic-verified merged handheld/No1 input path;
+  add native HID-to-SI, audio-delivery and separate cache/present diagnostics.
+  The user confirms working gameplay/input/audio/overlay and tried enhancements.
+  Startup cache-saving stalls remain known; extended coverage is still pending.
+
 - Add a separate native Switch 2 build using libounce/OunceVK and the existing
   recompilation core/Vulkan renderer. Includes staged diagnostics, isolated
   runtime data, permitted-core discovery and explicit resource cleanup.

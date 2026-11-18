@@ -1,5 +1,37 @@
 # Native Switch 2 experimental target
 
+## Accepted hardware checkpoint: 7d1bc5fcd419
+
+Physical Switch 2, firmware 23.0.1, handheld (mode 0); clocks unrecorded.
+The user accepted the tested gameplay, graphics, music/sound, input, overlay,
+aspect changes, bloom and other tried enhancements. This is acceptance of the
+tested route/settings, not every stage, multiplayer, sleep or extended sessions.
+
+- Input diagnostics confirm raw handheld A maps to GC 0x0100 and reaches guest
+  SI INBUF as 0x0100. The working merged reader uses handheld input even when
+  a separate No1 entry appears connected. Preserve this implementation.
+- All 85 audio summaries report 48 kHz stereo PCM16, no dropped-output samples
+  and no delivery errors. Final 15949 appends/15948 releases/one queued buffer
+  balance. Startup feed gaps do not establish uninterrupted audio during stalls;
+  the logs do not uniquely attribute improvement to the arithmetic correction.
+- All owned shutdown stages and EXIT_HOOK complete; user confirms hbmenu return,
+  relaunch and OunceShell. The prior FILE-based logging gap is resolved.
+- Warm startup loads 1253 KB cache and prewarms 44/44 pipelines in 1 ms. Frame
+  240 spends 6736.22 ms in cache saving, zero new pipelines, 0.03 ms in present.
+  Later cache saves cost 103-578 ms; actual present is 0.02-0.05 ms in all 16
+  hitch samples. New-pipeline creation can still cost about 214-260 ms.
+- The cache timer includes key writes, vkGetPipelineCacheData serialization and
+  SD writes. Their individual costs are not measured. pipe_make counts every
+  API-created pipeline as dirty, including cache-backed prewarm, so a warm run
+  schedules a synchronous render-thread save after the 10-second interval.
+
+No correctness blocker is established before controlled extended play. Keep
+the accepted binary and caches. A future separate startup task should first
+distinguish serialization from file writes, then consider deferring/reducing
+saves or avoiding prewarm-only dirty bookkeeping. No such change is implemented.
+Keep the existing env.txt: SR_SWITCH2_FRAMES=9000. Old ZIPs contain stale default
+env.txt files and must not be used to overwrite current console configuration.
+
 Work locally on `feature/switch2-native`. Do not push, merge or publish it.
 This target is separate from the original libnx/deko3d Switch target and uses
 the pinned ounce-devkit20261117/libounce/OunceVK validated by SR2Diag.

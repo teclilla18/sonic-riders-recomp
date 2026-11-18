@@ -53,7 +53,12 @@ static void reclaim(void) {
 static void put(int16_t l, int16_t r) {
     if (g_fill_idx < 0) {
         if (!g_nfree) reclaim();
-        if (!g_nfree) return;  /* output behind: drop */
+        if (!g_nfree) {
+#ifdef __SWITCH2__
+            void switch2_audio_drop(void); switch2_audio_drop();
+#endif
+            return;
+        }
         g_fill_idx = g_free[--g_nfree];
         g_fill = (int16_t*)g_bufs[g_fill_idx].buffer;
         g_fill_n = 0;
@@ -77,7 +82,12 @@ void platform_audio_push(const int16_t* lr, unsigned frames) {
         int16_t l = lr[2 * i], r = lr[2 * i + 1];
         while (g_phase < 0x10000) {
             int32_t f = (int32_t)g_phase;
+#ifdef __SWITCH2__
+            /* PCM16 endpoint differences times Q16 can exceed signed32. */
+            put((int16_t)(g_last_l + (((int64_t)l - g_last_l) * f >> 16)), (int16_t)(g_last_r + (((int64_t)r - g_last_r) * f >> 16)));
+#else
             put((int16_t)(g_last_l + (((int32_t)l - g_last_l) * f >> 16)), (int16_t)(g_last_r + (((int32_t)r - g_last_r) * f >> 16)));
+#endif
             g_phase += 0x10000 * 2 / 3;
         }
         g_phase -= 0x10000;

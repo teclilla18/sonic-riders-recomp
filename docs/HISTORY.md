@@ -1637,3 +1637,18 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   loader return and performance. No acceptance/release claim. Next is bounded
   first boot, then complete race. Work stays on feature/switch2-native locally;
   no push, merge or publication. Details: notes/switch2.md.
+
+## 2026-11-17: native Switch 2 working build accepted
+
+- **Tested/accepted [confirmed]:** user reports build 7d1bc5fcd419 gameplay,
+  controls, graphics, music/sound, overlay/aspect/bloom and tried enhancements
+  working; initial loading still rocky. Handheld mode 0, clocks unrecorded.
+- Retrieved logs and exact NRO over authorized FTP read-only; SHA256 matches
+  deployed build. Preserved local binary/manifest/log snapshot and 9000-frame
+  env. Input raw handheld A reaches guest SI; 85 audio summaries show no drops
+  or delivery errors; owned cleanup and EXIT_HOOK complete.
+- **Loading cause [confirmed]:** warm startup frame240 spends 6736.22ms saving
+  pipeline cache, 0.03ms presenting, zero new pipelines. Serialization versus SD
+  write remains unmeasured. No speculative runtime fix, rebuild or deployment.
+- Local source checkpoint preserves previous targeted fixes and acceptance
+  evidence. No push, merge or publication. Extended coverage remains pending.

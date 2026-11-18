@@ -95,7 +95,7 @@ def configure(args, root):
     relative = lambda p: Path(p).relative_to(root).as_posix()
     config = {"root": str(root), "sdk": str(sdk), "devkitpro": str(dkp), "cc": str(cc), "cxx": str(cxx),
               "glslc": str(glslc.resolve()), "cpu": cpu, "flags": flags, "dependency_lock": lock,
-              "own_sources": [relative(p) for p in runtime if not relative(p).startswith("build/")] +
+              "own_sources": [relative(p) for p in runtime if not relative(p).startswith("build/")] + ["runtime/src/platform/switch/audio_switch.c"] +
                   [relative(p) for p in (root / "runtime/include").rglob("*.h")] +
                   [relative(p) for p in (root / "runtime/src").rglob("*.h")] +
                   [relative(p) for p in (root / "runtime/shaders").glob("*") if p.is_file()] +

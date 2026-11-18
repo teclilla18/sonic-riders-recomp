@@ -46,10 +46,17 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 void input_init(void) {
     padConfigureInput(PLAYERS, HidNpadStyleSet_NpadStandard);
     /* single Joy-Cons are held sideways (only matters once the user splits a pair) */
+#ifndef __SWITCH2__
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
+#endif
     /* player 1's controller and handheld mode are read separately: one combined PadState reported
      * a sideways single Joy-Con on No1 as "handheld", and it got the two-handed mapping */
+#ifdef __SWITCH2__
+    /* Match SR2Diag: a connected neutral No1 must not mask handheld input. */
+    padInitializeDefault(&g_pad[0]);
+#else
     padInitialize(&g_pad[0], HidNpadIdType_No1);
+#endif
     padInitialize(&g_handheld, HidNpadIdType_Handheld);
     padInitialize(&g_pad[1], HidNpadIdType_No2);
     padInitialize(&g_pad[2], HidNpadIdType_No3);
@@ -200,6 +207,16 @@ void input_pump(void) {
     /* the settings menu (overlay.h) is driven by player 1; while it is open every port is neutral */
     ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
+#ifdef __SWITCH2__
+    static uint64_t last_log, last_buttons;
+    uint64_t now = platform_now_ns(), raw = padGetButtons(&g_pad[0]);
+    if (raw != last_buttons || now - last_log > 2000000000ULL) {
+        HidAnalogStickState s = padGetStickPos(&g_pad[0], 0);
+        rt_log("[input2] raw=%llX ids=%X handheld=%d stick=%d,%d mapped=%04X menu=%d focus=%d", (unsigned long long)raw,
+               g_pad[0].active_id_mask, g_pad[0].active_handheld, s.x, s.y, p[0].buttons, menu, appletGetFocusState());
+        last_buttons = raw; last_log = now;
+    }
+#endif
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));
 }
 

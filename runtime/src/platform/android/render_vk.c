@@ -2126,6 +2126,9 @@ static void execute(GxFrame* f) {
         g_slayout[idx] = VK_IMAGE_LAYOUT_UNDEFINED;  /* contents not kept between frames */
         g_swap_idx = -1;
     }
+#ifdef __SWITCH2__
+    uint64_t native_present_end = platform_now_ns();
+#endif
     if (fake_lost_due()) vk_ok(VK_ERROR_DEVICE_LOST, "SR_VK_FAKELOST");  /* test: everything below as after a real loss */
     if (g_shot_pending && (g_lost || !g_fenced[g_slot] ||
                            vkWaitForFences(g_dev, 1, &g_fence[g_slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS))
@@ -2145,7 +2148,17 @@ static void execute(GxFrame* f) {
     memcpy(g_retired[g_slot], f->retired, f->nretired * sizeof(int));
     g_nretired[g_slot] = f->nretired;
     g_slot ^= 1;
+#ifdef __SWITCH2__
+    uint64_t native_cache_start = platform_now_ns();
+#endif
     pcache_save(0);
+#ifdef __SWITCH2__
+    uint64_t native_cache_end = platform_now_ns();
+    if (native_cache_end - t_start > 50000000ULL)
+        rt_log("[vk2] frame=%u pipelines=%u pipeline_ms=%.2f present_call_ms=%.2f post_present_ms=%.2f cache_save_ms=%.2f",
+               g_frames_done, g_fr_pipe_n, g_fr_pipe_ns / 1e6, (native_present_end - t_pres) / 1e6,
+               (native_cache_start - native_present_end) / 1e6, (native_cache_end - native_cache_start) / 1e6);
+#endif
     uint64_t t_end = platform_now_ns(), busy = t_end - t_start;
     g_ph_in += t_rec - t_start;
     g_ph_rec += t_sub - t_rec - g_fr_acq_ns;
