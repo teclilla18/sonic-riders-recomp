@@ -367,6 +367,11 @@ static int stall_thread(void* arg) {
             void sched_stream_dump(void);
             rt_log("[stream2] ns=%llu GX=%llu VI=%u fn=%08X lr=%08X", (unsigned long long)t, frames, vi_field_count(), g_ppc_cur_fn, g_ppc_cur_lr);
             sched_stream_dump();
+            uint64_t log_write, log_flush, log_slow;
+            void switch2_log_stats(uint64_t*, uint64_t*, uint64_t*);
+            switch2_log_stats(&log_write, &log_flush, &log_slow);
+            rt_log("[log2] ns=%llu max_write_ms=%.2f max_flush_ms=%.2f calls_over50ms=%llu (last interval)",
+                   (unsigned long long)t, log_write/1e6, log_flush/1e6, (unsigned long long)log_slow);
             if (mutexTryLock(&g_workers_lock)) {
                 for (unsigned i = 0; i < g_nworkers; i++) {
                     Worker* w = g_workers[i];

@@ -183,6 +183,9 @@ static GcPad read_player(int i, unsigned* ov) {
 }
 
 void input_pump(void) {
+#ifdef __SWITCH2__
+    uint64_t input_t0 = platform_now_ns();
+#endif
     if (overlay_take_controllers_request()) show_controller_applet();
     GcPad p[PLAYERS];
     unsigned ov = 0;
@@ -194,6 +197,9 @@ void input_pump(void) {
         if (i == 0) ov = o;
         if (i > 0) atomic_store(&g_connected[i], padIsConnected(&g_pad[i]) ? 1 : 0);
     }
+#ifdef __SWITCH2__
+    uint64_t pads_end = platform_now_ns();
+#endif
     /* after the console wakes (or the game gets focus back): the first button press goes to the log,
      * which tells a dead controller apart from a frozen picture (platform_switch.c sets the flag) */
     extern _Atomic int g_switch_log_input;
@@ -208,6 +214,7 @@ void input_pump(void) {
     ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
 #ifdef __SWITCH2__
+    uint64_t overlay_end = platform_now_ns();
     static uint64_t last_log, last_buttons;
     uint64_t now = platform_now_ns(), raw = padGetButtons(&g_pad[0]);
     if (raw != last_buttons || now - last_log > 2000000000ULL) {
@@ -218,6 +225,13 @@ void input_pump(void) {
     }
 #endif
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));
+#ifdef __SWITCH2__
+    uint64_t input_end = platform_now_ns();
+    if (input_end-input_t0 > 50000000ULL)
+        rt_log("[input2-time] ns=%llu pads_ms=%.2f overlay_ms=%.2f heartbeat_publish_ms=%.2f",
+               (unsigned long long)input_end, (pads_end-input_t0)/1e6,
+               (overlay_end-pads_end)/1e6, (input_end-overlay_end)/1e6);
+#endif
 }
 
 int input_connected(int chan) {

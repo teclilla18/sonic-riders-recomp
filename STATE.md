@@ -1,36 +1,27 @@
-# Experimental Switch 2 audio/stutter diagnostics (2026-11-18)
+# Native audio/pump diagnostics (2026-11-18)
 
-Branch codex/switch2-stall-diag. Validated Alpha1releasebranch64e8316/ZIP
-unchanged; higherFPSb381e54 separate/excluded. No publication.
+Branchcodex/switch2-stall-diag. Sixrace scheduler-fixcheckpoint5db73f5/4a6ead
+preserved, plus3more67582races withoutselectionfreeze; promising, not permanent
+elimination. Validatedrelease64e8316 ZIP unchanged, no publication.
 
-Scheduler fix5db73f5/build4a6ead9bbb02 is hardware-tested for SIXconsecutive
-races at2x with zero character-selection freezes and cleanQuit/hbmenu. This is
-promising evidence, not permanent elimination. Exactbinary+manifest preserved
-build/alpha/scheduler-sixrace-4a6ead9bbb02/ and branch
-codex/switch2-sixrace-checkpoint at5db73f5; SD backup retained on deployment.
+67582race1 hitchlocalizedinput/eventpump694ms, subsequent350/224/141ms;
+voicePCMcountsfallthenreturn, loaderthreads laterresume. Music/announceruserloss
+persists whilegameplayrecovers: identity/decoderfailureNOTestablished. NoGPUloss
+or permanentguestdeadlock shown. SharedlogIOblocking possible, unmeasured.
+Evidence build/alpha/audio67582-hw1/focused-analysis.md; allrawlogspreserved.
 
-Remaining: music lost race1, announcer lost byrace3 while ordinarySFX continue.
-Race2/3 stutter, sampledmin32.3/28.2fps with long renderwaits and audiofeedgaps
-up to3.569s, but recordedGPU/execute short. Cache/newpipe events earlier do not
-explain sustainedstutter; pausedlaterraces okay. Rootcause/sharedrelation to
-scheduler unconfirmed; no speculativefix. Sourceofmixedaudio versus guest
-stream/voice/refill/waits needs new diagnostics. All19workerscleanexitconfirmed.
-Evidence: build/alpha/condfix-six-races/focused-analysis.md and rawlogs.
+Implemented3e551c8bf7f3 diagnosticsONLY: preciseapplet/drawable/inputpumpsplit,
+pad/overlay/heartbeat split, sharedstderrwrite/flushmaxlatency counters, PCM
+voiceprioritysnapshot inclstopped (8PCM+8other) for before/aftercomparison.
+No speculativefix/audio-rate/FPS/cache/rendererrefactor. Retains successful
+schedulerfix,2x,livecontrolsdisabled,frames0. OriginalSwitchpreprocessing and
+Androidsyntax, schedulerregression, nativeartifactsourcefreshness/linkchecksPASS.
+Bytes29468621 SHAcd7851aafbb9bac6fca662e3d2e5e8b24966af217740cb1730c29db0dce632a9.
+Deploymentstatus in handoff and build/switch2/audio2-deployment.json.
 
-Implemented next experiment: native-only bounded2sAXvoices/aggregates,5s guest
-thread/DVD/DSP/IRQ/renderqueue/workerwait summaries, completedwait maximum and
-timeouts, longinputpump logging. Retains successfulpredicate-recheckfix,
-2xresolution, disabledlivechanges andframes0; no rendererpolicy/audio rate/FPS
-changes. Snapshotsoverheadlogged; evidence is asynchronous and can perturbtiming.
-Locallytested: schedulerregressionPASS, originalSwitchmain/sched/menu/AX
-preprocessingunchanged, AndroidVksyntaxPASS, nativebuild/link/manifest/hashchecks
-PASS. Build67582dd7f046 bytes29464525 SHA
-4f1a317d3b7f182b7539e76a81e5f7df4e231b0b60b8da1112b9bb151fc26942.
-Exactdeploymentresults recorded in AI handoff and build/switch2/audiodiag-deployment.json.
-Hardwarepending. No releaseZIPrebuild/coldtest until hardwareacceptance.
-
-Nexttest: normalentry, same race/menu/reselect route. Note approximate time of
-music/announcer loss and stutter, pause/menustate and mode/clocks. Quit normally
-when possible, preservelogs viaFTP. Analyzevoice2/stream2/wait2/vk2-loop alongside
-existingaudio2/perf/cachetimers. Never assume rawvoicePB is namedmusic without
-correlation. Preserveactiveconfig/ISO/saves/caches/rollbackbuilds.
+Next: normalentry same races; noteexactelapsedtimefirstmusic/announcerloss and
+stutter. Capture logs before relaunch. Correlatelog2/pump2/input2-time with
+voice2PCMtransitions and stream2/workerqueueprogress. No timingnumbers from
+softwaretests representhardware; snapshots asynchronous/perturbationpossible.
+NoZIPregeneration/coldtest until actualfixhardwareaccepted. Preserve allrollback
+branches/artifacts and isolateddata. No externalreplies/push/merge/publication.

@@ -2262,10 +2262,17 @@ static void pump(void) {
 #ifdef __SWITCH2__
     uint64_t pump_t0 = platform_now_ns();
     if (!appletMainLoop()) g_quit = 1;
+    uint64_t applet_end = platform_now_ns();
     int w = 0, h = 0;
     drawable_size(&w, &h);
     if (g_ext.width && ((uint32_t)w != g_ext.width || (uint32_t)h != g_ext.height)) g_swap_bad = 1;
+    uint64_t input_start = platform_now_ns();
     input_pump();
+    uint64_t input_end = platform_now_ns();
+    if (input_end - pump_t0 > 50000000ULL)
+        rt_log("[pump2] ns=%llu applet_ms=%.2f drawable_ms=%.2f input_ms=%.2f",
+               (unsigned long long)input_end, (applet_end-pump_t0)/1e6,
+               (input_start-applet_end)/1e6, (input_end-input_start)/1e6);
     const char* limit = getenv("SR_SWITCH2_FRAMES");
     if (limit && (unsigned)strtoul(limit, NULL, 10) > 0 && g_frames_done >= (unsigned)strtoul(limit, NULL, 10)) g_quit = 1;
     if (overlay_take_quit_request()) g_quit = 1;

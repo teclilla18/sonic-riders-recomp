@@ -252,7 +252,7 @@ static void process_pb_list(uint32_t addr) {
     int snapshot = now - last_ns >= 2000000000ULL;
     if (snapshot) last_ns = now;
     unsigned voices = 0, running = 0, streaming = 0, pcm16 = 0, updates = 0;
-    unsigned detailed = 0;
+    unsigned detailed = 0, pcm_detailed = 0;
 #endif
     while (addr && guard++ < 256) {
         PB pb, orig;
@@ -278,9 +278,9 @@ static void process_pb_list(uint32_t addr) {
         updates += any_upd != 0;
         /* Raw PB state, not an asserted music identity. Bounded snapshots let
          * the same voice/address be compared before and after audible loss. */
-        if (snapshot && pb.running == 1 && detailed++ < 16)
-            rt_log("[voice2] ns=%llu pb=%08X fmt=%04X loop=%u stream=%u cur=%08X end=%08X loopaddr=%08X loops=%u mc=%04X env=%u main=%04X/%04X updates=%d",
-                   (unsigned long long)now, addr, pb.sample_format, pb.looping, pb.is_stream,
+        if (snapshot && (pb.sample_format == 0xA ? pcm_detailed++ < 8 : pb.running == 1 && detailed++ < 8))
+            rt_log("[voice2] ns=%llu pb=%08X fmt=%04X running=%u loop=%u stream=%u cur=%08X end=%08X loopaddr=%08X loops=%u mc=%04X env=%u main=%04X/%04X updates=%d",
+                   (unsigned long long)now, addr, pb.sample_format, pb.running, pb.looping, pb.is_stream,
                    (uint32_t)pb.cur_hi << 16 | pb.cur_lo, (uint32_t)pb.end_hi << 16 | pb.end_lo,
                    (uint32_t)pb.loop_hi << 16 | pb.loop_lo, pb.loop_counter, pb.mixer_control,
                    pb.vol_env, pb.main_l.volume, pb.main_r.volume, any_upd != 0);
@@ -303,7 +303,7 @@ static void process_pb_list(uint32_t addr) {
     }
 #ifdef __SWITCH2__
     if (snapshot) {
-        rt_log("[voice2] ns=%llu list=%u voices=%u active=%u streaming=%u pcm16=%u updated=%u stopped_since=%u details_capped=16",
+        rt_log("[voice2] ns=%llu list=%u voices=%u active=%u streaming=%u pcm16=%u updated=%u stopped_since=%u details_capped=8PCM_plus8other",
                (unsigned long long)now, g_lists, voices, running, streaming, pcm16, updates, stopped);
         stopped = 0;
     }

@@ -1706,3 +1706,12 @@ renderwaits not explained by short Vulkan execution or earlier cache events.
 No supported nextfix. Add bounded native guestvoice/stream/wait/progress and
 inputpumptiming diagnostics; scheduler regression/platform/build checks pass.
 New build67582dd7f046 pending hardware. Validated release ZIP unchanged.
+
+
+## 2026-11-18: localize recovered stutter and persistent audio loss
+
+Three67582races noselectionfreeze. Firstmajorhitch aligns694ms input/eventpump;
+PCMvoicecountsdropthenreturn, guestloaderthreads laterresume. Musicidentity/
+rootcauseunconfirmed. Do not claim globalmute/deaddecoder. Refined native
+applet/HID/logIOtiming plus dedicatedPCM/stoppedvoice snapshots; scheduler
+fixretained. Regression/platform/artifactchecksPASS. No speculativeaudiofix.
