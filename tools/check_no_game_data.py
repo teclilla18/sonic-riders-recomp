@@ -50,6 +50,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # picture is refused until its SHA-1 is put here. Also the launcher banner (the user's OK, 2026-11-07): public
 # fan art the user chose, not from the game.
 OWN_ART = {
+    "docs/images/switch2-alpha1-banner.jpg": "b4be7ce0f7e34e3b56735283781a58c775fc5161",  # user-approved Lanmana banner, unchanged with signature (2026-11-18)
     "docs/images/banner.jpg": "4c0e681fef3ff69d583129825b1023f00a86f0c5",  # README banner (fan art, user's choice, 2026-11-09; cropped to 1529x600 2026-11-16)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four

@@ -7,6 +7,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | Note | Kind | What is in it |
 |---|---|---|
 | [notes/build-and-test.md](notes/build-and-test.md) | Reference | **Quick commands** (configure/build/run for every target, phone runs, RAM tools), Switch / PC builds, setup, releases, GitHub, Eden / Dolphin / test routes |
+| [SWITCH2-ALPHA.md](SWITCH2-ALPHA.md) | Guide | Separate native Switch 2 alpha download, compatibility, installation, manual updates and known issues |
 | [notes/android.md](notes/android.md) | Reference | Android build, install, test, touch controls, app icon, triggers, phone facts |
 | [notes/debug-variables.md](notes/debug-variables.md) | Reference | every `SR_*` debug variable, `RECOMP_*` switches |
 | [notes/game-addresses.md](notes/game-addresses.md) | Reference | game addresses (modes, players, gear, SDK map pointers) |

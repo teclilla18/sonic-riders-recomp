@@ -3,6 +3,7 @@
 [← Back to the README](../README.md)
 
 - [What you need](#what-you-need)
+- [Install on Switch 2 Alpha](#install-on-switch-2-alpha)
 - [Install on Switch](#install-on-switch)
 - [Install on PC](#install-on-pc)
 - [Install on Android](#install-on-android)
@@ -52,6 +53,12 @@
 - About **2 GB free on the phone** (the game plus your disc image) and about **4 GB more on the PC** for the
   Android build tools (a 1.1 GB download the first time, about 3 GB unpacked, kept for updates).
 - A **USB cable** between the phone and the PC, and **USB debugging** turned on (step 1 below).
+
+## Install on Switch 2 Alpha
+
+Use the [separate Alpha 1 pre-release](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1), not the original Switch ZIP or stable automatic updater. Follow the [Switch 2 guide](SWITCH2-ALPHA.md) for the Windows installer, your own validated USA disc image, SD/manual transfer and compatible native homebrew.
+
+The target folder is `/switch/sonicriders-switch2/`. Fresh defaults are 2x, 60 FPS and no automatic exit; live resolution changes are disabled. Keep existing settings, saves and caches. Hold Minus about half a second, choose Quit Game and confirm for hbmenu. Stuttering, music/announcer dropout and temporary distortion remain known alpha issues. Updates are manual and separate from original Switch auto-updates.
 
 ## Install on Switch
 
@@ -270,6 +277,8 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 *Sonic Riders*); the setup's log is `setup.log` in the install folder.
 
 ## Updating to a new version
+
+**Switch 2 Alpha:** download its dedicated pre-release ZIP, extract to a new folder and rerun its installer. Keep `/switch/sonicriders-switch2/` saves/settings/caches/env.txt. This target does not use the original Switch automatic updater. [Full instructions](SWITCH2-ALPHA.md#update-and-rollback).
 
 > 👉 **[Easy-read update guide](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN)**: the same steps, colour coded, in a reading-friendly font, with a tab for each device.
 

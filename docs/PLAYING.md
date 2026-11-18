@@ -16,7 +16,7 @@
 | Settings menu | hold − (Minus) | hold F1 | hold Back / View |
 | Fullscreen | – | F11 or Alt+Enter | (settings menu) |
 
-HOME exits on the Switch.
+HOME exits on the original Switch. **Switch 2 Alpha:** hold Minus about half a second, choose Quit Game and confirm to return to hbmenu. See the [separate alpha guide](SWITCH2-ALPHA.md); live resolution changes are disabled and the default is 2x/60 FPS with no exit timer.
 
 ## Settings menu
 

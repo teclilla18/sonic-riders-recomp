@@ -1,5 +1,12 @@
 # Changelog
 
+## Documentation — Switch 2 Alpha 1
+
+- Announce the separate experimental Switch 2 release with Lanmana banner/credit,
+  installation and bug-report links, and dedicated interactive install/update tabs.
+  Stable platform releases and runtime source are unchanged.
+
+
 ## v0.8.6 (2026-11-16; Linux zip updated the same day)
 
 - **Linux zip update** (#30): if the setup's compiler check fails, zig's own error now goes into setup.log, and zig keeps

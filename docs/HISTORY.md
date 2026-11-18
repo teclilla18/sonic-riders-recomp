@@ -1619,3 +1619,15 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - **#30** (Steam Deck: "the downloaded zig compiler does not work"): the check hid zig's error; not the path with
   spaces (reproduced fine in WSL). setup_linux.py now logs zig's error and keeps zig's cache in the tools folder
   [tested in WSL; whether it fixes the Deck: uncertain]; Linux zip replaced on v0.8.6; reply posted.
+
+## 2026-11-18: public Switch 2 Alpha 1 announcement
+
+Documentation/art-only main update: user-supplied banner copied unchanged with exact
+approved SHA-1 and Lanmana credit; exact requested announcement, separate alpha links,
+platform/download/install/reporting references. Both easy-read HTML guides gain a
+Switch 2 tab using existing interactive checklists. Stable versions and other tabs
+preserved. External Claude Artifact pages require republication/verification separately.
+No runtime merge, rebuild, or release asset changes.
+Headless Edge checks passed six-tab navigation and mouse/keyboard checklist toggles
+in both guides; original platform panels, supplied artwork bytes and exact announcement
+verified, with game-data audit clean [confirmed].

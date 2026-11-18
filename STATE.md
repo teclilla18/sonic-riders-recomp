@@ -1,4 +1,4 @@
-# State (2026-11-16, late)
+# State (2026-11-18)
 
 Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
 behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
@@ -6,6 +6,21 @@ behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](do
 Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. A third Claude session runs on the
 user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
 `sr-main` worktree next to it.
+
+## Switch 2 Alpha 1 public announcement
+
+- **Released:** v0.8.6-switch2-alpha.1 is a separate experimental pre-release;
+  runtime c8c06fdda996 includes scheduler/logging fixes. Known audio/stutter issues remain.
+- **Implemented:** docs/art-only main announcement with exact requested text, unchanged
+  Lanmana banner/signature and approved SHA-1, alpha install/download/bug-report links.
+- Dedicated Switch 2 tabs added to both interactive HTML guides; other platforms and
+  stable versions retained. External Claude Artifact pages are prepared for republication,
+  not verified updated. No runtime merge/build or stable release changes.
+- **Tested:** headless Edge six-tab navigation and click/keyboard checklists pass in
+  both guides; exact announcement/banner and original platform panels verified;
+  mandatory game-data audit passes [confirmed].
+- Other sessions’ dirty sr-main work remains untouched. Announcement uses isolated main
+  checkout. Personal Unlimited build remains private and is not part of this release.
 
 ## Thursday 2026-11-19 release (user's plan): Switch texture-pack fix, auto stick-spin, iOS
 

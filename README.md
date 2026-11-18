@@ -1,3 +1,23 @@
+<p align="center">
+  <img src="docs/images/switch2-alpha1-banner.jpg" width="100%" alt="Sonic Riders Recomp — Nintendo Switch 2 Alpha 1. Original artwork by Lanmana; signature preserved.">
+</p>
+
+# 🎉 Sonic Riders is now playable on Nintendo Switch 2!
+
+I've been working on getting Sonic Riders running natively on Switch 2 since the release of Seedsow, and I'm excited to finally share an early build with everyone.
+
+I've managed to complete several consecutive races at 2x internal resolution, with most of the existing graphical enhancements and Riders Plus features working.
+
+There are still some issues with audio and occasional stuttering, which is why I'm releasing this as an alpha. I'd really appreciate anyone willing to try it out and report bugs. There's only so much I can test on my own console!
+
+A huge thank you to the Switch 2 homebrew developers for making this possible.
+
+**[Download Switch 2 Alpha 1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1) · [Install on Switch 2](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
+
+Switch 2 is a separate experimental target. Stable v0.8.6 and the original Switch installer are unchanged. Alpha updates are manual. Known issues include intermittent stuttering, music/announcer dropout and temporary audio distortion. [What has been tested and what to expect](docs/SWITCH2-ALPHA.md).
+
+---
+
 # REGULAR UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
 > ☕ **Enjoying the port? [Support it on Ko-fi](https://ko-fi.com/teclilla18)**: every coffee helps keep updates coming.
 >
@@ -8,7 +28,7 @@
 > **New here? [Easy-read install guide](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W)**: step by step for Switch, PC,
 > Android, Linux / Steam Deck and iPhone / iPad. An `.iso` or Dolphin's `.rvz` both work (v0.8.4 converts RVZ by itself).
 >
-> **Updating got revamped in v0.8.3.** Once you're on v0.8.3, every future update is one press: **UPDATE NOW** in
+> **Updating got revamped in v0.8.3.** Once you're on v0.8.3, future stable-platform updates are one press (Switch 2 alpha updates are manual): **UPDATE NOW** in
 > the app downloads, rebuilds and installs it by itself, usually in under a minute. Switch players can update
 > without taking the SD card out (hekate's USB mode). [Easy-read update guide](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) · [How to update](docs/INSTALL.md#updating-to-a-new-version)
 
@@ -16,7 +36,7 @@
   <img src="docs/images/banner.jpg" alt="Sonic, Tails, Knuckles, Jet, Wave and Storm racing on Extreme Gear through a neon city" width="100%">
 </p>
 
-# Sonic Riders Recomp: native port for PC, Switch, Android & iOS
+# Sonic Riders Recomp: native port for PC, Switch, Switch 2 Alpha, Android & iOS
 
 <p align="center">
   <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
@@ -26,7 +46,8 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
   <img src="https://img.shields.io/badge/Focus-Game%20Preservation-pink" alt="Focus: game preservation">
-  <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Android, Linux, iOS">
+  <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%201-orange" alt="Nintendo Switch 2: experimental Alpha 1"></a>
   <img src="https://img.shields.io/badge/Recompiler-gcrecomp-orange" alt="Recompiler: gcrecomp (this repo)">
   <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
   <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
@@ -36,7 +57,7 @@
   <a href="https://ko-fi.com/teclilla18"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
-Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a
+Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a **Nintendo Switch 2** ([experimental Alpha 1](docs/SWITCH2-ALPHA.md)), a
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
@@ -120,8 +141,9 @@ measured PC races.</sub>
 
 ## Get it
 
-| I want to play on... | Download from the [latest release](../../releases/latest) | Guide |
+| I want to play on... | Download from the [latest stable release](../../releases/latest), unless marked experimental | Guide |
 |---|---|---|
+| **Nintendo Switch 2** (experimental Alpha 1) | [SonicRiders-Switch2-Setup-Alpha1.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1) — separate pre-release | [Install on Switch 2](docs/SWITCH2-ALPHA.md) |
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
@@ -260,6 +282,9 @@ Licensed under the [Mozilla Public License 2.0](LICENSE), like the ZeldaWWHDReco
 forks (`third_party/LICENSE-MPL-2.0`).
 
 ## Credits
+
+- Switch 2 Alpha 1 banner: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request. The supplied image and artist's signature are preserved unchanged.
+- Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the
