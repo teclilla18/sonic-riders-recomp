@@ -79,8 +79,20 @@ Diagnostics (not persisted in settings):
   no-dual/no-push through racing and simulated loss at frame 4,201; dynamic recovery
   likewise reaches the post-recovery capture. Corrected runs have no validation
   warnings/errors/VUIDs. Legacy background/resume continues rendering.
-- **Unproven:** automatic selection and performance on the reporter's Mali-G57;
-  real iOS/MoltenVK execution (no Mac SDK/device used); real GPU reset; exhaustive
+- **Reporter-tested [confirmed, 2026-11-18]:** source build `3b2592b7` on Mali-G57 MC3,
+  Vulkan 1.1.177, driver `08001000`: automatic legacy selection with dynamic feature/
+  extension absent, separate alpha pass and descriptor pool. Reporter confirms a full
+  race without issues in [the follow-up](https://github.com/teclilla18/sonic-riders-recomp/issues/32#issuecomment-6988716603).
+  Log reaches 17,700 presented frames; all 59 shader-coverage samples are 100%.
+  Race samples draw 30.6-58.5 fps; Auto usually keeps 59.8-60 steps/s, including
+  60 steps/s at 30.6 fps. Cold compilation causes hitches (worst 1,077 ms frame,
+  1,059 ms compiling 18 pipelines) and temporary simulation slowdowns.
+- **Quit failure [confirmed]:** `[android] quit` immediately precedes SIGSEGV in
+  the returned Mali log, despite successful gameplay. No Vulkan error/device-loss
+  message precedes it. Existing `render_thread` calls `exit(0)` there; this path
+  was not edited by #32. The crash handler's stack does not establish the fault's
+  cause or exclude a driver/resource-lifetime interaction. Do not claim clean exit.
+- **Unproven:** real iOS/MoltenVK execution (no Mac SDK/device used); real GPU reset; exhaustive
   alpha/depth overlap cases, all stages and long-session memory pressure.
 
 Separate frame-pacing audit (no pacing source changes): normal Auto (`SR_FRAMERATE=1`,
@@ -111,5 +123,6 @@ py -3 tools/test_vk_shaders.py --validator <spirv-val> --dksh build/switch
 Reporter distribution must use the standard experimental Android **source/setup
 ZIP**, built by `tools/make_release.py --flavor android` from a committed branch.
 Never share the locally built APK, generated code, shaders, logs or disc files.
-Keep #32 open until the Mali reporter confirms boot and gameplay. No release,
+Mali boot/gameplay are now reporter-confirmed; the quit crash still needs investigation.
+Keep #32 open for the user's decision. No release,
 merge into main or external reply is authorized by this experiment.
