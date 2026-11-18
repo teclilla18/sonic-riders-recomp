@@ -19,6 +19,40 @@ static void stats(uint32_t p, uint32_t block, float top, float drift, float boos
 static void expect(uint32_t p, uint32_t block, uint32_t off, float shown) {
     assert(fabsf(u32_as_f32(ld32(p + block + off)) * 216.0f - shown) < 0.001f);
 }
+static void finished_race(int super) {
+    uint32_t p = player(0), block = super ? 0x8DC : BLK3;
+    lv_race_reset();
+    st32(GAME_TOP_MODE, GAME_TOP_MODE_RACE); st32(GAME_RACE_PHASE, 14);
+    st8(p + GAME_RACER_CHARACTER, super ? GAME_CHAR_SUPER_SONIC : 0);
+    st8(p + GAME_RACER_GEAR, super ? GAME_GEAR_CHAOS_EMERALD : 0);
+    st8(p + 0x102E, super ? 0 : 2); st32(p + 0xB98, 568);
+    stats(p, block, super ? 182 : 180, 100, 250);
+    lv_racer_update(p);
+    assert(g_lv[0].ext == 2 && g_lv[0].levelup);
+    /* Finish with feedback pending: all native hooks must retire it before consuming it. */
+    st32(GAME_RACE_PHASE, GAME_RACE_FINISHED);
+    lv_player_update(p);
+    assert(!lv_super_player_update(p));
+    expect(p, block, OFF_TOP, super ? 182 : 180);
+    assert(!g_lv[0].applied && !g_lv[0].levelup && !g_lv[0].ext);
+    uint8_t before[GAME_PLAYER_SIZE];
+    for (unsigned b = 0; b < sizeof before; b++) before[b] = ld8(p + b);
+    for (int repeat = 0; repeat < 100; repeat++) {
+        /* Both orders occur: per-racer native hooks and simulation-step retirement. */
+        if (repeat & 1) lv_racers_frame();
+        lv_racer_update(p); lv_player_update(p); assert(!lv_super_player_update(p));
+        if (!(repeat & 1)) lv_racers_frame();
+        for (unsigned b = 0; b < sizeof before; b++) assert(ld8(p + b) == before[b]);
+        assert(!g_lv[0].ext && !g_lv[0].levelup && !g_lv[0].applied);
+    }
+    /* A new race reapplies once; returning to a menu also retires before any hook. */
+    st32(GAME_RACE_PHASE, 14); lv_racer_update(p); assert(g_lv[0].ext == 2);
+    st32(GAME_TOP_MODE, 0); lv_player_update(p);
+    assert(!lv_super_player_update(p) && !g_lv[0].applied);
+    expect(p, block, OFF_BOOST, 250);
+    st32(GAME_TOP_MODE, GAME_TOP_MODE_RACE);
+    lv_race_reset();
+}
 int main(void) {
     ppc_mem_base_var = calloc(1, 32 * 1024 * 1024);
     assert(ppc_mem_base_var);
@@ -102,6 +136,7 @@ int main(void) {
     lv_race_reset();
     for (int i = 0; i < 8; i++) expect(player(i), BLK3, OFF_TOP, (float)(180 + i));
     assert(racer_index(GAME_PLAYERS + 1) == -1 && racer_index(GAME_PLAYERS + 8 * GAME_PLAYER_SIZE) == -1);
-    puts("game_levels: thresholds, baseline ownership, feedback/resource isolation, toggle, gear change, race reset and eight racers PASS");
+    finished_race(0); finished_race(1);
+    puts("game_levels: thresholds, ownership/mods, resource isolation, finished-phase retirement, feedback, reset and eight racers PASS");
     free(ppc_mem_base_var);
 }
