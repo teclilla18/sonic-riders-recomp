@@ -1648,3 +1648,37 @@ note with implementation inventory, input/audio findings, dependency pins, sourc
 map, regression chronology, cache measurements and resume gates [confirmed existing
 records]. Audio causes and permanent freeze elimination remain unproven. No runtime
 edits, builds, log deletion, rollout or release changes during this handoff.
+
+## 2026-11-18: local Riders Plus Super Sonic and adaptive split HUD review
+
+- [confirmed, static + minimized PC] Super stays native level 0 and reads first live block, while old extension
+  required level 2/third block. Actual gear +BB=18, transformed +BA=11/original +BF=0; +1034 is an ability mask.
+  Ring mirror derives from fuel/max-air; two native fuel clamps also limited him to 100. Both now use the 999-ring
+  ceiling without changing resource denominator/costs. Own baseline182/100/250 scales to202.222/110/275 and
+  217.389/125/300; below200/disable restores it. Feedback uses effect branch after level/speed/refill writes.
+- [confirmed, source tests + PC] Field-wise ownership avoids compounded partial stat mods. Reset before the true
+  constructor818F2008/caller81817150 and race init; preserve native level/resource and independent racer state.
+- [confirmed, PC captures] 3/4P mode4 bypassed old mode8 edge gate; shared640x480 HUD pass hides per-player viewport
+  ownership. Completed-frame pass detects half/quadrant perspectives, groups HUD artwork per owner, translates
+  projection copies, preserves sizes, timer/map, centred notifications and silhouette. No shader/backend/RAM writes.
+- Separately #29: old alternate split digit hooks never ran in local Free Race. Added actual8182D528/r4 and
+  8182D5F8/r3 cell-pointer hooks. Mixed3P Super+normal racers show4/5; issue not closed and no reply posted.
+- [confirmed] Actual-source C regressions pass thresholds, fuel clamp, partial mods, equal-valued new baseline,
+  reset/disable/gear change/eight racers; synthetic complete frames cover2/3/4P xfive aspects and state isolation.
+  PC20/20 actual races (1-4P x4:3/16:9/16:10/21:9/32:9),80 captures including pause; scene RAM checked.
+  Final mixed3P has two Super feedback events/native0/refill0 and correct per-racer digits. Plus-off baseline kept.
+  Both offline own-view players:6701 checksum steps each, full28MiB RAM and active/pause PNG files identical.
+- Full PC/Switch builds and Android ARM64 affected-source compilation pass; Eden0.1.1 boots and renders3P with
+  own captures;48DKSH scratch0. Emulator timing is not hardware evidence. Existing capped MMIO noise also occurs
+  on baseline. Early ring-only/single-clamp attempts and a stale intermediate build are explicitly superseded.
+- [unproven] Audible feedback, natural999-ring collection, full boost/drift/damage/fall/capsule play, consecutive
+  races/gear changes on devices, all stages/results/story, live peers and hardware performance/user acceptance.
+  Detailed evidence/limits: notes/riders-plus-local-hud.md. All captures/dumps/binaries/logs remain ignored/local.
+- User scope: local review only; no push/merge/release/deployment/asset replacement/replies. Private/native and
+  dirty sr-main work preserved. Inbox at start: #32 reporter confirms one completed race; #29 remained open.
+- Final renderer review found score/header artwork overlapping its gauge by six source pixels and reusing its
+  atlas. Separate groups across shared/global layers and retain a wider centre zone for compact messages.
+  Targeted3P16:9/4P32:9 final captures and same-atlas overlap regression pass; full guest RAM remains identical.
+- Later user steering authorizes Switch2 FTP deployment for playtest, retaining source local/no push or merge.
+  Native integration will use a separate checkout based on the installed personal build, matching NRO/manifest
+  backups and readback verification; it does not authorize publishing native/private experiments.

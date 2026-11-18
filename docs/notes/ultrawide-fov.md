@@ -1,8 +1,18 @@
 # Ultrawide without stretching, edge HUD, and a FOV setting (2026-11-06)
 
 Requested by the user (3440x1440 monitor, 21.5:9) and in GitHub Discussions #15. Released in v0.5.0.
-Status: tested on PC (det route 16:9 / 21:9 / 32:9 + 2P split, menu route and race pause at 21:9), Switch in
+Original status (2026-11-06): tested on PC (det route 16:9 / 21:9 / 32:9 + 2P split, menu route and race pause at 21:9), Switch in
 Eden (Fit = 16:9), Android emulator (20:9); **not yet seen by the user, not on Switch hardware or a phone**.
+
+## Local split-screen update (2026-11-18, unreleased)
+
+`local_hud_frame` in gx_render.c uses the completed frame's real perspective viewports to assign shared-pass
+ortho draws to players. Local 3P/4P races use mode 4, outside the old mode-8 edge gate. Per-owner texture/geometry
+groups receive projection-only translations about their view edges; centred notifications, the global timer/map
+and 3P silhouette retain their intended placement. It bypasses original 4:3 and online own-view. The existing
+shader/backend, camera, scissor and EFB-copy paths are unchanged. `SR_LOCALHUDLOG=<frame>` shows final ownership
+and moves; `SR_ANCHORLOG` shows the earlier anchor pass. Full PC 1P-4P x five-aspect capture matrix and an Eden
+3P smoke test performed; physical hardware remains untested. [Detailed evidence/limits](riders-plus-local-hud.md).
 
 ## Settings (settings.c, menu.cpp Display tab)
 

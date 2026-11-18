@@ -52,7 +52,8 @@ per id, hard-coded arrays), `src/handlers/ingame/customcss.cpp`, `src/gears/twea
   **`fn_80012EA8`** (called from `DVDOpen` `fn_8001319C`), mostly from a CRI file-system thread (names on its
   stack around 0x8022C904): the single place where any file name can be redirected.
 - **Racer character id:** racer + 0xBA (signed byte; racer array 0x81A0D740, stride 0x1080); + 0xBF holds the
-  same value in a race (a second copy; which one Super Sonic changes is to check).
+  same value for normal racers. Super Sonic: transformed +0xBA = 11, original +0xBF = 0, selected
+  gear +0xBB = 18 [confirmed, PC RAM 2026-11-18]; +0x1034 is an ability mask, not his gear id.
 - **Player Entry works on the racer structs directly:** racer[n] + 0xBA is the selection while the screen is up
   (cursor function `fn_1_141720` edits it; grid 2 x 8, index 11 skipped); work + 0x3C + player (work 0x803E2958
   in the PC route) only drives the highlight. Test route: `SR_POKEAT=3520:803E2994:02,3520:81A0D7FA:02` on

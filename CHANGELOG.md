@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — local review
+
+- Riders Plus supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own
+  live stats, while retaining his native level, ring costs and transformation. Extended feedback skips air refill.
+- Wide local split-screen HUD groups follow each player's view edges, keeping their size, shared timer/map,
+  centred notifications and the 3P silhouette. Rendering changes do not write guest RAM.
+- Separately, fix the missing split-screen Lv. 4/5 digit hooks (#29), including Super Sonic's multiplayer HUD.
+  Validation and remaining checks: [Riders Plus / HUD note](docs/notes/riders-plus-local-hud.md).
+
 ## Documentation — Switch 2 Alpha 1
 
 - Announce the separate experimental Switch 2 release with Lanmana banner/credit,

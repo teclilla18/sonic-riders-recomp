@@ -1,121 +1,66 @@
 # State (2026-11-18)
 
-Read this at the start of every session. Rewrite it in place at the end of each session (never append). Stories
-behind each line: `grep` the date, issue number or topic in [docs/HISTORY.md](docs/HISTORY.md). Durable facts
-(addresses, `SR_*` variables, procedures): [docs/REFERENCE.md](docs/REFERENCE.md) (index of `docs/notes/`).
-Two sessions work on `main`: PC ("Mike") and Mac (iOS); pull before every push. A third Claude session runs on the
-user's gaming laptop (online tests). The PC's main checkout folder may be on a local branch: do main work in the
-`sr-main` worktree next to it.
+Read this first, then excluded canonical AI_HANDOFF.md for ownership, exact local paths and deployments.
+Durable references: docs/REFERENCE.md; code map: docs/MAP.md. Preserve dirty sr-main and private/native work.
 
-## Final Switch 2 continuity
+## Current local review: Super Sonic Riders Plus and split-screen HUD
 
-- Canonical local AI_HANDOFF.md is consolidated; historical entries are archived locally.
-- Public native baseline is tag v0.8.6-switch2-alpha.1; personal Unlimited remains
-  separate and not hardware-accepted. Use the handoff worktree table before editing.
+- **Implemented**, local codex/riders-plus-local-hud from public main bf9f723: Super uses his own first live stat
+  block and native level 0. Gear ID is +0xBB (18), transformed character +0xBA (11); +0x1034 is an ability mask.
+  Extend both fuel ceilings to 999 rings while preserving the conversion denominator and native costs.
+- **Implemented:** existing Lv.4/5 multipliers/thresholds, field-wise stat ownership, reset before race/stat
+  construction, restoration on decrease/disable/identity change, native feedback branch without air refill.
+- **Implemented:** completed-frame renderer pass assigns shared ortho HUD draws to actual half/quadrant views,
+  groups per owner, preserves dimensions, centred messages, timer/map and 3P silhouette. Original 4:3 and online
+  own-view bypass it. No renderer guest-RAM writes, shader/backend/camera changes or changed EFB copies.
+- **Separately implemented #29:** missing active MP digit pointers at 8182D528/8182D5F8. Old alternate HUD hooks
+  never ran in tested local Free Race. Both Super and normal racers show 4/5 in mixed 3P PC captures.
+- **Tested [confirmed]:** minimized PC deterministic 1P-4P x 4:3/16:9/16:10/21:9/32:9: 20 races, four captures each
+  including pause. Actual-source synthetic tests cover thresholds, partial stat mods, disable, constructor/race
+  reset, equal-valued new baselines, eight racers, clipping, shared pieces and original group dimensions.
+- **Tested [confirmed]:** Super first block 182/100/250 -> 202.222/110/275 -> 217.389/125/300; decrease restores it.
+  Near-999/over-cap fuel handled; native byte remains 0, refill 0. Plus off retains original stats. Final mixed 3P
+  has exactly two Super feedback events and correct per-player digit hooks, with no reset/feedback spam.
+- **Tested [confirmed]:** both offline own-view players match baseline on 6,701 whole-RAM checksum steps each,
+  byte-identical 28 MiB snapshots and pixel-identical active/pause PNGs. Earlier local 3P RAM snapshot also equal.
+- **Built:** full Windows and Switch targets; Android ARM64 affected-source compilation. Eden v0.1.1 renders 3P;
+  all 48 Switch DKSH files scratch 0. No physical console/phone/iOS deployment or user acceptance.
+- **Not released/accepted.** Keep source local: no push, merge, publication, release asset replacement or replies.
+  User subsequently authorized deploying these fixes to Switch 2 over FTP. Prepare a separate native checkout
+  from the currently installed personal baseline, back up NRO/manifest, preserve data/settings and verify readbacks.
+  Details: docs/notes/riders-plus-local-hud.md; ignored evidence: build/.
+- Before release: manual collection/boost/drift/damage/fall/capsules, consecutive races/gear changes, sound,
+  results/story/other modes, real peers and physical hardware. Matrix captures do not establish full gameplay.
 
-- [Technical handoff](docs/notes/switch2-handoff.md) records architecture, fixes,
-  hardware evidence, release validation, rollback points and unresolved issues.
-- Shared Codex/Claude workflow is explicit in local excluded AGENTS.md. No runtime changes or builds.
-- Alpha release body uses the player announcement with old technical details collapsed.
-- External install/update Claude Artifacts still need republication and verification.
+## Public releases and isolated work
 
-## Switch 2 Alpha 1 public announcement
+- **Released:** stable v0.8.6 (2026-11-16), PC/Switch/Android/Linux setup zips; iOS last v0.8.4. PC one-click texture
+  packs accepted; synchronous Switch pack loading still freezes. Android/iOS packs unplayed.
+- **Released separately:** v0.8.6-switch2-alpha.1 experimental prerelease; scheduler/logging fixes, known audio and
+  stutter issues. docs/notes/switch2-handoff.md is public continuity. Personal Unlimited remains separate and not
+  hardware-accepted. This task changes neither native experiments nor existing deployed builds.
+- External install/update Claude Artifacts still need republication/live verification; original URLs retained
+  in public guides. No publication here. Keep v0.8.2 forever and five newest releases per standing rule.
+- Issue #32 fallback remains on its isolated branch. New reporter comment 2026-11-18: a race completed successfully.
+  No new independent device validation, merge, issue closure or reply here. #30 remains closed.
 
-- **Released:** v0.8.6-switch2-alpha.1 is a separate experimental pre-release;
-  runtime c8c06fdda996 includes scheduler/logging fixes. Known audio/stutter issues remain.
-- **Implemented:** docs/art-only main announcement with exact requested text, unchanged
-  Lanmana banner/signature and approved SHA-1, alpha install/download/bug-report links.
-- Dedicated Switch 2 tabs added to both interactive HTML guides; other platforms and
-  stable versions retained. External Claude Artifact pages are prepared for republication,
-  not verified updated. No runtime merge/build or stable release changes.
-- **Tested:** headless Edge six-tab navigation and click/keyboard checklists pass in
-  both guides; exact announcement/banner and original platform panels verified;
-  mandatory game-data audit passes [confirmed].
-- Other sessions’ dirty sr-main work remains untouched. Announcement uses isolated main
-  checkout. Personal Unlimited build remains private and is not part of this release.
+## Previously queued work (outside this task)
 
-## Thursday 2026-11-19 release (user's plan): Switch texture-pack fix, auto stick-spin, iOS
+1. Thursday 2026-11-19 plan: Switch texture-pack background loading, off-by-default auto stick-spin (#23), iOS zip.
+   Worker design/baseline and machine details remain in canonical handoff and older HISTORY entries.
+2. Separate Android APK repository/disc-picker work needs its own authorized publication flow; no APK distribution
+   from this repository and no private DX redistribution.
+3. Hold-B boost, custom music (#17), right-stick camera, roster expansion, #18 WGP freeze and #31 updater follow-up.
+4. Online lobby paused: room codes/list, punch/relay fallback and catch-up design agreed, not implemented. Next
+   agreed work: room-wide 30 fps transition, host rules/stat mods, then lobby server. Protocol 4 PC-Switch and
+   Switch-Switch 15,000-frame checks were previously confirmed; no live peer run in this task.
 
-1. **Texture packs without freezes (Switch first)**: background loading. Today texpack_load (texpack.c) runs on the
-   game thread inside gx_texture.c's cache miss; on the OLED that froze 65 times (46-114 ms typical, worst 1.3 s,
-   7 s total) in one session with a 1 GB BC7 pack. Plan: on a miss, draw the game's own decoded texture now, queue
-   the pack file to a low-priority worker (read + bcdec + 512 cap), swap the cache entry's picture when ready
-   (gx_frame_retire for the old one). Verify: PC route with `SR_PERFTEST=1` + the pack (no `[hitch]` with
-   "lookups"), then the OLED with the full pack (the user copies it over hekate UMS; log on F: or FTP).
-   Baseline log: build/old/switch-texpack-20261116.log.
-2. **Auto stick-spin option** (user, 2026-11-15: "must be in the NEXT release"; off by default, Gameplay tab; #23;
-   notes/plans-2026-11.md "Auto air refill"). Not started. It missed v0.8.5 and v0.8.6 by the user's choice.
-3. **iOS zip**: notes and guides promised iOS "this Thursday" (last iOS zip v0.8.4). Built on the Mac from the tag.
+## Next review / hardware checks
 
-## Releases
-
-**v0.8.6 released 2026-11-16** (tag e19f0dd; PC, Switch, Android, Linux zips; cold Sandbox PC + Android PASS).
-**HD texture packs in one click**: texpack.c reads DDS (BC1/2/3/7 via bcdec, third_party/bcdec.h), `_arb` names, a
-pack with the other `_m` still matches, Switch caps pack textures at 512 (DDS: smaller stored level; PNG halved);
-launcher Mods page and Switch installer "Add texture pack..." (Windows tar.exe unpacks zip/7z/rar; GXEE8P folder ->
-mods/<name>/textures + mod.ini, on); setup.ps1 copies mods\ to the SD card (robocopy, changed files only).
-- PC: **accepted** (the user played it, "I love it"); tested with a 1 GB BC7 Dolphin pack (install 9 s, 1,074
-  textures; demo races 59.9 fps, 0 slow frames).
-- Switch (user, OLED, mode/clocks not stated, pack copied by hand): **works but freezes** (above); known issue in the
-  release notes and README. The installer's SD copy was not run end to end (robocopy step tested on its own).
-- Android / iOS packs: built, not tested. That pack (made for a mod) matched 145+ of 738 textures seen on the
-  title + two demo races; the rest is expected.
-- **Linux zip replaced** the same evening from 6e9e2e7 (#30: zig's error text into setup.log, zig cache in the tools
-  folder; tested in WSL, not on a Deck; reply posted on #30, waiting for HazeX2's new setup.log).
-**v0.8.5** (tag cf5689a; release deleted when v0.8.6 replaced it): Lv. 5 at 300, drift dash, own screen shape online,
-PNG screenshots (seen working on the Switch: shot_114157.png), launcher notes view, RVZ on Mac/Linux, stat-mod syntax.
-**Releases page rule:** 5 newest + **v0.8.2 forever** (user). **Easy-read guides** (bumped every release): update
-https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN, install https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W (iOS rows
-point to v0.8.4 until Thursday). iOS test devices signed until **2026-11-21**. Unreleased on main: nothing.
-Release lesson: push the tag yourself before `gh release create` (`--verify-tag`); otherwise gh tags remote main.
-
-## Online play (paused for the Thursday items; user chose it 2026-11-15)
-
-Lobby design agreed (docs/ONLINE.md "Lobby design"): room codes, short public list, host's rules on the room card,
-punch + relay fallback, no accounts, Discord; Online tab in the overlay; joining = restart + replay the room's input
-history ("catch-up"). Nothing of the lobby is implemented.
-- [confirmed] PC-Switch and Switch-Switch 2P races (15,000 frames, checksums equal); own screen shape per player
-  (protocol 4) tested PC both ways + Switch-Switch, not played by the user.
-- The game's 30 fps mode is game state [confirmed, PC]: no per-player frame rate.
-- **Next (approved): room-wide 30 fps switch** at an agreed frame; then host rules, stat mods off in sessions, the
-  lobby server (notes/online-research.md step 4).
-
-## Other open items, in priority order
-
-1. **Ready-made Android APK in a SEPARATE public repo** (user, 2026-11-16, "absolute next" before the texture work):
-   (1) CLAUDE.md rule 1 + check_no_game_data allow exactly this (APK only there, never here, never DX); (2) disc
-   picker into main (local branch `android-disc-picker`, 2394600, tested on the S23); (3) optional in-app RVZ
-   converter; (4) create the repo + release with notice; link from README. Standing rule: EVERY release advertises
-   that repo once it exists (v0.8.5/v0.8.6 could not: it doesn't exist yet).
-2. **Hold-B continuous boost** (Riders Plus; user 2026-11-16): holding B keeps boosting, air drained at the rate
-   repeated taps would cost (from the gear's boost air cost and length); High Booster (gear 10) keeps one-press.
-3. **#29** split-screen HUD shows Lv 3 at Lv. 4/5 (the 1P digits patch, game_levels.c, doesn't cover the
-   split-screen ring graphic). Cosmetic; in the v0.8.5/v0.8.6 notes as a known issue.
-4. **#23 Ayn Thor slowdown** (Kiri235): GPU-bound busy frames (Adreno 740, same as our S23) [likely our Android
-   renderer]; plan: reproduce on the S23 (ask before the heavy run), GPU A/B in render_vk.c, test APK to Kiri235.
-5. #30 waits for the reporter; #18 WGP freeze, #12, #24, custom music (#17), right-stick camera, #16.
-6. Roster expansion: design approved 2026-11-14 (docs/notes/roster.md), paused.
-
-## Devices
-
-- OLED (switch-remote, 10.0.0.44): `sonicriders.nro` = v0.8.6 build e19f0dd; previous dev build
-  `sonicriders.dev-4873a73.nro`; user's `sonicriders.user-20261115.nro`; `mods/HDPackTest/` = the full test pack
-  (on in mods.ini: turn it off or remove it for non-texture tests). Clocks handheld 1785 / 614 / 2133, docked
-  1785 / 1152 / 2133. When the SD card is in the PC it is F:.
-- Second Switch (10.0.0.18, MCP `switch-remote-2`): build 4873a73; sys-clk handheld 1224 / 460 / 1600.
-- S23 Ultra: v0.8.1-25 APK, wireless adb 10.0.0.140. Gaming laptop (10.0.0.89): online partner.
-- PC `sr-main/mods/` holds the test pack ("super srdx hd texture pack v2 4k dds", on) and old test mods (off).
-
-## Next hardware-test checklist
-
-Console: overclocked unless the test is about stock clocks (say which). Build from current `main`.
-
-- [ ] Texture packs with background loading: full pack, a race on 3 stages; no `[hitch]` with "lookups"; memory OK.
-- [ ] Switch installer end to end: "Add texture pack..." + BUILD AND INSTALL copies mods/ to the SD card.
-- [ ] Room-wide 30 fps switch: OLED + second console, no desync, both switch together.
-- [ ] Stock clocks with three swapchain images: fps, no new judder.
-
-## Studies and contacts (2026-11-15)
-
-- ShadowRecomp (GPL-3.0, Xbox Shadow recomp) at build/ext/ShadowRecomp: ideas only for our mod manager.
-- BastianWolf80 (YouTube, custom CTR track) invited to Discussions for custom stages.
+- Review local fixes and separate MP digit correction before authorizing a push or merge.
+- Play Super near 200/300/999 with Plus on/off: fuel costs, audible feedback, damage/fall/capsules, then change
+  gear and restart. Capture through the port's own screenshot command.
+- Play 2P/3P/4P wide and original 4:3: pause, finish/results, silhouette, centred messages, timer/map, gauge/digit
+  spacing, speed blur and neighbouring views. Live online own-view still needs a manual check.
+- Physical Switch numbers require docked/handheld and CPU/GPU/MEM clocks. PC/Eden cannot establish hardware speed.
+  Switch 2 deployment is now authorized; playing/accepting the build remains the user's next step.

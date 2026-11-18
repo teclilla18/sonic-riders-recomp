@@ -204,7 +204,7 @@ already unpacked. Download the pack yourself (we don't host packs), then:
 
 ## Status
 
-<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 70% done"></p>
+<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 76% done"></p>
 
 <details>
 <summary><b>What v1.0 means, and what each bar still needs</b></summary>
@@ -220,7 +220,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
 | Online play | 55 % | PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings |
-| Features and polish | 69 % | Custom music, right-stick camera, code mods, new characters from mods (done: the "Riders Plus" set in v0.8.2; one-press in-app updates in v0.8.3, its download step not yet run for real; one-click Dolphin texture packs in v0.8.6, PC accepted, Switch freezes while loading; easier stat mods in v0.8.5) |
+| Features and polish | 70 % | Custom music, right-stick camera, code mods, new characters from mods (local/unreleased: Super Sonic Riders Plus, local split HUD and Lv.4/5 digits, PC tested; physical hardware pending; done: Riders Plus v0.8.2, in-app updates v0.8.3, texture packs v0.8.6 with Switch loading freezes, easier stat mods v0.8.5) |
 
 </details>
 
