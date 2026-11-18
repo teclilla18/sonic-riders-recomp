@@ -6,6 +6,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 
 | Note | Kind | What is in it |
 |---|---|---|
+| [notes/switch2-icon.md](notes/switch2-icon.md) | Native build | Universal game JPEG, NRO icon dependencies, resource identity and ASET verification |
 | [notes/build-and-test.md](notes/build-and-test.md) | Reference | **Quick commands** (configure/build/run for every target, phone runs, RAM tools), Switch / PC builds, setup, releases, GitHub, Eden / Dolphin / test routes |
 | [notes/android.md](notes/android.md) | Reference | Android build, install, test, touch controls, app icon, triggers, phone facts |
 | [notes/switch2.md](notes/switch2.md) | Experimental | Native kaiHEN/libounce target, Phase 1 hardware evidence, sparse guest mapping, build and initial test procedure |

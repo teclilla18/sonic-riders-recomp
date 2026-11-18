@@ -94,16 +94,16 @@ def configure(args, root):
     generated = sorted(gen.glob("code_*.c")) + [gen / "table.c"]
     relative = lambda p: Path(p).relative_to(root).as_posix()
     config = {"root": str(root), "sdk": str(sdk), "devkitpro": str(dkp), "cc": str(cc), "cxx": str(cxx),
-              "icon_source": "launcher/icon_256.png", "icon_jpeg": "build/switch2/icon_256.jpg",
+              "icon_source": "setup/icon_256.jpg",
               "glslc": str(glslc.resolve()), "cpu": cpu, "flags": flags, "dependency_lock": lock,
               "own_sources": [relative(p) for p in runtime if not relative(p).startswith("build/")] + ["runtime/src/platform/switch/audio_switch.c"] +
                   [relative(p) for p in (root / "runtime/include").rglob("*.h")] +
                   [relative(p) for p in (root / "runtime/src").rglob("*.h")] +
                   [relative(p) for p in (root / "runtime/shaders").glob("*") if p.is_file()] +
-                  ["configure.py", "tools/switch2_build.py", "tools/switch2_icon.py", "tools/switch2_icon.ps1",
-                   "launcher/icon_256.png", "config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt"]}
-    from switch2_icon import png_size
-    png_size(root / config["icon_source"])
+                  ["configure.py", "tools/switch2_build.py", "tools/switch2_icon.py",
+                   "setup/icon_256.jpg", "config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt"]}
+    from switch2_icon import jpeg_size
+    jpeg_size((root / config["icon_source"]).read_bytes())
     (OUT / "build-config.json").write_text(json.dumps(config, indent=2) + "\n")
     py = quote(sys.executable)
     with (root / "build.ninja").open("w") as f:
@@ -121,10 +121,8 @@ def configure(args, root):
         n.rule("recomp", py + " tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen", description="RECOMP", restat=True, generator=True, pool="console")
         n.build([relative(p) for p in generated] + ["build/gen/funcs.h"], "recomp", inputs)
         n.rule("version", py + " tools/switch2_build.py version", description="VERSION native Switch2", restat=True)
-        n.rule("icon", py + " tools/switch2_icon.py $in $out", description="ICON native Switch2", restat=True)
-        n.build(config["icon_jpeg"], "icon", config["icon_source"], implicit=["tools/switch2_icon.py", "tools/switch2_icon.ps1"])
         n.build("version_always", "phony")
-        n.build(relative(version), "version", implicit=["version_always", config["icon_jpeg"]])
+        n.build(relative(version), "version", implicit=["version_always", config["icon_source"]])
         shaders = [relative(p) for p in (root / "runtime/shaders").glob("*") if p.is_file()]
         header = "build/switch2/gen/gx_shaders_spv.h"
         n.rule("shaders", py + " tools/embed_shaders.py spv $out " + quote(glslc.resolve()) + " build/switch2/shaders", description="SPIRV $out")
@@ -149,7 +147,7 @@ def configure(args, root):
         elf = "build/switch2/sonicriders-switch2.elf"
         n.build(elf, "link", objects, implicit=["tools/switch2_build.py", "build/switch2/build-config.json"])
         n.rule("nro", py + " tools/switch2_build.py pack", description="NRO native Switch2")
-        n.build("build/switch2/sonicriders-switch2.nro", "nro", elf, implicit=["tools/switch2_build.py", "build/switch2/build-config.json", config["icon_jpeg"]])
+        n.build("build/switch2/sonicriders-switch2.nro", "nro", elf, implicit=["tools/switch2_build.py", "build/switch2/build-config.json", config["icon_source"]])
         n.build("gen_objs", "phony", objects[:len(generated)])
         n.default("build/switch2/sonicriders-switch2.nro")
     print(f"wrote build.ninja (switch2): {len(generated)} generated + {len(runtime)} runtime sources; verified SDK20261117", flush=True)
@@ -163,7 +161,7 @@ def identity(c):
     source_hashes = {p: digest(ROOT / p) for p in c["own_sources"]}
     versions = [subprocess.check_output([c[t], "--version"], text=True).splitlines()[0] for t in ("cc", "glslc")]
     fields = {"sources": source_hashes, "compiler": versions[0], "shader_compiler": versions[1],
-              "icon_jpeg_sha256": digest(ROOT / c["icon_jpeg"]),
+              "icon_jpeg_sha256": digest(ROOT / c["icon_source"]),
               "sdk": c["dependency_lock"]["sdk"]["sha256"], "flags": c["flags"]}
     build_id = hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()[:12]
     return build_id, source_hashes, versions
@@ -216,7 +214,7 @@ def pack():
                 "guest_memory": {"strategy": "svcMapMemory stack", "reservation": 0x20010000, "backed": [0x1c00000, 0x10000]},
                 "elf_sha256": digest(elf),
                 "icon": {"source": c["icon_source"], "source_sha256": digest(ROOT / c["icon_source"]),
-                         "jpeg_sha256": digest(ROOT / c["icon_jpeg"]), "width": 256, "height": 256}}
+                         "jpeg_sha256": digest(ROOT / c["icon_source"]), "width": 256, "height": 256}}
     imgui = ROOT / "build/ext/imgui-1.92.9b"
     manifest["imgui"] = {"version": "1.92.9b", "files_sha256": {p.name: digest(p) for p in imgui.iterdir() if p.is_file()}}
     manifest["build_id"] = build_id
@@ -229,9 +227,9 @@ def pack():
                     "native port (own disc image required)", "0.1.0", str(nacp)], check=True)
     nro = OUT / "sonicriders-switch2.nro"
     subprocess.run([str(executable(dkp / "tools/bin/elf2nro")), str(elf), str(nro), "--nacp=" + str(nacp),
-                    "--icon=" + str(ROOT / c["icon_jpeg"]), "--romfsdir=" + str(romfs)], check=True)
+                    "--icon=" + str(ROOT / c["icon_source"]), "--romfsdir=" + str(romfs)], check=True)
     binary = nro.read_bytes()
-    verify_nro_icon(binary, (ROOT / c["icon_jpeg"]).read_bytes())
+    verify_nro_icon(binary, (ROOT / c["icon_source"]).read_bytes())
     record = binary[:4096].find(b"OUN0")
     if binary[16:20] != b"NRO0" or record < 0 or struct.unpack_from("<II", binary, record + 4) != (2, 1):
         raise SystemExit("switch2: native NRO platform/header verification failed")

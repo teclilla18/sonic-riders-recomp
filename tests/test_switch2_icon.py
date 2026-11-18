@@ -1,8 +1,7 @@
-"""Icon conversion and real NRO asset verification; no disc or game data needed."""
+"""Universal game icon and real NRO asset verification; no disc or game data needed."""
 import importlib.util
 from pathlib import Path
 import struct
-import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,25 +12,15 @@ icon = importlib.util.module_from_spec(spec); spec.loader.exec_module(icon)
 class IconTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory()
-        cls.output = Path(cls.tmp.name) / 'icon.jpg'
-        icon.build(ROOT / 'launcher/icon_256.png', cls.output)
-        cls.jpeg = cls.output.read_bytes()
+        cls.jpeg = (ROOT / 'setup/icon_256.jpg').read_bytes()
 
-    @classmethod
-    def tearDownClass(cls): cls.tmp.cleanup()
-
-    def test_conversion_and_noop_rebuild(self):
+    def test_existing_universal_game_icon(self):
         self.assertEqual(icon.jpeg_size(self.jpeg), (256, 256))
-        stamp = self.output.stat().st_mtime_ns
-        icon.build(ROOT / 'launcher/icon_256.png', self.output)
-        self.assertEqual(self.output.stat().st_mtime_ns, stamp)
 
     def test_rejects_wrong_source_size_and_incomplete_jpeg(self):
-        bad = Path(self.tmp.name) / 'wrong.png'
-        data = bytearray((ROOT / 'launcher/icon_256.png').read_bytes())
-        struct.pack_into('>II', data, 16, 32, 32); bad.write_bytes(data)
-        with self.assertRaises(ValueError): icon.build(bad, Path(self.tmp.name) / 'bad.jpg')
+        data = bytearray(self.jpeg)
+        struct.pack_into('>HH', data, data.index(b'\xff\xc0') + 5, 32, 32)
+        with self.assertRaises(ValueError): icon.jpeg_size(data)
         for value in (b'', b'\xff\xd8\xff\xff\xff\xd9', self.jpeg[:-2]):
             with self.assertRaises(ValueError): icon.jpeg_size(value)
 
