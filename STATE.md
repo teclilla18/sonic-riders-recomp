@@ -9,9 +9,13 @@ user's gaming laptop (online tests). The PC's main checkout folder may be on a l
 
 ## Final Switch 2 continuity
 
+- Canonical local AI_HANDOFF.md is consolidated; historical entries are archived locally.
+- Public native baseline is tag v0.8.6-switch2-alpha.1; personal Unlimited remains
+  separate and not hardware-accepted. Use the handoff worktree table before editing.
+
 - [Technical handoff](docs/notes/switch2-handoff.md) records architecture, fixes,
   hardware evidence, release validation, rollback points and unresolved issues.
-- Shared Codex/Claude workflow is explicit in AGENTS.md. No runtime changes or builds.
+- Shared Codex/Claude workflow is explicit in local excluded AGENTS.md. No runtime changes or builds.
 - Alpha release body uses the player announcement with old technical details collapsed.
 - External install/update Claude Artifacts still need republication and verification.
 

@@ -72,8 +72,8 @@ platform-compatibility checks. Checkpoint `fa2ec57`, build `c8c06fdda996`.
 This fixes a demonstrated blocking path, not every stutter or audio defect.
 
 **Hardware evidence:** the user reported 13 consecutive races without a
-character-selection freeze across earlier scheduler-fix testing, followed by two
-additional races on c8c06fdda996 without that freeze. This is promising regression
+character-selection freeze across scheduler-fix sessions, including the latest two
+races on c8c06fdda996 without that freeze. This is promising regression
 evidence, not proof of permanent elimination. Resolution was 2x; clocks were not
 recorded, so do not invent performance comparisons. Ordinary gameplay and clean
 overlay quit/return to Homebrew Menu were tested.
@@ -92,6 +92,96 @@ overlay quit/return to Homebrew Menu were tested.
 - Earlier FPS build `67341d614683` froze at Player Entry. Interpolation was excluded
   from Alpha 1. Later scheduler fixes do not establish higher-FPS stability. Preserve
   `b381e54`, accepted `f05fd81`/`7d1bc5fcd419`, and validated `64e8316` rollback points.
+
+## Implementation inventory and source map
+
+Read this summary before the older native `docs/notes/switch2.md`: that historical
+note still mentions 9000 frames and the original experimental branch. Current
+Alpha 1 has `SR_SWITCH2_FRAMES=0` and higher FPS excluded.
+
+| Stage | Implemented and verified scope | Evidence / limit |
+|---|---|---|
+| Standalone SR2Diag | Separate staged startup, SD/RomFS/services, counter, worker/TLS/core, HID, audible tone, mapping and Vulkan diagnostic NRO; persistent flushed logs and clean shutdown | Build `48b77e581423`: hardware passed all selected tests, RGB output personally confirmed; process-code alternative skipped automatically, stack map passed |
+| Core integration | Isolated native configure/build target, shared recompilation core and guest devices, native mapping, Vulkan, controllers, audio and shutdown | Initial `12580193cc87` booted/demo raced; input and audio required follow-up |
+| Accepted platform | Merged handheld/controller input, button-to-PAD/SI delivery, audio arithmetic/transport diagnostics, overlay/enhancements and persistent lifecycle logs | `7d1bc5fcd419` / `f05fd81`: user accepted tested gameplay and settings; later stress bugs were still possible |
+| Alpha safety | 2x default, no automatic exit, live resolution controls disabled after overlay lockup | `80f7b92ba6c3` / `64e8316`; resolution defect trigger restricted, underlying recreation cause not established |
+| Stall diagnostics | Independent focused stall snapshots, guest/host wait ownership, scheduler handoff, DVD/IRQ, voice/stream and pump/log timing breadcrumbs | `20e0f1f3fc7c`, `5c449024047a`, `67582dd7f046`, `3e551c8bf7f3`; diagnostics are observations and can perturb timing |
+| Confirmed targeted fixes | Native condition-wait predicate recheck, then bounded asynchronous logging | `4a6ead9bbb02` / `5db73f5`, then `c8c06fdda996` / `fa2ec57` |
+| Distribution | Dedicated Windows GUI/CLI Switch 2 setup, pinned dependencies, local build/SD install, package/audit/Sandbox flavors, manual alpha updates | Published `1df03e0`; no compiled game distributed; other platform installers unchanged |
+
+Native source locations (in the tagged/runtime checkout, not all present on main):
+
+- `runtime/src/platform/switch2/platform_switch2.c`: native initialization, HID,
+  host worker condition waits, services, timing and shutdown.
+- `runtime/src/platform/switch2/audio_switch2.c`: native output transport;
+  shared `runtime/src/ax.c` owns guest mixing/voice diagnostics.
+- `runtime/src/platform/switch2/log_switch2.c` and `log_queue.h`: logger writer,
+  queue and flush barriers; shared `runtime/src/log.c` routes native output.
+- `runtime/src/platform/android/render_vk.c`: shared Vulkan backend with native
+  platform paths. Shared `sched.c`, `di.c`, `os_irq.c`, memory and input/device
+  code provide guest scheduling, DVD completions, IRQ and PAD delivery.
+- `tools/switch2_build.py`, `tools/switch2_install.py`, `configure.py`,
+  `setup/setup.ps1`, `setup/toolchain.json`: native build/install graph and locks.
+- `tools/make_release.py --flavor switch2`, `tools/audit_switch2_release.py`,
+  `tools/sandbox_test.py`: established distribution workflow. Do not invoke a
+  rebuild or Sandbox simply to resume reading; final results already exist.
+
+Input root cause and evidence: a connected No1 entry was not sufficient to select
+the working handheld stream. The accepted reader merges handheld input even with
+No1 connected; raw A maps to GameCube `0x0100` and reaches guest SI INBUF. Preserve
+that behavior instead of replacing it with assumptions about controller IDs.
+Accepted-run audio transport reported 48 kHz stereo PCM16, no output drops or
+delivery errors in 85 summaries; append/release/queued counts balanced. This did
+not prove guest music/announcer health or uniquely attribute improvement to the
+audio arithmetic correction. Don't use transport success to dismiss later dropout.
+
+Dependency baseline: ounce-devkit `20261117`, SDK commit
+`b11c29cba8d476f193bdc78ac98f344c167e541c`, libounce
+`39406be1f25a2f1da3f7dfdaf7a42d2216cda4d0`, OunceVK
+`114e9298fc0e6ba351d68a1b22be7f4072a759f8`. Verify the tagged lock rather than
+upgrading tools. Dusklight `v2.0.3-switch2-1` and Aurora were references for native
+patterns; their game code is not linked. Licenses/notices are retained in the tag.
+
+Regression entry points already exercised: `tools/test_switch2_condition_wait.py`,
+`tools/test_switch2_log_queue.c` and `tools/test_switch2_release.py`. Existing
+native manifest/link/source-freshness checks and original-Switch preprocessing /
+Android syntax checks passed during implementation. The personal FPS branch also
+has render-rate/interpolation/ownership tests; these are not Alpha 1 acceptance.
+
+## Hardware chronology and diagnostic interpretation
+
+The six-race session on 4a6ead9bbb02 included regular Sonic/Blue Star and Super
+Sonic without selection freezes. Music disappeared in race 1; announcer was absent
+later. Stutters varied between races and were not consistently caused by pausing.
+Three races on 67582dd7f046 had no selection freeze: one major hitch preceded loss
+of music and announcer. Two races on 3e551c8bf7f3 had no selection freeze: results/menu
+stuttering cleared after character selection; announcer recovered next race then
+disappeared independently of stuttering. Two further races had no selection freeze,
+temporary stalls/distortion in the first and an otherwise clean second. These
+reported sessions are the 13-race regression evidence across sessions, not a claim
+of one uninterrupted 13-race run. Keep the later c8 observations separate.
+
+Startup evidence on the accepted early build: a warm cache prewarmed 44/44 pipelines
+in about 1 ms, yet frame 240 spent 6736.22 ms saving cache with zero new pipelines
+and about 0.03 ms presentation. Other saves were 103–578 ms; new pipelines could
+still cost 214–260 ms. The save timer includes serialization and file writes, so
+their separate costs remain unresolved. Prewarm-created pipelines mark the cache
+dirty and schedule a save. Preserve caches; do not assume cache deletion is a fix.
+
+## Resume without repeating work
+
+1. Read the excluded canonical handoff for exact current paths, deployed build and
+   log evidence index. Check branch/status before choosing a task.
+2. Keep released Alpha 1, private personal FPS and unrelated main work separate.
+   No unpublished runtime branch is implicitly authorized for pushing.
+3. First pending external step: republish the two HTML guides and verify the live
+   Switch 2 tabs. Personal Unlimited awaits a hardware report, not another rebuild.
+4. If the user requests public native debugging, use a new isolated branch from
+   the published alpha tag; first compare preserved focused reviews, then collect
+   only missing evidence. Audio cause remains unresolved; cache work is lower priority.
+5. Do not replace/repackage the accepted release merely to update these notes.
+   A future runtime candidate needs physical acceptance before release regeneration
+   and final cold validation, following the existing workflow and approval gates.
 
 ## Published release and validation
 

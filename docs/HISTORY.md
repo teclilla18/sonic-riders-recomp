@@ -1639,3 +1639,12 @@ in a collapsed section. Shared agent rules and native architecture/fix/test/rele
 handoff consolidated; no runtime changes, bug investigation or builds. Thirteen-race
 regression evidence is promising, not proof of permanent freeze elimination. External
 Claude Artifact republication remains pending. Release assets/tag/stable stay unchanged.
+
+## 2026-11-18: consolidated Claude Code resume checkpoint
+
+Archived superseded local handoff entries and replaced the canonical handoff with
+current branch/worktree/deployment and evidence indexes. Expanded the public native
+note with implementation inventory, input/audio findings, dependency pins, source
+map, regression chronology, cache measurements and resume gates [confirmed existing
+records]. Audio causes and permanent freeze elimination remain unproven. No runtime
+edits, builds, log deletion, rollout or release changes during this handoff.
