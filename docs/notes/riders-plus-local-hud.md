@@ -99,6 +99,12 @@ history, changelog, source map, address/gear/roster/debug/wide/online notes and 
 
 ## Limits before release
 
+Personal native Switch 2 follow-up: integrated only the five shared fix sources/tests into an isolated checkout
+from the installed personal baseline. Native scheduler/Unlimited regression tests and full pinned-SDK build pass.
+Build `da8da376c5f4`, code checkpoint `791de65`, deployed with matching staged/final NRO/manifest readbacks and
+verified settings/env preservation. Previous pair backed up locally and on SD; saves/ISO/caches untouched.
+Deployment is not physical gameplay validation or acceptance. No source push, merge or publication.
+
 Manual play should confirm audible feedback, natural collection to 999, boost/drift feel, damage/falling/capsules,
 consecutive race/gear changes and every stage/layout (including players finishing at different times). Automated
 tests validate stat/cap paths and selected Metal City routes, not all gameplay or maximum sustainable speeds.

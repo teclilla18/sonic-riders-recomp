@@ -1751,3 +1751,8 @@ original personal/native/public checkouts preserved. Applied only five shared fi
 tests from public local3dfb3f0/3e46743 using clean3-way patches, preserving native/Unlimited code.
 Integrated actual-source gameplay/frame tests pass; native condition-wait and actual interpolation/rate/ownership
 regressions pass. Native build/deployment pending. No physical acceptance, no source push/merge/release/replies.
+- Native follow-up [confirmed build/transfer only]: code checkpoint791de65, buildda8da376c5f4,
+  NRO29,469,225bytes SHA256e00d7d6c49a77bf210081f18543b37b01bcb12aafbdb942ab90bf99b70765fbb.
+  Staged and installed NRO/manifest readbacks match; old pair backed up locally/onSD. Settings/env byte-identical,
+  other data untouched; Unlimited stays enabled. Native wait/interpolation/rate/ownership regressions pass.
+  User may exitFTPandlaunch; physical gameplay/user acceptance pending. No push/merge/release/replies.
