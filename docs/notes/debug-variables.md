@@ -6,6 +6,9 @@ Android/iOS Vulkan compatibility: `SR_VK_FORCE_LEGACY=1` forces traditional rend
 `SR_VK_NODUALSRC=1` tests single-source colour/separate alpha writes. Both are diagnostic only;
 see [vulkan-legacy.md](vulkan-legacy.md) for path selection, cache handling and validation.
 
+`SR_DETCLOCK=1` intentionally bypasses adaptive frame pacing for deterministic captures/replays.
+Leave it off when measuring normal simulation speed or Auto; use `SR_FRAMERATE=1` for Auto.
+
 Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not proven; **[uncertain]** = guess / needs work.
 
 ## Debug variables (SR_*): full list

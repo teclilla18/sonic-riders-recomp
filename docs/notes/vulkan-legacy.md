@@ -68,7 +68,9 @@ Diagnostics (not persisted in settings):
   deterministic 1P/2P attract-demo routes with 1x, bloom 25%, non-neutral grading
   and FSR sharpness 50: dynamic **50.283 / 56.734 fps**, forced legacy
   **49.650 / 56.240 fps**, 1,800 measured steps per scene. Simulation speed equalled
-  FPS in these runs. Single sequential runs do not establish a performance change.
+  FPS in these runs because `SR_DETCLOCK=1` intentionally bypasses adaptive pacing.
+  These are matched-capture diagnostics, not normal Auto benchmarks. Single sequential
+  runs do not establish a performance change.
 - **Tested [confirmed]:** three matching dual-source captures look equivalent;
   fewer than 0.02% of colour channels differ, including the live FPS overlay.
   Forced single-source captures also show solid floors and matching scene/timer;
@@ -80,6 +82,24 @@ Diagnostics (not persisted in settings):
 - **Unproven:** automatic selection and performance on the reporter's Mali-G57;
   real iOS/MoltenVK execution (no Mac SDK/device used); real GPU reset; exhaustive
   alpha/depth overlap cases, all stages and long-session memory pressure.
+
+Separate frame-pacing audit (no pacing source changes): normal Auto (`SR_FRAMERATE=1`,
+**no** `SR_DETCLOCK`), 2x/bloom 25%/grading/FSR 50 on the same S23:
+
+| Path | 1P simulation / rendering | 2P simulation / rendering |
+|---|---|---|
+| Dynamic | 59.95 steps/s / 44.56 fps | 59.94 steps/s / 52.64 fps |
+| Legacy | 59.94 steps/s / 42.93 fps | 59.95 steps/s / 51.76 fps |
+
+Both complete 1,800 measured steps per scene. Normal Auto maintains full speed while
+skipping drawing; GPU frames around 25-26 ms and render waits around 16-20 ms explain
+the lower display rate. No normal Auto regression was reproduced on either path.
+Raw values remain in local perftest JSON. Single sequential runs are not a controlled
+speed comparison.
+The host glue returns -1 for `platform_gpu_frame_ms` on Android, so `[pace] GPU -1`
+means unavailable: use the Vulkan renderer's `[vk] GPU` timestamps. Auto schedules
+from retrace lag; the missing hint is a separate 60/30 hysteresis audit item, not a
+demonstrated cause of this observation.
 
 Reproduce focused checks (no disc needed):
 

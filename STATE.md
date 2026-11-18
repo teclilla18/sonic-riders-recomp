@@ -2,7 +2,7 @@
 
 Read this first, then canonical excluded AI_HANDOFF.md for ownership/deployments.
 This checkpoint is on `codex/issue32-vulkan-legacy`, not main. Preserve other sessions'
-dirty sr-main work and all native/private branches. Never merge private DX into public work.
+dirty sr-main work and other branches. Keep this experiment isolated from main.
 References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 
 ## Issue #32: experimental Vulkan 1.1 compatibility
@@ -24,8 +24,10 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
   exhaustive alpha/depth overlaps, all stages and long-session memory pressure unproven.
 - Prepare standard experimental Android source/setup ZIP only; no generated APK sharing, public
   release, main merge, issue reply or closure authorized. Details: docs/notes/vulkan-legacy.md.
-- User observed slow-motion below 60 fps; benchmarks show simulation speed equals FPS on both
-  paths. Audit frame_pacing.c/Auto separately after #32; no pacing edits in this renderer fix.
+- Separate pacing audit **tested [confirmed]**: matched-capture runs used SR_DETCLOCK, which
+  intentionally bypasses adaptive pacing. Normal Auto at 2x/effects keeps 59.94-59.95 steps/s:
+  dynamic 44.56/52.64 fps, legacy 42.93/51.76 fps (1P/2P). GPU waits reduce rendering, while
+  simulation remains full speed. No normal Auto regression reproduced; no pacing code changed.
 
 ## Switch 2 continuity (preserved)
 
@@ -79,7 +81,7 @@ References: docs/REFERENCE.md; code: docs/MAP.md; evidence: docs/HISTORY.md.
 - Mali reporter: own-disc test setup, automatic legacy selection, boot, complete race, solid
   floors, effects, input/sound, background/resume and logs; keep #32 open.
 - Real Mac/iOS/MoltenVK build/test before integrating/releasing shared renderer changes.
-- Separate pacing audit: simulation speed versus FPS, Auto mode and GPU backpressure.
+- Any further normal-play slowdown needs logs with SR_DETCLOCK off and the selected mode stated.
 - Switch pack worker: three stages/full pack, memory/hitches; installer SD copy end to end.
 - Room-wide 30 fps switch on two consoles; stock-clock swapchain/performance comparison.
 - Device identities/clocks/deployments and local test paths stay in excluded AI_HANDOFF.md.

@@ -1657,3 +1657,9 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Khronos validation found invalid internal ALL_COMMANDS subpass masks; corrected to attachment graphics stages. Corrected legacy/no-dual/no-push race + simulated device recovery and dynamic recovery have zero validation warnings/errors/VUIDs. Legacy background/resume continues rendering [confirmed].
 - Source-extracted helper tests run on Windows and ARM64; Vulkan 1.1 SPIR-V validation and Switch zero-scratch checks pass. Experimental branch only; no public release, main merge, issue reply or closure. Mali and real MoltenVK execution, real GPU reset and exhaustive alpha/depth overlap remain unproven.
 - User observed slow-motion below 60 fps. Frame-pacing audit is a separate follow-up after #32; do not change simulation/pacing as part of the renderer fix. Details: docs/notes/vulkan-legacy.md.
+
+## 2026-11-18: separate S23 Auto pacing audit after #32
+
+- The slow-motion observation came from matched-capture runs with SR_DETCLOCK=1: frame_pacing.c explicitly bypasses adaptive pacing in deterministic mode [confirmed, source]. It did not demonstrate a normal Auto regression.
+- Without deterministic timing, Auto at 2x with bloom25/grading/FSR50 maintains full speed on both paths: dynamic 1P 59.95steps/s at44.56fps,2P59.94at52.64;legacy1P59.94at42.93,2P59.95at51.76. Each scene measured1800steps [confirmed,S23 Adreno740 Vulkan1.3.128]. GPU25-26ms/render waits16-20ms reduce drawing while skipped-draw iterations keep simulation near60.
+- No normal Auto regression reproduced in these routes; no pacing, VI, settings or frame-queue source changed. Leave SR_DETCLOCK off for ordinary gameplay/performance checks. Android platform_gpu_frame_ms is unavailable (-1); actual GPU timings are in the Vulkan log, a separate hint/hysteresis audit item if needed. Not proof for every load/hitch/device.
