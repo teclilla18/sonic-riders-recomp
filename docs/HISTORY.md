@@ -1884,3 +1884,12 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [uncertain] No new physical console launch, SD ejection, disc dumping or child-user acceptance test.
   Native audio/Race Select limitations and #6 loading hang remain unresolved. Latest #31 comment still
   reports old Switch version after updating; no cause/fix inferred and no external reply sent.
+
+### 2026-11-18 — Neutral installation-guide wording
+- [confirmed] User approved the illustrated presentation and clarified that simple language should address
+  adults respectfully. Replaced diminutives and playful headings in both shared guide sources, generated
+  HTML/Markdown and diagram labels; documented the editorial convention in the maintenance note.
+- [confirmed] Screenshots, fonts, CSS, platform filenames/paths/download links and anchors stay unchanged.
+  Guide link/image/privacy/platform checks and offline browser layouts verify the wording revision.
+  No installer/package rebuild, runtime change, device action or new hardware test.
+- Inbox: maintainer reply on #31 now links the guide; no new issue or discussion. No reply sent by this task.

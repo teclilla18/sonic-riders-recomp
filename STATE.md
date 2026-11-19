@@ -1,5 +1,10 @@
 # Released state (2026-11-18)
 
+**Guide wording follow-up:** headings, subheadings, diagram labels and callouts use plain, neutral language
+for an adult audience. The illustrated style and detailed instructions remain. User approved the original
+presentation and requested this tone correction. Screenshot/font/CSS identities, URLs, platform files/paths
+and anchors stay unchanged. Validation uses the guide checker and offline layouts; no installer rerun.
+
 **Illustrated console booklets:** separate Switch Stable and Switch 2 Experimental Alpha HTML/Markdown
 guides preserve Claude’s easy-read styling, colors and offline typography. Ten actual annotated current
 installer captures, 26 labelled diagrams, 17 checkpoints per guide, direct downloads, exact SD trees, safe

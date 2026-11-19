@@ -10,6 +10,10 @@ background, Atkinson Hyperlegible/Lexend typography, original color key, friendl
 steps and checkpoints. Do not turn these pages into technical reference manuals. The older technical
 installation references remain available separately.
 
+Use plain, neutral language for an adult audience. Headings should name the task or outcome, such as
+"Before you start", "Build and install" and "Installation complete". Explain unfamiliar terms directly;
+avoid diminutives, childish metaphors, and praise for completing routine steps. Keep the visual style.
+
 ## Editing and verification
 
 - Edit `tools/console_guide_data.py`; run `python tools/make_console_guides.py` to regenerate both HTML

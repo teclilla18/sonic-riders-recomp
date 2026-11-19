@@ -2,6 +2,7 @@
 
 ### Illustrated installation booklets
 
+- Use clear, neutral headings and callouts for all readers while retaining the illustrated presentation.
 - Separate beginner booklets for Switch Stable and Switch 2 Experimental Alpha, in HTML and Markdown.
 - Retain the Claude-made easy-read guides' colors, typography and friendly numbered presentation.
 - Add actual annotated current-installer captures, labelled console/folder illustrations, checkpoints,

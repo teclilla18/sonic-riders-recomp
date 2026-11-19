@@ -12,31 +12,31 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 **Please read first:** Alpha 2 can develop severe, lasting audio distortion in Race Select, sometimes after a freeze. Switching Unlimited off or leaving the menu did not fix the reported session. This is unresolved. If you want a trouble-free first homebrew project, wait for a more mature native release.
 
-## Your path to the starting line
+## Installation steps
 
-1. [Your little starting checklist](#ready)
-2. [Make your own game file](#disc)
-3. [Pick the right download](#download)
-4. [Unpack the whole ZIP](#extract)
+1. [Before you start](#ready)
+2. [Prepare your game image](#disc)
+3. [Download the correct setup package](#download)
+4. [Extract the ZIP file](#extract)
 5. [Connect the SD card](#card)
 6. [Open the installer](#open)
-7. [Tell it where your game file is](#choose-disc)
-8. [Tell it where the SD card is](#choose-card)
-9. [A few choices before you build](#options)
-10. [Press the big button and wait](#build)
-11. [Meet Open Output Folder](#output)
-12. [Copy by hand, if you chose PC-only](#manual)
-13. [Check the finished SD card](#folders)
-14. [Unplug the card safely](#eject)
-15. [Let’s open Sonic Riders](#launch)
-16. [Check the version, then enjoy](#play)
+7. [Select your game image](#choose-disc)
+8. [Select the SD card](#choose-card)
+9. [Configure installation options](#options)
+10. [Build and install](#build)
+11. [Open the output folder](#output)
+12. [Copy the files manually](#manual)
+13. [Verify the SD card folder structure](#folders)
+14. [Safely eject the SD card](#eject)
+15. [Launch Sonic Riders](#launch)
+16. [Verify the installed version](#play)
 17. [Update without losing your progress](#update)
 
 [Help](#help) · [Report a bug](#report)
 
 <a id="ready"></a>
 
-## 01. Your little starting checklist
+## 01. Before you start
 
 ![Illustration: Nintendo Switch 2, Windows computer, prepared SD card, card reader, internet and your own game disc.](images/installation/switch2-ready.svg)
 
@@ -58,7 +58,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="disc"></a>
 
-## 02. Make your own game file
+## 02. Prepare your game image
 
 ![Illustration: your own USA GameCube disc becomes a full ISO file on your computer; the installer checks it.](images/installation/switch2-disc.svg)
 
@@ -79,7 +79,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="download"></a>
 
-## 03. Pick the right download
+## 03. Download the correct setup package
 
 ![Illustration of the GitHub download choices: select SonicRiders-Switch2-Setup-Alpha2.zip under Assets, not Source code.](images/installation/switch2-release.svg)
 
@@ -99,7 +99,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="extract"></a>
 
-## 04. Unpack the whole ZIP
+## 04. Extract the ZIP file
 
 ![Illustration: right-click the downloaded ZIP, choose Extract All, then open the normal extracted folder.](images/installation/switch2-extract.svg)
 
@@ -107,7 +107,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 1. Open **File Explorer**. It is the yellow folder app on the Windows taskbar, at the bottom of the screen.
 2. Click **Downloads** in the left column. Find `SonicRiders-Switch2-Setup-Alpha2.zip`. If you chose a different download location, open that folder instead.
-3. Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP is a packed box of files. Extracting opens the box and puts all its files in a normal folder.
+3. Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP stores several files in one file. Extracting restores those files to a normal folder.
 4. In the extraction window, choose a short place you can find again, such as `C:\SonicRidersAlpha`. Use English letters and numbers in the path. Spaces work, but accented characters in the path can stop the tools.
 5. Click **Extract**. Wait until it finishes. Keep all the extracted files together.
 6. Open the extracted folder. Open `SonicRiders-Switch2-Alpha2` if there is one more folder inside. Stop when you can see `Install Sonic Riders (Switch2).exe`, `setup`, and `tools` together.
@@ -145,7 +145,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 1. Go back to the normal folder you extracted on your computer.
 2. Double-click **`Install Sonic Riders (Switch2).exe`**. Double-click means press the left mouse button twice quickly.
-3. Windows may hide the `.exe` ending. In that case, look for the same name with **Application** in the Type column. Do not open the command-line BAT file for this picture-booklet route.
+3. Windows may hide the `.exe` ending. In that case, look for the same name with **Application** in the Type column. Do not open the command-line BAT file for this illustrated guide.
 4. Check the installer window. It should identify **Switch 2 Alpha installer**.
 5. If Windows blocks the program, first check that the ZIP came from the exact project release linked above. This installer is unsigned. If you cannot verify the download, stop and ask someone you trust to help. Do not turn off Windows security.
 
@@ -155,7 +155,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="choose-disc"></a>
 
-## 07. Tell it where your game file is
+## 07. Select your game image
 
 ![Actual installer detail: Select disc button and the place where the selected game filename appears.](images/installation/switch2-select-disc.png)
 
@@ -170,7 +170,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="choose-card"></a>
 
-## 08. Tell it where the SD card is
+## 08. Select the SD card
 
 ![Actual installer detail: SD dropdown, Refresh and Other buttons. The copy-disc checkbox appears after selecting a destination.](images/installation/switch2-select-card.png)
 
@@ -189,7 +189,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="options"></a>
 
-## 09. A few choices before you build
+## 09. Configure installation options
 
 ![Actual installer detail: shader compiler license and universal game icon.](images/installation/switch2-options.png)
 
@@ -202,11 +202,11 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 > Fresh installs use 2x internal resolution, normal 60 FPS and no automatic exit timer. Leave the default settings alone for the first launch. Unlimited rendering is experimental. Changing resolution while the game is running is disabled in this alpha.
 
-- [ ] **Checkpoint:** Your required choices are complete. Optional extras can wait.
+- [ ] **Checkpoint:** The required options are selected. Optional extras are not needed for the first installation.
 
 <a id="build"></a>
 
-## 10. Press the big button and wait
+## 10. Build and install
 
 ![Illustration: checks, tools, build and copy lead to Done; a failed build leads to setup.log.](images/installation/switch2-build.svg)
 
@@ -224,7 +224,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="output"></a>
 
-## 11. Meet Open Output Folder
+## 11. Open the output folder
 
 ![Actual completed installer screenshot: Done, local output path and Open Output Folder highlighted; build log hidden for privacy.](images/installation/switch2-completion.png)
 
@@ -233,7 +233,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 1. After success, click **Open Output Folder** in the bottom action bar. The button stays there when you resize the window.
 2. File Explorer opens a folder **on your computer**: `build/switch2/sd/switch/sonicriders-switch2/`. It opens this local folder even if you already disconnected the SD card.
 3. Look for `sonicriders-switch2.nro`, `build-info.json`, `env.txt`, and `settings.ini`. The `.nro` is the console app. The JSON file identifies the matching build. The two text files hold startup defaults and settings.
-4. If the installer already copied to the correct SD card and reported success, continue to **Check the finished SD card**. Opening this folder does not copy anything by itself.
+4. If the installer already copied to the correct SD card and reported success, continue to **Verify the SD card folder structure**. Opening this folder does not copy anything by itself.
 
 > The local output folder is not your SD card. If you chose to keep the build on the PC, you still need the next page.
 
@@ -241,7 +241,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="manual"></a>
 
-## 12. Copy by hand, if you chose PC-only
+## 12. Copy the files manually
 
 ![Illustration: copy the console app and full game image into /switch/sonicriders-switch2/, not the whole Windows installer folder.](images/installation/switch2-copy.svg)
 
@@ -261,7 +261,7 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 <a id="folders"></a>
 
-## 13. Check the finished SD card
+## 13. Verify the SD card folder structure
 
 ![Illustrated correct SD tree for Nintendo Switch 2, plus a crossed-out extra nested switch folder.](images/installation/switch2-folders.svg)
 
@@ -300,7 +300,7 @@ SD card (top folder)
 
 <a id="eject"></a>
 
-## 14. Unplug the card safely
+## 14. Safely eject the SD card
 
 ![Illustration: completed file copy, Eject, Safe to remove, then reinsert the card in the powered-off console.](images/installation/switch2-eject.svg)
 
@@ -318,7 +318,7 @@ SD card (top folder)
 
 <a id="launch"></a>
 
-## 15. Let’s open Sonic Riders
+## 15. Launch Sonic Riders
 
 ![Illustration, not console capture: hold R over a native Switch 2 game, choose Sonic Riders in Homebrew Menu, then reach the title screen.](images/installation/switch2-launch.svg)
 
@@ -337,7 +337,7 @@ SD card (top folder)
 
 <a id="play"></a>
 
-## 16. Check the version, then enjoy
+## 16. Verify the installed version
 
 ![Illustration: hold Minus, open About to check the version, and use Quit Game for a normal exit.](images/installation/switch2-play.svg)
 
@@ -443,7 +443,7 @@ Compare the new local NRO with the file in `/switch/sonicriders-switch2/`. Make 
 
 <a id="report"></a>
 
-## Help us help you
+## Report a problem
 
 ![Illustration: a useful report includes steps and cleaned log copies.](images/installation/switch2-report.svg)
 
@@ -455,7 +455,7 @@ Compare the new local NRO with the file in `/switch/sonicriders-switch2/`. Make 
 6. Add the error text and the cleaned log copies. Say what you expected, what happened, and whether you can make it happen again. A cropped photo of the error can help; hide private details.
 7. Never attach your ISO/RVZ, NRO, saves, console keys, passwords, generated code or game assets. Those are not needed for a useful public report.
 
-### A little report you can copy
+### Bug report template
 
 ```text
 Platform: Nintendo Switch 2

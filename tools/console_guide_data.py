@@ -34,7 +34,7 @@ def guide(native=False):
     ready = ('A compatible **native homebrew** setup. Native means made for Switch 2. It must already open the native Homebrew Menu.' if native else
              '**Atmosphère custom firmware** and **Homebrew Menu**, already working. Custom firmware lets your console run community-made apps.')
     intro = ('This is an early test version. Bugs can interrupt play. Read the audio warning below before you begin.' if native else
-             'Let’s put Sonic Riders on your console. Take one small step at a time. You do not need to write any code.')
+             'Follow these steps to install Sonic Riders on your console. No coding is required.')
     prerequisites = [
         f'Check the console’s name. This booklet is for **{platform}**. ' +
         ('If your console is an original Switch, Switch Lite, or Switch OLED, use the other booklet.' if native else 'Switch, Switch Lite, and Switch OLED use this stable package. If the console says Switch 2, use the other booklet.'),
@@ -48,11 +48,11 @@ def guide(native=False):
     ]
     if native:
         prerequisites.insert(3, 'The recorded console test used **firmware 23.0.1, kaiHEN 20261117.1 through Seedsow, and OunceShell**. This is one tested setup, not a promise for every console. The [Seedsow project’s setup instructions](https://github.com/Malev0/seedsow-fs-kaihen#setup-once) describe that entry route and its extra requirements. Do not update firmware just to match these numbers. Check those projects’ current compatibility instructions.')
-    chapters = [chapter('ready','Your little starting checklist',prerequisites,'ready',
+    chapters = [chapter('ready','Before you start',prerequisites,'ready',
         f'Illustration: {platform}, Windows computer, prepared SD card, card reader, internet and your own game disc.',
         'You have a working homebrew menu, a Windows computer, free space, and your own game image.',tone='old',
         note='A homebrew menu is a list of community-made apps. If you cannot open it yet, finish the linked homebrew setup first. Do not format a card that already has your files on it.'),
-      chapter('disc','Make your own game file',[
+      chapter('disc','Prepare your game image',[
         'Find your own **USA GameCube Sonic Riders** disc. This is the original Sonic Riders, not Sonic Riders: Zero Gravity.',
         'A **disc image** is one file holding a copy of a disc. A full image usually ends in `.iso`. Copying a disc to this file is called **dumping**.',
         f'If you need to dump it, open the [illustrated Wii dumping walkthrough]({WII}). It uses **CleanRip**, a disc-copying homebrew app. Follow its **GameCube** section. You need a Wii that can read GameCube discs and a working Homebrew Channel. The Wii mini, ordinary Wii Family Edition, and Wii U’s Wii mode cannot read these discs.',
@@ -63,7 +63,7 @@ def guide(native=False):
       'Your own full game image is on the computer. You know where you saved it.',tone='old',
       note='The installer contains no game. Use your own disc and follow the rules where you live. We do not provide game downloads.',
       extra='**For helpers:** accepted disc ID `GXEE8P`, revision `0`; full ISO size `1,459,978,240 bytes`; SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`. The installer checks this fingerprint automatically. A filename alone does not prove that a dump is supported.'),
-      chapter('download','Pick the right download',[
+      chapter('download','Download the correct setup package',[
         f'Open the [{platform} release page]({release}). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.',
         f'Check the heading. This page should say **{("Switch 2 Alpha 2" if native else "v0.8.7")}**. ' + ('The **Pre-release** label is expected. Alpha means it is still being tested.' if native else 'This is the stable release for this booklet.'),
         'Scroll down to **Assets**. Assets means the downloadable files. If the list is folded up, click **Assets** to open it.',
@@ -72,10 +72,10 @@ def guide(native=False):
       ],'release',f'Illustration of the GitHub download choices: select {archive} under Assets, not Source code.',
       f'The downloaded filename is exactly `{archive}`.',
       note=('Keep this alpha package separate from stable downloads. Its updates are manual.' if native else 'A PC, Android, or Linux setup ZIP will not install the Switch version. The separate Switch 2 ZIP is for a different console.')),
-      chapter('extract','Unpack the whole ZIP',[
+      chapter('extract','Extract the ZIP file',[
         'Open **File Explorer**. It is the yellow folder app on the Windows taskbar, at the bottom of the screen.',
         f'Click **Downloads** in the left column. Find `{archive}`. If you chose a different download location, open that folder instead.',
-        'Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP is a packed box of files. Extracting opens the box and puts all its files in a normal folder.',
+        'Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP stores several files in one file. Extracting restores those files to a normal folder.',
         f'In the extraction window, choose a short place you can find again, such as `{local}`. Use English letters and numbers in the path. Spaces work, but accented characters in the path can stop the tools.',
         'Click **Extract**. Wait until it finishes. Keep all the extracted files together.',
         f'Open the extracted folder. Open `{extracted}` if there is one more folder inside. Stop when you can see `{exe}`, `setup`, and `tools` together.'
@@ -95,20 +95,20 @@ def guide(native=False):
       chapter('open','Open the installer',[
         'Go back to the normal folder you extracted on your computer.',
         f'Double-click **`{exe}`**. Double-click means press the left mouse button twice quickly.',
-        'Windows may hide the `.exe` ending. In that case, look for the same name with **Application** in the Type column. Do not open the command-line BAT file for this picture-booklet route.',
+        'Windows may hide the `.exe` ending. In that case, look for the same name with **Application** in the Type column. Do not open the command-line BAT file for this illustrated guide.',
         f'Check the installer window. It should identify **{("Switch 2 Alpha installer" if native else "Switch installer")}**.',
         'If Windows blocks the program, first check that the ZIP came from the exact project release linked above. This installer is unsigned. If you cannot verify the download, stop and ask someone you trust to help. Do not turn off Windows security.'
       ],'installer',f'Actual published {platform} installer. Numbered markers identify Select disc, SD card choices, optional settings and Build and Install.',
       f'The {platform} installer is open. You are still on the computer.',
       note='The colorful picture across the top is part of the real installer. Your window may be a different size. You can make it larger by clicking the square at the top right.'),
-      chapter('choose-disc','Tell it where your game file is',[
+      chapter('choose-disc','Select your game image',[
         'Click the pink-marked **Select disc…** button shown in the picture.',
         'In the file window, open the folder where you saved your own game dump. Single-click the `.iso`, `.gcm`, `.rvz`, or `.wia` file.',
         'Click **Open**. This selects the file for the installer. You do not need to double-click or mount an ISO in Windows.',
         'Look below **Select disc…**. Your selected file’s name should now appear. The installer performs the full game checks when you start the build.'
       ],'select-disc','Actual installer detail: Select disc button and the place where the selected game filename appears.',
       'The installer shows the game image you chose. It no longer says “No disc image selected”.'),
-      chapter('choose-card','Tell it where the SD card is',[
+      chapter('choose-card','Select the SD card',[
         'Find **2. SD CARD** in the installer.',
         'Click **Refresh** if you inserted the card after opening the installer.',
         'Click the small downward arrow on the SD card box. Choose your card if it is listed.',
@@ -135,11 +135,11 @@ def guide(native=False):
             'Leave **4. TEXTURE PACKS (OPTIONAL)** alone for the first test. Texture packs replace how the game looks. They are not needed to play.',
             'Later, **Add texture pack…** accepts your downloaded ZIP, 7z, or RAR pack. **Add a pack folder…** accepts an unpacked folder. Read the [texture pack instructions](https://github.com/teclilla18/sonic-riders-recomp#hd-texture-packs-pc-and-switch) first. Large packs need extra SD space and can pause the game when a new texture loads.'
         ]
-        option_note='The first-install route needs only your game image, the right SD card, and Copy the disc image too. Optional pictures, HOME icons and texture packs can wait.'
-    chapters += [chapter('options','A few choices before you build',options,'options',
+        option_note='The first installation needs your game image, the correct SD card, and Copy the disc image too. Custom pictures, HOME icons and texture packs are optional.'
+    chapters += [chapter('options','Configure installation options',options,'options',
         'Actual installer detail: '+('shader compiler license and universal game icon.' if native else 'optional custom picture, HOME-screen icon and texture-pack buttons.'),
-        'Your required choices are complete. Optional extras can wait.',note=option_note),
-      chapter('build','Press the big button and wait',[
+        'The required options are selected. Optional extras are not needed for the first installation.',note=option_note),
+      chapter('build','Build and install',[
         'Click **BUILD AND INSTALL** at the bottom right. If it is dimmed, read the message at the bottom. It tells you which required choice is missing.',
         'Leave the installer open. It checks your image, downloads its tools, and builds the program from your own disc. **Build** means make the program that your console can run.',
         'Watch the progress messages. Some steps take several minutes. A changing log is a sign that it is working. Keep the internet connected and the SD card plugged in.',
@@ -148,15 +148,15 @@ def guide(native=False):
       ],'build','Illustration: checks, tools, build and copy lead to Done; a failed build leads to setup.log.',
       'The installer says the installation completed. There is no failure message.',
       note='You do not need to install Python, Visual Studio, devkitPro or another development kit yourself. The installer fetches its own checked tools.'),
-      chapter('output','Meet Open Output Folder',[
+      chapter('output','Open the output folder',[
         'After success, click **Open Output Folder** in the bottom action bar. The button stays there when you resize the window.',
         f'File Explorer opens a folder **on your computer**: `{output}/`. It opens this local folder even if you already disconnected the SD card.',
         ('Look for `sonicriders-switch2.nro`, `build-info.json`, `env.txt`, and `settings.ini`. The `.nro` is the console app. The JSON file identifies the matching build. The two text files hold startup defaults and settings.' if native else 'Look for `sonicriders.nro`. An `.nro` is a homebrew app that your console can launch.'),
-        'If the installer already copied to the correct SD card and reported success, continue to **Check the finished SD card**. Opening this folder does not copy anything by itself.'
+        'If the installer already copied to the correct SD card and reported success, continue to **Verify the SD card folder structure**. Opening this folder does not copy anything by itself.'
       ],'completion','Actual completed installer screenshot: Done, local output path and Open Output Folder highlighted; build log hidden for privacy.',
       ('The local folder contains the native NRO and its matching build-info.json.' if native else 'The local folder contains sonicriders.nro.'),
       note='The local output folder is not your SD card. If you chose to keep the build on the PC, you still need the next page.'),
-      chapter('manual','Copy by hand, if you chose PC-only',[
+      chapter('manual','Copy the files manually',[
         'Use this page only if the installer did not copy to your SD card. Keep the installer’s successful output folder open.',
         'Open a second File Explorer window. Open **This PC**, then your SD card.',
         f'Open the card’s `switch` folder. If `{app}` is missing inside it, right-click an empty space, choose **New → Folder**, and name it exactly `{app}`.',
@@ -167,7 +167,7 @@ def guide(native=False):
       ],'copy',f'Illustration: copy the console app and full game image into {sdpath}, not the whole Windows installer folder.',
       f'The app and your full disc image sit together inside `{sdpath}`.',tone='sd',
       note=('For an existing install, copy only the new NRO and matching build-info.json. Keep the SD card’s own env.txt and settings.ini. The SD-ready folder does not include your disc image.' if native else 'Do not copy the Windows EXE, the ZIP, the tools folder, or the whole build folder to the SD card. If adding texture packs later, follow the separate mod instructions.')),
-      chapter('folders','Check the finished SD card',[
+      chapter('folders','Verify the SD card folder structure',[
         f'On the card, open `switch`, then `{app}`. Compare it with the picture below.',
         f'Check the exact app name: **`{app}.nro`**. Do not rename another platform’s app to this name.',
         'Check that your own full `.iso` or `.gcm` is in the **same folder** as the NRO. The example uses `SonicRiders.iso`; the installer keeps your ISO’s original name.',
@@ -175,7 +175,7 @@ def guide(native=False):
         'Leave your other homebrew folders alone. This picture shows only the part that matters to Sonic Riders.'
       ],'folders',f'Illustrated correct SD tree for {platform}, plus a crossed-out extra nested switch folder.',
       f'The path is exactly `{sdpath}{app}.nro`, with the full image beside it.',tone='sd'),
-      chapter('eject','Unplug the card safely',[
+      chapter('eject','Safely eject the SD card',[
         'Wait for all copy windows to finish. Close any files or Explorer windows using the card.',
         'If the installer has your SD card selected, click **Eject SD card**. Wait for **Safe to remove the SD card now.**',
         'Or use Windows: click the small **up arrow** near the clock at the bottom right. Right-click **Safely Remove Hardware and Eject Media**. Choose **Eject** for your card or reader.',
@@ -184,7 +184,7 @@ def guide(native=False):
       ],'eject','Illustration: completed file copy, Eject, Safe to remove, then reinsert the card in the powered-off console.',
       'The card is back in the console after a safe eject.',tone='sd',
       note=f'[Microsoft’s illustrated safe-removal help]({EJECT_HELP}). ' + ('If you used a native file-transfer app instead, finish its transfer and disconnect using that app’s instructions.' if native else 'If you used hekate’s USB storage instead, eject in Windows before ending USB storage in hekate and booting your usual custom firmware.')),
-      chapter('launch','Let’s open Sonic Riders',[
+      chapter('launch','Launch Sonic Riders',[
         ('Start your already-configured **native Switch 2** homebrew environment.' if native else 'Start the console in your already-configured **Atmosphère** environment.'),
         ('On HOME, highlight a **native Switch 2 game** that your loader supports. Hold the controller’s **R shoulder button** while opening it. Keep holding R until the native Homebrew Menu opens.' if native else 'On HOME, highlight an installed game you can launch. Hold the controller’s **R shoulder button** while opening the game. Keep holding R until Homebrew Menu opens. If it asks for a user, keep R held while choosing one.'),
         ('Follow the current loader instructions if the first launch still opens the game. kaiHEN’s instructions say the second launch and later open hbmenu. Close the native game normally and repeat the hold-R launch when instructed.' if native else 'Use this game-launch route, called **full-memory mode** or **title override**. Opening Homebrew Menu through **Album** gives less memory and is not the route for this game.'),
@@ -194,7 +194,7 @@ def guide(native=False):
       ],'launch',f'Illustration, not console capture: hold R over {("a native Switch 2 game" if native else "an installed game")}, choose Sonic Riders in Homebrew Menu, then reach the title screen.',
       'Sonic Riders reaches its title screen and menu. A successful PC build alone is not this checkpoint.',
       note=('This alpha has no native HOME-screen forwarder. The loader determines how hbmenu opens; the native-game hold-R route is the one recorded in the project’s console testing.' if native else 'The R button is the small right shoulder button, not ZR and not the right stick. A separate HOME-screen icon is optional and is outside this first-install route.')),
-      chapter('play','Check the version, then enjoy',[
+      chapter('play','Verify the installed version',[
         'In the game, hold **Minus (−)** for about half a second. This opens the port’s settings menu.',
         f'Open **About**. Check the version/build information against **{version}**. If an old version is still shown, follow **Update without losing your progress** below.',
         ('Keep normal **60 FPS** selected for a first test. **Unlimited rendering** is experimental. The number 60 is a target, not a guarantee for every scene or setup.' if native else 'For a first test, keep the normal settings. Stock-clock consoles can run races at 30 FPS. This booklet does not require overclocking.'),
