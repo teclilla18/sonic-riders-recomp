@@ -1893,3 +1893,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   Guide link/image/privacy/platform checks and offline browser layouts verify the wording revision.
   No installer/package rebuild, runtime change, device action or new hardware test.
 - Inbox: maintainer reply on #31 now links the guide; no new issue or discussion. No reply sent by this task.
+
+## 2026-11-19: 32-bit Android build (armeabi-v7a) for #33
+- Request (#33, Redmi A3: 64-bit CPU, 32-bit-only Android). Added the armeabi-v7a ABI to configure/android_build
+  and an automatic ABI choice in the setup (asks the phone; remembered for unplugged updates).
+- Fixes for 32-bit: `VK_NULL_HANDLE` instead of `NULL` for 3 Vulkan handle arguments (compile errors), ARM32
+  crash registers, `[hitch]` 64-bit frame counter printed with `%u` (garbage later fields on 32-bit).
+- [confirmed] S23 Ultra running the 32-bit APK natively (A710/A510 AArch32): full perftest, 1P 59.95 steps/s
+  46.9 fps, 2P 59.96 steps/s 53.9 fps, clean shutdown; log-reader found no errors. Phone restored to v0.8.7
+  (APK and caches backed up and put back, saves untouched).
+- [confirmed] The API 30 emulator's ARM translator crashes on this library (Thumb, -marm and emulated TLS alike);
+  a dev-only 32-bit x86 build ran both perftest scenes there, so the crash is the translator's [likely].
+- [uncertain] Real 32-bit-only phone, PowerVR GE8320 driver and Cortex-A53 speed untested; reporter test next.

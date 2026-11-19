@@ -178,6 +178,11 @@ static void crash_signal(int sig, siginfo_t* si, void* uctx) {
     crash_frame(0, (uintptr_t)uc->uc_mcontext.pc);
     crash_add("[crash] lr:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext.regs[30]);
+#elif defined(__arm__)
+    crash_add("[crash] at:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext.arm_pc);
+    crash_add("[crash] lr:\n");
+    crash_frame(0, (uintptr_t)uc->uc_mcontext.arm_lr);
 #elif defined(__x86_64__) && defined(REG_RIP)
     crash_add("[crash] at:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext.gregs[REG_RIP]);

@@ -11,7 +11,8 @@ shipped: the tool checks your image, recompiles its code locally, builds the Swi
 Parameters (all optional; asked for when missing):
   -Iso PATH          your Sonic Riders (USA) disc image, GXEE8P revision 0 (Redump, 1.4 GB .iso; Dolphin's .rvz / .wia are converted)
   -Target T          switch | pc | both (Switch + PC) | android | all
-  -Abi A             Android: arm64-v8a (phones, default) | x86_64 (the emulator) | both
+  -Abi A             Android: auto (default: asks the connected phone; 32-bit-only phones get armeabi-v7a) |
+                     arm64-v8a (phones) | armeabi-v7a (32-bit phones) | x86_64 (the emulator) | both
   -Install yes|no    Android: install the APK on the phone connected by USB (adb), if there is one
   -AcceptAndroidSdkLicense   Android: you accept the Android SDK License (https://developer.android.com/studio/terms);
                      without it the setup asks (and -Yes stops)
@@ -33,7 +34,7 @@ setup\toolchain.json and checked before use.
 param(
     [string]$Iso,
     [ValidateSet("", "switch", "pc", "both", "android", "all")][string]$Target = "",
-    [ValidateSet("arm64-v8a", "x86_64", "both")][string]$Abi = "arm64-v8a",
+    [ValidateSet("auto", "arm64-v8a", "armeabi-v7a", "x86_64", "both")][string]$Abi = "auto",
     [ValidateSet("", "yes", "no")][string]$Install = "",
     [switch]$AcceptAndroidSdkLicense,
     [string]$Sd,
@@ -560,6 +561,28 @@ if ($doPc) {
 $builtApks = @()
 if ($doAndroid) {
     $keystore = Join-Path $ToolsDir "android\sonicriders-local.keystore"
+    if ($Abi -eq "auto") {
+        # build for the phone that is connected: most phones are 64-bit (arm64-v8a); some run a 32-bit-only
+        # Android (for example Android Go phones), which needs armeabi-v7a. The last choice is kept, so an
+        # update with the phone unplugged builds the same kind again.
+        $abiFile = Join-Path $Root "build\android\abi.txt"
+        $Abi = "arm64-v8a"
+        if (Test-Path $abiFile) { $Abi = ((Get-Content $abiFile -Raw) -as [string]).Trim() }
+        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        $abiDevs = @()
+        if (Test-Path -LiteralPath $adb) { $abiDevs = @(& $adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "\tdevice$" } | ForEach-Object { ($_ -split "\t")[0] }) }
+        $abiLists = @($abiDevs | ForEach-Object { ((& $adb -s $_ shell getprop ro.product.cpu.abilist 2>$null) -join "").Trim() } | Where-Object { $_ } | Select-Object -Unique)
+        $ErrorActionPreference = $old
+        if ($abiLists.Count -eq 1) {
+            $list = $abiLists[0] -split ","
+            if ($list -contains "arm64-v8a") { $Abi = "arm64-v8a" }
+            elseif ($list -contains "armeabi-v7a") { $Abi = "armeabi-v7a" }
+        }
+        if ($Abi -notin @("arm64-v8a", "armeabi-v7a", "x86_64")) { $Abi = "arm64-v8a" }
+        if ($Abi -eq "armeabi-v7a") { Log "This phone runs 32-bit Android: building the 32-bit (armeabi-v7a) version (experimental)." "Yellow" }
+        New-Item -ItemType Directory -Force -Path (Split-Path $abiFile) | Out-Null
+        Set-Content -LiteralPath $abiFile -Value $Abi -Encoding ascii
+    }
     foreach ($a in $(if ($Abi -eq "both") { @("arm64-v8a", "x86_64") } else { @($Abi) })) {
         $andArgs = @("configure.py", "--target", "android", "--android-sdk", $asdk, "--jdk", $jdk, "--sdl-src", $sdlSrc, "--abi", $a, "--keystore", $keystore, "--imgui", $imgui)
         if ($Icon) { $andArgs += @("--icon", $Icon) }  # setup\icon.png unless you picked your own
@@ -650,7 +673,7 @@ if ($builtExe) {
     Log "F11 or Alt+Enter switches fullscreen." "Green"
 }
 if ($builtApks.Count -gt 0) {
-    $phoneApk = $builtApks | Where-Object { $_ -match "arm64-v8a" } | Select-Object -First 1
+    $phoneApk = $builtApks | Where-Object { $_ -match "arm64-v8a|armeabi-v7a" } | Select-Object -First 1
     if (-not $phoneApk) { $phoneApk = $builtApks[0] }
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
     # "adb devices" starts the adb server, which keeps running (and holds the tools folder) after the

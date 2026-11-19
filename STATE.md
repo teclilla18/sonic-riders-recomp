@@ -1,5 +1,10 @@
 # Released state (2026-11-18)
 
+**32-bit Android (#33), branch `claude/android-armv7`, unreleased:** armeabi-v7a build + automatic ABI choice in
+the setup. Tested on the S23 in 32-bit mode (full perftest, 60 steps/s, clean shutdown); not yet on a real
+32-bit-only phone or PowerVR GPU. Next: reporter's Redmi A3 test from an experimental source setup ZIP. Notes:
+docs/notes/android.md "32-bit Android".
+
 **Guide wording follow-up:** headings, subheadings, diagram labels and callouts use plain, neutral language
 for an adult audience. The illustrated style and detailed instructions remain. User approved the original
 presentation and requested this tone correction. Screenshot/font/CSS identities, URLs, platform files/paths

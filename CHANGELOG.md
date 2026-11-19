@@ -1,5 +1,10 @@
 # Changelog
 
+### 32-bit Android phones (experimental, #33)
+
+- Phones that run a 32-bit-only Android (for example Android Go phones) get a 32-bit build: the Android
+  setup asks the connected phone which kind it needs and builds that automatically.
+
 ### Illustrated installation booklets
 
 - Use clear, neutral headings and callouts for all readers while retaining the illustrated presentation.
