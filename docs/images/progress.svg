@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="334" viewBox="0 0 720 334" role="img" aria-label="Road to v1.0: 77% done">
 <title>Road to v1.0: 77% done</title>
 <defs>
-<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1a3f"/><stop offset="1" stop-color="#132c66"/></linearGradient>
-<linearGradient id="fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1e5bff"/><stop offset="0.6" stop-color="#2fb8ff"/><stop offset="1" stop-color="#ffd23f"/></linearGradient>
-<linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1a3f"/><stop offset="1" stop-color="#132c66"/></linearGradient><linearGradient id="fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1e5bff"/><stop offset="0.6" stop-color="#2fb8ff"/><stop offset="1" stop-color="#ffd23f"/></linearGradient><linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <clipPath id="barclip"><rect x="28" y="74" width="664" height="22" rx="11"/></clipPath>
 </defs>
 <rect width="720" height="334" rx="14" fill="url(#bg)"/>

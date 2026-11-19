@@ -1,0 +1,35 @@
+# Keeps the README's progress in step: the top bar (docs/images/progress-bar.svg), the Status card
+# (docs/images/progress.svg), the live badge (docs/progress.json) and the Road to v1.0 table numbers are all
+# drawn by tools/make_progress.py from its AREAS list. Change AREAS, push, and this redraws and commits the rest.
+name: progress
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/make_progress.py
+      - README.md
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: progress
+  cancel-in-progress: false
+jobs:
+  redraw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Redraw the progress pictures and numbers
+        run: python tools/make_progress.py
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet; then echo "progress already up to date"; exit 0; fi
+          python tools/check_no_game_data.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images/progress.svg docs/images/progress-bar.svg docs/progress.json README.md
+          git commit -m "Progress: redraw the Road to v1.0 bar, card and numbers (tools/make_progress.py)"
+          git push

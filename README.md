@@ -2,6 +2,10 @@
   <img src="docs/images/switch2-poster.jpg" width="100%" alt="Sonic Riders Recomp: now on Nintendo Switch 2! Sonic on his Extreme Gear in the sky. Original artwork by Lanmana.">
 </p>
 
+<p align="center">
+  <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 77% done"></a>
+</p>
+
 <h3 align="center">Sonic Riders, running natively. No emulator.<br>One of the first homebrew games playable on Nintendo Switch 2.</h3>
 
 <p align="center">
@@ -24,6 +28,7 @@
 <p align="center">
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><img src="https://img.shields.io/github/v/release/teclilla18/sonic-riders-recomp?label=Release&color=0aa5e8" alt="Latest release"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases"><img src="https://img.shields.io/github/downloads/teclilla18/sonic-riders-recomp/total?label=Downloads&color=teal" alt="Downloads"></a>
+  <a href="#status"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fteclilla18%2Fsonic-riders-recomp%2Fmain%2Fdocs%2Fprogress.json" alt="Road to v1.0 progress"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%202-orange" alt="Nintendo Switch 2: experimental Alpha 2"></a>
   <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
   <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
