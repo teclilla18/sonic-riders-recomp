@@ -17,9 +17,22 @@
 </p>
 
 <p align="center">
+  <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
+  <a href="https://decompbuddy.com/games/sonic-riders-gamecube?install"><img src="https://decompbuddy.com/install-button.svg" alt="Install With Decomp Buddy"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><img src="https://img.shields.io/github/v/release/teclilla18/sonic-riders-recomp?label=Release&color=0aa5e8" alt="Latest release"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases"><img src="https://img.shields.io/github/downloads/teclilla18/sonic-riders-recomp/total?label=Downloads&color=teal" alt="Downloads"></a>
-  <img src="https://img.shields.io/badge/Platform-Switch%202%20Alpha%20%7C%20Switch%20%7C%20PC%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: Switch 2 Alpha, Switch, PC, Android, Linux, iOS">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%202-orange" alt="Nintendo Switch 2: experimental Alpha 2"></a>
+  <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
+  <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/stargazers"><img src="https://img.shields.io/github/stars/teclilla18/sonic-riders-recomp?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
+  <br>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
+  <img src="https://img.shields.io/badge/Focus-Game%20Preservation-pink" alt="Focus: game preservation">
+  <img src="https://img.shields.io/badge/Recompiler-gcrecomp-orange" alt="Recompiler: gcrecomp (this repo)">
+  <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
   <a href="https://ko-fi.com/teclilla18"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
@@ -104,8 +117,7 @@ Updating? Stable versions update with one press of **UPDATE NOW** in the app (th
 | an **iPhone** or **iPad** (built on a Mac) | `SonicRiders-iOS-Setup-<version>.zip` | [Install on iPhone / iPad](docs/INSTALL.md#install-on-iphone--ipad) |
 
 Easy-read guides for every platform: [first install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) ·
-[updating](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN). Or install with
-[Decomp Buddy](https://decompbuddy.com/games/sonic-riders-gamecube?install).
+[updating](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN).
 
 **In short:** extract the zip, double-click `Install Sonic Riders`, pick your disc image, and wait 10-30 minutes
 the first time. **You need** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full `.iso` or Dolphin's
@@ -191,13 +203,6 @@ Known issues: [Issues](../../issues). What changed in each version: [CHANGELOG](
 | [Building from source](docs/BUILDING.md) | For developers |
 | [Contributing](CONTRIBUTING.md) | Help is welcome from players and developers; coding agents can use [CLAUDE.md](CLAUDE.md) |
 
-<p>
-  <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
-  <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/stargazers"><img src="https://img.shields.io/github/stars/teclilla18/sonic-riders-recomp?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
-</p>
-
 ## How it works
 
 The game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of time on your PC
@@ -223,7 +228,6 @@ forks (`third_party/LICENSE-MPL-2.0`).
 ## Credits
 
 - Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request, with the artist's signature preserved.
-- Riders Plus banner: made by the project owner with ChatGPT. Race shots: this port on PC. Charts: our own, from measured PC races.
 - Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the

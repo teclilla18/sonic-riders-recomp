@@ -78,6 +78,10 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
   https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) and the first-time install guide (`docs/install-guide.html`,
   https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W). Bump the versions and zip names inside both, republish each
   to its same URL, and put both links in the release notes; the README's top links to them too.
+- **Release downloads are setup ZIPs only** (user, 2026-11-19): no `.sha256` / `SHA256SUMS` files, pictures or
+  other extras in a release's assets. A checksum, if wanted, goes in the notes' folded test details; pictures go
+  in `docs/images/` and are linked by their raw `main` URL. Notes follow the layout of the current releases:
+  banner, title + one line, Highlights, Download, Already installed?, Known issues, Thanks, folded details, changelog.
 
 ## End of every session
 

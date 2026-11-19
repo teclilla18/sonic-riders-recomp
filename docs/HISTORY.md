@@ -1904,3 +1904,16 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   cycles (Control Center, lock/unlock) recovered picture and sound (user + log); `SR_VK_FORCE_LEGACY=1` race normal
   (user), 58-60 fps; menu Quit Game ran the full shutdown sequence, exit 0.
 - [uncertain] No iPad retested (none reachable; the iPad Pro is excluded). Guides/README iOS lines: PC session.
+## 2026-11-19: front page and release pages cleaned up (Claude, docs only)
+
+- README rewritten around the Switch 2 alpha: new Lanmana "Now on Nintendo Switch 2!" poster on top
+  (`docs/images/switch2-poster.jpg`), a two-line hook and three buttons, all badges together under it, a short
+  Switch 2 box, the new Riders Plus "Break the limits" banner (`docs/images/riders-plus/riders-plus-banner.jpg`),
+  a screenshot gallery, side-by-side original vs port, and one Get it table for every platform and guide. The
+  neon-city banner (unknown artist) and the stale "updates paused" box are gone; long sections fold away.
+- All 8 release pages rewritten to one layout (banner, title + one line, Highlights, Download, Already
+  installed?, Known issues, Thanks, folded details, changelog + compare link). Stale "coming Thursday" lines
+  removed; older pages point at the newest release. The `.sha256` assets of both Switch 2 alphas were deleted
+  (the hashes are in their notes). New rule (user): release downloads are setup ZIPs only (CLAUDE.md).
+- [confirmed] Guard passes with the two new pictures in OWN_ART and the removed banner in PAST_ART. The
+  launcher's "See what's new" drops HTML tags but shows tables as raw text, so v0.8.7's downloads are a list.
