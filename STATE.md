@@ -1,7 +1,8 @@
 # Released state (2026-11-18)
 
 Installer maintenance implemented on isolated public/native branches: responsive layout, full banner, live DPI,
-wrapped logs, consistent completion and Open Output Folder. Initial 176 simulated UI cases passed.
+wrapped logs, consistent completion and Open Output Folder. 176 simulated UI cases and output-button clicks passed.
+Package audit caught stable compiler assertion paths; prefix mapping and deterministic PE builds added.
 Rebuilt-package/cold-install verification and existing-asset replacement are pending; release tags stay fixed.
 See docs/notes/installer-layout.md and excluded AI_HANDOFF.md.
 

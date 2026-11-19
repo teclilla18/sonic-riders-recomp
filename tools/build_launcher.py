@@ -81,8 +81,10 @@ def main():
     windres = os.path.join(a.llvm_mingw, "bin", "x86_64-w64-mingw32-windres.exe")
     subprocess.run([windres, rc, "-O", "coff", "-o", res], check=True)
     srcs.append(res)
-    cmd = [cxx, "-std=c++17", "-O2", "-municode", "-mwindows", "-static", "-s",
+    cmd = [cxx, "-std=c++17", "-O2", "-Wl,--no-insert-timestamp", "-municode", "-mwindows", "-static", "-s",
            "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-DWINVER=0x0A00", "-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS",
+           "-ffile-prefix-map=" + ROOT + "=.", "-ffile-prefix-map=" + ROOT.replace("\\", "/") + "=.",
+           "-ffile-prefix-map=" + im + "=third_party/imgui", "-ffile-prefix-map=" + im.replace("\\", "/") + "=third_party/imgui",
            "-DIMGUI_USE_WCHAR32",  # emoji are above U+FFFF
            "-I", im, "-I", os.path.join(im, "backends")] + srcs + [
            "-o", out, "-ld3d11", "-ldxgi", "-ld3dcompiler", "-ldwmapi", "-lole32", "-lwindowscodecs", "-ld2d1", "-ldwrite",

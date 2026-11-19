@@ -1845,3 +1845,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   coverage; fixture user files unchanged. Final source/package and cold-install validation follows.
 - Existing-release replacement authorized by the user; keep versions, tags, filenames, descriptions and
   unrelated assets. Do not equate simulated DPI checks with physical multi-monitor acceptance.
+
+- Package validation rejected initial stable candidates containing absolute library assertion paths;
+  adopted the native installer compiler prefix maps and reproducible PE timestamps before rebuilding.
+  Failed candidates were never uploaded. Initial cold PC/space-path install passed; final candidates retest.
