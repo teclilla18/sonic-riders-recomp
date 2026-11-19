@@ -7,7 +7,7 @@
 Super Sonic now gets 999 rings, Lv. 4/5 and stronger speed stats. Split-screen HUD placement and level digits
 are improved, and high-ring finishes no longer repeat level-up effects. Windows, Switch, Android and Linux
 packages are in the [latest stable release](https://github.com/teclilla18/sonic-riders-recomp/releases/latest).
-iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4) for now (iOS build requires a different setup which I don't have access to until tomorrow).
+The iPhone / iPad package (`SonicRiders-iOS-Setup-v0.8.7.zip`, built on your Mac) is in the same release.
 
 The [easy-read install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) and
 [update](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) guides cover every platform, including the Switch 2 alpha.
