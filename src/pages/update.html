@@ -1,0 +1,177 @@
+<!-- title="Updating (easy-read guide)" nav="guides" description="Easy-read Riders Plus update guide: one press of UPDATE NOW on v0.8.3 or newer. Saves and settings stay." -->
+<section class="page-hero">
+  <p class="eyebrow">Easy-read guide · updating</p>
+  <h1 class="display slant">Updating</h1>
+  <p class="lead">Pick your device, then your version, and follow only that part. Your saves and settings stay.
+    First time? Use the <a href="install.html">install guide</a>.</p>
+</section>
+
+<div class="wrap easy">
+  <div class="tabs" role="tablist" aria-label="Device" data-tabs="update">
+    <button role="tab" id="u-switch" data-dev="switch" aria-controls="v-switch">Switch</button>
+    <button role="tab" id="u-switch2" data-dev="switch2" aria-controls="v-switch2" class="alpha">Switch 2 (alpha)</button>
+    <button role="tab" id="u-pc" data-dev="pc" aria-controls="v-pc">Windows PC</button>
+    <button role="tab" id="u-android" data-dev="android" aria-controls="v-android">Android</button>
+    <button role="tab" id="u-linux" data-dev="linux" aria-controls="v-linux">Linux / Steam Deck</button>
+    <button role="tab" id="u-ios" data-dev="ios" aria-controls="v-ios">iPhone / iPad</button>
+  </div>
+  <div class="legend"><p><b>Colour key:</b></p><p><span class="k-btn">Pink</span> = a button to press</p><p><span class="k-file">Teal</span> = a file or program</p><p><span class="k-sd">Purple</span> = SD card / hekate</p><p><span class="k-screen">Gold</span> = what you'll see on screen</p></div>
+
+  <!-- SWITCH -->
+  <div id="v-switch" role="tabpanel" aria-labelledby="u-switch">
+    <div class="version-pick" data-versions>
+      <button type="button" data-ver="old"><b>I'm on v0.8.2 or older</b><span>One-time setup, then you're done</span></button>
+      <button type="button" data-ver="new"><b>I'm on v0.8.3 or newer</b><span>One-press update</span></button>
+    </div>
+    <section class="block panel t-old" data-ver-panel="old" hidden>
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file">{{file:switch}}</span> from the <a href="download.html#get-switch">download page</a>.</span></li>
+        <li><span class="txt">Extract it over your old install folder. When asked, choose <span class="k-btn">Replace</span>.</span><span class="detail">A new folder works too.</span></li>
+        <li><span class="txt">Connect your SD card to the PC.</span><span class="detail">How: see <a href="#upd-switch-sd">Connecting the SD card</a> below.</span></li>
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Switch).exe</span>.</span></li>
+        <li><span class="txt">Pick the same disc image → check your SD card is selected → press <span class="k-btn">BUILD AND INSTALL</span>.</span></li>
+        <li><span class="txt">When it says <span class="k-screen">Done</span>, eject the SD card and play.</span><span class="detail">This one time it builds the whole game (a few minutes, up to 30 on a slow PC). Later updates take seconds.</span></li>
+      </ol>
+    </section>
+    <section class="block panel t-install" data-ver-panel="new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Switch).exe</span>.</span></li>
+        <li><span class="txt">When a new version is out, it shows <span class="k-screen">Update available</span> in gold.</span></li>
+        <li><span class="txt">Connect your SD card.</span><span class="detail">How: see <a href="#upd-switch-sd">Connecting the SD card</a> below.</span></li>
+        <li><span class="txt">Press <span class="k-btn">See what's new</span>, then <span class="k-btn">UPDATE NOW</span>.</span><span class="detail">It downloads, restarts, rebuilds and copies to your SD card by itself, usually in under a minute.</span></li>
+        <li><span class="txt">Eject the SD card and play.</span></li>
+      </ol>
+      <aside class="callout"><p><b>SD card not connected yet?</b> No problem. The updater waits for it and carries on as soon as it shows up.</p></aside>
+    </section>
+    <section class="block panel t-sd" id="upd-switch-sd">
+      <h2>Connecting the SD card <span class="tag">no need to take it out</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Restart the Switch into <span class="k-sd">hekate</span>.</span><span class="detail">The way you normally start your custom firmware.</span></li>
+        <li><span class="txt">Go to <span class="k-sd">Tools → USB Tools → SD Card</span>.</span></li>
+        <li><span class="txt">Plug the Switch into the PC with a USB-C cable.</span><span class="detail">The SD card shows up as a drive.</span></li>
+        <li><span class="txt">When the update says <span class="k-screen">Done</span>, press <span class="k-btn">Eject SD card</span> in the installer.</span>
+          <span class="detail">Wait for <span class="k-screen">Safe to remove the SD card now</span>. (On v0.8.3 and older: right-click the drive in Windows and choose Eject.)</span></li>
+        <li><span class="txt">In hekate press <span class="k-btn">Close</span>, then <span class="k-sd">Home → Launch → your Atmosphère entry</span>.</span></li>
+      </ol>
+      <aside class="callout callout-warn"><p><b>Windows offers to scan and fix the drive?</b> Choose <span class="k-btn">Continue without scanning</span>.</p></aside>
+      <aside class="callout callout-good"><p><b>Nothing else to do.</b> Your saves, settings, disc image and HOME-screen icon stay as they are.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>In the game, hold <span class="k-key">−</span> to open the settings menu.</p><p>Look at the version number in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- SWITCH 2 -->
+  <div id="v-switch2" role="tabpanel" aria-labelledby="u-switch2" hidden>
+    <aside class="callout callout-warn"><p><b>Switch 2 alpha updates are manual.</b> They are separate from the original Switch's UPDATE NOW button.
+      Never use an original Switch installer on this console. Quit the game normally before updating, and keep your SD card data.</p></aside>
+    <section class="block panel t-alpha">
+      <h2>Every alpha <span class="tag">by hand</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file">{{file:switch2}}</span> from the <a href="download.html#get-switch2">Switch 2 download</a>.</span>
+          <span class="detail">Always use the Switch 2 alpha release, not the stable "latest release".</span></li>
+        <li><span class="txt">Extract it to a new PC folder and open <span class="k-file">Install Sonic Riders (Switch2).exe</span>.</span></li>
+        <li><span class="txt">Pick the same disc image and your SD card, read the shader compiler license, then press <span class="k-btn">BUILD AND INSTALL</span>.</span>
+          <span class="detail">It replaces only the app and its build information. Saves, settings, caches and env.txt stay.</span></li>
+        <li><span class="txt">Using FTP? Copy the new NRO and <span class="k-file">build-info.json</span> to <span class="k-sd">/switch/sonicriders-switch2/</span>.</span>
+          <span class="detail">Don't overwrite env.txt or settings.ini, and don't delete saves or caches.</span></li>
+        <li><span class="txt">Eject the SD card safely, then start the game and check the version.</span></li>
+      </ol>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>Start the game and check the version in the menu's <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- PC -->
+  <div id="v-pc" role="tabpanel" aria-labelledby="u-pc" hidden>
+    <div class="version-pick" data-versions>
+      <button type="button" data-ver="old"><b>I'm on v0.8.2 or older</b><span>A few presses, one time</span></button>
+      <button type="button" data-ver="new"><b>I'm on v0.8.3 or newer</b><span>One-press update</span></button>
+    </div>
+    <section class="block panel t-old" data-ver-panel="old" hidden>
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Open the Sonic Riders launcher.</span><span class="detail">It shows <span class="k-screen">Update available</span> in gold.</span></li>
+        <li><span class="txt">Press <span class="k-btn">See what's new</span>, then <span class="k-btn">DOWNLOAD AND INSTALL</span>.</span></li>
+        <li><span class="txt">When it says <span class="k-screen">Updated</span>, press <span class="k-btn">RESTART</span>.</span></li>
+        <li><span class="txt">On the Play page, press <span class="k-btn">Rebuild now</span>.</span><span class="detail">This one time it builds the whole game (a few minutes). Later updates take seconds.</span></li>
+        <li><span class="txt">When it's done, press <span class="k-btn">PLAY</span>.</span></li>
+      </ol>
+      <aside class="callout"><p><b>Prefer the zip?</b> Download <span class="k-file">{{file:pc}}</span>, extract it over your old Sonic Riders folder (<span class="k-btn">Replace</span>), and run <span class="k-file">Install Sonic Riders (PC).bat</span> with the same disc image.</p></aside>
+    </section>
+    <section class="block panel t-install" data-ver-panel="new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Open the Sonic Riders launcher.</span></li>
+        <li><span class="txt">When a new version is out, it shows <span class="k-screen">Update available</span> in gold.</span></li>
+        <li><span class="txt">Press <span class="k-btn">See what's new</span>, then <span class="k-btn">UPDATE NOW</span>.</span><span class="detail">It downloads, restarts and rebuilds by itself, usually in under a minute.</span></li>
+        <li><span class="txt">Press <span class="k-btn">PLAY</span>.</span></li>
+      </ol>
+      <aside class="callout callout-good"><p><b>Nothing else to do.</b> Your saves, settings, mods and disc image stay in the same folder.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>In the game, hold <span class="k-key">F1</span> to open the settings menu.</p><p>Look at the version number in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- ANDROID -->
+  <div id="v-android" role="tabpanel" aria-labelledby="u-android" hidden>
+    <div class="version-pick" data-versions>
+      <button type="button" data-ver="old"><b>I'm on v0.8.2 or older</b><span>One-time setup, then you're done</span></button>
+      <button type="button" data-ver="new"><b>I'm on v0.8.3 or newer</b><span>One-press update</span></button>
+    </div>
+    <section class="block panel t-old" data-ver-panel="old" hidden>
+      <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file">{{file:android}}</span> from the <a href="download.html#get-android">download page</a>.</span></li>
+        <li><span class="txt">Extract it over your old install folder. When asked, choose <span class="k-btn">Replace</span>.</span></li>
+        <li><span class="txt">Connect your phone with USB debugging on.</span><span class="detail">Use the same PC as before: Android only accepts an update signed by that PC.</span></li>
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Android).exe</span>.</span></li>
+        <li><span class="txt">Pick the same disc image → press <span class="k-btn">BUILD AND INSTALL</span>.</span></li>
+        <li><span class="txt">When it says <span class="k-screen">Done</span>, open the app on your phone.</span><span class="detail">It installs over the old app and keeps your saves. This one time the build takes a few minutes.</span></li>
+      </ol>
+    </section>
+    <section class="block panel t-install" data-ver-panel="new">
+      <h2>From v0.8.3 on <span class="tag">one press</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Connect your phone and open <span class="k-file">Install Sonic Riders (Android).exe</span>.</span></li>
+        <li><span class="txt">When a new version is out, it shows <span class="k-screen">Update available</span> in gold.</span></li>
+        <li><span class="txt">Press <span class="k-btn">See what's new</span>, then <span class="k-btn">UPDATE NOW</span>.</span><span class="detail">It downloads, restarts, rebuilds and installs on the phone by itself.</span></li>
+        <li><span class="txt">Open the app on your phone.</span></li>
+      </ol>
+    </section>
+    <aside class="callout callout-warn"><p><b>Never uninstall the app to update.</b> Uninstalling deletes your saves.</p></aside>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>In the game, open the settings menu.</p><p>Look at the version number in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- LINUX -->
+  <div id="v-linux" role="tabpanel" aria-labelledby="u-linux" hidden>
+    <section class="block panel t-install">
+      <h2>Every version <span class="tag">no one-press button on Linux yet</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file">{{file:linux}}</span> from the <a href="download.html#get-linux">download page</a>.</span></li>
+        <li><span class="txt">Extract it over your old install folder. When asked, choose <span class="k-btn">Replace</span>.</span><span class="detail">On the Steam Deck, do this in Desktop Mode.</span></li>
+        <li><span class="txt">Run <span class="k-file">Install Sonic Riders (Linux).sh</span> with the same disc image.</span><span class="detail">The first time on v0.8.3 or newer builds the whole game once. After that, only the parts that changed are rebuilt.</span></li>
+        <li><span class="txt">When it says <span class="k-screen">Done</span>, play as usual.</span></li>
+      </ol>
+      <aside class="callout callout-good"><p><b>Nothing else to do.</b> Your saves stay in the same folder, and your Steam shortcut keeps working.</p></aside>
+    </section>
+  </div>
+
+  <!-- iOS -->
+  <div id="v-ios" role="tabpanel" aria-labelledby="u-ios" hidden>
+    <section class="block panel t-install">
+      <h2>Every version <span class="tag">no one-press button on iOS yet</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">On your Mac, download <span class="k-file">{{file:ios}}</span> from the <a href="download.html#get-ios">download page</a>.</span></li>
+        <li><span class="txt">Unzip it into a folder whose path has no spaces.</span><span class="detail">Your home folder works, for example <span class="k-file">~/SonicRiders</span>.</span></li>
+        <li><span class="txt">Open <span class="k-file">Sonic Riders Launcher</span> from the new folder.</span><span class="detail">If macOS blocks it, follow <span class="k-file">START HERE (Mac).html</span> in the same folder.</span></li>
+        <li><span class="txt">On the Build page, pick the same disc image and press <span class="k-btn">BUILD THE APP</span>.</span>
+          <span class="detail">When it says <span class="k-screen">Done</span>, the new SonicRiders.ipa is in <span class="k-file">Desktop/Sonic Riders iOS</span>.</span></li>
+        <li><span class="txt">On the Install page, install it over the old app.</span><span class="detail">With Sideloadly: open SonicRiders.ipa, then Start. From the Mac: Install only (renewing).</span></li>
+      </ol>
+      <aside class="callout callout-warn"><p><b>Never delete the app to update.</b> Deleting it removes your saves and the disc image copied to it.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>Start the game, open the settings menu, and look at the version in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <p class="note-line"><b>Why is there still a short build?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download.
+    The big conversion happens only on the first install; updates only rebuild the parts that changed.</p>
+</div>

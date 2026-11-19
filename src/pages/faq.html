@@ -1,0 +1,100 @@
+<!-- title="FAQ and troubleshooting" nav="faq" description="Answers about Riders Plus (Sonic Riders native port): what you need, which disc image works, Switch 2 alpha, performance, updating, and fixes for common install errors." -->
+<section class="page-hero">
+  <p class="eyebrow">Questions and fixes</p>
+  <h1 class="display slant">FAQ &amp; <span class="accent">help</span></h1>
+  <p class="lead">Short answers first. Can't find yours? Ask in <a href="https://github.com/teclilla18/sonic-riders-recomp/discussions">Discussions</a>
+    or <a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">report a bug</a>.</p>
+</section>
+
+<section class="wrap">
+  <div class="sec-head"><span class="lap">01 <i>/</i> QUESTIONS</span><h2 class="slant">Frequently <span class="accent">asked</span></h2></div>
+  <div class="faq-list">
+    <details class="panel"><summary>What is Riders Plus?</summary><div class="ans">
+      <p>A fan-made native port of Sonic Riders (GameCube, 2006). The game's PowerPC code is translated into C ahead of time
+        (static recompilation) and the GameCube hardware is rebuilt natively, so it runs as a real app on each device. It is not an emulator.</p>
+      <p>Riders Plus is also the name of our optional gameplay rules (999 rings, Lv. 4 and 5); see <a href="riders-plus.html">Riders Plus rules</a>.</p></div></details>
+    <details class="panel"><summary>Is it free? Do I need to buy anything?</summary><div class="ans">
+      <p>The port is free. You need your own copy of Sonic Riders (USA) for GameCube, saved as a disc image. We don't sell, host or send the game.</p></div></details>
+    <details class="panel"><summary>Why can't I just download the game?</summary><div class="ans">
+      <p>The finished game contains SEGA's code and assets, so it can never be shared. The installer builds it on your own computer
+        from your own disc. That is also why you must never share what it builds.</p></div></details>
+    <details class="panel"><summary>Which disc image works?</summary><div class="ans">
+      <p>Sonic Riders for GameCube, <b>USA</b>, revision 0 (game ID <code>GXEE8P</code>): a full <code>.iso</code>/<code>.gcm</code>, or Dolphin's
+        <code>.rvz</code>/<code>.wia</code>. European, Japanese, modified, trimmed, GCZ, CISO and "Remove Junk Data" images don't work.
+        Sonic Riders: Zero Gravity is a different game.</p>
+      <p>To make one from your disc you need a Wii that can read GameCube discs and CleanRip:
+        <a href="https://wii.hacks.guide/dump-games.html#dumping-a-disc-to-sd-usb-cleanrip">illustrated dumping guide</a>.</p></div></details>
+    <details class="panel"><summary>Do I need a GitHub account?</summary><div class="ans">
+      <p>No. Downloading and reading never need one. Only posting a bug report or a discussion does (it's free).</p></div></details>
+    <details class="panel"><summary>Which devices does it run on?</summary><div class="ans">
+      <p>Nintendo Switch (Switch, Lite, OLED, with custom firmware), Nintendo Switch 2 (experimental alpha, native homebrew), Windows 10/11,
+        Android 11+ (64-bit), Linux / Steam Deck (test version) and iPhone / iPad (built on a Mac). See <a href="download.html">Download</a>.</p></div></details>
+    <details class="panel"><summary>What does "experimental alpha" mean for Switch 2?</summary><div class="ans">
+      <p>It is an early test build. It plays races at 2x resolution, but you may see stutter, short freezes, missing music or announcer audio,
+        and slow startup. In Race Select the audio can break up badly and stay that way; this is not fixed yet. It updates by hand,
+        separately from the stable version.</p></div></details>
+    <details class="panel"><summary>How fast does it run?</summary><div class="ans">
+      <p><b>PC:</b> 60 fps on the test PC (RTX 3060), 4 players included. <b>Switch at normal clocks:</b> a steady 30 fps in races;
+        the 60 fps setting reaches 60 in lighter parts. <b>Switch overclocked</b> (CPU 1785 / GPU 1152 / memory 2133 MHz, at your own risk):
+        1–2 players mostly 60 fps. <b>Android:</b> 60 fps on a Galaxy S23 Ultra. <b>iPhone / iPad:</b> 60 fps on an iPhone 17 Pro and recent iPads.</p></div></details>
+    <details class="panel"><summary>How many players?</summary><div class="ans">
+      <p>Up to 4 on one screen on Switch and PC, 2 on one phone. Online races between PC and Switch work on a home network today;
+        internet play with room codes is the next big step on the Road to v1.0.</p></div></details>
+    <details class="panel"><summary>How do I update? Will I lose my saves?</summary><div class="ans">
+      <p>On v0.8.3 or newer, open the installer or launcher and press <span class="k-btn">UPDATE NOW</span>. Saves, settings and your disc image stay.
+        Step by step: <a href="update.html">update guide</a>. On Android, never uninstall the app to update.</p></div></details>
+    <details class="panel"><summary>Can I use HD texture packs?</summary><div class="ans">
+      <p>Yes, on PC and Switch. Packs made for Dolphin work as they are. Download the pack yourself (we don't host packs), then add it on the
+        launcher's <b>Mods</b> page (PC) or under <b>Texture packs</b> in the Switch installer.
+        <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/MODDING.md#texture-packs">Details</a>.</p></div></details>
+    <details class="panel"><summary>How do I open the settings menu?</summary><div class="ans">
+      <p>Hold <span class="k-key">−</span> on Switch, <span class="k-key">F1</span> or Back on PC, View on Steam Deck, or tap the top-left button on Android.
+        The version number is in the <b>About</b> tab. <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/PLAYING.md">All controls</a>.</p></div></details>
+    <details class="panel"><summary>Is this official?</summary><div class="ans">
+      <p>No. It is an unofficial fan project, not affiliated with, endorsed or sponsored by SEGA or Nintendo. See <a href="community.html#legal">Legal</a>.</p></div></details>
+  </div>
+</section>
+
+<section class="section">
+  <div class="sec-head"><span class="lap">02 <i>/</i> TROUBLESHOOTING</span><h2 class="slant">Something went <span class="accent">wrong</span></h2>
+    <p>Find the message or problem that matches yours.</p></div>
+  <div class="panel">
+    <table class="trouble">
+      <tbody>
+        <tr><th scope="row"><span class="plat-tag">Installer</span>"does not match the known-good dump"</th><td>Your image isn't the clean USA revision 0 dump (trimmed, compressed or modified). Dump it again, or convert it to a full ISO.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Installer</span>"game ID is …"</th><td>Only the USA release (GXEE8P) works.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Installer</span>The installer can't find its setup files</th><td>You ran it from inside the ZIP. Right-click the ZIP, choose <span class="k-btn">Extract All…</span>, and run it from the normal folder next to <code>setup</code> and <code>tools</code>.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Installer</span><code>CreateProcess failed</code>, paths with <code>?</code> or odd letters</th><td>Your folder path has letters outside English. Extract the ZIP to a short folder like <code>C:\SonicRiders</code> and run it there.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Installer</span>A download fails / INSTALL FAILED</th><td>Check your internet connection or firewall and run the setup again; finished downloads are kept. Read the last line of <code>setup.log</code> next to the installer.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Switch</span>Black screen or crash at start</th><td>Start from a game with <span class="k-key">R</span> held (not from the Album), and check the <code>.iso</code> is in <code>/switch/sonicriders/</code>.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Switch</span>Sonic Riders isn't in the Homebrew Menu</th><td>Check that <code>sonicriders.nro</code> is directly in <code>/switch/sonicriders/</code> (not in a second <code>switch</code> folder), then eject safely and reopen the menu.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Switch</span>Slow motion or low frame rate</th><td>Set the frame rate to 30 or 60 fps (hold − for the settings), or overclock at your own risk.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Switch</span>About still shows the old version</th><td>Make sure the update went to the SD card you actually use, then launch again. Still old? <a href="install-switch.html#help-old-version">See the booklet's fix</a>.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">PC</span>The game doesn't start</th><td>Check <code>sonicriders.log</code> in the install folder, and update your graphics driver (OpenGL 3.3 is needed).</td></tr>
+        <tr><th scope="row"><span class="plat-tag">PC</span>No sound</th><td>Check Windows' default playback device; the game uses it.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Linux</span>The installer opens in a text editor</th><td>Right-click it → Properties → Permissions → tick <b>Is executable</b>, or run <code>sh 'Install Sonic Riders (Linux).sh'</code> in a terminal there.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Linux</span>"SDL2 library … was not found"</th><td>Install your distribution's SDL2 package (<code>libsdl2-2.0-0</code> on Debian/Ubuntu, <code>sdl2</code> on Arch/SteamOS, <code>SDL2</code> on Fedora).</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Android</span>"0 Android devices are connected"</th><td>Unlock the phone, use a data cable (not charge-only), choose File transfer, turn on USB debugging and tap Allow on the phone, then run the installer again.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Android</span>"signatures do not match"</th><td>The installed app was built on another PC. Uninstall it (this deletes its saves) and install again.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Android</span>The game closes on launch or while playing</th><td>Open it again and tap <b>Share report</b> (also saved in <code>Download/SonicRiders/</code>), and attach it to a bug report. Screen recording during races is not supported.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note-line">More fixes: <a href="install-switch.html#help">Switch booklet help</a> · <a href="install-switch2.html#help">Switch 2 booklet help</a> ·
+    <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md#if-something-goes-wrong">INSTALL.md</a></p>
+</section>
+
+<section class="section">
+  <div class="sec-head"><span class="lap">03 <i>/</i> REPORTING</span><h2 class="slant">Send a useful <span class="accent">bug report</span></h2></div>
+  <div class="two-col">
+    <div class="panel"><ol class="steps">
+      <li>Say your device, the version from the <b>About</b> tab, and exactly what you did.</li>
+      <li>Attach the log: <code>sonicriders.log</code> (and <code>sonicriders.prev.log</code>) from the game folder, or <code>setup.log</code> for installer problems.</li>
+      <li>Read it first and replace personal paths or names with <code>[removed]</code>.</li>
+      <li>Never attach your disc image, the built game, saves or console keys.</li>
+    </ol></div>
+    <div class="panel stack"><p class="muted">The form asks for everything step by step. A free GitHub account is needed to post.</p>
+      <a class="btn btn-primary" href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml"><span class="btn-in">Open the bug form</span></a>
+      <p class="muted"><a href="https://github.com/teclilla18/sonic-riders-recomp/issues">See known issues first</a></p></div>
+  </div>
+</section>

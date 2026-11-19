@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Installing (easy-read guide) · Riders Plus</title>
+<meta name="description" content="Easy-read Riders Plus installation guide for Nintendo Switch, Switch 2, Windows PC, Android, Linux / Steam Deck and iPhone / iPad.">
+<link rel="canonical" href="https://teclilla18.github.io/sonic-riders-recomp/install.html">
+<meta name="theme-color" content="#040a17">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Installing (easy-read guide) · Riders Plus">
+<meta property="og:description" content="Easy-read Riders Plus installation guide for Nintendo Switch, Switch 2, Windows PC, Android, Linux / Steam Deck and iPhone / iPad.">
+<meta property="og:url" content="https://teclilla18.github.io/sonic-riders-recomp/install.html">
+<meta property="og:image" content="https://teclilla18.github.io/sonic-riders-recomp/assets/img/switch2-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Saira+Condensed:wght@600;700;800&family=Saira:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>document.documentElement.classList.add("js")</script>
+
+</head>
+<body class="page-install">
+<div class="bg" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="./" aria-label="Riders Plus home">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 30 18 6h10L14 30z"/><path class="m2" d="M17 34 31 10h6L23 34z"/></svg>
+      <span class="brand-text"><b>Riders<em>Plus</em></b><small>Sonic Riders, recompiled</small></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="download.html" data-nav="download">Download</a>
+      <a href="riders-plus.html" data-nav="riders-plus">Riders Plus rules</a>
+      <a href="guides.html" data-nav="guides" aria-current="page">Guides</a>
+      <a href="./#road-to-v1" data-nav="progress">Road to v1.0</a>
+      <a href="faq.html" data-nav="faq">FAQ</a>
+      <a href="community.html" data-nav="community">Community</a>
+    </nav>
+    <a class="btn btn-primary btn-sm topbar-cta" href="download.html"><span class="btn-in">Get it</span></a>
+  </div>
+</header>
+
+<main id="main">
+<section class="page-hero">
+  <p class="eyebrow">Easy-read guide · first install</p>
+  <h1 class="display slant">Installing</h1>
+  <p class="lead">Pick your device and follow only that part. Tap a step to tick it off.
+    Already installed? Use the <a href="update.html">update guide</a>.</p>
+</section>
+
+<div class="wrap easy">
+  <aside class="callout callout-good"><p><b>Console with pictures?</b> The illustrated booklets show every screen:
+    <a href="install-switch.html">Nintendo Switch</a> · <a href="install-switch2.html">Nintendo Switch 2 (alpha)</a>.</p></aside>
+
+  <div class="tabs" role="tablist" aria-label="Device" data-tabs="install">
+    <button role="tab" id="t-switch" data-dev="switch" aria-controls="d-switch">Switch</button>
+    <button role="tab" id="t-switch2" data-dev="switch2" aria-controls="d-switch2" class="alpha">Switch 2 (alpha)</button>
+    <button role="tab" id="t-pc" data-dev="pc" aria-controls="d-pc">Windows PC</button>
+    <button role="tab" id="t-android" data-dev="android" aria-controls="d-android">Android</button>
+    <button role="tab" id="t-linux" data-dev="linux" aria-controls="d-linux">Linux / Steam Deck</button>
+    <button role="tab" id="t-ios" data-dev="ios" aria-controls="d-ios">iPhone / iPad</button>
+  </div>
+
+  <div class="legend"><p><b>Colour key:</b></p><p><span class="k-btn">Pink</span> = a button to press</p><p><span class="k-file">Teal</span> = a file or program</p><p><span class="k-sd">Purple</span> = SD card / hekate</p><p><span class="k-screen">Gold</span> = what you'll see on screen</p></div>
+
+  <section class="block panel t-before">
+    <h2>Your disc image <span class="tag">every device</span></h2>
+    <ol class="easy-steps">
+      <li><span class="txt">You need your own copy of <b>Sonic Riders (USA)</b>.</span>
+        <span class="detail">Game ID GXEE8P. The download has no game files: the game is built from your disc.</span></li>
+      <li><span class="txt">An <span class="k-file">.iso</span> or Dolphin's <span class="k-file">.rvz</span> both work.</span>
+        <span class="detail">Pick your .rvz and the setup turns it into an .iso by itself (about a minute). Your .rvz stays as it is.</span></li>
+    </ol>
+    <aside class="callout callout-warn"><p><b>Not supported:</b> the European or Japanese versions, and RVZ files made with Dolphin's
+      <span class="k-screen">Remove Junk Data</span> option. The setup checks your image and tells you if it's the wrong one.</p></aside>
+  </section>
+
+  <!-- SWITCH -->
+  <div id="d-switch" role="tabpanel" aria-labelledby="t-switch">
+    <aside class="callout"><p><b>You need:</b> a Switch with custom firmware (Atmosphère) and the Homebrew Menu, about 2 GB free on the SD card, and a Windows 10 or 11 PC (it does the building).</p></aside>
+    <section class="block panel t-install">
+      <h2>Install <span class="tag">10–30 minutes, once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file"><span data-file="switch">SonicRiders-Switch-Setup-v0.8.7.zip</span></span> from the <a href="download.html#get-switch">download page</a>.</span></li>
+        <li><span class="txt">Extract the whole zip to a folder, for example <span class="k-file">C:\SonicRiders</span>.</span>
+          <span class="detail">Don't run it from inside the zip. Use a path with only English letters and digits.</span></li>
+        <li><span class="txt">Connect your SD card to the PC.</span>
+          <span class="detail">How: see <a href="#switch-sd">Connecting the SD card</a> below.</span></li>
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Switch).exe</span>.</span>
+          <span class="detail">Windows says <span class="k-screen">Windows protected your PC</span>? Press <span class="k-btn">More info</span> → <span class="k-btn">Run anyway</span>.</span></li>
+        <li><span class="txt">Press <span class="k-btn">Select disc...</span> and pick your .iso or .rvz.</span></li>
+        <li><span class="txt">Check your SD card is selected, and keep <span class="k-screen">Copy the disc image too</span> ticked.</span></li>
+        <li><span class="txt">Press <span class="k-btn">BUILD AND INSTALL</span> and wait for <span class="k-screen">Done</span>.</span>
+          <span class="detail">The first time it downloads its tools and builds the game. Later updates take seconds.</span></li>
+        <li><span class="txt">Press <span class="k-btn">Eject SD card</span>, then put the card back in the Switch.</span>
+          <span class="detail">Wait for <span class="k-screen">Safe to remove the SD card now</span>.</span></li>
+      </ol>
+    </section>
+    <section class="block panel t-sd" id="switch-sd">
+      <h2>Connecting the SD card <span class="tag">no need to take it out</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Restart the Switch into <span class="k-sd">hekate</span>.</span><span class="detail">The way you normally start your custom firmware.</span></li>
+        <li><span class="txt">Go to <span class="k-sd">Tools → USB Tools → SD Card</span>.</span></li>
+        <li><span class="txt">Plug the Switch into the PC with a USB-C cable.</span><span class="detail">The SD card shows up as a drive.</span></li>
+        <li><span class="txt">After the install, press <span class="k-btn">Eject SD card</span> in the installer.</span></li>
+        <li><span class="txt">In hekate press <span class="k-btn">Close</span>, then <span class="k-sd">Home → Launch → your Atmosphère entry</span>.</span></li>
+      </ol>
+      <aside class="callout callout-warn"><p><b>Windows offers to scan and fix the drive?</b> Choose <span class="k-btn">Continue without scanning</span>.</p></aside>
+      <aside class="callout"><p><b>Have a card reader?</b> That works too. Just take the SD card out and put it in the PC.</p></aside>
+    </section>
+    <section class="block panel t-play">
+      <h2>Start the game</h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Hold <span class="k-key">R</span> while starting any installed game.</span>
+          <span class="detail">Keep holding until the <span class="k-screen">Homebrew Menu</span> opens. Don't open it from the Album: the game needs the full memory.</span></li>
+        <li><span class="txt">Choose <span class="k-screen">Sonic Riders</span>.</span></li>
+      </ol>
+      <aside class="callout"><p><b>60 fps?</b> At normal clocks races run at a steady 30 fps. 60 needs an overclock (for example sys-clk), at your own risk.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2>
+      <p>In the game, hold <span class="k-key">−</span> to open the settings menu.</p><p>Look at the version number in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- SWITCH 2 -->
+  <div id="d-switch2" role="tabpanel" aria-labelledby="t-switch2" hidden>
+    <aside class="callout callout-warn"><p><b>Experimental alpha.</b> You may see stuttering or short freezes, missing music or announcer audio,
+      distortion and slow startup. In Race Select the audio can break up badly and stay that way; this is not fixed yet.
+      Fresh installs default to 2x resolution, 60 FPS and no time limit. Unlimited FPS is an experimental opt-in.</p></aside>
+    <aside class="callout"><p><b>You need:</b> a compatible native Switch 2 homebrew setup, a Windows 10/11 x64 PC with internet and about 8 GB free,
+      your own clean Sonic Riders USA disc image, and room for it on the SD card. Tested: firmware 23.0.1, kaiHEN 20261117.1 through Seedsow.
+      Other setups need testing.</p></aside>
+    <section class="block panel t-alpha">
+      <h2>Install <span class="tag">alpha</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Get <span class="k-file"><span data-file="switch2">SonicRiders-Switch2-Setup-Alpha2.zip</span></span> from the <a href="download.html#get-switch2">Switch 2 download</a>.</span>
+          <span class="detail">It is a separate pre-release. Don't download the original Switch ZIP.</span></li>
+        <li><span class="txt">Extract the whole ZIP to a folder on your PC, and put the Switch 2 SD card in the PC.</span>
+          <span class="detail">Use a path with ordinary English characters. Spaces are fine.</span></li>
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Switch2).exe</span>.</span>
+          <span class="detail">If Windows shows a warning, check that you downloaded the official release before choosing <span class="k-btn">More info</span> → <span class="k-btn">Run anyway</span>.</span></li>
+        <li><span class="txt">Press <span class="k-btn">Select disc...</span> and pick your own USA disc image.</span>
+          <span class="detail">ISO/GCM or RVZ/WIA. The installer checks it and converts RVZ when needed. Your original file stays unchanged.</span></li>
+        <li><span class="txt">Select the SD card's top folder, and choose to copy the disc image too if it isn't on the card yet.</span>
+          <span class="detail">The game goes to <span class="k-sd">/switch/sonicriders-switch2/</span>, separate from original Switch installs.</span></li>
+        <li><span class="txt">Read and accept the shader compiler license, then press <span class="k-btn">BUILD AND INSTALL</span>.</span>
+          <span class="detail">Wait for <span class="k-screen">Done</span>, then eject the SD card safely.</span></li>
+      </ol>
+      <aside class="callout"><p><b>Copying by FTP instead?</b> Choose <span class="k-btn">Don't copy</span>, then copy the files from
+        <span class="k-file">build/switch2/sd/switch/sonicriders-switch2/</span> and your disc image to that SD folder. Keep any existing env.txt, settings, saves and caches.</p></aside>
+    </section>
+    <section class="block panel t-play">
+      <h2>Playing, quitting and reporting a problem</h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Hold <span class="k-key">R</span> while starting a <b>native Switch 2 game</b>, then choose Sonic Riders in the Homebrew Menu.</span></li>
+        <li><span class="txt">To quit, hold <span class="k-key">−</span> for half a second, choose <span class="k-btn">Quit Game</span> and confirm.</span>
+          <span class="detail">You return to the Homebrew Menu.</span></li>
+        <li><span class="txt">Something wrong? Save <span class="k-file">sonicriders.log</span>, <span class="k-file">sonicriders.prev.log</span> and the lifecycle logs before you start it again.</span>
+          <span class="detail">Then <a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">report it</a> with the version, firmware, loader, handheld or docked, stage, character and gear. Never share your disc image, NRO, saves or keys.</span></li>
+      </ol>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>Start the game and check the version in the menu's <span class="k-screen">About</span> tab.</p>
+      <p><a href="install-switch2.html">The illustrated Switch 2 booklet</a> has every screen.</p></section>
+  </div>
+
+  <!-- PC -->
+  <div id="d-pc" role="tabpanel" aria-labelledby="t-pc" hidden>
+    <aside class="callout"><p><b>You need:</b> a 64-bit Windows 10 or 11 PC, a graphics card with OpenGL 3.3 (any from the last ten years), about 4 GB free and internet the first time. A controller is recommended; a keyboard works too.</p></aside>
+    <section class="block panel t-install">
+      <h2>Install <span class="tag">10–30 minutes, once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file"><span data-file="pc">SonicRiders-PC-Setup-v0.8.7.zip</span></span> from the <a href="download.html#get-pc">download page</a>.</span></li>
+        <li><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="k-file">C:\Games\SonicRiders</span>.</span>
+          <span class="detail">The game, your saves and settings live there. Use a path with only English letters and digits.</span></li>
+        <li><span class="txt">Open <span class="k-file">SonicRidersLauncher.exe</span>.</span>
+          <span class="detail">Windows says <span class="k-screen">Windows protected your PC</span>? Press <span class="k-btn">More info</span> → <span class="k-btn">Run anyway</span>.</span></li>
+        <li><span class="txt">Press <span class="k-btn">Select disc...</span> and pick your .iso or .rvz.</span></li>
+        <li><span class="txt">Press <span class="k-btn">INSTALL AND PLAY</span> and wait.</span>
+          <span class="detail">The first time it downloads its tools and builds the game. After that, <span class="k-btn">PLAY</span> starts it right away.</span></li>
+      </ol>
+      <aside class="callout callout-good"><p><b>All in one place.</b> The launcher also has the settings, mods and button remapping (Controls page).</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2>
+      <p>In the game, hold <span class="k-key">F1</span> to open the settings menu.</p><p>Look at the version number in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- ANDROID -->
+  <div id="d-android" role="tabpanel" aria-labelledby="t-android" hidden>
+    <aside class="callout"><p><b>You need:</b> a 64-bit phone on Android 11 or newer, about 2 GB free on it, a USB cable, and a Windows 10 or 11 PC with about 4 GB free. The game is built on the PC and installed over USB.</p></aside>
+    <section class="block panel t-before">
+      <h2>On the phone <span class="tag">once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Open <span class="k-screen">Settings → About phone → Software information</span>.</span><span class="detail">On other brands, Build number is right under About phone.</span></li>
+        <li><span class="txt">Tap <span class="k-screen">Build number</span> 7 times.</span><span class="detail">Until it says Developer mode is on.</span></li>
+        <li><span class="txt">Open <span class="k-screen">Settings → Developer options</span> and turn on <span class="k-btn">USB debugging</span>.</span></li>
+      </ol>
+    </section>
+    <section class="block panel t-install">
+      <h2>Install <span class="tag">20–40 minutes, once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Download <span class="k-file"><span data-file="android">SonicRiders-Android-Setup-v0.8.7.zip</span></span> from the <a href="download.html#get-android">download page</a>.</span></li>
+        <li><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="k-file">C:\SonicRiders</span>.</span></li>
+        <li><span class="txt">Connect the phone with the cable and unlock it.</span><span class="detail">If it asks what the USB connection is for, choose <span class="k-btn">File transfer</span>.</span></li>
+        <li><span class="txt">Open <span class="k-file">Install Sonic Riders (Android).exe</span>.</span>
+          <span class="detail">Windows says <span class="k-screen">Windows protected your PC</span>? Press <span class="k-btn">More info</span> → <span class="k-btn">Run anyway</span>.</span></li>
+        <li><span class="txt">Press <span class="k-btn">Select disc...</span> and pick your .iso or .rvz.</span></li>
+        <li><span class="txt">Tick <span class="k-screen">I accept the Android SDK License</span>, then press <span class="k-btn">BUILD AND INSTALL</span>.</span></li>
+        <li><span class="txt">When the phone asks <span class="k-screen">Allow USB debugging?</span>, tap <span class="k-btn">Allow</span>.</span><span class="detail">Tick "Always allow from this computer" to skip it next time.</span></li>
+        <li><span class="txt">Wait for <span class="k-screen">Done</span>.</span><span class="detail">It installs the app and copies your disc image to the phone by itself.</span></li>
+      </ol>
+      <aside class="callout callout-warn"><p><b>Keep the same PC for updates.</b> Android only accepts an update signed by the PC that made the app.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2>
+      <p>Start <span class="k-screen">Sonic Riders</span> from the phone's app list. You can unplug the cable.</p>
+      <p>The top-left button opens the settings menu; the version is in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <!-- LINUX -->
+  <div id="d-linux" role="tabpanel" aria-labelledby="t-linux" hidden>
+    <aside class="callout"><p><b>You need:</b> a Linux PC or a Steam Deck (x86_64), about 4 GB free and internet the first time. It builds on the machine itself, no Windows needed.</p></aside>
+    <section class="block panel t-install">
+      <h2>Install <span class="tag">10–30 minutes, once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">Steam Deck: switch to <span class="k-screen">Desktop Mode</span>.</span><span class="detail">Power → Switch to Desktop. Do steps 2–5 there.</span></li>
+        <li><span class="txt">Download <span class="k-file"><span data-file="linux">SonicRiders-Linux-Setup-v0.8.7.zip</span></span> from the <a href="download.html#get-linux">download page</a>.</span></li>
+        <li><span class="txt">Extract it to a folder you'll keep, for example <span class="k-file">~/Games/SonicRiders</span>.</span><span class="detail">Right-click the zip → Extract. Your disc image can stay where it is.</span></li>
+        <li><span class="txt">Double-click <span class="k-file">Install Sonic Riders (Linux).sh</span>.</span>
+          <span class="detail">Choose <span class="k-btn">Execute</span> or <span class="k-btn">Run</span> if asked, then pick your .iso or .rvz.</span></li>
+        <li><span class="txt">Wait for <span class="k-screen">Done</span>.</span><span class="detail">Sonic Riders is now in the application menu (Games).</span></li>
+        <li><span class="txt">Steam Deck Game Mode: in Steam, <span class="k-btn">Add a Non-Steam Game to My Library</span> → tick <span class="k-screen">Sonic Riders</span> → <span class="k-btn">Add</span>.</span>
+          <span class="detail">Back in Game Mode it's under Non-Steam. Hold View for the settings menu.</span></li>
+      </ol>
+      <aside class="callout"><p><b>RVZ on Linux:</b> Dolphin's default RVZ works as it is. The setup fetches the small piece it needs by itself, only when you pick an .rvz.</p></aside>
+    </section>
+  </div>
+
+  <!-- iOS -->
+  <div id="d-ios" role="tabpanel" aria-labelledby="t-ios" hidden>
+    <aside class="callout"><p><b>You need:</b> an Apple silicon Mac (M1 or newer) with Xcode and Homebrew, about 6 GB free, a cable, and an iPhone or iPad on iOS 16 or newer. A free Apple ID is enough.</p></aside>
+    <section class="block panel t-install">
+      <h2>Install <span class="tag">15–30 minutes, once</span></h2>
+      <ol class="easy-steps">
+        <li><span class="txt">On your Mac, download <span class="k-file"><span data-file="ios">SonicRiders-iOS-Setup-v0.8.7.zip</span></span> from the <a href="download.html#get-ios">download page</a>.</span>
+          <span class="detail">Double-click it and keep the folder it makes, in a path with no spaces (for example <span class="k-file">~/SonicRiders</span>).</span></li>
+        <li><span class="txt">Open <span class="k-file">START HERE (Mac).html</span> in that folder.</span><span class="detail">It shows, with pictures, how to allow the launcher the first time (it isn't signed by Apple).</span></li>
+        <li><span class="txt">Open <span class="k-file">Sonic Riders Launcher</span>. On <span class="k-screen">Get ready</span>, install what's missing.</span><span class="detail">Each missing piece has its own button. Press <span class="k-btn">Check again</span> after each.</span></li>
+        <li><span class="txt">On <span class="k-screen">Build</span>, press <span class="k-btn">Select disc...</span>, then <span class="k-btn">BUILD THE APP</span>.</span><span class="detail">The app goes to <span class="k-file">Desktop/Sonic Riders iOS</span>.</span></li>
+        <li><span class="txt">On <span class="k-screen">Install</span>, follow the Sideloadly steps.</span>
+          <span class="detail">Install the app, turn on Developer Mode, trust your Apple ID, and copy your disc image with Finder → your device → Files.</span></li>
+      </ol>
+      <aside class="callout callout-warn"><p><b>Every 7 days:</b> an app installed with a free Apple ID has to be renewed. The launcher's <span class="k-screen">Renew</span> page shows when and how, and can add a Calendar reminder.</p></aside>
+    </section>
+    <section class="block panel check-final"><h2>Check it worked</h2><p>Start <span class="k-screen">Sonic Riders</span> on the device.</p><p>Open the settings menu; the version is in the <span class="k-screen">About</span> tab.</p></section>
+  </div>
+
+  <p class="note-line"><b>Why does it build on my computer?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download.
+    It is always made on your computer from your own disc. Stuck? See the <a href="faq.html">FAQ &amp; troubleshooting</a>.</p>
+</div>
+
+</main>
+<footer class="footer">
+  <div class="footer-in">
+    <div class="footer-brand">
+      <p class="brand-text"><b>Riders<em>Plus</em></b><small>Sonic Riders, recompiled</small></p>
+      <p class="muted">An unofficial fan project. Not affiliated with, endorsed or sponsored by SEGA or Nintendo.
+        Sonic Riders is © SEGA. No game files are included or downloaded: you build the game from your own disc.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <div><p class="eyebrow">Play</p><a href="download.html">Download</a><a href="guides.html">Install guides</a><a href="update.html">Updating</a><a href="faq.html">FAQ &amp; help</a></div>
+      <div><p class="eyebrow">Project</p><a href="riders-plus.html">Riders Plus rules</a><a href="./#road-to-v1">Road to v1.0</a><a href="community.html#credits">Credits</a><a href="community.html#legal">Legal</a></div>
+      <div><p class="eyebrow">Community</p><a href="https://github.com/teclilla18/sonic-riders-recomp">GitHub</a><a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">Report a bug</a><a href="https://github.com/teclilla18/sonic-riders-recomp/discussions">Discussions</a><a href="https://ko-fi.com/teclilla18">Support on Ko-fi</a></div>
+    </nav>
+  </div>
+  <p class="footer-base muted">Code: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/LICENSE">MPL-2.0</a> · Switch 2 poster art by <a href="https://www.deviantart.com/lanmana">Lanmana</a> · Site source: <a href="https://github.com/teclilla18/sonic-riders-recomp/tree/gh-pages">gh-pages branch</a></p>
+</footer>
+
+<script src="assets/js/site.js" defer></script>
+</body>
+</html>

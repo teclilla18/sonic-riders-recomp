@@ -1,0 +1,258 @@
+{
+ "main": "75380c0",
+ "releases": [
+  {
+   "name": "v0.8.7: Super Sonic joins Riders Plus",
+   "tag": "v0.8.7",
+   "prerelease": false,
+   "date": "2026-11-19",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7",
+   "assets": [
+    {
+     "name": "SonicRiders-Android-Setup-v0.8.7.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-Android-Setup-v0.8.7.zip",
+     "size": 8272819,
+     "downloads": 41
+    },
+    {
+     "name": "SonicRiders-iOS-Setup-v0.8.7.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-iOS-Setup-v0.8.7.zip",
+     "size": 8243319,
+     "downloads": 2
+    },
+    {
+     "name": "SonicRiders-Linux-Setup-v0.8.7.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-Linux-Setup-v0.8.7.zip",
+     "size": 7383048,
+     "downloads": 36
+    },
+    {
+     "name": "SonicRiders-PC-Setup-v0.8.7.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-PC-Setup-v0.8.7.zip",
+     "size": 8269987,
+     "downloads": 208
+    },
+    {
+     "name": "SonicRiders-Switch-Setup-v0.8.7.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-Switch-Setup-v0.8.7.zip",
+     "size": 8272016,
+     "downloads": 25
+    }
+   ]
+  },
+  {
+   "name": "Switch 2 Alpha 2: Super Sonic feels super again",
+   "tag": "v0.8.7-switch2-alpha.2",
+   "prerelease": true,
+   "date": "2026-11-19",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2",
+   "assets": [
+    {
+     "name": "SonicRiders-Switch2-Setup-Alpha2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7-switch2-alpha.2/SonicRiders-Switch2-Setup-Alpha2.zip",
+     "size": 7783316,
+     "downloads": 20
+    }
+   ]
+  },
+  {
+   "name": "Sonic Riders Recomp — Switch 2 Alpha 1",
+   "tag": "v0.8.6-switch2-alpha.1",
+   "prerelease": true,
+   "date": "2026-11-18",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1",
+   "assets": [
+    {
+     "name": "SonicRiders-Switch2-Setup-Alpha1.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6-switch2-alpha.1/SonicRiders-Switch2-Setup-Alpha1.zip",
+     "size": 7733960,
+     "downloads": 38
+    }
+   ]
+  },
+  {
+   "name": "v0.8.6: HD texture packs in one click (PC and Switch)",
+   "tag": "v0.8.6",
+   "prerelease": false,
+   "date": "2026-11-17",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6",
+   "assets": [
+    {
+     "name": "SonicRiders-Android-Setup-v0.8.6.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6/SonicRiders-Android-Setup-v0.8.6.zip",
+     "size": 8210435,
+     "downloads": 10
+    },
+    {
+     "name": "SonicRiders-Linux-Setup-v0.8.6.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6/SonicRiders-Linux-Setup-v0.8.6.zip",
+     "size": 6789863,
+     "downloads": 65
+    },
+    {
+     "name": "SonicRiders-PC-Setup-v0.8.6.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6/SonicRiders-PC-Setup-v0.8.6.zip",
+     "size": 7633074,
+     "downloads": 404
+    },
+    {
+     "name": "SonicRiders-Switch-Setup-v0.8.6.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.6/SonicRiders-Switch-Setup-v0.8.6.zip",
+     "size": 7634861,
+     "downloads": 65
+    }
+   ]
+  },
+  {
+   "name": "v0.8.4: RVZ works now, no ISO needed",
+   "tag": "v0.8.4",
+   "prerelease": false,
+   "date": "2026-11-15",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4",
+   "assets": [
+    {
+     "name": "SonicRiders-Android-Setup-v0.8.4.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.4/SonicRiders-Android-Setup-v0.8.4.zip",
+     "size": 5333943,
+     "downloads": 88
+    },
+    {
+     "name": "SonicRiders-iOS-Setup-v0.8.4.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.4/SonicRiders-iOS-Setup-v0.8.4.zip",
+     "size": 5371952,
+     "downloads": 28
+    },
+    {
+     "name": "SonicRiders-Linux-Setup-v0.8.4.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.4/SonicRiders-Linux-Setup-v0.8.4.zip",
+     "size": 4504865,
+     "downloads": 68
+    },
+    {
+     "name": "SonicRiders-PC-Setup-v0.8.4.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.4/SonicRiders-PC-Setup-v0.8.4.zip",
+     "size": 5331588,
+     "downloads": 386
+    },
+    {
+     "name": "SonicRiders-Switch-Setup-v0.8.4.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.4/SonicRiders-Switch-Setup-v0.8.4.zip",
+     "size": 5333230,
+     "downloads": 58
+    }
+   ]
+  },
+  {
+   "name": "v0.8.3: updating, revamped (iOS archive)",
+   "tag": "v0.8.3",
+   "prerelease": false,
+   "date": "2026-11-14",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.3",
+   "assets": [
+    {
+     "name": "SonicRiders-iOS-Setup-v0.8.3.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.3/SonicRiders-iOS-Setup-v0.8.3.zip",
+     "size": 5365495,
+     "downloads": 11
+    }
+   ]
+  },
+  {
+   "name": "v0.8.2: Sonic Riders Plus",
+   "tag": "v0.8.2",
+   "prerelease": false,
+   "date": "2026-11-14",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.2",
+   "assets": [
+    {
+     "name": "SonicRiders-Android-Setup-v0.8.2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.2/SonicRiders-Android-Setup-v0.8.2.zip",
+     "size": 4399063,
+     "downloads": 90
+    },
+    {
+     "name": "SonicRiders-iOS-Setup-v0.8.2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.2/SonicRiders-iOS-Setup-v0.8.2.zip",
+     "size": 4464612,
+     "downloads": 26
+    },
+    {
+     "name": "SonicRiders-Linux-Setup-v0.8.2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.2/SonicRiders-Linux-Setup-v0.8.2.zip",
+     "size": 3595819,
+     "downloads": 56
+    },
+    {
+     "name": "SonicRiders-PC-Setup-v0.8.2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.2/SonicRiders-PC-Setup-v0.8.2.zip",
+     "size": 4396798,
+     "downloads": 271
+    },
+    {
+     "name": "SonicRiders-Switch-Setup-v0.8.2.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.2/SonicRiders-Switch-Setup-v0.8.2.zip",
+     "size": 4398366,
+     "downloads": 37
+    }
+   ]
+  },
+  {
+   "name": "v0.8.1: up to 999 rings; Sonic Heroes alpha testers needed (iOS archive)",
+   "tag": "v0.8.1",
+   "prerelease": false,
+   "date": "2026-11-12",
+   "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.1",
+   "assets": [
+    {
+     "name": "SonicRiders-iOS-Setup-v0.8.1.zip",
+     "url": "https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.1/SonicRiders-iOS-Setup-v0.8.1.zip",
+     "size": 4437833,
+     "downloads": 15
+    }
+   ]
+  }
+ ],
+ "progress": {
+  "version": "v0.8.7",
+  "updated": "2026-11-18",
+  "overall": 77,
+  "areas": [
+   {
+    "label": "Whole game playable",
+    "weight": 25,
+    "done": 90,
+    "left": "Grand Prix freeze after character select (#18), rare \"Now Loading\" hang (#6)"
+   },
+   {
+    "label": "Graphics match the GameCube",
+    "weight": 15,
+    "done": 80,
+    "left": "Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3)"
+   },
+   {
+    "label": "Switch performance",
+    "weight": 15,
+    "done": 70,
+    "left": "60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked)"
+   },
+   {
+    "label": "Platforms",
+    "weight": 15,
+    "done": 85,
+    "left": "Android #32 resolved: Vulkan 1.1 race/clean quit confirmed on Mali; MoltenVK pending. Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9)"
+   },
+   {
+    "label": "Online play",
+    "weight": 15,
+    "done": 55,
+    "left": "PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings"
+   },
+   {
+    "label": "Features and polish",
+    "weight": 15,
+    "done": 72,
+    "left": "Responsive installers, DPI/completion and output-folder action tested. Remaining: custom music, right-stick camera, code mods/new characters and background texture-pack loading on Switch."
+   }
+  ]
+ }
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# gh-pages guard: refuses commits with unapproved pictures, game-like files or personal paths.
+if command -v py >/dev/null 2>&1; then exec py -3 tools/check_site.py; fi
+exec python3 tools/check_site.py
