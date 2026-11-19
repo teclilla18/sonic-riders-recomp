@@ -1,5 +1,11 @@
 # Changelog
 
+### PC: an unpacked update that was never installed is now noticed
+
+- Unzipping a new version over an old folder and then starting the old shortcut kept running the old game.
+  The launcher now shows UPDATE NOT FINISHED with a FINISH UPDATE button, and the game shows a banner and
+  an F1 > About line saying which version is unpacked but not installed yet.
+
 ### Illustrated installation booklets
 
 - Use clear, neutral headings and callouts for all readers while retaining the illustrated presentation.

@@ -70,6 +70,7 @@ void platform_open_game_folder(void);
 #endif
 #ifdef _WIN32
 const char* update_available(void);  /* update_check.c: the newer release's tag, or NULL */
+const char* update_unbuilt(void);    /* update_check.c: a newer version unpacked here but not built, or NULL */
 const char* update_notes(void);      /* its release notes, or NULL */
 int SDL_OpenURL(const char* url);
 #define UPDATE_PAGE "https://github.com/teclilla18/sonic-riders-recomp/releases/latest"
@@ -681,6 +682,13 @@ void tab_about() {
     heading("Sonic Riders native port");
     ImGui::Text("Version: %s", g_build_version);
 #ifdef _WIN32
+    if (const char* unpacked = update_unbuilt()) {
+        char line[160];
+        snprintf(line, sizeof line, "%.*s is unpacked in this folder but not installed yet.", (int)strcspn(unpacked, " "), unpacked);
+        warn(line);
+        help("Quit the game, open SonicRidersLauncher.exe and press FINISH UPDATE (or run Install Sonic Riders (PC).bat). "
+             "Your saves and settings stay.");
+    }
     if (const char* latest = update_available()) {
         char line[96];
         snprintf(line, sizeof line, "Update available: %s", latest);

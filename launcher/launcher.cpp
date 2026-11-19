@@ -795,10 +795,33 @@ const char* kOnOff[] = {"Off", "On"};
 
 struct Ready {
     bool built, disc, saves, setup;
+    bool stale;  /* a newer release zip was unpacked over this folder but the game was not rebuilt yet */
     std::wstring disc_path;
 } g_ready;
+/* does the file contain the text? (the game exe holds its version string "v0.8.7 (cf243a9f)") */
+bool file_contains(const std::wstring& p, const std::string& text) {
+    FILE* f = _wfopen(p.c_str(), L"rb");
+    if (!f || text.empty()) {
+        if (f) fclose(f);
+        return false;
+    }
+    std::vector<char> buf(4 << 20);
+    size_t keep = 0, n;
+    bool found = false;
+    while (!found && (n = fread(buf.data() + keep, 1, buf.size() - keep, f)) > 0) {
+        size_t len = keep + n;
+        found = std::search(buf.begin(), buf.begin() + len, text.begin(), text.end()) != buf.begin() + len;
+        keep = std::min(len, text.size() - 1);  /* a match may straddle two reads */
+        memmove(buf.data(), buf.data() + len - keep, keep);
+    }
+    fclose(f);
+    return found;
+}
 void refresh_ready() {
     g_ready.built = exists(path(L"build\\host-mingw\\sonicriders.exe"));
+    std::string v = read_text(path(L"VERSION"));  /* the release zip's version (none in a git checkout) */
+    v = v.substr(0, v.find_first_of("\r\n"));
+    g_ready.stale = g_ready.built && !v.empty() && !file_contains(path(L"build\\host-mingw\\sonicriders.exe"), v);
     g_ready.disc_path = find_disc();
     g_ready.disc = !g_ready.disc_path.empty();
     g_ready.saves = exists(path(L"saves\\card_a.raw"));
@@ -1292,6 +1315,12 @@ void page_play(float w) {
         ImGui::TextWrapped("%s", g_disc_choice.empty() ? "No disc image selected" : narrow(g_disc_choice).c_str());
         if (!g_ready.setup) ImGui::TextColored(kRed, "setup\\setup.ps1 is missing: unpack the whole zip again.");
     } else {
+        if (g_ready.stale && !exists(path(L"build\\launcher\\rebuild_after_update"))) {
+            section("UPDATE NOT FINISHED");
+            ImGui::TextColored(kGoldV, "A new version was unpacked into this folder, but the game is still the old one. "
+                                       "Press FINISH UPDATE to finish (usually a few minutes; saves and settings stay).");
+            ImGui::Spacing();
+        }
         if (exists(path(L"build\\launcher\\rebuild_after_update"))) {
             section("UPDATED");
             ImGui::TextColored(kGoldV, "The port was updated: update the game (usually under a minute; only what changed is rebuilt).");
@@ -2668,6 +2697,11 @@ void draw_ui(float W, float H) {
         bool host = v.state == lobby::HOSTING;
         const char* t = host ? "START RACE" : v.state == lobby::STARTING ? "RACING" : "WAITING FOR HOST";
         if (big_button(t, ImVec2(playw, bh), true, host && v.players.size() >= 2 && !game_on)) lobby::start_race();
+    } else if (g_ready.stale) {  /* finish the unpacked update first (then PLAY as usual) */
+        if (big_button("FINISH UPDATE", ImVec2(playw, bh), true, !game_on && !setup_on && g_ready.disc && g_ready.setup)) {
+            DeleteFileW(path(L"build\\launcher\\rebuild_after_update").c_str());
+            start_install(g_ready.disc_path);
+        }
     } else if (big_button("PLAY", ImVec2(playw, bh), true, !game_on && !setup_on && g_ready.disc)) {
         play();
     }
