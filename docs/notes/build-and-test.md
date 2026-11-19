@@ -78,6 +78,27 @@ After a fresh clone, run `git config core.hooksPath tools/git-hooks` (the game-d
 - Setup: `SonicRidersSetup.sh` -> `tools/setup_linux.py` (6 steps; tools in `~/.local/share/SonicRidersSetup/tools`,
   pinned in `setup/toolchain.json` "linux": dtk, ninja, zig 0.17.1, SDL2 headers; per `uname -m`). Release:
   `make_release.py --flavor linux` (`.sh` mode 0755 in the zip).
+- Zig fallback (#30): the setup writes `zig-cc` / `zig-c++` wrappers with
+  `-target <arch>-linux-gnu.<installed-glibc-version>` (version from `os.confstr("CS_GNU_LIBC_VERSION")`). This
+  explicitly selects Zig's bundled libc headers/startup files; the executable still loads system glibc, SDL2
+  and OpenGL. Native Zig can fail with `LibCStdLibHeaderNotFound` on a partial toolchain. Do not remove the
+  compiler check or switch to musl. Both compile and link must use the wrappers.
+  Select the compiler before SDL headers: explicit-target Zig always uses the pinned downloaded SDL headers,
+  because Debian/Ubuntu's installed SDL_config.h redirects into multiarch include paths Zig does not search.
+  System compilers keep installed headers when available and download them only when missing. Runtime SDL2/GL
+  linking stays on the system libraries; no development packages or system changes are needed for Zig.
+- Setup regressions: `python3 -m unittest discover -s tools -p test_setup_linux.py`. Optional real Debian/Ubuntu
+  multiarch regression: set `SR_TEST_ZIG` to the pinned Zig executable and `SR_TEST_SDL_HEADERS` to its downloaded
+  SDL headers folder before running the suite. It checks that the affected system headers fail with explicit
+  target Zig and the headers actually selected by setup compile successfully. For a stripped-system
+  build test use unprivileged bubblewrap with a read-only root, hidden `/usr/include`, unavailable development
+  tools and **`--dev /dev`**; otherwise compiler discovery can fail differently and mask #30. A fresh full
+  setup/build passed this test on x86_64 Ubuntu 24.04 / glibc 2.39 (cached tools, new build/cache/home).
+  The full offscreen demo route also completed both samples (1,800 steps each), wrote results and exited normally.
+  SteamOS/Deck hardware, audio, controllers and visual correctness remain unverified.
+- Background WSL runs: `SR_MINIMIZED=1` alone can still show a WSLg window. For tests while the PC is in use,
+  require `SDL_VIDEODRIVER=offscreen`, `SDL_AUDIODRIVER=dummy`, `SR_NOAUDIO=1` and unset `DISPLAY` /
+  `WAYLAND_DISPLAY`; if offscreen initialization fails, stop without falling back to a desktop display.
 - WSL test loop on this PC (Ubuntu 24.04; clang 18, libsdl2-dev, gdb, bubblewrap, unzip installed): mirror the
   tree into `~/sr` with rsync (not /mnt/c: slow, and it would share build.ninja), plus baserom and build/gen.
   Drive WSL from Git Bash with `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -- bash -c ...`; PowerShell 5.1 mangles
