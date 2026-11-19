@@ -77,6 +77,7 @@ vk_*.frag / vk_quad.vert: Vulkan helpers (copies, fills, touch controls).
 | Recompiler | tools/recomp/gcrecomp.py, ppc2c.py |
 | Game-data guard | tools/check_no_game_data.py (`OWN_ART`) |
 | Setup (Windows) | setup/setup.ps1, setup/toolchain.json |
+| Windows installer layout/DPI/completion | launcher/installer_layout.h; launcher/launcher.cpp | `draw_ui`, `wndproc`, `install_progress`, `installer_output_folder`; tools/test_installer_ui.py |
 | Setup build folder kept between updates (sync changed files, skip dtk) | tools/build_workdir.py (`sync`, `dtk`); used by setup.ps1 and tools/setup_linux.py; folder `<tools>/build` |
 | Perf test compare | tools/perf_test.py |
 | Game config | config/GXEE8P/hle.txt, patches.txt |

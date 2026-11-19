@@ -31,10 +31,10 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAT = {"pc": "PC", "android": "Android", "switch2": "Switch2"}
-OUTPUT = {"pc": [r"build\host-mingw\sonicriders.exe"], "android": [r"build\android\sonicriders-arm64-v8a.apk"]}
+PLAT = {"pc": "PC", "android": "Android", "switch": "Switch", "switch2": "Switch2"}
+OUTPUT = {"switch": [r"build\switch\sonicriders.nro"], "pc": [r"build\host-mingw\sonicriders.exe"], "android": [r"build\android\sonicriders-arm64-v8a.apk"]}
 OUTPUT["switch2"] = [r"build\switch2\sonicriders-switch2.nro", r"build\switch2\build-info.json", r"build\switch2\sd\switch\sonicriders-switch2\env.txt"]
-EXTRA_ARGS = {"pc": ["-NoSd", "-Yes"], "android": ["-NoSd", "-Yes", "-AcceptAndroidSdkLicense", "-Install", "no"]}
+EXTRA_ARGS = {"switch": ["-NoSd", "-Yes", "-HomeIcon", "no"], "pc": ["-NoSd", "-Yes"], "android": ["-NoSd", "-Yes", "-AcceptAndroidSdkLicense", "-Install", "no"]}
 EXTRA_ARGS["switch2"] = ["-Yes", "-AcceptAndroidSdkLicense", "-Sd", r"C:\SR-Switch2TestSD", "-CopyIso", "no"]
 SANDBOX_EXE = r"C:\Windows\System32\WindowsSandbox.exe"
 
@@ -100,7 +100,7 @@ try {
             }
             if ($cfg.launcher -and ($cfg.flavor -ne "switch2" -or $i -eq 1)) {
                 # README-FIRST's first way: the launcher's "Select disc..." + INSTALL AND PLAY (SR_LAUNCHER_INSTALL)
-                $exeName = if ($cfg.flavor -eq "switch2") { "Install Sonic Riders (Switch2).exe" } else { "SonicRidersLauncher.exe" }
+                $exeName = if ($cfg.flavor -eq "pc") { "SonicRidersLauncher.exe" } else { "Install Sonic Riders ($($cfg.flavor -replace '^android$', 'Android' -replace '^switch2$', 'Switch2' -replace '^switch$', 'Switch')).exe" }
                 $exe = Join-Path $top $exeName
                 if ($cfg.flavor -eq "switch2") { $env:SR_INSTALLER_SD = "C:\SR-Switch2TestSD" }
                 $motw = [bool](Get-Item $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue)
@@ -120,6 +120,8 @@ try {
             $code = $p.ExitCode
             $rep = Join-Path $top "launcher_test.txt"
             if (Test-Path $rep) { Copy-Item $rep (Join-Path $res "launcher_test-$i.txt") -Force }
+            $shot = Join-Path $top "launcher_completion.png"
+            if (Test-Path $shot) { Copy-Item $shot (Join-Path $res "launcher-completion-$i.png") -Force }
             $missing = @($cfg.outputs | Where-Object { -not (Test-Path (Join-Path $top $_)) })
             if ($code -ne 0) { $why = "setup exit code $code" }
             elseif ($missing.Count) { $why = "exit code 0 but missing: $($missing -join ', ')" }

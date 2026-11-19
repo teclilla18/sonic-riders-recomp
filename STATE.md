@@ -1,17 +1,19 @@
-# Switch 2 Alpha 2 release candidate (2026-11-18)
+# Switch 2 Alpha 2 installer maintenance (2026-11-18)
 
-User explicitly authorizes v0.8.7 stable then separate v0.8.7-switch2-alpha.2 prerelease.
-Runtime/config identical to accepted80304ca/0d995f3def88:Super999/progression/balance, adaptive split HUD,
-MP4/5 indicators, finished-effect fix, Unlimited opt-in, universal setup/icon_256.jpg.
-Fresh installer defaults60FPS/2x and preserves existing settings/saves/caches/env on updates.
-Source package only; no compiled game data. Cold GUI+CLI/space Sandbox and distribution audit pending.
+Released v0.8.7-switch2-alpha.2 remains at immutable tag 1ca54eb0; public stable v0.8.7 stays latest.
+Runtime/config and SDK pins remain identical to the accepted Alpha2 baseline80304ca/build0d995f3def88.
+The user accepted the universal game icon, Super Sonic feel, high-ring finish and2P Fit HUD.
+Fresh60FPS/2x defaults and existing settings/saves/caches/env preservation are unchanged.
 
-Known severe limitation: RaceSelect(FreeRace/TimeAttack/WGP) persistent audio distortion with one freeze
-at onset. Normal60 and parentmenu did not recover it. Similar failures predate ours; no severe newregression
-established. Current log0outputdrops/errors butunderrun/content/leak causeunresolved. No claimoffixes.
-Logs preserved in public ignored build/live-preview-20261118/capture. Log-reader investigation bounded.
-User accepted icon,Superfeel,highringfinish,2PFitHUD. Other modes/aspects/longruns requirecommunitytesting.
+Implemented: shared responsive Windows installer, uncropped aspect-correct artwork, wrapped logs,
+live DPI handling, safe swap-chain resizing, clear completion and persistent Open Output Folder.
+Native messages identify the correct Switch2 SD-ready directory and native-game hbmenu startup.
+Tested:44 off-screen idle/building/done/failed cases across11 geometries and100–250% simulated DPI;
+actual maximize/restore/DPI-message handlers and output-folder mouse click/ShellExecute pass.
+Three native preservation/input tests and actual no-SD completion-message branch pass.
+The exact rebuilt source ZIP still requires cold GUI/CLI/space-path validation and distribution audit.
+User authorizes replacing only this existing ZIP/checksum after validation; no version/tag/description changes.
 
-Both updated easy-readHTMLguides are committed. ExistingClaudeArtifactURLs retained witholder-version
-notice; user explicitly defers externalrepublication untilweeklyreset. Do not attemptbrowserautomationagain.
-PreserveiOSv0.8.4 andforeverv0.8.2; stablemuststaylatest,alpha2prerelease. Canonicalhandoff hasexactstatus.
+Known severe RaceSelect audio distortion remains unresolved; no runtime/audio work in this task.
+Existing Claude Artifact republication remains deferred; preserve all pending canonical handoff entries.
+See docs/notes/installer-layout.md and the excluded canonical AI_HANDOFF.md for current evidence/ownership.

@@ -1,5 +1,12 @@
 # Changelog
 
+### Installer maintenance for existing v0.8.7 downloads
+
+- Responsive installer columns, uncropped aspect-correct banner, readable wrapped build logs and live DPI changes.
+- Clear completion state and a persistent Open Output Folder action for PC, Switch, Android and Switch 2.
+- Correct native Switch 2 output paths and hbmenu instructions; saves/settings/caches remain preserved.
+
+
 ## v0.8.7-switch2-alpha.2 (2026-11-18)
 
 - Super Sonic feels super again with Riders Plus:999rings,Lv4/5 and improved speed balance.

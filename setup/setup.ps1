@@ -192,7 +192,8 @@ $sdDir = $null
 if (($doSwitch -or $doSwitch2) -and -not $NoSd) {
     if (-not $Sd) {
         if ($Yes) {
-            Log "No -Sd given: the .nro stays in build\switch\ (copy it yourself)."
+            if ($doSwitch2) { Log "No -Sd given: SD-ready files stay in build\switch2\sd\switch\sonicriders-switch2\ (copy them yourself)." }
+            else { Log "No -Sd given: the .nro stays in build\switch\ (copy it yourself)." }
         } else {
             $a = Ask "Copy the build to your Switch's SD card now? (y/n)" "y"
             if ($a -match "^[yY]") {
@@ -201,7 +202,10 @@ if (($doSwitch -or $doSwitch2) -and -not $NoSd) {
                 $fb.Description = "Select your Switch SD card (its top folder, e.g. E:\)"
                 $fb.ShowNewFolderButton = $false
                 if ($fb.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $Sd = $fb.SelectedPath }
-                else { Log "No SD card selected: the .nro stays in build\switch\." }
+                else {
+                    if ($doSwitch2) { Log "No SD card selected: SD-ready files stay in build\switch2\sd\switch\sonicriders-switch2\." }
+                    else { Log "No SD card selected: the .nro stays in build\switch\." }
+                }
             }
         }
     }
@@ -649,8 +653,13 @@ if ($sdDir) {
         Log "Copied the HOME-screen icon to $nspDir\SonicRiders-HOME-icon.nsp"
     }
     Log ""
-    Log "Done. Eject the SD card safely, put it in the Switch, hold R while starting any game to open the" "Green"
-    Log "Homebrew Menu with full memory, and start 'Sonic Riders'." "Green"
+    if ($doSwitch2) {
+        Log "Done. Eject the SD card safely, put it in the Switch 2, hold R while starting a native Switch 2 game" "Green"
+        Log "to open the native Homebrew Menu, and start Sonic Riders (Switch 2 Alpha)." "Green"
+    } else {
+        Log "Done. Eject the SD card safely, put it in the Switch, hold R while starting any game to open the" "Green"
+        Log "Homebrew Menu with full memory, and start 'Sonic Riders'." "Green"
+    }
     if ($builtNsp) {
         Log ""
         Log "HOME-screen icon: install it once on the Switch:" "Green"
@@ -659,6 +668,9 @@ if ($sdDir) {
         Log "  It needs up-to-date sigpatches. The icon starts switch/sonicriders/sonicriders.nro: keep it there." "Green"
         Log "  You can delete the .nsp from the SD card afterwards." "Green"
     }
+} elseif ($doSwitch2 -and $builtNro) {
+    Log "Switch 2: copy the contents of build\switch2\sd\switch\sonicriders-switch2\ and your disc image to sdmc:/switch/sonicriders-switch2/." "Green"
+    Log "Hold R while starting a native Switch 2 game to open the native Homebrew Menu." "Green"
 } elseif ($builtNro) {
     Log "Switch: copy build\switch\sonicriders.nro and your disc image to sdmc:/switch/sonicriders/ on the SD card." "Green"
     if ($builtNsp) { Log "HOME-screen icon: $builtNsp - copy it to the SD card and install it with DBI or Goldleaf (docs\INSTALL.md)." "Green" }

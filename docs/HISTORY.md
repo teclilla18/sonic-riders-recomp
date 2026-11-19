@@ -1793,3 +1793,13 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
   console launch; native binary cannot be smoke-tested in Eden. All10 deployment regressions pass.
 - Full/staged data guards + ignored-status/hooks preserved for local checkpoints. No push/publish/release/
   asset change or external reply. Inbox unchanged (32closed/6open). Local handoff owns exact backups/paths.
+
+
+### 2026-11-18 - Shared installer layout maintenance
+- Implemented responsive one/two-column layout, complete banner containment, DPI-change handling, safe
+  swap-chain resize, scrollable wrapped logs, fixed action bar and platform-specific output-folder button.
+- Corrected native Switch 2 completion/no-SD instructions separately; no runtime or SDK changes.
+- [confirmed] Initial 176 off-screen render cases passed resize/maximize/restore and simulated DPI/state
+  coverage; fixture user files unchanged. Final source/package and cold-install validation follows.
+- Existing-release replacement authorized by the user; keep versions, tags, filenames, descriptions and
+  unrelated assets. Do not equate simulated DPI checks with physical multi-monitor acceptance.

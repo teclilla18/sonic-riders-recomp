@@ -32,3 +32,5 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 Kinds: **Reference** = maintained, current; **Historical** = true when written, "current" / "next" in it meant then;
 **Investigation** = analysis of a problem and its evidence limits; **Draft** = design or research, not evidence of
 implementation. When a note is superseded, move it to `docs/archive/` with `git mv` and fix the links here.
+
+- [Windows installer layout](notes/installer-layout.md): responsive shared GUI, DPI and completion/output folders; regression and package checks.
