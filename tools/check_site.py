@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ALLOWED = {'.html', '.css', '.js', '.json', '.md', '.txt', '.py', '.svg', '.jpg', '.jpeg', '.png', '.webp', '.gif', ''}
 PICTURES = {'.svg', '.jpg', '.jpeg', '.png', '.webp', '.gif'}
 PRIVATE = [re.compile(p, re.I) for p in (r'[A-Z]:[\/]+Users[\/]', r'/home/[a-z]', r'/Users/[a-z]',
-                                         r'[\w.+-]+@(gmail|outlook|hotmail|yahoo|icloud|proton)\.')]
+                                         r'(?<![\w.+-])(?!ridersplusgame@)[\w.+-]+@(gmail|outlook|hotmail|yahoo|icloud|proton)\.')]  # the project's public address is allowed
 
 files = subprocess.run(['git', '-C', str(ROOT), 'ls-files', '--cached', '--others', '--exclude-standard'],
                        capture_output=True, text=True, check=True).stdout.split('\n')

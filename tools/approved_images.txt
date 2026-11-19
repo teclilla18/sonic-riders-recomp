@@ -1,8 +1,12 @@
 # SHA-1  path  (source). Every picture on the site must be listed; tools/check_site.py enforces it.
 # Lines "(from main:...)" are rewritten by tools/build_site.py sync; add other pictures by hand, only with the maintainer's OK.
-d7bc00c6891a7d3386ffd00e5980153724589752  assets/img/grid-tile.jpg  (background grid supplied by the maintainer 2026-11-19, cropped on its grid lines)
-7faa02a280445fc20387a84609f85246f7141376  assets/img/grid-portrait.jpg  (background grid supplied by the maintainer 2026-11-19, as supplied)
-556c1a60d9b1fe6426a5e4dc24a38332a12c002a  assets/img/favicon.svg  (site logo mark, drawn for the website)
+5d33a306e5ff9565f22bc291a564bb2546a847b1  assets/img/grid-tile.jpg  (background grid supplied by the maintainer 2026-11-19, redrawn at 2x by tools/bg (repeating tile))
+a923937180bbc360e62aad021cbf4baa9839c16d  assets/img/grid-portrait.jpg  (background grid supplied by the maintainer 2026-11-19, redrawn at 2x by tools/bg)
+493a0a3338b57d7a6a67031efccd35210076ea4b  assets/img/logo.webp  (Riders Plus logo supplied by the maintainer 2026-11-19)
+56e065ad4a22561875aea22652d418c0e74c9053  assets/img/logo-sm.webp  (Riders Plus logo supplied by the maintainer 2026-11-19, small)
+78985fa629823a198b0a9ef1dc04494feb8f873d  assets/img/icon-64.png  (Riders Plus round profile icon supplied by the maintainer 2026-11-19)
+28e34ee64d095e27da9616e3d4cb98c6d62ab7bf  assets/img/icon-180.png  (Riders Plus round profile icon supplied by the maintainer 2026-11-19)
+# Lines "(from main:...)" are rewritten by tools/build_site.py sync; add other pictures by hand, only with the maintainer's OK.
 b8f599c76f1e13e4ba8349b89cf02fd203cfb042  assets/guide/switch-build.svg  (from main:docs/images/installation/switch-build.svg)
 c1833b072d3b42d5115d0240fa5e0765124810ce  assets/guide/switch-card.svg  (from main:docs/images/installation/switch-card.svg)
 117e009d71e381fddb4c4cb6332ece8c87c3f63d  assets/guide/switch-completion.png  (from main:docs/images/installation/switch-completion.png)

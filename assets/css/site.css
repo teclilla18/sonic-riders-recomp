@@ -51,9 +51,6 @@ strong, b { color: #fff; }
   position: fixed; inset: 0; z-index: -2; pointer-events: none;
   background: var(--bg) url("../img/grid-tile.jpg") center top / 598px 864px repeat;
 }
-@media (min-resolution: 1.75dppx) and (min-aspect-ratio: 3/4) {
-  .bg { background-size: 449px 648px; }
-}
 /* Phones and portrait tablets: the original portrait picture, whole, never stretched. */
 @media (max-aspect-ratio: 3/4) {
   .bg { background: var(--bg) url("../img/grid-portrait.jpg") center / cover no-repeat; }
@@ -158,8 +155,17 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--cyan) 30%, transparent 70%); opacity: .7; }
 .topbar-in { width: min(var(--wrap), 100% - 2 * var(--gutter)); margin: 0 auto; display: flex; align-items: center; gap: 24px; min-height: 68px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); flex: none; }
-.brand-mark { width: 34px; height: 34px; fill: var(--cyan); }
-.brand-mark .m2 { fill: var(--gold); }
+.brand-logo { height: 50px; width: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .55)); transition: transform .25s; }
+.brand:hover .brand-logo { transform: scale(1.04) rotate(-1deg); }
+.brand-tag { font: 500 .66rem/1.25 var(--ui); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); border-left: 1px solid rgba(63, 227, 255, .35); padding-left: 10px; }
+@media (max-width: 480px) { .brand-tag { display: none; } .brand-logo { height: 44px; } }
+.footer-logo { width: 150px; height: auto; margin-bottom: 14px; }
+.hero-logo {
+  width: min(400px, 78%); height: auto; margin: 0 0 18px -6px;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, .6)) drop-shadow(0 0 22px rgba(63, 160, 255, .28));
+  animation: logo-in .9s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes logo-in { from { opacity: 0; transform: translateX(-24px) skewX(-8deg); } to { opacity: 1; transform: none; } }
 .brand-text { display: grid; line-height: 1; margin: 0; }
 .brand-text b { font: 800 1.45rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; transform: skewX(-9deg); display: inline-block; }
 .brand-text em { font-style: normal; color: var(--cyan); }
@@ -225,7 +231,6 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .hero-art figcaption { font: 400 .8rem var(--mono); color: var(--muted); margin-top: 12px; text-align: right; padding-right: 6%; }
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; }
-  .hero-art { order: -1; }
   .hero-art figcaption { text-align: left; padding-left: 4%; }
 }
 

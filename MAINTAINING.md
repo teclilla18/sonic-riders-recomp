@@ -51,6 +51,17 @@ Text that is still written by hand and may need a touch after big changes: the R
 (`src/pages/riders-plus.html`), FAQ and troubleshooting (`faq.html`), the easy-read guides (`install.html`,
 `update.html`; keep them in step with main's `docs/INSTALL.md`), credits (`community.html`).
 
+## Brand pictures and the background
+
+- Logo (`assets/img/logo.webp`, `logo-sm.webp`) and round icon (`icon-64.png`, `icon-180.png`) come from the
+  maintainer's own files (logo PNG with transparency, round social-media icon). Regenerate them from those files;
+  list any new picture in `tools/approved_images.txt`.
+- The background grid is the maintainer's picture, redrawn sharp by `tools/bg/`: `analyse.py <picture>` measures
+  every element (grid, crossings, sparkles, streaks, squares) into `elements.json`; `render.py <picture> <scale> <out>
+  [x0,y0,x1,y1]` redraws it at any scale (the optional box drops streaks crossing a repeating tile's edges).
+  Site files: `grid-portrait.jpg` (whole picture at 2x, phones) and `grid-tile.jpg` (2x, crop 49,340 to 647,1204
+  of the original, repeats on wide screens; CSS keeps it at 598 x 864 CSS px).
+
 ## Rules
 
 - **No game data, ever.** Only pictures already approved on main (synced with a SHA-1 check against main's
