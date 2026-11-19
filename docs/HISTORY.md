@@ -1917,3 +1917,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   (the hashes are in their notes). New rule (user): release downloads are setup ZIPs only (CLAUDE.md).
 - [confirmed] Guard passes with the two new pictures in OWN_ART and the removed banner in PAST_ART. The
   launcher's "See what's new" drops HTML tags but shows tables as raw text, so v0.8.7's downloads are a list.
+- Later the same day: a self-updating Road to v1.0 bar at the top of the README (`docs/images/progress-bar.svg`)
+  and a live shields.io badge (`docs/progress.json`), both drawn with the Status card and the table numbers by
+  `tools/make_progress.py`; `.github/workflows/progress.yml` reruns it on push to main. [confirmed] first CI run
+  passed with nothing to change; the badge renders "Road to v1.0: 77%". The style rules went into CLAUDE.md.

@@ -1,70 +1,49 @@
-# Released state (2026-11-18)
+# State (2026-11-19)
 
-**Guide wording follow-up:** headings, subheadings, diagram labels and callouts use plain, neutral language
-for an adult audience. The illustrated style and detailed instructions remain. User approved the original
-presentation and requested this tone correction. Screenshot/font/CSS identities, URLs, platform files/paths
-and anchors stay unchanged. Validation uses the guide checker and offline layouts; no installer rerun.
+## Released
 
-**Illustrated console booklets:** separate Switch Stable and Switch 2 Experimental Alpha HTML/Markdown
-guides preserve Claude’s easy-read styling, colors and offline typography. Ten actual annotated current
-installer captures, 26 labelled diagrams, 17 checkpoints per guide, direct downloads, exact SD trees, safe
-updates and source-backed help. Public entry: https://teclilla18.github.io/sonic-riders-recomp/ .
-README/current-release links use the new public routes; technical docs remain. No new game release,
-release-package rebuild, gameplay change or console deployment. Sources: docs/guide-verification.md.
-**Tested:** exact published ZIP hashes/CRC, both warm-cache GUI installs, full ISO copy/SHA-1, repeated
-updates preserving save/mod/cache/settings/env sentinels, real output-folder clicks, 225 local references,
-16 external HTTP links and 8 offline browser layouts. No fresh physical console/SD-eject or child-user
-acceptance claim. #31’s new Switch Lite update-still-0.1.0 comment remains unresolved; no reply sent.
+- **[v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7)** (latest; tag
+  `381a369`): Windows, original Switch, Android, Linux and iOS setup ZIPs. Super Sonic in Riders Plus (999 rings,
+  Lv. 4/5; top/boost/drift Base 195/270/110, Lv. 4 220/300/125, Lv. 5 240/330/140 km/h), adaptive split-screen
+  HUD, multiplayer Lv. 4/5 digits (#29), no repeated finished-race level-ups, Android Vulkan 1.1 + quit fixes
+  (#32), Linux setup fix (#30). Tested: PC matrix and both own-view checksum routes, cold Sandbox PC + Android,
+  cold Mac + iPhone 17 Pro race. iPads not retested.
+- **[Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2)**
+  (pre-release; tag `1ca54eb`, runtime = accepted build `0d995f3def88`). **Accepted by the user on Switch 2:**
+  icon, Super Sonic feel, high-ring finish, 2P Fit HUD. Fresh installs default to 60 FPS; Unlimited experimental.
+- Release downloads are setup ZIPs only (rule in CLAUDE.md); both alphas' `.sha256` files were removed.
 
+## Front page and release pages (2026-11-19, docs only)
 
-**Installer maintenance released in existing downloads:** shared PC/original Switch/Android GUI and native
-Switch 2 Alpha 2 are responsive, preserve the full banner, handle live DPI/resize, wrap logs/instructions,
-show consistent completion and keep Open Output Folder visible after success. Source-only packages were
-replaced in the existing releases; versions/tags/descriptions/other assets unchanged. Linux/iOS untouched.
-Package source: stable `cf243a9f`, native `d680eb2b`. All 176 simulated DPI/state cases and real output-button
-clicks pass; four independent cold Sandbox GUI/space-path installs pass (native CLI/user-data repeat too).
-Full ZIP/source/privacy audits and anonymous public SHA-256 download readbacks pass. Physical multi-monitor
-migration is untested; no additional hardware gameplay validation. Details: docs/notes/installer-layout.md.
-Current-tree/package guards pass; pre-existing history-only CI rejects older banner blobs. The guard and
-repository history were preserved.
+- README rewritten: Switch 2 poster first, self-updating Road to v1.0 bar, hook, three buttons, all badges
+  together, Riders Plus showcase, one Get it table. All 8 release pages rewritten to one layout. The user
+  approved both styles; future README and release changes must follow CLAUDE.md "README style" and
+  "Release-notes style".
+- `tools/make_progress.py` now draws the top bar, the Status card, the live badge (`docs/progress.json`) and the
+  README table numbers from one AREAS list; `.github/workflows/progress.yml` reruns it on push to main
+  (first run: success, nothing to change). Overall 77 %, unchanged.
 
-**Released:** [v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7),
-original runtime/tag source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
-Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
-SHA-256 readback. Cold Windows Sandbox PC and Android tests passed separately, including space paths.
-iOS v0.8.7 setup ZIP added to this release 2026-11-19 (from the tag; cold Mac test + iPhone 17 Pro race,
-pause, lock/unlock, legacy Vulkan path and menu quit passed; no iPad retested).
+## Open items (priority order, from the user's plan)
 
-**Released separately:** [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2),
-original runtime/tag source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
-ZIP SHA-256: `dde6e5125981ecee948af030b45076431289eaceadfdd049579a567c1f1aa6d7`.
-Cold native GUI and command-line/space-path builds, user-data preservation sentinels and uploaded readback
-audit passed. These tests establish setup/build behavior, not additional hardware gameplay acceptance.
-Runtime/config match accepted source `80304ca` / build `0d995f3def88` exactly. Fresh installs default to
-60 FPS; Unlimited rendering remains explicitly experimental. Updates preserve existing settings.
+1. **Switch texture-pack freezes** (promised for a release, overdue): the game freezes up to ~1.3 s the first
+   time each HD texture appears. Plan: draw the game's own texture first, decode the replacement on a worker,
+   swap it in when ready (`runtime/src/texpack.c` texpack_load / load_dds, `gx_texture.c` cache miss around
+   gx_texture_get). Baseline log: `build/old/switch-texpack-20261116.log` (65 `[hitch]` lines with "lookups").
+   Not started.
+2. **Auto stick-spin / air refill (#23)**: approved, plan in docs/notes/plans-2026-11.md "Auto air refill /
+   stick spin". Not started.
+3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
+   perftest passed; test zip posted to #33, waiting for the reporter's result. Not merged.
+4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
+   Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
+5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in
+   v0.8.7; ask the user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
+6. **Super Sonic overhaul** (Riders Plus only, after 1-4 are stable): always flying, golden aura and trails,
+   ring magnet, exclusive Lv. 6 Overdrive at 425 rings (275 / 400 / 155 km/h). Plan only; nothing implemented.
+7. History-only CI failure (old banner blobs rejected by the "every commit" guard step): the Heroes fix (PAST_ART
+   for earlier versions) is partly in; ask the user before changing the history check.
 
-**Implemented, tested and released:** Super Sonic's 999-ring compatibility, native-level-preserving Lv. 4/5
-progression, noncompounding mod-compatible balance, adaptive multiplayer HUD, multiplayer Lv. 4/5 digits
-(#29), independent shared 2P timer, and finished-race repeated stat/effect fix. Super top/boost/drift targets
-are 195/270/110 Base, 220/300/125 Lv. 4 and 240/330/140 Lv. 5 km/h. Vanilla and online determinism preserved.
-Main also includes validated Android Vulkan/shutdown fixes (#32) and Linux installer fix (#30).
-PC matrix/controls and both own-view 6,701-checksum routes passed. Broader hardware coverage remains limited.
-**Accepted by the user on Switch 2:** universal icon, Super Sonic feel, high-ring finish and 2P Fit HUD.
-The console still has accepted build `0d995f3def88`; this release session did not replace or relaunch it.
+## Next hardware test
 
-**Unresolved Alpha 2 limitation:** Race Select (Free Race / Time Attack / World Grand Prix) can develop
-severe persistent audio distortion, with one reported freeze at onset. Disabling Unlimited and leaving
-the menu did not recover that session. Similar audio/stall failures predate these fixes; no severe new
-regression was established. Native output drops/errors were zero; underruns, PCM faults and resource leaks
-remain unproven. No audio fix is claimed. Captured log/screenshots are preserved locally under ignored
-`build/live-preview-20261118/`; use log-reader rather than rereading logs. Rare post-race loading hang #6
-remains open. No speculative fix or larger Super Sonic overhaul was attempted.
-
-Legacy Claude Artifact links remain with their older-version notice. New console first-install routes
-are the separate GitHub Pages booklets above; they do not depend on external artifact republication.
-
-Retention completed: five newest releases retain their assets; v0.8.2 is permanently protected.
-By explicit user choice, v0.8.1 and v0.8.3 remain iOS-only archive pages with their exact original iOS assets
-and links. Eight obsolete non-iOS assets were removed only after complete local backups and hash checks.
-v0.8.2 and v0.8.4 assets/notes were unchanged. Native source stays separate from main; dirty sr-main,
-private DX and concurrent worktrees were preserved. Exact evidence and local ownership: excluded AI_HANDOFF.md.
+- Original Switch OLED (overclocked: docked CPU 1785 / GPU 1152 / MEM 2133): HD texture pack with background
+  loading, full pack already in `mods/HDPackTest` on the SD card; compare `[hitch]` lines with the baseline.
