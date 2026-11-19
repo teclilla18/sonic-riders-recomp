@@ -62,7 +62,8 @@ OWN_ART = {
     "docs/images/installation/switch2-select-card.png": "3415e8d035862c907f3cdeefe8bd3dbe7e84a600",
     "docs/images/installation/switch2-select-disc.png": "eff37dd176652aa70c7c8977d04d0e95f70abfcb",
     "docs/images/switch2-alpha1-banner.jpg": "b4be7ce0f7e34e3b56735283781a58c775fc5161",  # user-approved Lanmana banner, unchanged with signature (2026-11-18)
-    "docs/images/banner.jpg": "4c0e681fef3ff69d583129825b1023f00a86f0c5",  # README banner (fan art, user's choice, 2026-11-09; cropped to 1529x600 2026-11-16)
+    "docs/images/switch2-poster.jpg": "1b3ad238b2a0864f3b838fbde681415262cc5d47",  # README Switch 2 poster, Lanmana art with signature (user's choice, 2026-11-19)
+    "docs/images/riders-plus/riders-plus-banner.jpg": "db92bc23219a1cc21e32f950d26c205b56a49c11",  # README Riders Plus banner (user's choice, 2026-11-19)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four
     "docs/images/compare/original-1.jpg": "4bd5401024ca6f240715dc878434d6d298f59421",
@@ -100,7 +101,7 @@ OWN_ART = {
 # the user's choice, 2026-11-07) and cedry2kio's game icon (the user's OK, 2026-11-10); and the maintainer's own
 # touch-control art. Committing any of these again as a new file is still refused unless it is in OWN_ART.
 PAST_ART = {
-    "docs/images/banner.jpg": {"54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b"},
+    "docs/images/banner.jpg": {"54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b", "4c0e681fef3ff69d583129825b1023f00a86f0c5"},  # removed from README 2026-11-19
     "launcher/banner.jpg": {"a1d51fb7890668be5dfd126311b946aec8744339"},
     "setup/icon.png": {"b84f997daba5df2563d0c3526cf633aa87151ebf", "b42362f551138986cd53dda64721510c101a80e2"},
     "setup/icon_256.jpg": {"4ab58b2f4da4418a9febadea57937eae7f2da5a6", "849b075587a60443ed7ac41ab4cbf3f61736b4a0"},
