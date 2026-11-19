@@ -2,6 +2,13 @@
 
 **Reference.** Moved from docs/REFERENCE.md on 2026-11-03 (content unchanged). Index: [REFERENCE.md](../REFERENCE.md).
 
+Android/iOS Vulkan compatibility: `SR_VK_FORCE_LEGACY=1` forces traditional render passes;
+`SR_VK_NODUALSRC=1` tests single-source colour/separate alpha writes. Both are diagnostic only;
+see [vulkan-legacy.md](vulkan-legacy.md) for path selection, cache handling and validation.
+
+`SR_DETCLOCK=1` intentionally bypasses adaptive frame pacing for deterministic captures/replays.
+Leave it off when measuring normal simulation speed or Auto; use `SR_FRAMERATE=1` for Auto.
+
 Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not proven; **[uncertain]** = guess / needs work.
 
 ## Debug variables (SR_*): full list
@@ -102,3 +109,5 @@ Environment variables read by `tools/recomp/gcrecomp.py` when generating code (a
 - `configure.py --no-base-reg`: Switch without the x28 guest-memory base register.
 - After editing `config/GXEE8P/patches.txt`, run `python tools/recomp/gcrecomp.py config/GXEE8P baserom build/gen`
   if ninja says there is nothing to do [uncertain].
+
+- `SR_SHUTDOWN_DELAY_MS=1..5000` (Android): diagnostic hold after explicit Vulkan/SDL cleanup and owned exit handlers, before direct process termination; verifies delayed shutdown faults. Normal quits have no delay.

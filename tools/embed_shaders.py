@@ -63,6 +63,10 @@ PRELUDE_VK = ("#version 460\n#define ATTR(n) layout(location = n)\n#define VARY(
               "#define DEPTH_ZERO_ONE 1\n#define XFM_WORD(i) 0u\n#define gl_VertexID gl_VertexIndex\n")
 PROGRAMS_VK = (("gx_vert", "gx", "vert", "#define XF_UBO 1\n"), ("gx_frag", "gx", "frag", "#define GX_INDIRECT 0\n"),
                ("gx_frag_ind", "gx", "frag", "#define GX_INDIRECT 1\n"),
+               ("gx_frag_single", "gx", "frag", "#define GX_INDIRECT 0\n#define GX_SINGLE_SOURCE 1\n"),
+               ("gx_frag_ind_single", "gx", "frag", "#define GX_INDIRECT 1\n#define GX_SINGLE_SOURCE 1\n"),
+               ("gx_frag_alpha", "gx", "frag", "#define GX_INDIRECT 0\n#define GX_SINGLE_SOURCE 1\n#define GX_ALPHA_PASS 1\n"),
+               ("gx_frag_ind_alpha", "gx", "frag", "#define GX_INDIRECT 1\n#define GX_SINGLE_SOURCE 1\n#define GX_ALPHA_PASS 1\n"),
                ("vk_quad_vert", "vk_quad", "vert", None), ("vk_tex_frag", "vk_tex", "frag", None),
                ("vk_fill_frag", "vk_fill", "frag", None), ("vk_touch_frag", "vk_touch", "frag", None),
                # picture options: bloom, colour grading, FSR 1 (docs/notes/picture-options-port.md)

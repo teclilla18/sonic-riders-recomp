@@ -1755,3 +1755,58 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   console launch; native binary cannot be smoke-tested in Eden. All10 deployment regressions pass.
 - Full/staged data guards + ignored-status/hooks preserved for local checkpoints. No push/publish/release/
   asset change or external reply. Inbox unchanged (32closed/6open). Local handoff owns exact backups/paths.
+## 2026-11-18: experimental Android Vulkan 1.1 fallback (#32)
+
+- Implemented feature/dependency negotiation and automatic legacy render passes in the shared Vulkan renderer; supported devices retain dynamic rendering. Framebuffers follow existing view retirement/fences/resize/swapchain/device recovery; prewarm-safe compatible passes and separate caches [confirmed, source/tests].
+- Corrected depth-clear image usage, checked formats/limits, capped the image pool and added dedicated spills. Audited shaders; single-source variants and separate alpha writes preserve the historical solid-floor TEV-alpha distinction (0c00ba4), including on no-dual-source devices.
+- Tested S23 Ultra / Adreno 740 / Vulkan 1.3.128: full 1P/2P effects routes dynamic 50.283/56.734 fps, legacy 49.650/56.240 fps, each 1800 measured steps. Sequential runs do not establish a speed regression. Captures match closely; displayed FPS and simulation speed both fall together [confirmed].
+- Khronos validation found invalid internal ALL_COMMANDS subpass masks; corrected to attachment graphics stages. Corrected legacy/no-dual/no-push race + simulated device recovery and dynamic recovery have zero validation warnings/errors/VUIDs. Legacy background/resume continues rendering [confirmed].
+- Source-extracted helper tests run on Windows and ARM64; Vulkan 1.1 SPIR-V validation and Switch zero-scratch checks pass. Experimental branch only; no public release, main merge, issue reply or closure. Mali and real MoltenVK execution, real GPU reset and exhaustive alpha/depth overlap remain unproven.
+- User observed slow-motion below 60 fps. Frame-pacing audit is a separate follow-up after #32; do not change simulation/pacing as part of the renderer fix. Details: docs/notes/vulkan-legacy.md.
+
+## 2026-11-18: separate S23 Auto pacing audit after #32
+
+- The slow-motion observation came from matched-capture runs with SR_DETCLOCK=1: frame_pacing.c explicitly bypasses adaptive pacing in deterministic mode [confirmed, source]. It did not demonstrate a normal Auto regression.
+- Without deterministic timing, Auto at 2x with bloom25/grading/FSR50 maintains full speed on both paths: dynamic 1P 59.95steps/s at44.56fps,2P59.94at52.64;legacy1P59.94at42.93,2P59.95at51.76. Each scene measured1800steps [confirmed,S23 Adreno740 Vulkan1.3.128]. GPU25-26ms/render waits16-20ms reduce drawing while skipped-draw iterations keep simulation near60.
+- No normal Auto regression reproduced in these routes; no pacing, VI, settings or frame-queue source changed. Leave SR_DETCLOCK off for ordinary gameplay/performance checks. Android platform_gpu_frame_ms is unavailable (-1); actual GPU timings are in the Vulkan log, a separate hint/hysteresis audit item if needed. Not proof for every load/hitch/device.
+
+## 2026-11-18: #32 reporter confirms Mali race; quit crash remains
+
+- Crashmania468 confirms the experimental source setup boots and completes a race without issues (issue comment 6988716603) [confirmed, reporter]. Returned build3b2592b7 log identifies Mali-G57MC3,Vulkan1.1.177,driver08001000; automatic legacy fallback,separate alpha pass,descriptor pool,17700presented frames,59/59shader-coverage samples100%.
+- Race samples30.6-58.5fps;Auto usually59.8-60steps/s,including60steps/s at30.6fps [confirmed,log]. Cold-load pipeline compilation still hitches:worst1077msframe,1059ms compiling18pipelines;temporary simulation dips during cold loads.
+- Important limit:the same log ends with [android]quit immediately followed by SIGSEGV. No Vulkan error/device-loss line precedes it. Existing render_thread exit(0) path is unchanged by #32; cause is unproven, not safe to attribute/exclude renderer lifetime. Need useful fault stack/tombstone. Boot/race success does not establish clean shutdown.
+- Validation documentation updated only; no runtime edits, merge, release, reply or issue closure. Real MoltenVK and broader stress/alpha/depth cases remain unproven.
+
+
+## 2026-11-18: #32 Android quit lifecycle follow-up (experimental)
+
+- Original quit block calling exit(0) predates the Vulkan fallback. Unchanged S23 baseline menu/full-race quits passed both paths; original Mali SIGSEGV not reproduced [confirmed]. The Mali unmapped PC remains insufficient for exact attribution.
+- An intermediate explicit-cleanup candidate still using libc exit reproduced a dynamic-path FORTIFY destroyed-mutex SIGABRT in Android/vendor RenderThread, 8 ms after cleanup. EXIT_SELF/status0 was also recorded [confirmed]. Bionic finalizers can race surviving graphics threads; shared Android lifecycle hazard, not legacy-only. Identical cause on Mali remains uncertain.
+- Implemented producer gate, real SDL prewarm/UI worker joins (8 MiB stacks), safe concurrent audio close, existing GPU-idle/device teardown and framebuffer-before-view destruction, surface/instance/window/SDL cleanup. Owned rt_atexit save/net/record handlers and stream flush precede Android _Exit; other platforms preserve libc semantics. Crash handling remains active.
+- Full S23 Ultra / Adreno740 / Vulkan1.3.128 Khronos validation routes pass natural quit: dynamic1P59.95steps/s51.09fps,2P59.95/56.38; legacy/no-dual/no-push1P59.83/26.59,2P59.97/55.27 (1800steps each). Zero validation warnings/errors/VUIDs/fatals; 500 ms post-cleanup holds pass. Validation runs are not release performance comparisons [confirmed].
+- Both paths also pass simulated loss/rebuild at31, Home/resume and menu rendering59.9fps, then clean exit after5s hold. Menu resume only, not mid-race or real GPU reset. Normal signed APK menu quits pass without delay; validation settings restored [confirmed].
+- Windows/ARM64 actual-helper concurrency and exit-handler regressions pass; Android x86_64 syntax passes. Floor shaders/compatibility/pacing behaviour preserved. Real MoltenVK and exact Mali shutdown retest remain unproven. Updated source/setup package prepared experimentally; no merge/release/issue closure/reply.
+
+
+## 2026-11-18: #32 Mali shutdown verified; separate Green Cave loading evidence
+
+- Reviewed the two latest reporter comments and attachments35054029/35054699 [confirmed]. Both are90868613,Mali-G57MC3,Vulkan1.1.177,automaticlegacy,separatealpha,descriptorpool; all shutdown/application-handler phases finish,status0,no subsequent signal. Updated shutdown verified in both supplied logs.
+- Green Cave/Tails completes race then stalls on loading for~130s while four-draw frames and simulation stay~59.9/s,GPU~7ms,renderwait0.04-0.05ms,disc54MB/0furthercompletions. No Vulkanerror/device-loss/GPUblock evidenced [confirmed]. Separate guestloading/game-state progress failure likely; exact#6CRI/DI signature uncertain without watchdog/IRQ/threads. No speculativefix; disc/scheduler/OS/frame_pacing source unchanged by#32.
+- Preserved both raw logs locally with hashes/provenance; docs/notes/loading-hang.md links original attachments and compares historical PC/Eden CRI/filetail/loader-resume research. Keep#6open for a targeted watchdog reproduction.
+- User conditionally authorizes existingv0.8.6Android asset update and explicitly authorizes cold PC/Android Sandbox checks. Source/setup ZIP only; tag/main/otherplatformassets/issues remain unchanged. Publication results follow separately.
+
+
+## 2026-11-18: v0.8.6 Android-only release asset updated (#32)
+
+- After reporter verification and explicit Sandbox permission, cold PC/Android setups PASS both normal and space paths (fresh downloads, exit0, expected EXE/APK). PCsource90868613; exactAndroidZIPfaab3dd4 differs only in verification docs, runtime unchanged [confirmed].
+- Replaced only SonicRiders-Android-Setup-v0.8.6.zip on existingv0.8.6:249entries,8210435bytes,SHA256fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e. Downloaded public asset matches hash [confirmed]. Original releasebody preserved; appended Android fix/source/checksum and separate#6 knownhang note. Tag/releaseidentity/otherassetIDsanddigests unchanged; originalAndroidasset retained locally for rollback.
+- No main merge,newtag,APKupload,issuecommentorclosure. Branch-only docs and excluded canonical handoff updated; raw Mali logs remain local with immutable hashes/provenance. Green Cave exactcause and realMoltenVK remain unproven; no speculative loader fix shipped.
+
+
+## 2026-11-18: released Android fixes integrated into main; #32 resolved
+
+- User authorized source integration, reporter thanks/closure and separate#6evidence. Mainbf9f723 was an ancestor; merge-tree matched the fix tree and guarded fast-forward reached510df14 without conflicts. No runtime/build implementation changes relative to the tested/public package. Dirty sr-main's7existingdocfiles and staging were preserved; no stash/reset/worktree rewrite.
+- Public Android source pinned to faab3dd43fd5f5e9f4e64674694ac66016496cb5, runtime90868613, embeddedVERSIONv0.8.6(faab3dd4). Manifest and verifier added. All245source+3generatedtextentries match publicZIP. Fresh own-source launcher differs only by2PEtimestampbytes; restoring recordedtimestamp reproduces full publicZIP SHA256fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e [confirmed]. Negative verifier checks reject mismatches/input overwrite. No APK/game output uploaded.
+- Focused Vulkanpass/feature/framebuffer/pool, concurrentcompiler/audio/shutdown, exit-handler and quit-verifier regressions pass. Prior S23/Mali and cold PC/Android validation retained; no redundant release/device deployment. Real MoltenVK remains untested.
+- Thanked Crashmania468 and linked public installer; #32 closed COMPLETED (comment6993712427). #6 remains OPEN with findings/original attachment35054699 (comment6993712013). Exact loading cause remains uncertain; research preserved separately, no speculativefix.
+- No new release, tag move, release-body edit or asset replacement in integration; tag and allassetIDs/digests verified unchanged. STATE/canonical excluded handoff updated; other native/HUD/Super work remains separate.

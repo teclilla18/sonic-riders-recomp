@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.7 (2026-11-18)
+
+- Super Sonic works with Riders Plus:999 rings, Lv4/5 progression and active top/boost/drift targets
+  195/270/110 Base,220/300/125 Lv4 and240/330/140 Lv5 km/h. Native level/resource costs and stat mods preserved.
+- Adaptive multiplayer HUD positioning, independent shared2P timer and correct multiplayer Lv4/5 digits29.
+- Stop finished-race repeated stat application and native level-up effects.
+- Includes validated Android Vulkan compatibility/shutdown fixes32 and Linux/SteamDeck setup fix30.
+- Windows, originalSwitch, Android and Linux setup packages; existing iOSv0.8.4 remains available separately.
+
 ## Unreleased — local review
 
 - Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
@@ -18,6 +27,19 @@
   centred notifications and the 3P silhouette. Rendering changes do not write guest RAM.
 - Separately, fix the missing split-screen Lv. 4/5 digit hooks (#29), including Super Sonic's multiplayer HUD.
   Validation and remaining checks: [Riders Plus / HUD note](docs/notes/riders-plus-local-hud.md).
+## Android download update — v0.8.6 (#32, 2026-11-18)
+
+- Automatically use traditional render passes on drivers without dynamic rendering;
+  preserve the existing path on supported devices. Tested on the S23 by forcing both paths;
+  the reporter confirms a completed Mali-G57 race. iOS/MoltenVK still requires testing.
+- Check optional features, format/allocation limits and depth-clear usage. Preserve
+  the solid-floor destination-alpha fix on devices without dual-source blending.
+- Shut down Android renderer/audio workers and Vulkan/SDL resources in order. Preserve save/record
+  handlers while avoiding a reproduced library-finalizer race with Android graphics threads.
+  S23 tests pass and both updated Mali logs complete clean shutdown without another signal.
+- The separately reported Green Cave/Tails loading hang remains under investigation (#6);
+  no speculative loading/loader change is included.
+- Diagnostic `SR_VK_FORCE_LEGACY=1`; technical details in `docs/notes/vulkan-legacy.md`.
 
 ## Documentation — Switch 2 Alpha 1
 

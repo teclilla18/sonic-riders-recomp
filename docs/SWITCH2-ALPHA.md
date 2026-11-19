@@ -1,12 +1,22 @@
-# Sonic Riders Recomp — Switch 2 Alpha 1
+# Sonic Riders Recomp — Switch 2 Alpha 2
+
+**Known serious limitation:** Race Select (Free Race / Time Attack / World Grand Prix) can develop persistent
+severe audio distortion, with a freeze at onset. Normal 60 FPS and leaving the menu did not recover the
+reported accumulated state. Relaunching may help, but is not a guaranteed fix. Keep 60 FPS as the default;
+Unlimited rendering is experimental and may exacerbate stress. This is an alpha, not a stable native release.
+
+Includes applicable v0.8.7 Riders Plus/HUD/finished-level fixes, Unlimited as an opt-in experiment, and the
+universal game icon. User accepted build0d995f3def88 for Super balance, high-ring finish, icon and2P Fit HUD.
+Similar audio/stall defects predate these changes; no severe newregression is established, but exact cause
+and resource/PCM/underrun behavior remain unresolved. Diagnostic logs are preserved locally.
 
 Experimental community compatibility, bug, performance and stress testing.
-[Download Alpha 1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1). This experimental pre-release is separate from stable v0.8.6.
+[Download Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2). This experimental pre-release is separate from stable v0.8.6.
 No compiled game or Nintendo/SEGA game data is distributed.
 
 ## What has been tested
 
-Runtime baseline: checkpoint `fa2ec57`, hardware-tested build `c8c06fdda996`, including the scheduler wakeup and bounded asynchronous logging fixes.
+Runtime baseline: accepted `80304ca` / `0d995f3def88`, retaining the earlier scheduler wakeup and asynchronous logging fixes.
 One physical Switch 2: firmware23.0.1, kaiHEN20261117.1 launched through Seedsow,
 native-game hold-R Homebrew Menu flow, OunceShell installed. These environment
 details are the tester's report, not a promise for other setups or firmware.
@@ -20,12 +30,12 @@ building only; they cannot establish physical Switch 2 functionality.
 Higher-FPS interpolation is excluded. Its separate experimental build froze at
 Player Entry after selecting Sonic with Chaos Emerald gear (user report). It is
 preserved separately for investigation. Alpha uses the accepted renderer.
-Known issues: intermittent stuttering or temporary freezes, music/announcer dropout, temporary audio distortion and minor selection audio glitches. Relaunching has restored missing music in tests; not all symptoms are fixed. Recent two-race test had no selection freeze: first race had two temporary stalls and recoverable distortion, second was otherwise flawless. Further fixes are deferred after Alpha 1. Startup/loading can hitch for several seconds; logs identified synchronous
+Known issues: intermittent stuttering or temporary freezes, music/announcer dropout, temporary audio distortion and minor selection audio glitches. Relaunching has restored missing music in tests; not all symptoms are fixed. Recent two-race test had no selection freeze: first race had two temporary stalls and recoverable distortion, second was otherwise flawless. Further fixes are deferred after Alpha 2. Startup/loading can hitch for several seconds; logs identified synchronous
 pipeline-cache saving. Do not delete caches as a routine update step.
 
 ## Install on Windows
 
-1. Download **SonicRiders-Switch2-Setup-Alpha1.zip** from the dedicated alpha
+1. Download **SonicRiders-Switch2-Setup-Alpha2.zip** from the dedicated alpha
    pre-release, not the ordinary latest/stable download. Extract the whole ZIP.
 2. Run **Install Sonic Riders (Switch2).exe**. It uses the existing Switch
    installer's interface. Pick your own clean USA GXEE8P revision0 ISO/GCM or
@@ -64,7 +74,7 @@ Hold Minus about0.5seconds for the overlay. Choose **Quit Game**, then confirm,
 to shut down and return to the Homebrew Menu. Fresh installs use **2x internal resolution**, target 60 FPS and
 write `SR_SWITCH2_FRAMES=0`, meaning no automatic exit. Existing env/settings
 are retained. **Live resolution changes are disabled** in this alpha because they
-could leave the overlay frozen. The alpha retains the accepted Auto/30/60 menu, without higher FPS.
+could leave the overlay frozen. The alpha retains the accepted Auto/30/60 menu, with Unlimited rendering available only as an explicitly experimental option.
 
 ## Update and rollback
 
@@ -78,7 +88,7 @@ in this alpha. The original Switch installer and folder are unaffected.
 
 ## Report a bug
 
-Use the [bug report form](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). State Alpha 1 and the build ID from startup,
+Use the [bug report form](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). State Alpha 2 and the build ID from startup,
 firmware, loader/version, handheld/docked mode, known clocks, track/gear/player
 count/settings, exact steps, and whether it recurs. For performance, distinguish
 warm from cold cache and do not compare hardware against PC/emulator timings.
@@ -94,10 +104,10 @@ alone does not prove the game's workers remain healthy.
 Thanks to ouncebrew/ounce-devkit, libounce, OunceVK and kaiHEN developers; Seedsow
 and OunceShell developers; devkitPro/devkitA64/switch-tools; Google shaderc/NDK;
 Dear ImGui; and decomp-toolkit contributors. Exact pinned URLs, hashes and SDK
-component revisions are in [the release's toolchain lock](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.6-switch2-alpha.1/setup/toolchain.json), [SDK dependency lock](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.6-switch2-alpha.1/diagnostics/switch2/dependencies.json),
+component revisions are in [the release's toolchain lock](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.7-switch2-alpha.2/setup/toolchain.json), [SDK dependency lock](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.7-switch2-alpha.2/diagnostics/switch2/dependencies.json),
 and the generated release-metadata.json. Dusklight and Aurora informed native
 platform patterns; their game code/dependencies are not linked into this port.
-See [the release's third-party notices](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.6-switch2-alpha.1/diagnostics/switch2/THIRD_PARTY_NOTICES.md) and the repository licenses/credits.
+See [the release's third-party notices](https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.7-switch2-alpha.2/diagnostics/switch2/THIRD_PARTY_NOTICES.md) and the repository licenses/credits.
 SEGA/Nintendo own Sonic Riders and associated trademarks; this is an unofficial
 fan project. No game data is included. Development and documentation are
 LLM-assisted (Claude Code/Codex), with human physical hardware feedback. Source,

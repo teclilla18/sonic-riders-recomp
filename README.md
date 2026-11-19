@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/switch2-alpha1-banner.jpg" width="100%" alt="Sonic Riders Recomp — Nintendo Switch 2 Alpha 1. Original artwork by Lanmana; signature preserved.">
+  <img src="docs/images/switch2-alpha1-banner.jpg" width="100%" alt="Sonic Riders Recomp — Nintendo Switch 2 Alpha 2. Original artwork by Lanmana; signature preserved.">
 </p>
 
 # 🎉 Sonic Riders is now playable on Nintendo Switch 2!
@@ -12,7 +12,7 @@ There are still some issues with audio and occasional stuttering, which is why I
 
 A huge thank you to the Switch 2 homebrew developers for making this possible.
 
-**[Download Switch 2 Alpha 1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1) · [Install on Switch 2](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
+**[Download Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) · [Install on Switch 2](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
 
 Switch 2 is a separate experimental target. Stable v0.8.6 and the original Switch installer are unchanged. Alpha updates are manual. Known issues include intermittent stuttering, music/announcer dropout and temporary audio distortion. [What has been tested and what to expect](docs/SWITCH2-ALPHA.md).
 
@@ -47,7 +47,7 @@ Switch 2 is a separate experimental target. Stable v0.8.6 and the original Switc
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
   <img src="https://img.shields.io/badge/Focus-Game%20Preservation-pink" alt="Focus: game preservation">
   <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%201-orange" alt="Nintendo Switch 2: experimental Alpha 1"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%201-orange" alt="Nintendo Switch 2: experimental Alpha 1"></a>
   <img src="https://img.shields.io/badge/Recompiler-gcrecomp-orange" alt="Recompiler: gcrecomp (this repo)">
   <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
   <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
@@ -143,7 +143,7 @@ measured PC races.</sub>
 
 | I want to play on... | Download from the [latest stable release](../../releases/latest), unless marked experimental | Guide |
 |---|---|---|
-| **Nintendo Switch 2** (experimental Alpha 1) | [SonicRiders-Switch2-Setup-Alpha1.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1) — separate pre-release | [Install on Switch 2](docs/SWITCH2-ALPHA.md) |
+| **Nintendo Switch 2** (experimental Alpha 1) | [SonicRiders-Switch2-Setup-Alpha2.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) — separate pre-release | [Install on Switch 2](docs/SWITCH2-ALPHA.md) |
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
@@ -218,7 +218,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Whole game playable | 90 % | Grand Prix freeze after character select (#18), rare "Now Loading" hang (#6) |
 | Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
-| Platforms | 85 % | Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
+| Platforms | 85 % | Android #32 resolved: Vulkan 1.1 race/clean quit confirmed on Mali; MoltenVK pending. Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
 | Online play | 55 % | PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings |
 | Features and polish | 71 % | Custom music, right-stick camera, code mods, new characters from mods (local/unreleased: Super balance,2P clock and finished-level fixes PC tested;3P/4P and own-view controls unchanged; universal native icon embedded, USB deployment verified; hardware acceptance pending; texture-pack loading still freezes on Switch) |
 
@@ -283,7 +283,7 @@ forks (`third_party/LICENSE-MPL-2.0`).
 
 ## Credits
 
-- Switch 2 Alpha 1 banner: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request. The supplied image and artist's signature are preserved unchanged.
+- Switch 2 Alpha 2 banner: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request. The supplied image and artist's signature are preserved unchanged.
 - Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
