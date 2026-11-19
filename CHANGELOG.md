@@ -20,6 +20,7 @@
 
 ## v0.8.7 (2026-11-18)
 
+- iPhone / iPad: the iOS setup ZIP is now on v0.8.7 (added to the v0.8.7 release on 2026-11-19).
 - Super Sonic works with Riders Plus:999 rings, Lv4/5 progression and active top/boost/drift targets
   195/270/110 Base,220/300/125 Lv4 and240/330/140 Lv5 km/h. Native level/resource costs and stat mods preserved.
 - Adaptive multiplayer HUD positioning, independent shared2P timer and correct multiplayer Lv4/5 digits29.

@@ -1893,3 +1893,14 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   Guide link/image/privacy/platform checks and offline browser layouts verify the wording revision.
   No installer/package rebuild, runtime change, device action or new hardware test.
 - Inbox: maintainer reply on #31 now links the guide; no new issue or discussion. No reply sent by this task.
+
+### 2026-11-19 — iOS v0.8.7 setup ZIP (Mac)
+- iOS was still on v0.8.4. Built `SonicRiders-iOS-Setup-v0.8.7.zip` from tag v0.8.7 (381a3694) and, with the
+  user's OK, added it to the existing v0.8.7 release (no new tag/release); notes' iOS line updated. Uploaded
+  SHA-256 `6f640eb7...3391`, download readback equal [confirmed].
+- [confirmed] Cold Mac test from the zip (fresh folder/tools, `--unsigned`, scratch ipa dir): 7/7 steps, 85 s.
+- [confirmed] iPhone 17 Pro, iOS 27.0, over Wi-Fi; signed build from main 229d6ee (no code diff to the tag):
+  Metal City Free Race normal (user), 55-60 fps, GPU ~6.5 ms, specialized shaders 48012/48012; 3 background/return
+  cycles (Control Center, lock/unlock) recovered picture and sound (user + log); `SR_VK_FORCE_LEGACY=1` race normal
+  (user), 58-60 fps; menu Quit Game ran the full shutdown sequence, exit 0.
+- [uncertain] No iPad retested (none reachable; the iPad Pro is excluded). Guides/README iOS lines: PC session.

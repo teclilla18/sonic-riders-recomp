@@ -239,6 +239,14 @@ First-boot findings [confirmed on the iPhone]:
   SR_CARD=saves/<new>.raw ...` reaches a Metal City Free Race as on PC (build-and-test.md routes); a file for
   `SR_RAMSAMPLE` goes in with `devicectl device copy to ... --destination Documents/<name>` (paths are relative
   to Documents). `SR_TEST_MENU=3` opens the Gameplay tab.
+- Wi-Fi devices (2026-11-19): Finder/Sideloadly see a phone over Wi-Fi through the old sync connection even when
+  `devicectl` says "A connection to this device could not be established"; the CoreDevice tunnel comes up once the
+  device is awake and unlocked (transport `localNetwork`). "iPhone 18 Pro" with transport `sameMachine` is Xcode's
+  simulator, not a device. A repo `build.ninja` from before new runtime files fails to link (`_rt_atexit`,
+  `_texpack_active` undefined): rerun configure.py.
+- No scripted quit on iOS: the shutdown path runs only from the settings menu's Quit Game (log `[shutdown] ...`
+  through "shutdown complete", exit 0); a swipe-away is SIGKILL. `SR_VK_FORCE_LEGACY=1` forces the #32 render-pass
+  path (MoltenVK on A19 Pro picks dynamic by itself).
 
 ## Pause, clock and touch (2026-11-08)
 

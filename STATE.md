@@ -32,7 +32,8 @@ repository history were preserved.
 original runtime/tag source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
 Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
 SHA-256 readback. Cold Windows Sandbox PC and Android tests passed separately, including space paths.
-No new iOS package. Existing iOS downloads remain available.
+iOS v0.8.7 setup ZIP added to this release 2026-11-19 (from the tag; cold Mac test + iPhone 17 Pro race,
+pause, lock/unlock, legacy Vulkan path and menu quit passed; no iPad retested).
 
 **Released separately:** [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2),
 original runtime/tag source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
