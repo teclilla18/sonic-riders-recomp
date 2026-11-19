@@ -163,3 +163,24 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 - Our own repro: S23 over adb, a race boosting next to CPU racers, compare GPU ms with the blur on and off.
 - Gaps: Android has no "Save a bug report" button (`HAVE_BUG_REPORT` is PC/Linux) and the `[vk]` line does not
   count render passes / EFB copies per frame. Both worth adding.
+
+## 32-bit Android (armeabi-v7a, #33, 2026-11-19) [experimental]
+
+- Why: some phones run a 32-bit-only Android on a 64-bit CPU (Android Go builds; #33's Redmi A3, Helio G36
+  with 8x Cortex-A53 and PowerVR GE8320). `ro.product.cpu.abilist` lists only `armeabi-v7a,armeabi` there.
+- Build: `configure.py --abi armeabi-v7a` (target `armv7a-linux-androideabi30`, Thumb-2, normal ELF TLS) ->
+  `build/android/sonicriders-armeabi-v7a.apk`. The setup's default `-Abi auto` asks the connected phone
+  (`getprop ro.product.cpu.abilist`): arm64-v8a if listed, else armeabi-v7a; the choice is kept in
+  `build/android/abi.txt` for updates done with the phone unplugged (no phone, nothing kept: arm64-v8a).
+- Code changes needed: Vulkan non-dispatchable handles are `uint64_t` on 32-bit, so `NULL` arguments became
+  `VK_NULL_HANDLE` (3 `quad()` calls in render_vk.c); crash.txt gets pc/lr from `arm_pc`/`arm_lr`; the `[hitch]`
+  line printed a 64-bit frame counter with `%u` (shifted every later value on 32-bit). The guest window (512 MB)
+  fits a 32-bit address space; no other format mismatches (checked with `rt_log` declared printf-like).
+- Tested [confirmed]: S23 Ultra in 32-bit mode (its A710/A510 cores still run AArch32; `abilist32` lists
+  armeabi-v7a): full `SR_PERFTEST=1` both scenes, 1P 59.95 steps/s 46.9 fps, 2P 59.96 steps/s 53.9 fps,
+  game 2.9-3.3 ms/step, 0 steps over 16.7 ms, 100% specialized shaders, clean shutdown (status 0).
+  Not tested: a real 32-bit-only phone, a PowerVR GPU, Cortex-A53 speed (expect roughly 3-4x the game time).
+- Emulator: the API 30 x86_64 image (the last with 32-bit ARM translation) cannot run the armeabi-v7a build:
+  libndk_translation crashes in `ExecuteGuest` jumping to a low address (Thumb, ARM mode and emulated TLS all
+  crash). A dev-only `--abi x86` build (same 32-bit pointers, no translator) ran both scenes there at 60 fps.
+  Use real ARM hardware for armeabi-v7a; the x86 build only checks 32-bit pointer/format issues.

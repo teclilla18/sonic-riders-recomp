@@ -1798,7 +1798,7 @@ static void draw_overlay_and_touch(void) {
         }
         float col[4] = {ts[i].tint[0], ts[i].tint[1], ts[i].tint[2], ts[i].alpha};
         float shape[4] = {(float)ts[i].kind, (float)ts[i].icon, (float)ts[i].pressed, 1.0f};
-        quad(Q_TOUCH, TGT_SWAP, 15, NULL, NULL, W, H, px, NULL, col, shape);
+        quad(Q_TOUCH, TGT_SWAP, 15, VK_NULL_HANDLE, VK_NULL_HANDLE, W, H, px, NULL, col, shape);
     }
     rendering_end();
 }
@@ -1943,7 +1943,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
                 to_layout(t, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
                 target_begin(t->view, t->w, t->h, 0);
                 float px[4] = {0, 0, (float)t->w, (float)t->h}, one[4] = {0, 0, 0, 1};
-                quad(Q_FILL, TGT_TEX, VK_COLOR_COMPONENT_A_BIT, NULL, NULL, (float)t->w, (float)t->h, px, NULL, one, NULL);
+                quad(Q_FILL, TGT_TEX, VK_COLOR_COMPONENT_A_BIT, VK_NULL_HANDLE, VK_NULL_HANDLE, (float)t->w, (float)t->h, px, NULL, one, NULL);
                 rendering_end();
             }
             to_layout(t, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1964,7 +1964,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             VkPipeline p = quad_pipe(Q_FILL, TGT_EFB, mask);
             (void)p;
             float px[4] = {(float)XSC(x), (float)SC(y), (float)XSC(x + w), (float)(SC(y) + SC(h))};
-            quad(Q_FILL, TGT_EFB, mask, NULL, NULL, EFB_W, EFB_H, px, NULL, col, NULL);
+            quad(Q_FILL, TGT_EFB, mask, VK_NULL_HANDLE, VK_NULL_HANDLE, EFB_W, EFB_H, px, NULL, col, NULL);
         }
         if ((u->bp[0x40] >> 4) & 1) {
             VkClearAttachment da = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, {.depthStencil = {(float)c->copy[7] / 16777215.0f, 0}}};

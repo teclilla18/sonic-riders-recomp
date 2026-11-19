@@ -54,7 +54,7 @@ ap.add_argument("--ipa-dir", default="~/Desktop/Sonic Riders iOS",
                 "It holds recompiled game code: never share it")
 ap.add_argument("--bundle-id", default="", help="ios: app bundle ID (default: net.srnative.sonicriders.<team ID>, the one ID every install should use; ios_run.py install moves an older one onto it)")
 ap.add_argument("--moltenvk", default="", help="ios: MoltenVK folder holding include/ and static/ (default build/ext/MoltenVK/MoltenVK)")
-ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a) or emulator (x86_64)")
+ap.add_argument("--abi", choices=["arm64-v8a", "armeabi-v7a", "x86", "x86_64", "both"], default="arm64-v8a", help="android: phone (arm64-v8a), 32-bit phone (armeabi-v7a) or emulator (x86_64)")
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
 ap.add_argument("--icon", default="", help="your own program icon (.ico; android and ios also .png) instead of the fan-made icon in "
                 "setup/icon.png. Keep it out of git unless it is your own art")
