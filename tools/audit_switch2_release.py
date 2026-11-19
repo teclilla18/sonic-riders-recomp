@@ -45,11 +45,11 @@ def audit(path):
                 assert data==source, 'Source mismatch: '+n
             if n=='SOURCE_COMMIT': assert data.decode().strip()==commit
             if n=='release-metadata.json':
-                meta=json.loads(data); assert meta['source_commit']==commit and not meta['higher_fps_included']
+                meta=json.loads(data); assert meta['source_commit']==commit and meta['higher_fps_included'] and meta['default_fps']==60 and meta['unlimited_experimental']
         assert actual==expected, ('Unexpected/missing entries',actual^expected)
     # Runtime/config/shaders must exactly match the user-selected tested alpha baseline.
-    baseline = 'fa2ec57f1fb7feebc470377652fcf02f386b6f33'
-    assert not git('diff',baseline,'HEAD','--','runtime','config').strip(), 'Runtime/config differs from tested c8c06fdda996 source'
+    baseline = '80304cace54ad3c138ddf3af288f27578cd6994c'
+    assert not git('diff',baseline,'HEAD','--','runtime','config').strip(), 'Runtime/config differs from accepted 0d995f3def88 source'
     checksum=hashlib.sha256(Path(path).read_bytes()).hexdigest()
     assert (Path(str(path)+'.sha256')).read_text().split()[0]==checksum
     report={'source_commit':commit,'zip':Path(path).name,'bytes':Path(path).stat().st_size,'sha256':checksum,

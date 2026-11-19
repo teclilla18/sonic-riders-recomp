@@ -17,6 +17,8 @@ class Switch2InstallerTests(unittest.TestCase):
             manifest=src/'info.json'; manifest.write_text(json.dumps({'format':'sonicriders-switch2-phase2-v1','build_id':'test'}))
             install(nro,manifest,dest)
             self.assertIn('SR_SWITCH2_FRAMES=0', (dest/'env.txt').read_text())
+            self.assertIn('framerate=0', (dest/'settings.ini').read_text())
+            self.assertIn('pc_fps=0', (dest/'settings.ini').read_text())
             files={'env.txt':b'SR_SWITCH2_FRAMES=0\r\n# customized\r\n','settings.ini':b'bloom=37\npc_fps=0\n',
                    'saves/test.txt':b'save sentinel','vk_pipeline_cache.bin':b'cache sentinel','disc.iso':b'not real game data'}
             for name,data in files.items():

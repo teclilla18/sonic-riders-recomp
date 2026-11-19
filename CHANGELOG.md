@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.8.7-switch2-alpha.2 (2026-11-18)
+
+- Super Sonic feels super again with Riders Plus:999rings,Lv4/5 and improved speed balance.
+- Cleaner multiplayer HUD, correct Lv4/5 indicators and no repeated level-ups after finishing.
+- Universal game icon in hbmenu; Unlimited rendering available as an explicitly experimental option.
+- Fresh installs default60FPS; updates retain saves/settings/caches. Known severe RaceSelect audio distortion
+  and occasional freeze remain. Lower render rate did not recover the reported accumulated state.
+
 ## Local development test — not published
 
 - Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.

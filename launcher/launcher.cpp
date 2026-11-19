@@ -2555,7 +2555,7 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     ImGui::SetCursorPos(ImVec2(bx + 30 * s, banner - 46 * s));
     ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
-    ImGui::TextColored(kGoldV, "%s", g_mode == M_SWITCH2 ? "Experimental Switch 2 Alpha 1" : switch_installer() ? "Static recompilation for Nintendo Switch  \xC2\xB7  GXEE8P"
+    ImGui::TextColored(kGoldV, "%s", g_mode == M_SWITCH2 ? "Experimental Switch 2 Alpha 2" : switch_installer() ? "Static recompilation for Nintendo Switch  \xC2\xB7  GXEE8P"
                                      : g_mode == M_ANDROID ? "Static recompilation for Android  \xC2\xB7  GXEE8P"
                                                            : "Static recompilation for PC  \xC2\xB7  GXEE8P");
     ImGui::PopFont();

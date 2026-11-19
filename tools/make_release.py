@@ -78,7 +78,7 @@ exit $rc
 
 def readme_first(flavor, version):
     if flavor == "switch2":
-        return ("Sonic Riders Recomp - Switch 2 Alpha 1\r\n"
+        return ("Sonic Riders Recomp - Switch 2 Alpha 2\r\n"
                 "EXPERIMENTAL: community bug reports, compatibility/performance/stress testing.\r\n"
                 "No game data is included. Build from your own validated USA GXEE8P rev0 ISO/GCM or RVZ/WIA.\r\n"
                 "Windows 10/11 x64; internet and at least 8 GB free for tools/builds.\r\n"
@@ -89,10 +89,10 @@ def readme_first(flavor, version):
                 "Output: build/switch2/sd/switch/sonicriders-switch2/. Copy to /switch/sonicriders-switch2/ with your own image.\r\n"
                 "Existing saves/settings/caches/env are retained. Original Switch folders are separate.\r\n"
                 "Fresh default: 60 fps, no automatic exit. Hold Minus ~0.5s for menu; Quit Game and confirm returns to hbmenu.\r\n"
-                "Hardware-tested baseline: buildc8c06fdda996/fa2ec57; firmware23.0.1, kaiHEN20261117.1 via Seedsow.\r\n"
+                "Hardware-tested baseline: build0d995f3def88/80304ca; firmware23.0.1, kaiHEN20261117.1 via Seedsow.\r\n"
                 "Launch via hold-R on a native Switch 2 game; this is native homebrew, not Switch 1 compatibility mode.\r\n"
-                "Known: intermittent stuttering/temporary freezes, music or announcer dropout, temporary audio distortion and startup/cache-save hitches. Playable experimental alpha; not bug-free. Switch2 default2x; live resolution changes disabled. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Existing choices retained. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
-                "Experimental higher FPS caused a freeze and is excluded. No universal performance guarantee.\r\n"
+                "Known: severe persistent Race Select audio distortion, sometimes preceded by a freeze; normal60 and leaving the menu may not recover it; music or announcer dropout and startup/cache-save hitches. Playable experimental alpha; not bug-free. Switch2 default2x; live resolution changes disabled. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Existing choices retained. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
+                "Unlimited rendering is opt-in and experimental; fresh installs use60FPS. No universal performance guarantee.\r\n"
                 "Report mode/clocks, firmware/loader, build ID, steps and runtime/lifecycle logs (review personal paths first).\r\n"
                 "Never share your ISO, NRO, extracted assets, saves or keys. See docs/SWITCH2-ALPHA.md for full instructions/credits.\r\n"
                 "LLM-assisted development; human hardware acceptance and cold installer validation are separate.\r\n").encode()
@@ -368,8 +368,8 @@ def main():
         files.append(("SOURCE_COMMIT", (full_commit + "\n").encode()))
         deps = json.loads(git("show", args.ref + ":setup/toolchain.json"))
         metadata = {"version": args.version, "source_commit": full_commit,
-                    "runtime_baseline_commit": "fa2ec57f1fb7feebc470377652fcf02f386b6f33",
-                    "accepted_baseline_build": "c8c06fdda996", "higher_fps_included": False,
+                    "runtime_baseline_commit": "80304cace54ad3c138ddf3af288f27578cd6994c",
+                    "accepted_baseline_build": "0d995f3def88", "higher_fps_included": True, "default_fps": 60, "unlimited_experimental": True,
                     "sdk": deps["switch2"]["sdk"], "shader_compiler_ndk": deps["android"]["ndk"],
                     "imgui": deps["imgui"], "devkitpro_packages": [p for p in deps["devkitpro"]["packages"] if "devkita64-" in p["url"] or "switch-tools-" in p["url"]]}
         files.append(("release-metadata.json", (json.dumps(metadata, indent=2)+"\n").encode()))
@@ -383,7 +383,7 @@ def main():
         zipname = "SonicRiders-%s-Setup-%s.zip" % (plat, args.version)
         if args.flavor == "switch2":
             import re
-            alpha = re.fullmatch(r"v0\.8\.6-switch2-alpha\.(\d+)", args.version)
+            alpha = re.fullmatch(r"v\d+\.\d+\.\d+-switch2-alpha\.(\d+)", args.version)
             label = "Alpha" + alpha.group(1) if alpha else args.version
             top = "SonicRiders-Switch2-" + label
             zipname = "SonicRiders-Switch2-Setup-" + label + ".zip"

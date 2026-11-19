@@ -1,5 +1,10 @@
 # REGULAR UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
-> **Switch 2 Alpha 1 (experimental candidate):** dedicated native installer, separate from stable v0.8.6 and original Switch. See [installation, compatibility, known issues and reporting](docs/SWITCH2-ALPHA.md). No game data or compiled game is distributed; higher FPS is excluded.
+> **Switch 2 Alpha 2 (experimental candidate):** dedicated native installer, separate from stable v0.8.6 and original Switch. See [installation, compatibility, known issues and reporting](docs/SWITCH2-ALPHA.md). No game data or compiled game is distributed; higher FPS is excluded.
+
+> ⚠️ **Switch 2 Alpha 2:** Race Select can develop severe persistent audio distortion, sometimes after a freeze.
+> Use normal60FPS by default; Unlimited is experimental. Turning it off or leaving the menu may not recover
+> an already affected session. Community testing is welcome; this is separate from stable v0.8.7.
+
 
 > ☕ **Enjoying the port? [Support it on Ko-fi](https://ko-fi.com/teclilla18)**: every coffee helps keep updates coming.
 >

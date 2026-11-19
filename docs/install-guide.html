@@ -117,19 +117,9 @@
   <h1>Installing Sonic Riders</h1>
   <p class="sub">First time? Pick your device and follow only that part. Tap a step to tick it off.</p>
 
-  <section class="old" id="switch2-alpha">
-    <h2>Switch 2 Alpha 1 — experimental</h2>
-    <ol class="steps">
-      <li><span class="txt">Install with <span class="file">SonicRiders-Switch2-Setup-Alpha1.zip</span> from the dedicated pre-release, not the stable latest download.</span></li>
-      <li><span class="txt">Extract everything. Open <span class="file">Install Sonic Riders (Switch2).exe</span>, pick your own USA disc image and SD card, then build.</span></li>
-      <li><span class="txt">Use <span class="path">/switch/sonicriders-switch2/</span>. Keep existing saves, settings, caches and env.txt. Original Switch installs are separate.</span></li>
-      <li><span class="txt">In game, hold Minus, choose Quit Game and confirm to return to the Homebrew Menu. There is no automatic time limit.</span></li>
-    </ol>
-    <p>Higher FPS is excluded. Fresh defaults: 2x and 60 FPS, no time cap; live resolution changes disabled. Known alpha issues: intermittent stutter, music/announcer dropout and temporary audio distortion. Startup can hitch. Firmware23.0.1/kaiHEN/Seedsow is the reported tested setup; other systems need testing. <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/v0.8.6-switch2-alpha.1/docs/SWITCH2-ALPHA.md">Full alpha guide and bug reporting</a> (available after approval/publication).</p>
-  </section>
-
   <ul class="devices" role="tablist" aria-label="Device">
     <li><button role="tab" id="t-switch" data-dev="switch">🎮 Switch</button></li>
+    <li><button role="tab" id="t-switch2" data-dev="switch2">🎮 Nintendo Switch 2 (Alpha)</button></li>
     <li><button role="tab" id="t-pc" data-dev="pc">💻 PC</button></li>
     <li><button role="tab" id="t-android" data-dev="android">📱 Android</button></li>
     <li><button role="tab" id="t-linux" data-dev="linux">🐧 Linux / Steam Deck</button></li>
@@ -164,7 +154,7 @@
     <section class="new" id="switch-install">
       <h2>Install <span class="tag">10–30 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.8.6.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.8.7.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder, for example <span class="file">C:\SonicRiders</span>.</span>
           <span class="detail">Don't run it from inside the zip. Use a path with only English letters and digits.</span></li>
         <li tabindex="0"><span class="txt">Connect your SD card to the PC.</span>
@@ -213,13 +203,16 @@
   </div>
 
   <!-- ============================== PC ============================== -->
+  <div class="device" id="d-switch2" role="tabpanel" aria-labelledby="t-switch2" hidden><section class="old"><h2>Nintendo Switch 2 <span class="tag">experimental Alpha 2</span></h2><div class="callout info"><span class="ic">🧰</span><div><b>You need:</b> a compatible native Switch 2 homebrew environment, a Windows 10/11 x64 PC with internet and about 8 GB free for tools/building, your own clean Sonic Riders USA GXEE8P revision 0 disc image, and room for it on the SD card. Tested report: firmware 23.0.1, kaiHEN 20261117.1 through Seedsow. Other setups need testing; original Switch/Atmosphère instructions do not establish Switch 2 compatibility.</div></div><ol class="steps"><li tabindex="0"><span class="txt">Get <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><span class="file">SonicRiders-Switch2-Setup-Alpha2.zip</span></a> from the separate Switch 2 pre-release.</span><span class="detail">Do not download the original Switch ZIP. This package has no game files.</span></li><li tabindex="0"><span class="txt">Extract the <b>whole ZIP</b> to a folder on your PC. Put the Switch 2 SD card in the PC.</span><span class="detail">Use a path with ordinary English characters. Spaces are supported.</span></li><li tabindex="0"><span class="txt">Open <span class="file">Install Sonic Riders (Switch2).exe</span>.</span><span class="detail">If Windows shows a warning, check that you downloaded the official release before choosing More info → Run anyway.</span></li><li tabindex="0"><span class="txt">Press <span class="btn">Select disc...</span> and pick your own USA disc image.</span><span class="detail">ISO/GCM or supported RVZ/WIA; the installer validates it and converts RVZ when needed. Your original image stays unchanged.</span></li><li tabindex="0"><span class="txt">Select the SD card’s top folder. Choose to copy the disc image too if it is not already installed.</span><span class="detail">The game goes to <span class="path">/switch/sonicriders-switch2/</span>, separate from original Switch installations.</span></li><li tabindex="0"><span class="txt">Read and accept the shader compiler license, then press <span class="btn">BUILD AND INSTALL</span>.</span><span class="detail">The first setup downloads hash-checked tools and builds from your disc. Wait for Done; then eject the SD card safely.</span></li><li tabindex="0"><span class="txt">For manual FTP instead, choose <span class="btn">Don’t copy</span>.</span><span class="detail">Copy the files from build/switch2/sd/switch/sonicriders-switch2/ and your own disc image to the SD folder. Keep an existing env.txt, settings, saves and caches.</span></li></ol></section><div class="callout warn"><span class="ic">⚠️</span><div><b>This is an early alpha.</b> You may see stuttering or temporary freezes, missing music/announcer audio, temporary distortion and slow startup. Higher FPS is not included. Fresh defaults are 2x, 60 FPS and no time limit; live resolution changes are disabled.</div></div>
+<section class="old"><h2>Playing, quitting and reporting a problem</h2><ol class="steps"><li tabindex="0"><span class="txt">Launch through your compatible native homebrew setup.</span><span class="detail">The tested flow: hold R while starting a <b>native Switch 2 game</b>, then choose Sonic Riders in Homebrew Menu.</span></li><li tabindex="0"><span class="txt">To exit normally, hold Minus for about half a second. Choose <span class="btn">Quit Game</span> and confirm.</span><span class="detail">You should return to Homebrew Menu. There is no automatic exit timer.</span></li><li tabindex="0"><span class="txt"><a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">Report a bug</a> with the alpha/build version and what you did.</span><span class="detail">Include firmware, loader version, handheld/docked mode, known clocks, stage, character and gear. Save sonicriders.log, sonicriders.prev.log and lifecycle logs from /switch/sonicriders-switch2/ before relaunching. Review private paths first. Never share your disc image, NRO, saves or keys.</span></li></ol></section><div class="final"><h2>Check it worked</h2><p>Start the game and check the version in the overlay’s About tab.</p><p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/SWITCH2-ALPHA.md">Full Switch 2 alpha guide</a></p></div></div>
+
   <div class="device" id="d-pc" role="tabpanel" aria-labelledby="t-pc" hidden>
     <div class="callout info"><span class="ic">🧰</span><div><b>You need:</b> a 64-bit Windows 10 or 11 PC, a graphics card with OpenGL 3.3 (any from the last ten years), about 4 GB free and internet the first time. A controller is recommended; a keyboard works too.</div></div>
 
     <section class="new" id="pc-install">
       <h2>Install <span class="tag">10–30 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-PC-Setup-v0.8.6.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-PC-Setup-v0.8.7.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="file">C:\Games\SonicRiders</span>.</span>
           <span class="detail">The game, your saves and settings live there. Use a path with only English letters and digits.</span></li>
         <li tabindex="0"><span class="txt">Open <span class="file">SonicRidersLauncher.exe</span>.</span>
@@ -257,7 +250,7 @@
     <section class="new" id="android-install">
       <h2>Install <span class="tag">20–40 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.8.6.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.8.7.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="file">C:\SonicRiders</span>.</span></li>
         <li tabindex="0"><span class="txt">Connect the phone with the cable and unlock it.</span>
           <span class="detail">If it asks what the USB connection is for, choose <span class="btn">File transfer</span>.</span></li>
@@ -290,7 +283,7 @@
       <ol class="steps">
         <li tabindex="0"><span class="txt">Steam Deck: switch to <span class="gold">Desktop Mode</span>.</span>
           <span class="detail">Power → Switch to Desktop. Do steps 2–5 there.</span></li>
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.8.6.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.8.7.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract it to a folder you'll keep, for example <span class="file">~/Games/SonicRiders</span>.</span>
           <span class="detail">Right-click the zip → Extract. Your disc image can stay where it is.</span></li>
         <li tabindex="0"><span class="txt">Double-click <span class="file">Install Sonic Riders (Linux).sh</span>.</span>
@@ -340,7 +333,7 @@
 
 <script>
   (function(){
-    var devs = ["switch","pc","android","linux","ios"];
+    var devs = ["switch","switch2","pc","android","linux","ios"];
     function show(dev){
       if (devs.indexOf(dev) < 0) dev = "switch";
       devs.forEach(function(d){

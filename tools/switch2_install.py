@@ -28,6 +28,9 @@ def install(nro, manifest, destination):
     env = destination/'env.txt'
     if not env.exists():
         env.write_text('# Native Switch 2 Alpha: manual exit via Minus > Quit Game\nSR_SWITCH2_FRAMES=0\n', encoding='utf-8')
+    settings = destination/'settings.ini'
+    if not settings.exists():
+        settings.write_text('screen=3\nresolution=2\npc_scale=2\nframerate=0\npc_fps=0\n', encoding='utf-8')
     print('Native Switch 2 SD-ready layout verified; existing env/settings/saves/caches retained.')
 
 if __name__ == '__main__':
