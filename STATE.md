@@ -1,21 +1,25 @@
 # Released state (2026-11-18)
 
-Installer maintenance implemented on isolated public/native branches: responsive layout, full banner, live DPI,
-wrapped logs, consistent completion and Open Output Folder. 176 simulated UI cases and output-button clicks passed.
-Package audit caught stable compiler assertion paths; prefix mapping and deterministic PE builds added.
-Rebuilt-package/cold-install verification and existing-asset replacement are pending; release tags stay fixed.
-See docs/notes/installer-layout.md and excluded AI_HANDOFF.md.
-
+**Installer maintenance released in existing downloads:** shared PC/original Switch/Android GUI and native
+Switch 2 Alpha 2 are responsive, preserve the full banner, handle live DPI/resize, wrap logs/instructions,
+show consistent completion and keep Open Output Folder visible after success. Source-only packages were
+replaced in the existing releases; versions/tags/descriptions/other assets unchanged. Linux/iOS untouched.
+Package source: stable `cf243a9f`, native `d680eb2b`. All 176 simulated DPI/state cases and real output-button
+clicks pass; four independent cold Sandbox GUI/space-path installs pass (native CLI/user-data repeat too).
+Full ZIP/source/privacy audits and anonymous public SHA-256 download readbacks pass. Physical multi-monitor
+migration is untested; no additional hardware gameplay validation. Details: docs/notes/installer-layout.md.
+Current-tree/package guards pass; pre-existing history-only CI rejects older banner blobs. The guard and
+repository history were preserved.
 
 **Released:** [v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7),
-source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
+original runtime/tag source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
 Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
 SHA-256 readback. Cold Windows Sandbox PC and Android tests passed separately, including space paths.
 No new iOS package. Existing iOS downloads remain available.
 
 **Released separately:** [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2),
-source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
-ZIP SHA-256: `cf2518433ed832c992a2c27dfc5b803f9ea8ef52c441ac8dd0f0b289370c7954`.
+original runtime/tag source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
+ZIP SHA-256: `dde6e5125981ecee948af030b45076431289eaceadfdd049579a567c1f1aa6d7`.
 Cold native GUI and command-line/space-path builds, user-data preservation sentinels and uploaded readback
 audit passed. These tests establish setup/build behavior, not additional hardware gameplay acceptance.
 Runtime/config match accepted source `80304ca` / build `0d995f3def88` exactly. Fresh installs default to

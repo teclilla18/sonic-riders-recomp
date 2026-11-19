@@ -5,6 +5,7 @@
 - Responsive installer columns, uncropped aspect-correct banner, readable wrapped build logs and live DPI changes.
 - Clear completion state and a persistent Open Output Folder action for PC, Switch, Android and Switch 2.
 - Correct native Switch 2 output paths and hbmenu instructions; saves/settings/caches remain preserved.
+- Existing PC/Switch/Android/Alpha2 setup assets rebuilt and replaced after cold installation, UI and SHA-256 download validation; versions, tags and release descriptions unchanged.
 
 
 ## v0.8.7 (2026-11-18)

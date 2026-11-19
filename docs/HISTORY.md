@@ -1849,3 +1849,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Package validation rejected initial stable candidates containing absolute library assertion paths;
   adopted the native installer compiler prefix maps and reproducible PE timestamps before rebuilding.
   Failed candidates were never uploaded. Initial cold PC/space-path install passed; final candidates retest.
+
+
+### 2026-11-18 - Installer maintenance packages replaced in existing releases
+- [confirmed] Final public source `cf243a9f` / native source `d680eb2b`: 176 off-screen UI cases across 11 geometries,
+  four install states and 100–250% simulated DPI; maximize/restore, matching client/backbuffer and actual
+  output-button clicks pass. App-owned default/small/ultrawide/high-DPI and cold-completion captures reviewed.
+- [confirmed] Exact rebuilt PC, original Switch, Android and Switch2 ZIPs pass independent cold Sandbox
+  GUI installs and space-path repeats. Native CLI repeat confirms user-data/original-Switch preservation;
+  real no-SD completion branch confirms native output paths and native-game hbmenu instructions.
+- [confirmed] Replaced only PC/Android/Switch ZIPs plus stable SHA256SUMS in v0.8.7 and native Alpha2
+  ZIP/.sha256 in its existing prerelease. Full anonymous public download/readback hashes match. Original
+  assets/metadata retained locally for rollback. No version/tag move, new release, description/flag change
+  or unrelated-asset replacement; Linux/iOS remain unchanged. Guarded source commits/pushes completed.
+- [uncertain] Physical monitor migration/OS scale-setting changes were not manually exercised; simulated
+  DPI messages test the rendering/resize handlers. No gameplay/render/audio changes or console deployment.
