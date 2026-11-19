@@ -4,7 +4,7 @@
 
 ## 🦔 v0.8.7 — Super Sonic joins Riders Plus
 
-Super Sonic now gets999rings, Lv4/5 and stronger speed stats. Split-screen HUD placement and level digits
+Super Sonic now gets 999 rings, Lv4/5 and stronger speed stats. Split-screen HUD placement and level digits
 are improved, and high-ring finishes no longer repeat level-up effects. Windows, Switch, Android and Linux
 packages are in the [latest stable release](https://github.com/teclilla18/sonic-riders-recomp/releases/latest).
 iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4).
