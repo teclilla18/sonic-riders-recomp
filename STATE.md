@@ -1,20 +1,21 @@
 # Switch 2 Alpha 2 installer maintenance (2026-11-18)
 
-Released v0.8.7-switch2-alpha.2 remains at immutable tag 1ca54eb0; public stable v0.8.7 stays latest.
-Runtime/config and SDK pins remain identical to the accepted Alpha2 baseline80304ca/build0d995f3def88.
-The user accepted the universal game icon, Super Sonic feel, high-ring finish and2P Fit HUD.
-Fresh60FPS/2x defaults and existing settings/saves/caches/env preservation are unchanged.
+Released maintenance: existing Alpha 2 ZIP/checksum replaced after validation, package source `d680eb2b`.
+Original release tag remains `1ca54eb0`; no new release/version/tag move. Stable v0.8.7 stays latest.
+Runtime/config/SDK pins remain at accepted baseline `80304ca` / build `0d995f3def88`. No console deployment.
 
-Implemented: shared responsive Windows installer, uncropped aspect-correct artwork, wrapped logs,
-live DPI handling, safe swap-chain resizing, clear completion and persistent Open Output Folder.
-Native messages identify the correct Switch2 SD-ready directory and native-game hbmenu startup.
-Tested:44 off-screen idle/building/done/failed cases across11 geometries and100–250% simulated DPI;
-actual maximize/restore/DPI-message handlers and output-folder mouse click/ShellExecute pass.
-Three native preservation/input tests and actual no-SD completion-message branch pass.
-Deterministic, prefix-mapped installer build added for distribution validation.
-The exact rebuilt source ZIP still requires cold GUI/CLI/space-path validation and distribution audit.
-User authorizes replacing only this existing ZIP/checksum after validation; no version/tag/description changes.
+Implemented, tested and released: responsive shared installer layout, full aspect-correct artwork,
+wrapped logs, live DPI handling, safe swap-chain resize, accurate native completion/no-SD paths and a
+persistent Open Output Folder button. All 44 native UI cases and 176 combined cases pass at 100–250%
+simulated DPI across 11 geometries. Actual button mouse clicks/ShellExecute and user-file sentinels pass.
+Physical monitor migration was not manually tested. Cold GUI plus CLI/space-path native builds, source/SD
+identity and preservation sentinels pass; source/data/privacy audit and anonymous SHA-256 readback verified.
+Current-tree/package guards pass; pre-existing history-only CI still rejects older banner blobs.
+The guard and repository history were preserved.
 
-Known severe RaceSelect audio distortion remains unresolved; no runtime/audio work in this task.
-Existing Claude Artifact republication remains deferred; preserve all pending canonical handoff entries.
-See docs/notes/installer-layout.md and the excluded canonical AI_HANDOFF.md for current evidence/ownership.
+Fresh 60 FPS / 2x defaults and existing settings/saves/caches/environment preservation are unchanged.
+User accepted the universal icon, Super Sonic feel, high-ring finish and 2P Fit HUD before this task.
+Known severe Race Select audio distortion remains unresolved; no game rendering/audio/gameplay work here.
+Linux/older iOS assets and all release descriptions/titles/flags were preserved. Original distributions
+and metadata are retained locally for rollback; hashes are in docs/notes/installer-layout.md.
+External Claude Artifact republication remains deferred; preserve canonical handoff pending entries.

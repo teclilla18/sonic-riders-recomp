@@ -38,3 +38,24 @@ regenerate only affected checksums, and verify full unauthenticated download rea
 
 Installer compilation maps source/library prefixes to relative names and omits the PE linker timestamp;
 all three stable GUI copies must be byte-identical and contain no personal paths (ASCII or UTF-16).
+
+## Existing release assets replaced and verified
+
+The four Windows-hosted installers passed 176 render/state cases and real output-folder clicks, then
+independent cold Windows Sandbox GUI installs and space-path repeats. The native repeat used its CLI
+and verified that existing SD settings, saves, cache, environment and original Switch files were preserved.
+The four ZIPs passed source/data/CRC/privacy audits and full anonymous public-download SHA-256 readback.
+No new release/version/tag was created or moved; release descriptions/titles/flags and other assets remain.
+Linux and older iOS downloads are unchanged. DPI transitions were simulated; physical multi-monitor
+migration and hardware gameplay were not additional validation targets in this installer-only task.
+
+| Existing asset | SHA-256 |
+| --- | --- |
+| SHA256SUMS-v0.8.7.txt | `d6f4a938d45d8d3ee9c923156be4f635dcfc0ac355822647ce34afb0f7f76054` |
+| SonicRiders-Android-Setup-v0.8.7.zip | `12cdf75fe891258d99d6d4eb8ea2c1fa43556e7d9fa6e61834fee24bc7674720` |
+| SonicRiders-PC-Setup-v0.8.7.zip | `17694bccea5f92c68d7e7b44ee4cf98dffb22aba16adcf5d3cbc618bd9ef1b9b` |
+| SonicRiders-Switch-Setup-v0.8.7.zip | `ad21ee145873bfec161d4ecf8600a21724cb9429158b3b08ff1bd00538fb4687` |
+| SonicRiders-Switch2-Setup-Alpha2.zip | `dde6e5125981ecee948af030b45076431289eaceadfdd049579a567c1f1aa6d7` |
+| SonicRiders-Switch2-Setup-Alpha2.zip.sha256 | `3a5860db92004ea99aa282ed22e8eec3470072edc47a610f352b06e082a650a3` |
+
+Stable installer package source: `cf243a9fec432d5ecd0ab5631a70b0a0ac5b99a6`. Native package source: `d680eb2b78ec26a0ca7883b2ebf54471893135b2`. Existing immutable release tags still identify their original runtime release sources.
