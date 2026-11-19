@@ -10,9 +10,7 @@ packages are in the [latest stable release](https://github.com/teclilla18/sonic-
 iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4) for now (iOS build requires a different setup which I don't have access to until tomorrow).
 
 The [easy-read install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) and
-[update](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) pages may still refer to an older version.
-Updated HTML guides are in GitHub: [install](docs/install-guide.html) · [update](docs/update-guide.html).
-Claude Artifact republication is deferred until 11/19/26.
+[update](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) guides cover every platform, including the Switch 2 alpha.
 
 ## 📖 First time installing? Start with a picture booklet
 
