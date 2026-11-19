@@ -4,6 +4,25 @@ For Claude Code, Codex and people. Site: https://teclilla18.github.io/sonic-ride
 The project is called **Riders Plus** (since 2026-11-19); the gameplay changes are the "Riders Plus rules".
 The repository and URL keep the name `sonic-riders-recomp`.
 
+## Adding a social media account (no tools needed)
+
+All social links (home page, community page, footer) come from **`socials.json`** at the branch root. Edit it
+on GitHub's website: open https://github.com/teclilla18/sonic-riders-recomp/edit/gh-pages/socials.json, add a
+block like the ones already there (comma between blocks), press **Commit changes**. The live site shows it within
+a minute or two. A typo leaves the previous links on the site, so nothing breaks; the next
+`py -3 tools/build_site.py build` also refreshes the no-JavaScript copy (and reports a broken file).
+
+```json
+  {
+    "name": "YouTube",
+    "handle": "@ridersplus",
+    "url": "https://www.youtube.com/@ridersplus",
+    "about": "Trailers and gameplay videos."
+  }
+```
+
+`url` must start with `https://`. Order in the file = order on the site.
+
 ## What lives where
 
 - This branch (`gh-pages`) holds only the website. It shares no history with `main`; never merge it either way.

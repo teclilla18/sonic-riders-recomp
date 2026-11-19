@@ -370,6 +370,25 @@ def load_guide_data():
 
 # ---------------------------------------------------------------------------------------------------- pages
 
+def load_socials():
+    """socials.json at the branch root: the one place to add a social media account (see MAINTAINING.md)."""
+    try:
+        items = json.loads((ROOT / 'socials.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError) as e:
+        raise SystemExit(f'socials.json: {e}')
+    return [i for i in items if i.get('name') and str(i.get('url', '')).startswith('https://')]
+
+
+def social_cards(items, reveal):
+    cls = 'comm panel reveal' if reveal else 'comm panel'
+    return '\n'.join(f'    <a class="{cls}" href="{E(i["url"])}" rel="me" data-social><h3>{E(i["name"])}</h3>'
+                     f'<p>{E(i.get("about", ""))} {E(i.get("handle", ""))}</p><span class="go">Follow →</span></a>' for i in items)
+
+
+def social_links(items):
+    return ''.join(f'<a href="{E(i["url"])}" rel="me">{E(i["name"])}</a>' for i in items)
+
+
 def page_meta(text):
     m = re.match(r'\s*<!--\s*(.*?)\s*-->\s*', text, re.S)
     meta = dict(re.findall(r'(\w+)="([^"]*)"', m[1])) if m else {}
@@ -388,12 +407,15 @@ def render(name, body, meta, partials):
         head += '\n<meta name="robots" content="noindex">'
     if name == '404.html':  # served at any missing URL, so pin relative links to the site root
         head = '<base href="/sonic-riders-recomp/">\n' + head
+    socials = load_socials()
+    body = body.replace('{{social_cards}}', '<div class="social-slot" data-socials="cards" hidden></div>\n' + social_cards(socials, name == 'index.html'))
+    footer = partials['footer'].replace('{{social_links}}', '<span data-socials="links">' + social_links(socials) + '</span>')
     header = partials['header']
     active = meta.get('nav', '')
     if active:
         header = header.replace(f'data-nav="{active}"', f'data-nav="{active}" aria-current="page"')
     return (f'<!doctype html>\n<html lang="en">\n<head>\n{head}\n</head>\n<body class="page-{name[:-5]}">\n'
-            f'<div class="bg" aria-hidden="true"></div>\n{header}\n<main id="main">\n{body}\n</main>\n{partials["footer"]}\n'
+            f'<div class="bg" aria-hidden="true"></div>\n{header}\n<main id="main">\n{body}\n</main>\n{footer}\n'
             f'<script src="assets/js/site.js" defer></script>\n</body>\n</html>\n')
 
 
@@ -414,7 +436,7 @@ def build():
         meta, body = page_meta(page.read_text(encoding='utf-8'))
         for k, v in blocks.items():
             body = body.replace('{{' + k + '}}', v)
-        left = re.findall(r'\{\{[^}]+\}\}', body)
+        left = [x for x in re.findall(r'\{\{[^}]+\}\}', body) if x != '{{social_cards}}']  # filled in render()
         if left:
             raise SystemExit(f'{page.name}: unknown placeholders {left}')
         (ROOT / page.name).write_text(render(page.name, body, meta, partials), encoding='utf-8', newline='\n')

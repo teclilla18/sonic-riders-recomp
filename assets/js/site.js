@@ -95,6 +95,26 @@
     cached('releases', API + '/releases?per_page=40').then(applyReleases);
   }
 
+  /* ---------------------------------------------------------------- social media (socials.json) */
+  if (document.querySelector('[data-socials]')) {
+    fetch('socials.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (items) {
+      if (!Array.isArray(items)) return;
+      items = items.filter(function (i) { return i && i.name && /^https:\/\//.test(i.url || ''); });
+      $all('[data-socials="links"]').forEach(function (el) {
+        el.innerHTML = items.map(function (i) { return '<a href="' + esc(i.url) + '" rel="me">' + esc(i.name) + '</a>'; }).join('');
+      });
+      $all('.social-slot').forEach(function (slot) {
+        var parent = slot.parentNode, reveal = !!parent.querySelector('.comm.reveal');
+        $all('[data-social]', parent).forEach(function (a) { a.remove(); });
+        var html = items.map(function (i) {
+          return '<a class="comm panel' + (reveal ? ' reveal in-view' : '') + '" href="' + esc(i.url) + '" rel="me" data-social><h3>' + esc(i.name) +
+            '</h3><p>' + esc(i.about || '') + ' ' + esc(i.handle || '') + '</p><span class="go">Follow →</span></a>';
+        }).join('');
+        slot.insertAdjacentHTML('afterend', html);
+      });
+    }).catch(function () {});
+  }
+
   /* ---------------------------------------------------------------- Road to v1.0 */
   function mdInline(s) {
     return esc(s)
