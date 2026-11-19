@@ -23,27 +23,33 @@
   README table numbers from one AREAS list; `.github/workflows/progress.yml` reruns it on push to main
   (first run: success, nothing to change). Overall 77 %, unchanged.
 
-## Open items (priority order, from the user's plan)
+## Open items (priority order; the user moved online play to the top, 2026-11-19)
 
-1. **Switch texture-pack freezes** (promised for a release, overdue): the game freezes up to ~1.3 s the first
-   time each HD texture appears. Plan: draw the game's own texture first, decode the replacement on a worker,
-   swap it in when ready (`runtime/src/texpack.c` texpack_load / load_dds, `gx_texture.c` cache miss around
-   gx_texture_get). Baseline log: `build/old/switch-texpack-20261116.log` (65 `[hitch]` lines with "lookups").
-   Not started.
+1. **Online play** (Road to v1.0 area, 55 %). Works today: PC-PC, PC-Switch and Switch-Switch lockstep races on a
+   home network, two players, PC launcher lobby (docs/ONLINE.md "Lobby in the Windows launcher"). Next, per the
+   agreed lobby design (docs/ONLINE.md "Lobby design", not implemented): internet play with 6-character room codes,
+   hole punching first + relay fallback (docs/notes/online-research.md), an Online tab in the in-game overlay on
+   every platform, joining by restart + catch-up replay. Also left: a room-wide 30 fps switch for slow consoles,
+   phones, 3-4 players, ping and delay settings. Code: netplay.c (`SR_NET`), launcher/lobby.cpp, launcher.cpp
+   `page_online`. Not started this session.
 2. **Auto stick-spin / air refill (#23)**: approved, plan in docs/notes/plans-2026-11.md "Auto air refill /
-   stick spin". Not started.
+   stick spin". Not started. (Turned off in online races if it changes game memory, like the other options.)
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
    perftest passed; test zip posted to #33, waiting for the reporter's result. Not merged.
 4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
    Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
 5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in
    v0.8.7; ask the user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-6. **Super Sonic overhaul** (Riders Plus only, after 1-4 are stable): always flying, golden aura and trails,
-   ring magnet, exclusive Lv. 6 Overdrive at 425 rings (275 / 400 / 155 km/h). Plan only; nothing implemented.
-7. History-only CI failure (old banner blobs rejected by the "every commit" guard step): the Heroes fix (PAST_ART
-   for earlier versions) is partly in; ask the user before changing the history check.
+6. **Super Sonic overhaul** (Riders Plus only, after the items above are stable): always flying, golden aura and
+   trails, ring magnet, exclusive Lv. 6 Overdrive at 425 rings (275 / 400 / 155 km/h). Plan only.
+7. **Switch texture-pack first-appearance freezes** (up to ~1.3 s; set aside by the user 2026-11-19). Plan when
+   picked up: decode replacements on a worker and swap them in (texpack.c, gx_texture.c); baseline log
+   `build/old/switch-texpack-20261116.log`.
+8. History-only CI failure (old banner blobs rejected by the "every commit" guard step): ask the user before
+   changing the history check.
 
 ## Next hardware test
 
-- Original Switch OLED (overclocked: docked CPU 1785 / GPU 1152 / MEM 2133): HD texture pack with background
-  loading, full pack already in `mods/HDPackTest` on the SD card; compare `[hitch]` lines with the baseline.
+- Online: a PC-Switch race over the internet once room codes + relay exist (original Switch OLED, overclocked:
+  docked CPU 1785 / GPU 1152 / MEM 2133; state the mode and clocks). Online test hardware: gaming laptop + two
+  modded Switches.
