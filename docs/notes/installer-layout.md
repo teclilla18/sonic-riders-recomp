@@ -35,3 +35,6 @@ Existing-release maintenance uses tools/make_release.py with the existing versio
 installer source revision. Never move the release tag. Audit every ZIP entry against that source and the
 normal game-data guard, verify the source-built installer, back up originals, retain filenames/descriptions,
 regenerate only affected checksums, and verify full unauthenticated download readbacks after replacement.
+
+Installer compilation maps source/library prefixes to relative names and omits the PE linker timestamp;
+all three stable GUI copies must be byte-identical and contain no personal paths (ASCII or UTF-16).

@@ -11,6 +11,7 @@ Native messages identify the correct Switch2 SD-ready directory and native-game 
 Tested:44 off-screen idle/building/done/failed cases across11 geometries and100–250% simulated DPI;
 actual maximize/restore/DPI-message handlers and output-folder mouse click/ShellExecute pass.
 Three native preservation/input tests and actual no-SD completion-message branch pass.
+Deterministic, prefix-mapped installer build added for distribution validation.
 The exact rebuilt source ZIP still requires cold GUI/CLI/space-path validation and distribution audit.
 User authorizes replacing only this existing ZIP/checksum after validation; no version/tag/description changes.
 
