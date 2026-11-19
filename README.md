@@ -4,7 +4,7 @@
 
 ## 🦔 v0.8.7 — Super Sonic joins Riders Plus
 
-Super Sonic now gets999rings, Lv4/5 and stronger speed stats. Split-screen HUD placement and level digits
+Super Sonic now gets 999 rings, Lv. 4/5 and stronger speed stats. Split-screen HUD placement and level digits
 are improved, and high-ring finishes no longer repeat level-up effects. Windows, Switch, Android and Linux
 packages are in the [latest stable release](https://github.com/teclilla18/sonic-riders-recomp/releases/latest).
 iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4).
@@ -12,7 +12,7 @@ iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases
 The [easy-read install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) and
 [update](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) pages may still refer to an older version.
 Updated HTML guides are in GitHub: [install](docs/install-guide.html) · [update](docs/update-guide.html).
-Claude Artifact republication is deferred until the maintainer's weekly reset.
+The hosted guides will be refreshed soon.
 
 # 🎉 Sonic Riders is now playable on Nintendo Switch 2!
 
@@ -26,7 +26,7 @@ A huge thank you to the Switch 2 homebrew developers for making this possible.
 
 **[Download Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) · [Install on Switch 2](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
 
-Switch 2 is a separate experimental target. Stable v0.8.6 and the original Switch installer are unchanged. Alpha updates are manual. Known issues include intermittent stuttering, music/announcer dropout and temporary audio distortion. [What has been tested and what to expect](docs/SWITCH2-ALPHA.md).
+Switch 2 is a separate experimental target; v0.8.7 is the stable release for the other platforms. Alpha updates are manual. **Race Select can develop severe persistent audio distortion, sometimes after a freeze. Turning Unlimited off or leaving the menu may not recover an affected session.** Normal 60 FPS is the default for fresh installs; Unlimited remains experimental. Other known issues include stuttering and music/announcer dropout. [What has been tested and what to expect](docs/SWITCH2-ALPHA.md).
 
 ---
 

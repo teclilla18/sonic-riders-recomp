@@ -1824,3 +1824,14 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   notice. Pending same-URL republication belongs in excluded handoff for after weekly reset.
 - Native Alpha2 retains accepted80304ca runtime/config unchanged, fresh60FPS defaults/Unlimited experimental,
   universal game icon, serious RaceSelect audio limitation documented. Native cold GUI/CLI testing pending.
+
+
+### 2026-11-18 - Both releases verified; iOS archives preserved
+- [confirmed] v0.8.7 source381a3694 is latest stable; Alpha2 source1ca54eb0 is a separate prerelease.
+  Cold PC, Android and native GUI/CLI setup tests passed; all uploaded source ZIP SHA-256 readbacks match.
+- [confirmed] User chose iOS-only archives for v0.8.1/v0.8.3. Complete old-release backups were hashed before
+  removing eight obsolete non-iOS assets. Original iOS asset IDs/digests/URLs remain; v0.8.2/v0.8.4 untouched.
+- [confirmed] Both updated HTML guides are committed/linked. Existing Claude URLs carry an older-version
+  notice; user explicitly deferred hosted republication until weekly reset and prohibited browser retries.
+- [uncertain] Native Race Select severe audio remains unresolved and prominently documented; 60 FPS did
+  not recover the observed session. Accepted gameplay fixes preserved; no new console deployment this session.

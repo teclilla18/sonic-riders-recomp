@@ -1,4 +1,22 @@
-# Switch 2 Alpha 1 development handoff
+# Switch 2 release handoff
+
+## Current release checkpoint (2026-11-18)
+
+- Stable v0.8.7: `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, latest stable.
+- Native [Alpha 2 source](https://github.com/teclilla18/sonic-riders-recomp/tree/v0.8.7-switch2-alpha.2):
+  `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, separate prerelease. Runtime/config unchanged from
+  accepted `80304ca` / build `0d995f3def88`; universal icon and validated Super/HUD/finish fixes retained.
+- All cold setup tests and uploaded SHA-256 readbacks passed. Fresh settings default to 60 FPS;
+  Unlimited is experimental. Existing settings/saves/caches remain untouched on update.
+- Severe persistent Race Select audio distortion remains unresolved; see the current install guide and
+  release notes. Disabling Unlimited or leaving the menu did not recover the observed session.
+- Both HTML guides are committed. The user deferred same-URL Claude Artifact republication until the
+  weekly reset; existing links have an older-version notice. Do not repeat the blocked browser workflow.
+- Retention preserves v0.8.2 forever and all iOS links, with v0.8.1/v0.8.3 retained as iOS-only archives.
+- Exact local evidence/ownership and deferred guide task are in excluded AI_HANDOFF.md.
+
+## Historical Alpha 1 checkpoint
+
 
 This is a documentation checkpoint, not a request to restart debugging. Use
 [the alpha install guide](../SWITCH2-ALPHA.md) for player instructions and the

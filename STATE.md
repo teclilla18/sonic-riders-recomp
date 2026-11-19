@@ -1,27 +1,42 @@
-# Release candidate state (2026-11-18)
+# Released state (2026-11-18)
 
-Published v0.8.7 Stable (Windows/Switch/Android/Linux, no iOS), then separate
-v0.8.7-switch2-alpha.2. Canonical excluded AI_HANDOFF.md records exact source/test/release checkpoints.
-Public review worktree merges tested Riders Plus/HUD fixes with origin/main e1c79e6 Android fixes.
-Preserve dirty sr-main, private/native experiments and concurrent worktrees. No new features.
+**Released:** [v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7),
+source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
+Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
+SHA-256 readback. Cold Windows Sandbox PC and Android tests passed separately, including space paths.
+No new iOS package. Existing iOS downloads remain available.
 
-Implemented/tested: Super999 resource ceiling, own-block/native0 Lv4/5 and improved balance,
-per-field mod restoration, adaptive local HUD, active MP4/5 indicators29, independent2P clock,
-finished-phase reapplication/effect fix. Public actual-source tests and PC matrix/controls pass.
-Hardware accepted on native0d995f3def88: universal icon, Super feel, high-ring finish,2P Fit HUD.
-Both own-views retain6701 fullRAM checksums and images;3P/4P controls unchanged.
-Main includes validated Android legacy Vulkan/shutdown fixes32 and Linux installer fix30.
-Stable source/tag381a3694e65ddcbaa0a42f7479c8d72ef324ba1c. PC/Android cold Sandbox both PASS including space paths. All four source ZIP audits and uploaded SHA256 readbacks PASS. Stable is verified latest. Alpha2 cold native GUI/CLI audit/test pending. Updated HTML guides committed; user explicitly defers external Claude Artifact republication until weekly reset. Existing links retained with older-version notice. No browser automation retries.
-Existing iOSv0.8.4 downloads must remain; permanently preservev0.8.2 plus five newest releases.
+**Released separately:** [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2),
+source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
+ZIP SHA-256: `cf2518433ed832c992a2c27dfc5b803f9ea8ef52c441ac8dd0f0b289370c7954`.
+Cold native GUI and command-line/space-path builds, user-data preservation sentinels and uploaded readback
+audit passed. These tests establish setup/build behavior, not additional hardware gameplay acceptance.
+Runtime/config match accepted source `80304ca` / build `0d995f3def88` exactly. Fresh installs default to
+60 FPS; Unlimited rendering remains explicitly experimental. Updates preserve existing settings.
 
-Native Alpha2 includes applicable stable fixes, Unlimited experimental, universal setup/icon_256.jpg.
-Fresh default60FPS; preserve existing settings on update. Known severe RaceSelect audio distortion and
-one freeze at onset remain unresolved. Off59.9–60 and parent menu did not cure accumulated audio state.
-Older alpha/personal builds already have audio/stall defects; no severe newregression established.
-Current run has0nativeaudio drops/errors, lowqueueheadroom, no demonstratedresourceleak; underruns not
-measured. Log+screenshots preserved in ignored build/live-preview-20261118/capture, analyzed by log-reader.
-Do not spend this release session fixing the audio issue. Public alpha notes must state limitations clearly.
+**Implemented, tested and released:** Super Sonic's 999-ring compatibility, native-level-preserving Lv. 4/5
+progression, noncompounding mod-compatible balance, adaptive multiplayer HUD, multiplayer Lv. 4/5 digits
+(#29), independent shared 2P timer, and finished-race repeated stat/effect fix. Super top/boost/drift targets
+are 195/270/110 Base, 220/300/125 Lv. 4 and 240/330/140 Lv. 5 km/h. Vanilla and online determinism preserved.
+Main also includes validated Android Vulkan/shutdown fixes (#32) and Linux installer fix (#30).
+PC matrix/controls and both own-view 6,701-checksum routes passed. Broader hardware coverage remains limited.
+**Accepted by the user on Switch 2:** universal icon, Super Sonic feel, high-ring finish and 2P Fit HUD.
+The console still has accepted build `0d995f3def88`; this release session did not replace or relaunch it.
 
-User explicitly authorizes source/tag/assets/publication, mandatory coldSandbox launch and guide updates.
-Retain all game data/binaries/logs/saves under ignored build; release assets are guarded own-source setup ZIPs.
-Do not publish if mandatorytests fail or severe newalpha regression is demonstrated.
+**Unresolved Alpha 2 limitation:** Race Select (Free Race / Time Attack / World Grand Prix) can develop
+severe persistent audio distortion, with one reported freeze at onset. Disabling Unlimited and leaving
+the menu did not recover that session. Similar audio/stall failures predate these fixes; no severe new
+regression was established. Native output drops/errors were zero; underruns, PCM faults and resource leaks
+remain unproven. No audio fix is claimed. Captured log/screenshots are preserved locally under ignored
+`build/live-preview-20261118/`; use log-reader rather than rereading logs. Rare post-race loading hang #6
+remains open. No speculative fix or larger Super Sonic overhaul was attempted.
+
+Updated easy-read HTML guides are committed and linked through GitHub. Existing Claude Artifact links
+remain with an older-version notice. The user explicitly deferred same-URL republication until the weekly
+reset and prohibited further browser automation this session. This does not block the published releases.
+
+Retention completed: five newest releases retain their assets; v0.8.2 is permanently protected.
+By explicit user choice, v0.8.1 and v0.8.3 remain iOS-only archive pages with their exact original iOS assets
+and links. Eight obsolete non-iOS assets were removed only after complete local backups and hash checks.
+v0.8.2 and v0.8.4 assets/notes were unchanged. Native source stays separate from main; dirty sr-main,
+private DX and concurrent worktrees were preserved. Exact evidence and local ownership: excluded AI_HANDOFF.md.
