@@ -1864,3 +1864,23 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   or unrelated-asset replacement; Linux/iOS remain unchanged. Guarded source commits/pushes completed.
 - [uncertain] Physical monitor migration/OS scale-setting changes were not manually exercised; simulated
   DPI messages test the rendering/resize handlers. No gameplay/render/audio changes or console deployment.
+
+
+### 2026-11-18 — Separate illustrated console installation booklets
+- [confirmed] Implemented Switch Stable and Switch 2 Experimental Alpha HTML/Markdown booklets using
+  Claude’s existing easy-read visual language. Ten newly captured, annotated current-installer UI images;
+  26 original labelled diagrams; 17 checkpoints per platform; exact downloads/SD layouts/manual updates.
+  Existing technical documentation remains. Font subsets are embedded offline with open-font licenses.
+- [confirmed] Downloaded current public v0.8.7 Switch and Alpha2 ZIPs; SHA-256/CRC match. Ran both actual
+  GUI installers, full ISO transfer/SHA-1 and repeated updates in disposable SD folders. Save/mod/cache/
+  settings/env sentinels survive. Both real output-button clicks open their correct local folders.
+  Warm-cache checks only; earlier cold package evidence remains separately documented.
+- [confirmed] Both guides pass local link/image/privacy/platform checks (225 references), 16 external
+  HTTP links and 8 offline phone/tablet/desktop layouts, including fonts, theme, checkboxes, help and print.
+  A native fixture-only junction mismatch was corrected using a direct cache; no package/source fix.
+- [confirmed] GitHub Pages enabled from main/docs for account-free booklet access; README and legacy
+  easy-read pages link the separate guides. Current release descriptions receive corresponding links.
+  Versions/tags/assets stay unchanged. No game build was published, and no console was overwritten.
+- [uncertain] No new physical console launch, SD ejection, disc dumping or child-user acceptance test.
+  Native audio/Race Select limitations and #6 loading hang remain unresolved. Latest #31 comment still
+  reports old Switch version after updating; no cause/fix inferred and no external reply sent.

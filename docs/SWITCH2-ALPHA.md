@@ -1,5 +1,8 @@
 # Sonic Riders Recomp — Switch 2 Alpha 2
 
+**New to this? [Open the illustrated Switch 2 installation booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch2.html)**
+or use its [accessible Markdown version](install-switch2.md). The technical reference below remains available.
+
 **Known serious limitation:** Race Select (Free Race / Time Attack / World Grand Prix) can develop persistent
 severe audio distortion, with a freeze at onset. Normal 60 FPS and leaving the menu did not recover the
 reported accumulated state. Relaunching may help, but is not a guaranteed fix. Keep 60 FPS as the default;

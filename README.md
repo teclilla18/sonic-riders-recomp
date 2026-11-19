@@ -14,6 +14,17 @@ The [easy-read install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) and
 Updated HTML guides are in GitHub: [install](docs/install-guide.html) · [update](docs/update-guide.html).
 Claude Artifact republication is deferred until 11/19/26.
 
+## 📖 First time installing? Start with a picture booklet
+
+**One console. One guide. Small steps, real installer pictures, and a checkpoint on every page.**
+
+- **[Nintendo Switch / Lite / OLED — Stable installation booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch.html)** · [Accessible Markdown](docs/install-switch.md)
+- **[Nintendo Switch 2 — Experimental Alpha installation booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch2.html)** · [Accessible Markdown](docs/install-switch2.md)
+
+No ChatGPT or Claude account needed. The booklets cover downloading, extracting, building, copying to SD,
+launching, safe updates and picture-by-picture help. [Choose your console](https://teclilla18.github.io/sonic-riders-recomp/).
+The [technical installation documentation](docs/INSTALL.md) remains available for advanced users and other platforms.
+
 # 🎉 Sonic Riders is now playable on Nintendo Switch 2!
 
 I've been working on getting Sonic Riders running natively on Switch 2 since the release of Seedsow, and I'm excited to finally share an early build with everyone.
@@ -24,7 +35,7 @@ There are still some issues with audio and occasional stuttering, which is why I
 
 A huge thank you to the Switch 2 homebrew developers for making this possible.
 
-**[Download Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) · [Install on Switch 2](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
+**[Download Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) · [Illustrated Switch 2 install booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch2.html) · [Technical alpha guide](docs/SWITCH2-ALPHA.md) · [Report a bug](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml)**
 
 Switch 2 is a separate experimental target; v0.8.7 is the stable release for the other platforms. Alpha updates are manual. **Race Select can develop severe persistent audio distortion, sometimes after a freeze. Turning Unlimited off or leaving the menu may not recover an affected session.** Normal 60 FPS is the default for fresh installs; Unlimited remains experimental. Other known issues include stuttering and music/announcer dropout. [What has been tested and what to expect](docs/SWITCH2-ALPHA.md).
 
@@ -59,7 +70,7 @@ Switch 2 is a separate experimental target; v0.8.7 is the stable release for the
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue" alt="License: MPL-2.0"></a>
   <img src="https://img.shields.io/badge/Focus-Game%20Preservation-pink" alt="Focus: game preservation">
   <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%201-orange" alt="Nintendo Switch 2: experimental Alpha 1"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%202-orange" alt="Nintendo Switch 2: experimental Alpha 2"></a>
   <img src="https://img.shields.io/badge/Recompiler-gcrecomp-orange" alt="Recompiler: gcrecomp (this repo)">
   <img src="https://img.shields.io/badge/Type-Static%20Recompilation-blueviolet" alt="Type: static recompilation">
   <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
@@ -69,7 +80,7 @@ Switch 2 is a separate experimental target; v0.8.7 is the stable release for the
   <a href="https://ko-fi.com/teclilla18"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
-Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a **Nintendo Switch 2** ([experimental Alpha 1](docs/SWITCH2-ALPHA.md)), a
+Play **Sonic Riders** (GameCube, USA) natively, with no emulator, on a modded **Nintendo Switch**, a **Nintendo Switch 2** ([experimental Alpha 2](docs/SWITCH2-ALPHA.md)), a
 **Windows PC**, an **Android phone**, **Linux / Steam Deck** (new, untested on a Deck), or an **iPhone / iPad** (new, built on a Mac). The game is rebuilt on your own PC from **your own disc image**; this project contains
 no game files.
 
@@ -155,7 +166,7 @@ measured PC races.</sub>
 
 | I want to play on... | Download from the [latest stable release](../../releases/latest), unless marked experimental | Guide |
 |---|---|---|
-| **Nintendo Switch 2** (experimental Alpha 1) | [SonicRiders-Switch2-Setup-Alpha2.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) — separate pre-release | [Install on Switch 2](docs/SWITCH2-ALPHA.md) |
+| **Nintendo Switch 2** (experimental Alpha 2) | [SonicRiders-Switch2-Setup-Alpha2.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) — separate pre-release | [Install on Switch 2](docs/SWITCH2-ALPHA.md) |
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | a modded **Nintendo Switch** | `SonicRiders-Switch-Setup-<version>.zip` | [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |

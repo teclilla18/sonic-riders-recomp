@@ -2,6 +2,11 @@
 
 [← Back to the README](../README.md)
 
+**First time? Use a separate illustrated booklet:**
+[Nintendo Switch — Stable](install-switch.md) · [Nintendo Switch 2 — Experimental Alpha](install-switch2.md).
+Each includes actual installer pictures, one-action steps, SD folder examples, updates and help.
+The existing technical instructions below remain available.
+
 - [What you need](#what-you-need)
 - [Install on Switch 2 Alpha](#install-on-switch-2-alpha)
 - [Install on Switch](#install-on-switch)
@@ -56,7 +61,7 @@
 
 ## Install on Switch 2 Alpha
 
-Use the [separate Alpha 1 pre-release](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1), not the original Switch ZIP or stable automatic updater. Follow the [Switch 2 guide](SWITCH2-ALPHA.md) for the Windows installer, your own validated USA disc image, SD/manual transfer and compatible native homebrew.
+Use the [separate Alpha 2 pre-release](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2), not the original Switch ZIP or stable automatic updater. Start with the [illustrated beginner booklet](install-switch2.md), or follow the [technical Switch 2 guide](SWITCH2-ALPHA.md) for advanced details.
 
 The target folder is `/switch/sonicriders-switch2/`. Fresh defaults are 2x, 60 FPS and no automatic exit; live resolution changes are disabled. Keep existing settings, saves and caches. Hold Minus about half a second, choose Quit Game and confirm for hbmenu. Stuttering, music/announcer dropout and temporary distortion remain known alpha issues. Updates are manual and separate from original Switch auto-updates.
 

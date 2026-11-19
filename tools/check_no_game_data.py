@@ -50,6 +50,17 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # picture is refused until its SHA-1 is put here. Also the launcher banner (the user's OK, 2026-11-07): public
 # fan art the user chose, not from the game.
 OWN_ART = {
+    # User-requested documentation: reviewed current installer UI, privacy masks and vector annotations.
+    "docs/images/installation/switch-completion.png": "117e009d71e381fddb4c4cb6332ece8c87c3f63d",
+    "docs/images/installation/switch-installer.png": "c99dbc9b73cd2eff24ca90320837d46c7323a15d",
+    "docs/images/installation/switch-options.png": "d3f833422dd4516892cf3c3d6f0081adcc328ad3",
+    "docs/images/installation/switch-select-card.png": "11edb8b1b22b4918e675a8ab53135bda53652b70",
+    "docs/images/installation/switch-select-disc.png": "61022475a40e09d810c6109c18162d854e26b1c4",
+    "docs/images/installation/switch2-completion.png": "871abff16aa48ed974e3197b4ff43e4ed9fcfb43",
+    "docs/images/installation/switch2-installer.png": "2d0427e65a7c73bfdd9d84250ac27995cd60bf60",
+    "docs/images/installation/switch2-options.png": "38d20665c4661e4bf94671f9de4b58b0d6d2df55",
+    "docs/images/installation/switch2-select-card.png": "3415e8d035862c907f3cdeefe8bd3dbe7e84a600",
+    "docs/images/installation/switch2-select-disc.png": "eff37dd176652aa70c7c8977d04d0e95f70abfcb",
     "docs/images/switch2-alpha1-banner.jpg": "b4be7ce0f7e34e3b56735283781a58c775fc5161",  # user-approved Lanmana banner, unchanged with signature (2026-11-18)
     "docs/images/banner.jpg": "4c0e681fef3ff69d583129825b1023f00a86f0c5",  # README banner (fan art, user's choice, 2026-11-09; cropped to 1529x600 2026-11-16)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",

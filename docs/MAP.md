@@ -65,6 +65,12 @@ vk_*.frag / vk_quad.vert: Vulkan helpers (copies, fills, touch controls).
 
 ## Build and tools (`tools/`, root)
 
+Illustrated console booklets: `tools/console_guide_data.py` (player text),
+`tools/make_console_guides.py` (`build`, `artwork`, shared Claude-style layout),
+`tools/check_console_guides.py` (links, privacy, image and platform checks).
+Outputs: `docs/install-switch{,2}.{html,md}`, `docs/index.{html,md}` and
+`docs/images/installation/`. Evidence and picture provenance: `docs/guide-verification.md`.
+
 | Topic | File |
 |---|---|
 | Build file generator (all targets) | configure.py (`--target host/switch/android`, `--icon`) |

@@ -1,5 +1,14 @@
 # Changelog
 
+### Illustrated installation booklets
+
+- Separate beginner booklets for Switch Stable and Switch 2 Experimental Alpha, in HTML and Markdown.
+- Retain the Claude-made easy-read guides' colors, typography and friendly numbered presentation.
+- Add actual annotated current-installer captures, labelled console/folder illustrations, checkpoints,
+  direct downloads, safe updates, verified troubleshooting and privacy-aware bug-report steps.
+- Publish through GitHub Pages with prominent README and current-release links; retain technical docs.
+- Documentation only: no game/runtime changes, rebuilt release packages or new game version.
+
 ### Installer maintenance for existing v0.8.7 downloads
 
 - Responsive installer columns, uncropped aspect-correct banner, readable wrapped build logs and live DPI changes.

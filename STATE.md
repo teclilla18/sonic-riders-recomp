@@ -1,5 +1,17 @@
 # Released state (2026-11-18)
 
+**Illustrated console booklets:** separate Switch Stable and Switch 2 Experimental Alpha HTML/Markdown
+guides preserve Claude’s easy-read styling, colors and offline typography. Ten actual annotated current
+installer captures, 26 labelled diagrams, 17 checkpoints per guide, direct downloads, exact SD trees, safe
+updates and source-backed help. Public entry: https://teclilla18.github.io/sonic-riders-recomp/ .
+README/current-release links use the new public routes; technical docs remain. No new game release,
+release-package rebuild, gameplay change or console deployment. Sources: docs/guide-verification.md.
+**Tested:** exact published ZIP hashes/CRC, both warm-cache GUI installs, full ISO copy/SHA-1, repeated
+updates preserving save/mod/cache/settings/env sentinels, real output-folder clicks, 225 local references,
+16 external HTTP links and 8 offline browser layouts. No fresh physical console/SD-eject or child-user
+acceptance claim. #31’s new Switch Lite update-still-0.1.0 comment remains unresolved; no reply sent.
+
+
 **Installer maintenance released in existing downloads:** shared PC/original Switch/Android GUI and native
 Switch 2 Alpha 2 are responsive, preserve the full banner, handle live DPI/resize, wrap logs/instructions,
 show consistent completion and keep Open Output Folder visible after success. Source-only packages were
@@ -42,9 +54,8 @@ remain unproven. No audio fix is claimed. Captured log/screenshots are preserved
 `build/live-preview-20261118/`; use log-reader rather than rereading logs. Rare post-race loading hang #6
 remains open. No speculative fix or larger Super Sonic overhaul was attempted.
 
-Updated easy-read HTML guides are committed and linked through GitHub. Existing Claude Artifact links
-remain with an older-version notice. The user explicitly deferred same-URL republication until the weekly
-reset and prohibited further browser automation this session. This does not block the published releases.
+Legacy Claude Artifact links remain with their older-version notice. New console first-install routes
+are the separate GitHub Pages booklets above; they do not depend on external artifact republication.
 
 Retention completed: five newest releases retain their assets; v0.8.2 is permanently protected.
 By explicit user choice, v0.8.1 and v0.8.3 remain iOS-only archive pages with their exact original iOS assets
