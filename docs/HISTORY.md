@@ -1835,3 +1835,13 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   notice; user explicitly deferred hosted republication until weekly reset and prohibited browser retries.
 - [uncertain] Native Race Select severe audio remains unresolved and prominently documented; 60 FPS did
   not recover the observed session. Accepted gameplay fixes preserved; no new console deployment this session.
+
+
+### 2026-11-18 - Shared installer layout maintenance
+- Implemented responsive one/two-column layout, complete banner containment, DPI-change handling, safe
+  swap-chain resize, scrollable wrapped logs, fixed action bar and platform-specific output-folder button.
+- Corrected native Switch 2 completion/no-SD instructions separately; no runtime or SDK changes.
+- [confirmed] Initial 176 off-screen render cases passed resize/maximize/restore and simulated DPI/state
+  coverage; fixture user files unchanged. Final source/package and cold-install validation follows.
+- Existing-release replacement authorized by the user; keep versions, tags, filenames, descriptions and
+  unrelated assets. Do not equate simulated DPI checks with physical multi-monitor acceptance.

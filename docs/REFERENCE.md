@@ -37,3 +37,5 @@ Kinds: **Reference** = maintained, current; **Historical** = true when written, 
 implementation. When a note is superseded, move it to `docs/archive/` with `git mv` and fix the links here.
 
 - [Switch 2 technical handoff](notes/switch2-handoff.md): architecture, native fixes, regression evidence, release validation and remaining work.
+
+- [Windows installer layout](notes/installer-layout.md): responsive shared GUI, DPI and completion/output folders; regression and package checks.

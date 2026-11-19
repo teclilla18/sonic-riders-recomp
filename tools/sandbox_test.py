@@ -31,9 +31,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAT = {"pc": "PC", "android": "Android"}
-OUTPUT = {"pc": [r"build\host-mingw\sonicriders.exe"], "android": [r"build\android\sonicriders-arm64-v8a.apk"]}
-EXTRA_ARGS = {"pc": ["-NoSd", "-Yes"], "android": ["-NoSd", "-Yes", "-AcceptAndroidSdkLicense", "-Install", "no"]}
+PLAT = {"pc": "PC", "android": "Android", "switch": "Switch"}
+OUTPUT = {"switch": [r"build\switch\sonicriders.nro"], "pc": [r"build\host-mingw\sonicriders.exe"], "android": [r"build\android\sonicriders-arm64-v8a.apk"]}
+EXTRA_ARGS = {"switch": ["-NoSd", "-Yes", "-HomeIcon", "no"], "pc": ["-NoSd", "-Yes"], "android": ["-NoSd", "-Yes", "-AcceptAndroidSdkLicense", "-Install", "no"]}
 SANDBOX_EXE = r"C:\Windows\System32\WindowsSandbox.exe"
 
 # Runs inside the sandbox as WDAGUtilityAccount. C:\sr\run is this run's folder (read-only),
@@ -94,7 +94,8 @@ try {
             }
             if ($cfg.launcher) {
                 # README-FIRST's first way: the launcher's "Select disc..." + INSTALL AND PLAY (SR_LAUNCHER_INSTALL)
-                $exe = Join-Path $top "SonicRidersLauncher.exe"
+                $exeName = if ($cfg.flavor -eq "pc") { "SonicRidersLauncher.exe" } else { "Install Sonic Riders ($($cfg.flavor -replace '^android$', 'Android' -replace '^switch$', 'Switch')).exe" }
+                $exe = Join-Path $top $exeName
                 $motw = [bool](Get-Item $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue)
                 P "run ${i}: launcher install instead (mark-of-the-web on the exe: $motw)"
                 $env:SR_LAUNCHER_INSTALL = $iso
@@ -111,6 +112,8 @@ try {
             $code = $p.ExitCode
             $rep = Join-Path $top "launcher_test.txt"
             if (Test-Path $rep) { Copy-Item $rep (Join-Path $res "launcher_test-$i.txt") -Force }
+            $shot = Join-Path $top "launcher_completion.png"
+            if (Test-Path $shot) { Copy-Item $shot (Join-Path $res "launcher-completion-$i.png") -Force }
             $missing = @($cfg.outputs | Where-Object { -not (Test-Path (Join-Path $top $_)) })
             if ($code -ne 0) { $why = "setup exit code $code" }
             elseif ($missing.Count) { $why = "exit code 0 but missing: $($missing -join ', ')" }

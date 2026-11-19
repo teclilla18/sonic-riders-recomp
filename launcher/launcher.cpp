@@ -10,6 +10,7 @@
  * As "Install Sonic Riders (Switch|Android).exe" it is the installer for those builds (installer mode below).
  * Banner: launcher\banner.jpg, public fan art chosen by the project owner (not from the game).
  * Win32 + Direct3D 11 + Dear ImGui, linked statically (tools/build_launcher.py). */
+#include "installer_layout.h"
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -652,6 +653,7 @@ void load_fonts(float dpi) {
 
 void apply_style(float dpi) {
     ImGuiStyle& s = ImGui::GetStyle();
+    s = ImGuiStyle();  // Reset before scaling again on a monitor DPI change.
     s.FontSizeBase = kSize * dpi;
     s.WindowRounding = 0;
     s.FrameRounding = 3;
@@ -1011,16 +1013,19 @@ void install_progress(float col, const char* title_running) {
     std::string st;
     {
         std::lock_guard<std::mutex> lk(g_log_mx);
-        st = g_step_text;
+        st = g_install == INST_DONE ? "Installation completed successfully."
+             : g_install == INST_FAILED ? "Installation stopped. See the build log below." : g_step_text;
     }
-    float frac = g_install == INST_DONE ? 1.0f : g_step / 7.0f;
+    float frac = g_install == INST_DONE ? 1.0f : std::min(g_step / 7.0f, 0.97f);
     ImGui::ProgressBar(frac, ImVec2(col, 0), "");
     ImGui::TextWrapped("%s", st.c_str());
-    ImGui::BeginChild("log", ImVec2(col, 0), ImGuiChildFlags_None);
+    float log_h = std::clamp(ImGui::GetWindowHeight() * 0.60f, 180 * g_dpi, 480 * g_dpi);
+    section("BUILD LOG");
+    ImGui::BeginChild("log", ImVec2(col, log_h), ImGuiChildFlags_Borders);
     ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
     {
         std::lock_guard<std::mutex> lk(g_log_mx);
-        for (const std::string& l : g_log) ImGui::TextUnformatted(l.c_str());
+        for (const std::string& l : g_log) ImGui::TextWrapped("%s", l.c_str());
     }
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
     ImGui::PopFont();
@@ -1077,7 +1082,32 @@ void eject_button() {
     }
 }
 
+// Open the local build output even after the SD card/phone is disconnected.
+std::wstring installer_output_folder() {
+    if (g_mode == M_SWITCH) return path(L"build\\switch");
+    if (g_mode == M_ANDROID) return path(L"build\\android");
+    return path(L"build\\host-mingw");
+}
+void open_output_folder() {
+    if (g_install != INST_DONE) return;
+    std::wstring folder = installer_output_folder();
+    bool preview = getenv("SR_LAUNCHER_UI_TEST") && getenv("SR_LAUNCHER_SHOT");
+    INT_PTR result = (INT_PTR)ShellExecuteW(nullptr, L"open", folder.c_str(), nullptr, nullptr,
+                                          preview ? SW_SHOWMINNOACTIVE : SW_SHOWNORMAL);
+    if (result <= 32) g_status = "Could not open the output folder. See the path below.";
+    if (preview) write_text(widen(std::string(getenv("SR_LAUNCHER_SHOT")) + ".open.txt"),
+                            (result > 32 ? "PASS " : "FAIL ") + narrow(folder));
+}
+void output_folder_details() {
+    if (g_install != INST_DONE) return;
+    section("OUTPUT");
+    std::wstring folder = installer_output_folder();
+    ImGui::TextWrapped("%s", narrow(folder.substr(g_root.size() + 1)).c_str());
+    ImGui::Spacing();
+}
+
 void installer_next_steps() {
+    output_folder_details();
     section("NEXT");
     if (g_mode == M_SWITCH) {
         if (g_ic.sd.empty())
@@ -1100,7 +1130,22 @@ void installer_next_steps() {
 
 void texpack_ui(bool switch_installer);
 void page_installer(float w) {
-    float col = (w - 40) * 0.5f;
+    // On small windows, put the successful install's instructions before the historical log.
+    if (g_install == INST_DONE && installer_layout::columns(w, g_dpi) == 1) {
+        section("INSTALLATION COMPLETE");
+        installer_next_steps();
+        ImGui::Spacing();
+        install_progress(w, "BUILDING");
+        return;
+    }
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10 * g_dpi, 0));
+    if (!ImGui::BeginTable("installer_columns", installer_layout::columns(w, g_dpi),
+                           ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoPadOuterX)) {
+        ImGui::PopStyleVar();
+        return;
+    }
+    ImGui::TableNextColumn();
+    float col = ImGui::GetContentRegionAvail().x;
     bool idle = g_install == INST_IDLE;
     ImGui::BeginGroup();
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
@@ -1114,13 +1159,12 @@ void page_installer(float w) {
             std::wstring d = pick_disc(GetActiveWindow());
             if (!d.empty()) g_disc_choice = d;
         }
-        ImGui::SameLine();
-        ImGui::TextUnformatted(g_disc_choice.empty() ? "no disc image selected" : short_path(g_disc_choice, 34).c_str());
+        ImGui::TextWrapped("%s", g_disc_choice.empty() ? "No disc image selected" : narrow(g_disc_choice).c_str());
         ImGui::Spacing();
         if (g_mode == M_SWITCH) {
             section("2. SD CARD");
             ImGui::TextWrapped("Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
-            std::string cur = g_ic.sd.empty() ? "Don't copy (keep it in build\\switch\\)" : narrow(g_ic.sd);
+            std::string cur = g_ic.sd.empty() ? "Keep build on this PC" : narrow(g_ic.sd);
             const ImGuiStyle& st = ImGui::GetStyle();
             float btns = ImGui::CalcTextSize("Refresh").x + ImGui::CalcTextSize("Other...").x + 4 * st.FramePadding.x +
                          2 * st.ItemSpacing.x;
@@ -1128,7 +1172,7 @@ void page_installer(float w) {
             if (ImGui::BeginCombo("##sd", cur.c_str())) {
                 for (const std::wstring& d : g_ic.sd_found)
                     if (ImGui::Selectable((narrow(d) + "  (Switch SD card)").c_str(), d == g_ic.sd)) g_ic.sd = d;
-                if (ImGui::Selectable("Don't copy (keep it in build\\switch\\)", g_ic.sd.empty())) g_ic.sd.clear();
+                if (ImGui::Selectable("Keep build on this PC", g_ic.sd.empty())) g_ic.sd.clear();
                 ImGui::EndCombo();
             }
             ImGui::SameLine();
@@ -1142,8 +1186,9 @@ void page_installer(float w) {
                                      L"card's top folder.", L"Sonic Riders", MB_ICONWARNING);
                 }
             }
+            if (g_ic.sd.empty()) note("Output: build\\switch\\");
             if (g_ic.sd_found.empty() && g_ic.sd.empty())
-                ImGui::TextColored(kRed, "No Switch SD card found. Insert it and press Refresh.");
+                ImGui::TextColored(kDim, "No SD card found. Build locally, or insert it and press Refresh.");
             if (!g_ic.sd.empty()) {
                 ImGui::Checkbox("Copy the disc image too", &g_ic.copy_iso);
                 note("1.4 GB; needed once (skipped if it is already on the card).");
@@ -1164,11 +1209,15 @@ void page_installer(float w) {
     }
     ImGui::PopTextWrapPos();
     ImGui::EndGroup();
-    ImGui::SameLine(0, 40);
+    ImGui::TableNextColumn();
+    col = ImGui::GetContentRegionAvail().x;
     ImGui::BeginGroup();
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
     if (g_install == INST_DONE) {
         installer_next_steps();
+    } else if (g_install == INST_RUNNING) {
+        section("BUILD IN PROGRESS");
+        note("You can resize this window while the build runs. The full build log is also saved in setup.log.");
     } else {
         section("3. ICON (OPTIONAL)");
         ImGui::BeginDisabled(!idle);
@@ -1207,17 +1256,26 @@ void page_installer(float w) {
         }
         if (g_install == INST_FAILED) {
             ImGui::Spacing();
-            ImGui::TextColored(kRed, "Something went wrong: the messages on the left say what. setup.log in this folder "
+            ImGui::TextColored(kRed, "Something went wrong: the build log says what. setup.log in this folder "
                                      "has all of them (attach it to a bug report).");
             if (ImGui::Button("Try again")) g_install = INST_IDLE;
         }
     }
     ImGui::PopTextWrapPos();
     ImGui::EndGroup();
+    ImGui::EndTable();
+    ImGui::PopStyleVar();
 }
 
 void page_play(float w) {
-    float col = (w - 40) * 0.5f;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10 * g_dpi, 0));
+    if (!ImGui::BeginTable("play_columns", installer_layout::columns(w, g_dpi),
+                           ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoPadOuterX)) {
+        ImGui::PopStyleVar();
+        return;
+    }
+    ImGui::TableNextColumn();
+    float col = ImGui::GetContentRegionAvail().x;
     ImGui::BeginGroup();
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + col);
     if (g_install == INST_RUNNING || g_install == INST_FAILED) {
@@ -1231,8 +1289,7 @@ void page_play(float w) {
             std::wstring d = pick_disc(GetActiveWindow());
             if (!d.empty()) g_disc_choice = d;
         }
-        ImGui::SameLine();
-        ImGui::TextUnformatted(g_disc_choice.empty() ? "no disc image selected" : short_path(g_disc_choice).c_str());
+        ImGui::TextWrapped("%s", g_disc_choice.empty() ? "No disc image selected" : narrow(g_disc_choice).c_str());
         if (!g_ready.setup) ImGui::TextColored(kRed, "setup\\setup.ps1 is missing: unpack the whole zip again.");
     } else {
         if (exists(path(L"build\\launcher\\rebuild_after_update"))) {
@@ -1256,10 +1313,14 @@ void page_play(float w) {
     }
     ImGui::PopTextWrapPos();
     ImGui::EndGroup();
-    ImGui::SameLine(0, 40);
+    ImGui::TableNextColumn();
+    col = ImGui::GetContentRegionAvail().x;
     ImGui::BeginGroup();
+    output_folder_details();
     quick_settings(col);
     ImGui::EndGroup();
+    ImGui::EndTable();
+    ImGui::PopStyleVar();
 }
 
 void page_graphics(float w) {
@@ -2457,11 +2518,14 @@ void draw_ui(float W, float H) {
     ImGui::PopStyleVar();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     float s = g_dpi;
-    float side = 220 * s, banner = 260 * s, bar = 64 * s;
+    const auto layout = installer_layout::measure(W, H, s);
+    float side = layout.side, banner = layout.banner, bar = layout.bar;
 
     /* sidebar */
     dl->AddRectFilled(ImVec2(0, 0), ImVec2(side, H), kSide);
     dl->AddLine(ImVec2(side, 0), ImVec2(side, H), kLine);
+    ImGui::SetCursorPos(ImVec2(0, 0));
+    ImGui::BeginChild("navigation", ImVec2(side, H - 64 * s), ImGuiChildFlags_None);
     ImGui::SetCursorPos(ImVec2(26 * s, 30 * s));
     ImGui::TextColored(kDim, "Sonic");
     ImGui::SetCursorPos(ImVec2(26 * s, 50 * s));
@@ -2470,10 +2534,12 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     ImGui::SetCursorPos(ImVec2(26 * s, 84 * s));
     ImGui::PushFont(g_font_bold, kSize * g_dpi);
+    ImGui::PushTextWrapPos(side - 18 * s);
     ImGui::TextColored(ImVec4(0.55f, 0.68f, 0.95f, 1), "%s",
                        g_mode == M_SWITCH ? "Switch installer" : g_mode == M_ANDROID ? "Android installer" : "PC recompilation");
+    ImGui::PopTextWrapPos();
     ImGui::PopFont();
-    float y = 130 * s;
+    float y = 140 * s;
     for (int i = 0; i < P_COUNT; i++) {
         if (installer() && i != P_PLAY && i != P_ABOUT && i != P_UPDATE) continue;
         if (i == P_UPDATE && update_tag().empty()) continue;
@@ -2482,9 +2548,11 @@ void draw_ui(float W, float H) {
         bool sel = g_page == i;
         if (ImGui::InvisibleButton("nav", ImVec2(side - 1, 40 * s))) g_page = i;
         bool hov = ImGui::IsItemHovered();
-        if (sel || hov) dl->AddRectFilled(ImVec2(0, y), ImVec2(side - 1, y + 40 * s), sel ? IM_COL32(28, 33, 50, 255) : IM_COL32(22, 26, 40, 255));
-        if (sel) dl->AddRectFilled(ImVec2(0, y), ImVec2(4 * s, y + 40 * s), kGold);
-        dl->AddText(ImVec2(28 * s, y + (40 * s - ImGui::GetFontSize()) / 2), sel ? IM_COL32(242, 190, 60, 255) : IM_COL32(215, 220, 232, 255),
+        ImVec2 nav = ImGui::GetItemRectMin();
+        ImDrawList* nav_dl = ImGui::GetWindowDrawList();
+        if (sel || hov) nav_dl->AddRectFilled(nav, ImVec2(nav.x + side - 1, nav.y + 40 * s), sel ? IM_COL32(28, 33, 50, 255) : IM_COL32(22, 26, 40, 255));
+        if (sel) nav_dl->AddRectFilled(nav, ImVec2(nav.x + 4 * s, nav.y + 40 * s), kGold);
+        nav_dl->AddText(ImVec2(nav.x + 28 * s, nav.y + (40 * s - ImGui::GetFontSize()) / 2), sel ? IM_COL32(242, 190, 60, 255) : IM_COL32(215, 220, 232, 255),
                     installer() && i == P_PLAY ? "Install" : kPages[i]);
         ImGui::PopID();
         y += 40 * s;
@@ -2502,18 +2570,19 @@ void draw_ui(float W, float H) {
         ShellExecuteW(nullptr, L"open", L"https://github.com/teclilla18/sonic-heroes-recomp", nullptr, nullptr, SW_SHOWNORMAL);
     std::string upd = update_tag();
     if (!upd.empty()) {  /* a newer release: a gold button to its download page, above Quit */
-        ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 64 * s));
+        ImGui::SetCursorPos(ImVec2(18 * s, std::max(ImGui::GetCursorPosY() + 20 * s, H - 180 * s)));
         ImGui::PushTextWrapPos(side - 18 * s);
         ImGui::TextColored(kGoldV, "Update available: %s", upd.c_str());
         ImGui::PopTextWrapPos();
-        ImGui::SetCursorPos(ImVec2(18 * s, H - bar - 38 * s));
+        ImGui::SetCursorPosX(18 * s);
         ImGui::PushStyleColor(ImGuiCol_Button, kGoldV);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.08f, 0.08f, 0.12f, 1));
         if (ImGui::Button("See what's new", ImVec2(side - 36 * s, 0))) g_page = P_UPDATE;
         ImGui::PopStyleColor(2);
     }
-    dl->AddLine(ImVec2(0, H - bar), ImVec2(side, H - bar), kLine);
-    ImGui::SetCursorPos(ImVec2(26 * s, H - bar + (bar - ImGui::GetFrameHeight()) / 2));
+    ImGui::EndChild();
+    dl->AddLine(ImVec2(0, H - 64 * s), ImVec2(side, H - 64 * s), kLine);
+    ImGui::SetCursorPos(ImVec2(26 * s, H - 64 * s + (64 * s - ImGui::GetFrameHeight()) / 2));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::Button("Quit")) PostQuitMessage(0);
     ImGui::PopStyleColor();
@@ -2521,9 +2590,9 @@ void draw_ui(float W, float H) {
     /* banner: the picture from the player's disc (or a plain gradient), darkened on the left under the title */
     float bx = side + 1, bw = W - bx;
     if (g_banner.srv) {
-        float u_h = (float)g_banner.w / g_banner.h * (banner / bw);  /* part of the picture's height that fits */
-        float v0 = (1 - u_h) * 0.5f;
-        dl->AddImage((ImTextureID)(intptr_t)g_banner.srv, ImVec2(bx, 0), ImVec2(W, banner), ImVec2(0, v0), ImVec2(1, v0 + u_h));
+        // Contain the complete composition: no stretching or UV cropping on ultrawide windows.
+        auto art = installer_layout::contain(bx, 0, bw, banner, (float)g_banner.w, (float)g_banner.h);
+        dl->AddImage((ImTextureID)(intptr_t)g_banner.srv, ImVec2(art.x, art.y), ImVec2(art.x + art.w, art.y + art.h));
     } else {
         dl->AddRectFilledMultiColor(ImVec2(bx, 0), ImVec2(W, banner), IM_COL32(24, 58, 140, 255), IM_COL32(40, 120, 220, 255),
                                     IM_COL32(20, 40, 100, 255), IM_COL32(12, 22, 60, 255));
@@ -2543,9 +2612,9 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
 
     /* page */
-    float pad = 30 * s;
-    ImGui::SetCursorPos(ImVec2(bx + pad, banner + 26 * s));
-    ImGui::BeginChild("page", ImVec2(bw - 2 * pad, H - banner - bar - 36 * s), ImGuiChildFlags_None);
+    float pad = layout.pad;
+    ImGui::SetCursorPos(ImVec2(layout.content_x, banner + 20 * s));
+    ImGui::BeginChild("page", ImVec2(layout.content_w, std::max(1.0f, H - banner - bar - 28 * s)), ImGuiChildFlags_None);
     float pw = ImGui::GetContentRegionAvail().x;
     switch (g_page) {
     case P_PLAY: installer() ? page_installer(pw) : page_play(pw); break;
@@ -2562,9 +2631,10 @@ void draw_ui(float W, float H) {
     /* bottom bar: status, Stop, PLAY / INSTALL AND PLAY */
     dl->AddLine(ImVec2(bx, H - bar), ImVec2(W, H - bar), kLine);
     float bh = 42 * s;
-    ImGui::SetCursorPos(ImVec2(bx + pad, H - bar + (bar - ImGui::GetFontSize()) / 2));
+    ImGui::SetCursorPos(ImVec2(layout.content_x, H - bar + 10 * s));
     bool game_on = child_running(g_game), setup_on = child_running(g_setup);
     std::string blocker = installer() ? installer_blocker() : std::string();
+    ImGui::PushTextWrapPos(layout.content_x + layout.content_w);
     if (installer() && g_status.empty() && g_install == INST_IDLE)
         ImGui::TextColored(blocker.empty() ? kGreen : kDim, "%s", blocker.empty() ? "\xE2\x9C\x93 Ready to build" : blocker.c_str());
     else if (game_on) ImGui::TextColored(kGreen, "\xE2\x97\x8F Running");
@@ -2572,9 +2642,13 @@ void draw_ui(float W, float H) {
     else if (g_ready.built && g_ready.disc) ImGui::TextColored(kGreen, "\xE2\x9C\x93 Ready to play");
     else if (g_ready.built) ImGui::TextColored(kRed, "The disc image is missing from baserom\\");
     else ImGui::TextColored(kDim, "Not installed yet");
-    float playw = 190 * s, stopw = 80 * s;
-    ImGui::SetCursorPos(ImVec2(W - pad - playw - 10 * s - stopw, H - bar + (bar - bh) / 2));
-    if (big_button("Stop", ImVec2(stopw, bh), false, game_on || setup_on)) {
+    ImGui::PopTextWrapPos();
+    bool completed = g_install == INST_DONE;
+    float playw = (completed && installer() ? 130 : 220) * s, stopw = (completed ? 210 : 80) * s;
+    ImGui::SetCursorPos(ImVec2(layout.content_x + layout.content_w - playw - 10 * s - stopw, H - bh - 12 * s));
+    if (completed) {
+        if (big_button("Open Output Folder", ImVec2(stopw, bh), false, true)) open_output_folder();
+    } else if (big_button("Stop", ImVec2(stopw, bh), false, game_on || setup_on)) {
         stop_child(g_game);
         stop_child(g_setup);
     }
@@ -2676,6 +2750,7 @@ bool test_step(int frame) {
  * licence accepted) and passes when the setup succeeds */
 const char* g_install_test;
 int g_install_test_exit = 1;
+void save_backbuffer(const std::wstring& file);
 bool install_test_step(int frame) {
     if (frame == 20) {
         g_disc_choice = widen(g_install_test);
@@ -2691,6 +2766,8 @@ bool install_test_step(int frame) {
     if (frame < 20 || g_install == INST_RUNNING) return false;
     refresh_ready();
     bool ok = g_install == INST_DONE && (installer() || (g_ready.built && g_ready.disc));
+    std::wstring output = installer_output_folder();
+    ok = ok && exists(output);
     std::string rep = std::string(ok ? "PASS" : "FAIL") + ": install " +
                       (g_install == INST_DONE ? "done" : g_install == INST_FAILED ? "failed" : "not started") +
                       ", setup exit code " + std::to_string(g_setup.exit_code) + ", game built " + (g_ready.built ? "yes" : "no") +
@@ -2699,6 +2776,8 @@ bool install_test_step(int frame) {
         std::lock_guard<std::mutex> lk(g_log_mx);
         for (size_t i = g_log.size() > 15 ? g_log.size() - 15 : 0; i < g_log.size(); i++) rep += "  " + g_log[i] + "\n";
     }
+    rep += "Output folder: " + narrow(output) + "\n";
+    save_backbuffer(path(L"launcher_completion.png"));
     write_text(path(L"launcher_test.txt"), rep);
     g_install_test_exit = ok ? 0 : 1;
     return true;
@@ -2791,16 +2870,32 @@ LRESULT CALLBACK wndproc(HWND h, UINT m, WPARAM w, LPARAM l) {
     if (ImGui_ImplWin32_WndProcHandler(h, m, w, l)) return 1;
     switch (m) {
     case WM_SIZE:
-        if (g_dev && w != SIZE_MINIMIZED) {
+        if (g_dev && w != SIZE_MINIMIZED && LOWORD(l) && HIWORD(l)) {
+            g_ctx->OMSetRenderTargets(0, nullptr, nullptr);
             if (g_rtv) { g_rtv->Release(); g_rtv = nullptr; }
-            g_swap->ResizeBuffers(0, LOWORD(l), HIWORD(l), DXGI_FORMAT_UNKNOWN, 0);
-            create_rtv();
+            if (SUCCEEDED(g_swap->ResizeBuffers(0, LOWORD(l), HIWORD(l), DXGI_FORMAT_UNKNOWN, 0))) create_rtv();
         }
         return 0;
+    case WM_DPICHANGED: {
+        g_dpi = HIWORD(w) / 96.0f;
+        if (ImGui::GetCurrentContext()) apply_style(g_dpi);
+        const RECT* r = reinterpret_cast<const RECT*>(l);
+        SetWindowPos(h, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top,
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+        return 0;
+    }
     case WM_GETMINMAXINFO: {
         auto* mm = (MINMAXINFO*)l;
-        mm->ptMinTrackSize.x = 900;
-        mm->ptMinTrackSize.y = 620;
+        UINT dpi = GetDpiForWindow(h);
+        if (!dpi) dpi = 96;
+        MONITORINFO mi = {sizeof mi};
+        GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mi);
+        if (getenv("SR_LAUNCHER_UI_TEST") && getenv("SR_LAUNCHER_SHOT")) {
+            mm->ptMaxTrackSize.x = 10000;
+            mm->ptMaxTrackSize.y = 10000;
+        }
+        mm->ptMinTrackSize.x = std::min<LONG>(MulDiv(860, dpi, 96), mi.rcWork.right - mi.rcWork.left);
+        mm->ptMinTrackSize.y = std::min<LONG>(MulDiv(560, dpi, 96), mi.rcWork.bottom - mi.rcWork.top);
         return 0;
     }
     case WM_DESTROY: PostQuitMessage(0); return 0;
@@ -2847,7 +2942,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         if (g_mode == M_SWITCH) find_sd_cards();
         if (wcsstr(GetCommandLineW(), L"--after-update")) g_after_update = true;
     }
-    start_update_check();
+    if (!(getenv("SR_LAUNCHER_UI_TEST") && getenv("SR_LAUNCHER_SHOT"))) start_update_check();
+    else g_update_done = true;
     DeleteFileW((self_exe() + L".old").c_str());  /* left by an update (the exe that ran it) */
 
     WNDCLASSEXW wc = {sizeof wc, CS_CLASSDC, wndproc, 0, 0, inst, LoadIconW(inst, L"APPICON"), LoadCursorW(nullptr, IDC_ARROW),
@@ -2898,7 +2994,30 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     refresh_ready();
     reload_banner();
 
+    // Render-only regression matrix. Production installs use the real child-process state above.
+    const char* ui_test = g_shot_file ? getenv("SR_LAUNCHER_UI_TEST") : nullptr;
+    int test_w = 0, test_h = 0, test_dpi = 96, test_state = 0;
+    if (ui_test && sscanf(ui_test, "%dx%d@%d:%d", &test_w, &test_h, &test_dpi, &test_state) == 4) {
+        test_w = std::clamp(test_w, 640, 7680);
+        test_h = std::clamp(test_h, 480, 4320);
+        test_dpi = std::clamp(test_dpi, 96, 288);
+        g_dpi = test_dpi / 96.0f;
+        apply_style(g_dpi);
+        RECT r = {0, 0, test_w, test_h};
+        AdjustWindowRectExForDpi(&r, WS_OVERLAPPEDWINDOW, FALSE, 0, GetDpiForWindow(hwnd));
+        SetWindowPos(hwnd, nullptr, -10000, -10000, r.right - r.left, r.bottom - r.top,
+                     SWP_NOACTIVATE | SWP_NOZORDER);
+        g_install = std::clamp(test_state, (int)INST_IDLE, (int)INST_FAILED);
+        g_setup.done = g_install != INST_RUNNING;
+        g_step = 7;
+        g_step_text = "7/7 Installing";
+        g_status = g_install == INST_DONE ? "Done." : g_install == INST_FAILED ? "Install failed. See setup.log." : "";
+        g_log = {"== 6/7 Building", "Example compiler message with a long path in a folder with spaces: build/output/a deliberately long nested directory/example.cpp: build completed successfully.",
+                 "== 7/7 Installing", "The original full output remains available in setup.log."};
+    }
+
     bool quit = false;
+    int frames = 0;
     while (!quit) {
         MSG msg;
         while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -2918,17 +3037,35 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         auto_build_after_update();
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
+        if (ui_test && getenv("SR_LAUNCHER_UI_OPEN") && (frames == 10 || frames == 11)) {
+            RECT client; GetClientRect(hwnd, &client);
+            auto l = installer_layout::measure((float)client.right, (float)client.bottom, g_dpi);
+            float play_w = (installer() ? 130 : 220) * g_dpi;
+            ImGui::GetIO().AddMousePosEvent(l.content_x + l.content_w - play_w - 115 * g_dpi,
+                                          client.bottom - 33 * g_dpi);
+            ImGui::GetIO().AddMouseButtonEvent(0, frames == 10);
+        }
         ImGui::NewFrame();
         RECT rc;
         GetClientRect(hwnd, &rc);
         draw_ui((float)(rc.right - rc.left), (float)(rc.bottom - rc.top));
         ImGui::Render();
         const float clear[4] = {20 / 255.0f, 24 / 255.0f, 36 / 255.0f, 1};
+        if (!g_rtv) { Sleep(10); continue; }
         g_ctx->OMSetRenderTargets(1, &g_rtv, nullptr);
         g_ctx->ClearRenderTargetView(g_rtv, clear);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-        static int frames;
         ++frames;
+        if (ui_test && frames == 5) save_backbuffer(widen(std::string(g_shot_file) + ".max.png"));
+        if (ui_test && frames == 4) ShowWindow(hwnd, SW_MAXIMIZE);
+        if (ui_test && frames == 6) ShowWindow(hwnd, SW_RESTORE);
+        if (ui_test && frames == 8) {
+            RECT r;
+            r = {0, 0, test_w, test_h};
+            AdjustWindowRectExForDpi(&r, WS_OVERLAPPEDWINDOW, FALSE, 0, GetDpiForWindow(hwnd));
+            OffsetRect(&r, -10000, -10000);
+            SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(test_dpi, test_dpi), (LPARAM)&r);
+        }
         if (g_test && test_step(frames)) break;
         if (g_install_test && install_test_step(frames)) break;
         /* SR_LAUNCHER_UPDATE_TEST=1 (testing): once the check found an update, presses DOWNLOAD AND INSTALL, waits,
@@ -2959,6 +3096,19 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         }
         if (g_shot_file && frames >= 20 && ((g_update_done && !notes_pictures_loading()) || frames >= 600)) {  /* fonts, textures, update check settled */
             save_backbuffer(widen(g_shot_file));
+            if (ui_test) {
+                RECT client; GetClientRect(hwnd, &client);
+                D3D11_TEXTURE2D_DESC desc = {};
+                ID3D11Texture2D* back = nullptr;
+                g_swap->GetBuffer(0, IID_PPV_ARGS(&back));
+                if (back) { back->GetDesc(&desc); back->Release(); }
+                char report[512];
+                snprintf(report, sizeof report, "client=%ldx%ld backbuffer=%ux%u dpi=%.2f state=%d columns=%d output=%s\n",
+                         client.right, client.bottom, desc.Width, desc.Height, g_dpi, g_install,
+                         installer_layout::columns(installer_layout::measure((float)client.right, (float)client.bottom, g_dpi).content_w, g_dpi),
+                         narrow(installer_output_folder().substr(g_root.size() + 1)).c_str());
+                write_text(widen(std::string(g_shot_file) + ".txt"), report);
+            }
             break;
         }
         g_swap->Present(1, 0);

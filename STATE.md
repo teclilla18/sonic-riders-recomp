@@ -1,5 +1,11 @@
 # Released state (2026-11-18)
 
+Installer maintenance implemented on isolated public/native branches: responsive layout, full banner, live DPI,
+wrapped logs, consistent completion and Open Output Folder. Initial 176 simulated UI cases passed.
+Rebuilt-package/cold-install verification and existing-asset replacement are pending; release tags stay fixed.
+See docs/notes/installer-layout.md and excluded AI_HANDOFF.md.
+
+
 **Released:** [v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7),
 source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
 Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
