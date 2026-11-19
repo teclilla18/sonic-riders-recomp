@@ -2,7 +2,8 @@
 
 Player entry: [choose a console](../index.md). Separate routes:
 [Switch Stable](../install-switch.md) and [Switch 2 Experimental Alpha](../install-switch2.md).
-Rendered HTML is served through the repository's GitHub Pages site from `main`, `/docs`.
+Since 2026-11-19 GitHub Pages serves the website from the `gh-pages` branch (see [website.md](website.md)); it renders
+the booklets from this generator's data (`tools/console_guide_data.py`) at the same URLs. The `docs/*.html` copies here are no longer served.
 `docs/.nojekyll` keeps these self-contained static pages unchanged.
 
 The primary visual reference is Claude's existing easy-read install/update guide. Retain its warm paper

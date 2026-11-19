@@ -13,6 +13,15 @@
   icon, Super Sonic feel, high-ring finish, 2P Fit HUD. Fresh installs default to 60 FPS; Unlimited experimental.
 - Release downloads are setup ZIPs only (rule in CLAUDE.md); both alphas' `.sha256` files were removed.
 
+## Riders Plus website (2026-11-19)
+
+- The user named the project **Riders Plus** (the gameplay changes are the "Riders Plus rules"; repo name kept).
+- **Live, approved by the user:** https://teclilla18.github.io/sonic-riders-recomp/ , from the orphan branch
+  `gh-pages` (Pages source switched from `main` `/docs`). Releases, downloads and Road to v1.0 update themselves
+  from GitHub; the console booklets keep their URLs and are rendered from `tools/console_guide_data.py` (rerun
+  `build_site.py all` on gh-pages after changing it). Socials (Bluesky, Instagram) come from `socials.json` on
+  gh-pages. Tested in Chrome at desktop and phone widths; not yet on a real phone or Safari. docs/notes/website.md.
+
 ## Front page and release pages (2026-11-19, docs only)
 
 - README rewritten: Switch 2 poster first, self-updating Road to v1.0 bar, hook, three buttons, all badges

@@ -1921,3 +1921,19 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   and a live shields.io badge (`docs/progress.json`), both drawn with the Status card and the table numbers by
   `tools/make_progress.py`; `.github/workflows/progress.yml` reruns it on push to main. [confirmed] first CI run
   passed with nothing to change; the badge renders "Road to v1.0: 77%". The style rules went into CLAUDE.md.
+## 2026-11-19: Riders Plus website live (Claude, gh-pages branch; main docs only)
+
+- The user named the project **Riders Plus** and asked for an official site. Built a static site on a new orphan
+  `gh-pages` branch (worktree `.local/gh-pages`): home (hero with the new logo and the Lanmana poster, stable vs
+  experimental release cards, one download card per platform with direct ZIP links, GameCube-vs-port slider, Road
+  to v1.0, community), Download, Riders Plus rules, guides hub, easy-read install/update guides (ported from the
+  Claude guides), both console booklets rendered from `tools/console_guide_data.py`, FAQ/troubleshooting,
+  community/credits/legal, 404. Background: the user's grid picture, measured element by element and redrawn
+  at 2x (4x master in the user's Pictures folder). Details and procedures: docs/notes/website.md.
+- Pages source switched from `main` `/docs` to `gh-pages` `/` with the user's OK. Booklet URLs used by releases,
+  README and the Claude guides kept; old easy-read guide URLs redirect.
+- [confirmed] Desktop (1440) and phone (390) layouts checked in Chrome through scaled iframes (the test monitor is
+  portrait); no horizontal scroll; tabs, version picker, step ticks, saved checkpoints, slider, live GitHub data,
+  socials.json updates (and a broken socials.json keeping the old links) all work; 770 links checked; every live
+  page and asset answers 200, missing URLs get the 404 page. [uncertain] Not checked on a real phone, Safari or
+  an old browser; GitHub API rate limits (60/h per visitor, cached 20 min) fall back to the build snapshot.
