@@ -1,6 +1,6 @@
 # Release candidate state (2026-11-18)
 
-Preparing explicitly authorized v0.8.7 Stable (Windows/Switch/Android/Linux, no iOS), then separate
+Published v0.8.7 Stable (Windows/Switch/Android/Linux, no iOS), then separate
 v0.8.7-switch2-alpha.2. Canonical excluded AI_HANDOFF.md records exact source/test/release checkpoints.
 Public review worktree merges tested Riders Plus/HUD fixes with origin/main e1c79e6 Android fixes.
 Preserve dirty sr-main, private/native experiments and concurrent worktrees. No new features.
@@ -11,7 +11,7 @@ finished-phase reapplication/effect fix. Public actual-source tests and PC matri
 Hardware accepted on native0d995f3def88: universal icon, Super feel, high-ring finish,2P Fit HUD.
 Both own-views retain6701 fullRAM checksums and images;3P/4P controls unchanged.
 Main includes validated Android legacy Vulkan/shutdown fixes32 and Linux installer fix30.
-Cold PC/Android Sandbox, package audits, guides/live publication and upload verification pending.
+Stable source/tag381a3694e65ddcbaa0a42f7479c8d72ef324ba1c. PC/Android cold Sandbox both PASS including space paths. All four source ZIP audits and uploaded SHA256 readbacks PASS. Stable is verified latest. Alpha2 cold native GUI/CLI audit/test pending. Updated HTML guides committed; user explicitly defers external Claude Artifact republication until weekly reset. Existing links retained with older-version notice. No browser automation retries.
 Existing iOSv0.8.4 downloads must remain; permanently preservev0.8.2 plus five newest releases.
 
 Native Alpha2 includes applicable stable fixes, Unlimited experimental, universal setup/icon_256.jpg.

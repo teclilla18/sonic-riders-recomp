@@ -9,7 +9,7 @@
 - Includes validated Android Vulkan compatibility/shutdown fixes32 and Linux/SteamDeck setup fix30.
 - Windows, originalSwitch, Android and Linux setup packages; existing iOSv0.8.4 remains available separately.
 
-## Unreleased — local review
+### More Riders Plus details
 
 - Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
 - Stop finished-race Lv5 stat reapplication and repeated native level-up effect-path entries.
@@ -18,7 +18,7 @@
 
 - Riders Plus Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
   Lv.5 240/330/140 km/h, scaled from unmodified fields to preserve stat mods without compounding.
-  Standard characters and Plus-off Super retain their existing stats. Local test builds only.
+  Standard characters and Plus-off Super retain their existing stats. Released in v0.8.7.
 - Add a local Windows OunceMTP deployment utility: read-only detection/backups, temporary transfer probes,
   staged NRO/manifest deployment with explicit apply/current-hash gates, SHA-256 readback and FTP fallback.
 - Riders Plus supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own

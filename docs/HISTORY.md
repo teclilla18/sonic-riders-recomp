@@ -1810,3 +1810,17 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Focused Vulkanpass/feature/framebuffer/pool, concurrentcompiler/audio/shutdown, exit-handler and quit-verifier regressions pass. Prior S23/Mali and cold PC/Android validation retained; no redundant release/device deployment. Real MoltenVK remains untested.
 - Thanked Crashmania468 and linked public installer; #32 closed COMPLETED (comment6993712427). #6 remains OPEN with findings/original attachment35054699 (comment6993712013). Exact loading cause remains uncertain; research preserved separately, no speculativefix.
 - No new release, tag move, release-body edit or asset replacement in integration; tag and allassetIDs/digests verified unchanged. STATE/canonical excluded handoff updated; other native/HUD/Super work remains separate.
+
+
+### 2026-11-18 - v0.8.7 stable published; Alpha2 validation in progress
+- Explicit user publication authorization. Merge381a3694 integrates validated Riders Plus/Super/HUD/finish
+  fixes with mainAndroid32/Linux30 work; dirty sr-main/concurrent native/private checkouts preserved.
+- Cold Windows Sandbox PC and Android PASS separately, fresh downloads and space-path repeat. Four setup
+  ZIPs audited against source and full uploaded SHA256 readbacks equal. v0.8.7 published as latest stable.
+- User requested release writing style matching v0.8.6/4/3/2 and Alpha1; all five descriptions read before
+  drafting player-focused notes with guides/update instructions/credits. Existing iOSv0.8.4 left untouched.
+- Browser policy stopped Claude Artifact access (could not verify current URL). User explicitly defers external
+  republication, allows releases now; updated HTML guides committed, existing URLs retained with older-version
+  notice. Pending same-URL republication belongs in excluded handoff for after weekly reset.
+- Native Alpha2 retains accepted80304ca runtime/config unchanged, fresh60FPS defaults/Unlimited experimental,
+  universal game icon, serious RaceSelect audio limitation documented. Native cold GUI/CLI testing pending.

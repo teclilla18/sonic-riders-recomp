@@ -2,6 +2,18 @@
   <img src="docs/images/switch2-alpha1-banner.jpg" width="100%" alt="Sonic Riders Recomp — Nintendo Switch 2 Alpha 2. Original artwork by Lanmana; signature preserved.">
 </p>
 
+## 🦔 v0.8.7 — Super Sonic joins Riders Plus
+
+Super Sonic now gets999rings, Lv4/5 and stronger speed stats. Split-screen HUD placement and level digits
+are improved, and high-ring finishes no longer repeat level-up effects. Windows, Switch, Android and Linux
+packages are in the [latest stable release](https://github.com/teclilla18/sonic-riders-recomp/releases/latest).
+iOS stays on [v0.8.4](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.4).
+
+The [easy-read install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) and
+[update](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) pages may still refer to an older version.
+Updated HTML guides are in GitHub: [install](docs/install-guide.html) · [update](docs/update-guide.html).
+Claude Artifact republication is deferred until the maintainer's weekly reset.
+
 # 🎉 Sonic Riders is now playable on Nintendo Switch 2!
 
 I've been working on getting Sonic Riders running natively on Switch 2 since the release of Seedsow, and I'm excited to finally share an early build with everyone.

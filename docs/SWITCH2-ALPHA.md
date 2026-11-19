@@ -27,11 +27,7 @@ Other stages/story, extended play, multiplayer, docking, sleep/resume and other
 homebrew environments require testing. Windows Sandbox checks installation and
 building only; they cannot establish physical Switch 2 functionality.
 
-Higher-FPS interpolation is excluded. Its separate experimental build froze at
-Player Entry after selecting Sonic with Chaos Emerald gear (user report). It is
-preserved separately for investigation. Alpha uses the accepted renderer.
-Known issues: intermittent stuttering or temporary freezes, music/announcer dropout, temporary audio distortion and minor selection audio glitches. Relaunching has restored missing music in tests; not all symptoms are fixed. Recent two-race test had no selection freeze: first race had two temporary stalls and recoverable distortion, second was otherwise flawless. Further fixes are deferred after Alpha 2. Startup/loading can hitch for several seconds; logs identified synchronous
-pipeline-cache saving. Do not delete caches as a routine update step.
+Unlimited/interpolation is included as an explicitly experimental opt-in; normal60FPS remains the default. Persistent Race Select audio issues remain unresolved.
 
 ## Install on Windows
 
