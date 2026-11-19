@@ -11,7 +11,7 @@ Similar audio/stall defects predate these changes; no severe newregression is es
 and resource/PCM/underrun behavior remain unresolved. Diagnostic logs are preserved locally.
 
 Experimental community compatibility, bug, performance and stress testing.
-[Download Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2). This experimental pre-release is separate from stable v0.8.6.
+[Download Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2). This experimental pre-release is separate from stable v0.8.7.
 No compiled game or Nintendo/SEGA game data is distributed.
 
 ## What has been tested

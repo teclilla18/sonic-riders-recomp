@@ -1,17 +1,42 @@
-# Switch 2 Alpha 2 release candidate (2026-11-18)
+# Released state (2026-11-18)
 
-User explicitly authorizes v0.8.7 stable then separate v0.8.7-switch2-alpha.2 prerelease.
-Runtime/config identical to accepted80304ca/0d995f3def88:Super999/progression/balance, adaptive split HUD,
-MP4/5 indicators, finished-effect fix, Unlimited opt-in, universal setup/icon_256.jpg.
-Fresh installer defaults60FPS/2x and preserves existing settings/saves/caches/env on updates.
-Source package only; no compiled game data. Cold GUI+CLI/space Sandbox and distribution audit pending.
+**Released:** [v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7),
+source `381a3694e65ddcbaa0a42f7479c8d72ef324ba1c`, verified latest stable.
+Windows, original Switch, Android and Linux source setup ZIPs passed source/data audits and full uploaded
+SHA-256 readback. Cold Windows Sandbox PC and Android tests passed separately, including space paths.
+No new iOS package. Existing iOS downloads remain available.
 
-Known severe limitation: RaceSelect(FreeRace/TimeAttack/WGP) persistent audio distortion with one freeze
-at onset. Normal60 and parentmenu did not recover it. Similar failures predate ours; no severe newregression
-established. Current log0outputdrops/errors butunderrun/content/leak causeunresolved. No claimoffixes.
-Logs preserved in public ignored build/live-preview-20261118/capture. Log-reader investigation bounded.
-User accepted icon,Superfeel,highringfinish,2PFitHUD. Other modes/aspects/longruns requirecommunitytesting.
+**Released separately:** [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2),
+source `1ca54eb0897dc85687f5d7b0e3f93e4b7ba71a66`, marked prerelease, not latest stable.
+ZIP SHA-256: `cf2518433ed832c992a2c27dfc5b803f9ea8ef52c441ac8dd0f0b289370c7954`.
+Cold native GUI and command-line/space-path builds, user-data preservation sentinels and uploaded readback
+audit passed. These tests establish setup/build behavior, not additional hardware gameplay acceptance.
+Runtime/config match accepted source `80304ca` / build `0d995f3def88` exactly. Fresh installs default to
+60 FPS; Unlimited rendering remains explicitly experimental. Updates preserve existing settings.
 
-Both updated easy-readHTMLguides are committed. ExistingClaudeArtifactURLs retained witholder-version
-notice; user explicitly defers externalrepublication untilweeklyreset. Do not attemptbrowserautomationagain.
-PreserveiOSv0.8.4 andforeverv0.8.2; stablemuststaylatest,alpha2prerelease. Canonicalhandoff hasexactstatus.
+**Implemented, tested and released:** Super Sonic's 999-ring compatibility, native-level-preserving Lv. 4/5
+progression, noncompounding mod-compatible balance, adaptive multiplayer HUD, multiplayer Lv. 4/5 digits
+(#29), independent shared 2P timer, and finished-race repeated stat/effect fix. Super top/boost/drift targets
+are 195/270/110 Base, 220/300/125 Lv. 4 and 240/330/140 Lv. 5 km/h. Vanilla and online determinism preserved.
+Main also includes validated Android Vulkan/shutdown fixes (#32) and Linux installer fix (#30).
+PC matrix/controls and both own-view 6,701-checksum routes passed. Broader hardware coverage remains limited.
+**Accepted by the user on Switch 2:** universal icon, Super Sonic feel, high-ring finish and 2P Fit HUD.
+The console still has accepted build `0d995f3def88`; this release session did not replace or relaunch it.
+
+**Unresolved Alpha 2 limitation:** Race Select (Free Race / Time Attack / World Grand Prix) can develop
+severe persistent audio distortion, with one reported freeze at onset. Disabling Unlimited and leaving
+the menu did not recover that session. Similar audio/stall failures predate these fixes; no severe new
+regression was established. Native output drops/errors were zero; underruns, PCM faults and resource leaks
+remain unproven. No audio fix is claimed. Captured log/screenshots are preserved locally under ignored
+`build/live-preview-20261118/`; use log-reader rather than rereading logs. Rare post-race loading hang #6
+remains open. No speculative fix or larger Super Sonic overhaul was attempted.
+
+Updated easy-read HTML guides are committed and linked through GitHub. Existing Claude Artifact links
+remain with an older-version notice. The user explicitly deferred same-URL republication until the weekly
+reset and prohibited further browser automation this session. This does not block the published releases.
+
+Retention completed: five newest releases retain their assets; v0.8.2 is permanently protected.
+By explicit user choice, v0.8.1 and v0.8.3 remain iOS-only archive pages with their exact original iOS assets
+and links. Eight obsolete non-iOS assets were removed only after complete local backups and hash checks.
+v0.8.2 and v0.8.4 assets/notes were unchanged. Native source stays separate from main; dirty sr-main,
+private DX and concurrent worktrees were preserved. Exact evidence and local ownership: excluded AI_HANDOFF.md.

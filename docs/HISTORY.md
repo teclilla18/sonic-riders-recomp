@@ -1793,3 +1793,26 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
   console launch; native binary cannot be smoke-tested in Eden. All10 deployment regressions pass.
 - Full/staged data guards + ignored-status/hooks preserved for local checkpoints. No push/publish/release/
   asset change or external reply. Inbox unchanged (32closed/6open). Local handoff owns exact backups/paths.
+
+
+### 2026-11-18 - v0.8.7 and native Alpha2 published
+- Stable381a3694:four source setupZIPs, coldPC/Android+space PASS; uploadedSHA256readbacks match;lateststable.
+- Native1ca54eb0:v0.8.7-switch2-alpha.2 separateprerelease, coldGUI/CLI+space/preservation PASS; source/distribution
+  audit and fullreadback PASS. Runtime/config pinned unchanged to accepted80304ca; no untested audiofix.
+- Alpha2 fresh60FPS defaults; Unlimitedexplicitlyexperimental; serious persistentRaceSelect audio issue clear
+  inREADME/notes/guides. Current/historicallogs preserved; source/native output counters do not prove leak
+  orunderrun. Useraccepted Superbalance/highringfinish/icon/2PFitHUD. Othercoverage explicitlylimited.
+- Notes follow requested v0.8.6/4/3/2 andAlpha1 style, player-focused headings, bothguides,updatehelp,artist/
+  homebrewcredits andcommunitytesting invitation. UpdatedHTMLguides inGitHub; userdefers sameURLClaude
+  Artifactrepublication untilweeklyreset afterbrowserpolicy stop. No furtherbrowserautomation attempted.
+
+
+### 2026-11-18 - Both releases verified; iOS archives preserved
+- [confirmed] v0.8.7 source381a3694 is latest stable; Alpha2 source1ca54eb0 is a separate prerelease.
+  Cold PC, Android and native GUI/CLI setup tests passed; all uploaded source ZIP SHA-256 readbacks match.
+- [confirmed] User chose iOS-only archives for v0.8.1/v0.8.3. Complete old-release backups were hashed before
+  removing eight obsolete non-iOS assets. Original iOS asset IDs/digests/URLs remain; v0.8.2/v0.8.4 untouched.
+- [confirmed] Both updated HTML guides are committed/linked. Existing Claude URLs carry an older-version
+  notice; user explicitly deferred hosted republication until weekly reset and prohibited browser retries.
+- [uncertain] Native Race Select severe audio remains unresolved and prominently documented; 60 FPS did
+  not recover the observed session. Accepted gameplay fixes preserved; no new console deployment this session.

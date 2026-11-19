@@ -1,5 +1,5 @@
 # REGULAR UPDATES PAUSED UNTIL 11/19 Enjoy!! (working on online play)
-> **Switch 2 Alpha 2 (experimental candidate):** dedicated native installer, separate from stable v0.8.6 and original Switch. See [installation, compatibility, known issues and reporting](docs/SWITCH2-ALPHA.md). No game data or compiled game is distributed; higher FPS is excluded.
+> **Switch 2 Alpha 2 (experimental prerelease):** dedicated native installer, separate from stable v0.8.7 and original Switch. See [installation, compatibility, known issues and reporting](docs/SWITCH2-ALPHA.md). No game data or compiled game is distributed. Normal 60 FPS is the fresh-install default; Unlimited rendering is an experimental option.
 
 > ⚠️ **Switch 2 Alpha 2:** Race Select can develop severe persistent audio distortion, sometimes after a freeze.
 > Use normal60FPS by default; Unlimited is experimental. Turning it off or leaving the menu may not recover
@@ -18,6 +18,8 @@
 > **Updating got revamped in v0.8.3.** Once you're on v0.8.3, every future update is one press: **UPDATE NOW** in
 > the app downloads, rebuilds and installs it by itself, usually in under a minute. Switch players can update
 > without taking the SD card out (hekate's USB mode). [Easy-read update guide](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) · [How to update](docs/INSTALL.md#updating-to-a-new-version)
+
+The hosted easy-read guides may still refer to an older version. Updated HTML is available here: [install guide](docs/install-guide.html) · [update guide](docs/update-guide.html).
 
 <p align="center">
   <img src="docs/images/banner.jpg" alt="Sonic, Tails, Knuckles, Jet, Wave and Storm racing on Extreme Gear through a neon city" width="100%">
