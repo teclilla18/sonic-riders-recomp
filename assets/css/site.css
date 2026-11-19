@@ -114,7 +114,7 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
   font: 700 1rem/1 var(--ui); letter-spacing: .06em; text-transform: uppercase; color: #02101c;
 }
 .btn .btn-in {
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 26px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 26px; white-space: nowrap;
   background: var(--b); clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
   transition: filter .2s, transform .2s;
 }
@@ -129,7 +129,7 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .btn-gold .btn-in { background: linear-gradient(100deg, var(--gold), #fff0a6 60%, var(--gold)); }
 .btn-sm .btn-in { min-height: 38px; padding: 8px 18px; font-size: .86rem; }
 .btn-wide { display: flex; margin: 18px 0; }
-.btn-wide .btn-in { width: 100%; flex-direction: column; gap: 4px; padding-block: 14px; }
+.btn-wide .btn-in { white-space: normal; text-align: center; width: 100%; flex-direction: column; gap: 4px; padding-block: 14px; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 26px; }
 
 .chip {
