@@ -48,8 +48,10 @@
    every platform, joining by restart + catch-up replay. Also left: a room-wide 30 fps switch for slow consoles,
    phones, 3-4 players, ping and delay settings. Code: netplay.c (`SR_NET`), launcher/lobby.cpp, launcher.cpp
    `page_online`. Not started this session.
-2. **Auto stick-spin / air refill (#23)**: approved, plan in docs/notes/plans-2026-11.md "Auto air refill /
-   stick spin". Not started. (Turned off in online races if it changes game memory, like the other options.)
+2. **Auto spin (#23)**: implemented and merged to main 2026-11-20, **not released** (the user is holding the
+   release for one more change). F1 > Gameplay > Auto spin, off by default; turns only the controller stick
+   of the player's racer in spin sections, 7 turns/s (user's pick). Tested by the user on PC at 15/5/6 turns/s
+   (Splash Canyon); 7/s, online, 2-4 players and other stages not run. Code: auto_spin.c.
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
    perftest passed; test zip posted to #33. The reporter (23:32) will build an APK from it and offered a video;
    waiting for their result. Not merged.

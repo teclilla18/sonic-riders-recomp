@@ -24,7 +24,10 @@ static void get_pad(int ch, GcPad* p) {
     int ppc_detclock(void); int perftest_on(void); void perftest_pad(GcPad* p);
     if (perftest_on()) perftest_pad(p);  /* SR_PERFTEST: no controllers (perftest.c) */
     else if (ppc_detclock()) *p = g_det_latch[ch & 3];
-    else input_get_pad(ch, p);
+    else {
+        input_get_pad(ch, p);
+        auto_spin_pad(ch, p, -1);  /* read live: timed by the video fields */
+    }
 }
 
 static uint32_t g_out[4];        /* SICnOUTBUF: the poll command (0x40 0x03 motor) */

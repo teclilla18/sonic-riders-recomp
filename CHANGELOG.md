@@ -1,5 +1,12 @@
 # Changelog
 
+### Auto spin (Gameplay option, #23)
+
+- New option in the settings menu (F1 > Gameplay > Auto spin, off by default): in the scenes where the game asks
+  you to turn the stick round and round, the port turns it for you at a fast player's pace (7 turns a second).
+  Your air refills and you speed up as with a good hand spin, without wearing out your stick. Only your own
+  racers; it also works in online races (the other side receives the turned stick as your input).
+
 ### PC: an unpacked update that was never installed is now noticed
 
 - Unzipping a new version over an old folder and then starting the old shortcut kept running the old game.

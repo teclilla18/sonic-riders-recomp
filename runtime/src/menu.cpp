@@ -659,6 +659,11 @@ void tab_gameplay() {
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
+    if (check("Auto spin", &g_settings.auto_spin,
+              "Off by default. In the scenes where the game asks you to turn the stick round and round, the stick is "
+              "turned for you at a fast player's pace (7 turns a second): your air refills and you speed up without "
+              "wearing out your stick. Only your own racers, never the CPUs."))
+        settings_apply();
 }
 
 void tab_mods() {

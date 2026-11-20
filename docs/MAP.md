@@ -22,6 +22,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Memory card, RTC | exi.c (430) | |
 | Controllers into the game | si.c; scripted input input_script.c (`SR_INPUT`) | |
 | Settings file | settings.c / settings.h | `g_settings`, `settings_apply` |
+| Auto spin (#23, Gameplay option) | auto_spin.c, hooks in si.c `get_pad` and netplay.c `net_frame` / `netplay_latch` | `auto_spin_pad`, `spinning_racer` |
 | Settings menu (ImGui) | menu.cpp (760) | `tab_display`, `tab_controls`, `quit_row`, `close_menu`, `overlay_input`, `overlay_pointer`, `overlay_image` |
 | Menu software rasterizer | menu_raster.cpp | |
 | Mods | mods.c, mods_data.c, game_mods.c | |

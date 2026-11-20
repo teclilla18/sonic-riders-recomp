@@ -1952,3 +1952,20 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   available" banner then. No VERSION file (git checkout) = no check.
 - [confirmed] PC: launcher pictures with mismatched and matching VERSION (FINISH UPDATE / PLAY); game capture shows
   the banner, log line present. [uncertain] FINISH UPDATE through a real install not run; Linux has no banner.
+
+## 2026-11-20: Auto spin option (#23)
+
+- Asked for in #23: an overlay option that turns the stick in the stick-spin scenes (air refill + speed-up).
+- Found with a per-frame dump of racer 0 and pad 0 while the user played Splash Canyon (temporary recorder, not
+  committed): input fn 818A6E60 turns the stick into one of four directions (racer +0xA08: 0x1000 up, 0x2000 down,
+  0x4000 left, 0x8000 right; read from the racer's controller struct, racer +0x0 -> 801AF9F0 + port x 0x30, +0x8 bits).
+  A clockwise step adds 1 to +0xA20, anticlockwise subtracts 1; at +-4 a turn is counted (+0xA04 bit 31). A spin
+  section sets racer +0x624 (u16) to 1, +0x626 counts its progress (ends at 50 in the long ones), +0x628 is the
+  section's number in the stage's table (spin object fn 81881068, which sets speed +0xAAC). Air +5000 per turn
+  until full; every turn adds speed with no cap. [confirmed, PC dumps + static]
+- Fix: `auto_spin.c` overrides only the controller stick of a port whose racer has +0x624 = 1, clockwise, timed by
+  the game frame (latched input) or the 60 Hz field count (live polls). One quarter per frame (15 turns/s) is the
+  game's limit and left scenes at ~2x a human's speed (2.57 vs 1.31); the user chose a fast human's pace. 5 and 6
+  turns/s were played by the user; 7 turns/s chosen by the user without a further run. [likely]
+- Tested: PC, user-played Splash Canyon runs at 15, 5 and 6 turns/s: air refilled, speed rose (5/s: main scene
+  peak 1.50). [uncertain] 7/s build not run, online / multiplayer ports and other stages not tested.

@@ -330,12 +330,14 @@ static void net_poll(int ms) {
 static void net_frame(GcPad* pads) {
     if (g_net_ended) {  /* alone: our controller as player g_me, the other one neutral */
         input_get_pad(0, &pads[g_me]);
+        auto_spin_pad(g_me, &pads[g_me], g_frame + 1);
         return;
     }
     uint32_t f = g_frame + 1;
     GcPad local;
     input_get_pad(0, &local);
     g_local_upto = f + (uint32_t)g_delay;
+    auto_spin_pad(g_me, &local, g_local_upto);  /* the frame it is for */
     pack(&local, g_in[g_me][g_local_upto % RING]);
     g_in_f[g_me][g_local_upto % RING] = g_local_upto;
     net_send_input();
@@ -707,7 +709,7 @@ static void online_rules(GcPad* pads) {
 void netplay_latch(GcPad* pads) {
     for (int ch = 0; ch < MAXP; ch++) pads[ch] = k_neutral;
     if (!g_active) {
-        for (int ch = 0; ch < MAXP; ch++) input_get_pad(ch, &pads[ch]);
+        for (int ch = 0; ch < MAXP; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], g_frame + 1); }
         return;
     }
     uint32_t f = g_frame + 1, sum = g_sum_next;
@@ -733,7 +735,7 @@ void netplay_latch(GcPad* pads) {
         sum_check(f);
         net_frame(pads);
     } else {
-        for (int ch = 0; ch < g_ports; ch++) input_get_pad(ch, &pads[ch]);
+        for (int ch = 0; ch < g_ports; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], f); }
     }
     if (g_online_rules && !g_rep) online_rules(pads);  /* a replay reads them as recorded (already applied) */
     if (g_rec) {

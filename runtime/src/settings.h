@@ -36,6 +36,7 @@ typedef struct Settings {
     int update_check;   /* PC: ask GitHub at start-up whether a newer release exists (update_check.c) */
     int ring_cap_999;   /* races: a racer holds up to 999 rings (default) instead of the original 100
                            (g_ring_cap, read by the cap checks in config/GXEE8P/patches.txt) */
+    int auto_spin;      /* races: the port turns the stick in the game's spin scenes (auto_spin.c, #23) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

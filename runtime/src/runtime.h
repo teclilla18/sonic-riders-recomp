@@ -134,6 +134,8 @@ typedef struct GcPad {
     uint8_t trig_l, trig_r;
 } GcPad;
 void input_get_pad(int chan, GcPad* out);
+/* auto_spin.c: turns the stick of port `port` in a spin scene (frame >= 0: the game frame it is for) */
+void auto_spin_pad(int port, GcPad* p, int64_t frame);
 int input_connected(int chan);  /* GameCube port 0-3 has a controller (port 0 always does) */
 /* SDL builds: row i of the button map (GameCube input, key, controller button); 0 past the end */
 int input_map_row(int i, const char** gc, const char** key, const char** pad);
