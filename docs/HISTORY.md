@@ -1972,3 +1972,24 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   [confirmed] (`[autospin]` log: controller 1 -> racer 0, 2 -> racer 1, CPU racers none; sections taken over on
   both ports). The user also played it on the original Switch OLED and the S23 Ultra (dev build
   v0.8.7-28-g8989ab24): works on both [confirmed]. [uncertain] online, 3-4 players, other stages not tested.
+
+## 2026-11-20: Hold to boost (branch claude/auto-spin, not merged)
+
+- Asked for (plans-2026-11.md "Nitrous-style boost toggle"): holding B keeps boosting, a tap stays the game's boost.
+- Found with a temporary per-frame recorder of racer 0 + controller struct 0 while the user raced (not committed):
+  boost state racer +0xA28 bit 0x400; timer +0x8AC set to 120 at the start, counted down by fn 81896C9C (once per
+  racer per step while boosting; below 0 the boost ends); a crash or hit ends it earlier. Cost booked through
+  +0x98C = active level block +0x28 (25 000 / 30 000 / 40 000 on the tested gear); running drain block +0x20 (16).
+  Controller struct +0x8 held bits: B 0x0002, X 0x0004 (both boost), A 0x1000. +0x764 = animation (65 boost pose,
+  only the first frames). The boost start / end write the top speed +0xAB4 (818969B8.., 81896D50). [confirmed]
+- Fix: boost_hold.c, hook before 81896CC0: a boost whose first tick sees B/X held keeps its timer at 4 frames
+  while that button stays held, taking the refunded frames' air at cost / 120 each. User-played on PC: works, X
+  too, out-of-air stop, Super Sonic 626 extra frames [confirmed].
+- User follow-ups, implemented, not played: pull back to boost speed (10 % of the gap per frame) after turns and
+  bumps; Super Sonic ramps exponentially to 350 km/h in 4 s held (integer curve, no libm); "Riders Plus features"
+  fold-out with Auto spin and Hold to boost (on by default, only with Riders Plus); Super Sonic +5000 fuel per
+  counted spin turn (hook 818A78EC, turn set at 818A78E8); Auto spin hands the stick back when +0xA20 does not move
+  for 2 s. The user lost the stick near the end of a last lap right after a spin section was taken over: that the
+  section never ran is [likely], not proven.
+- Open: overlay wrap from the top of a long page lands mid-page (NavFlattened child, clipped items not scored).
+  [uncertain] online sync (welcome m[6] bit 1, recording flag 16), Switch, Android.

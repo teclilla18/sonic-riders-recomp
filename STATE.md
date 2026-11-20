@@ -1,4 +1,4 @@
-# State (2026-11-19, night)
+# State (2026-11-20, night)
 
 ## Released
 
@@ -48,14 +48,21 @@
    every platform, joining by restart + catch-up replay. Also left: a room-wide 30 fps switch for slow consoles,
    phones, 3-4 players, ping and delay settings. Code: netplay.c (`SR_NET`), launcher/lobby.cpp, launcher.cpp
    `page_online`. Not started this session.
-2. **Auto spin (#23)**: implemented and merged to main 2026-11-20, **not released** (the user is holding the
-   release for one more change). F1 > Gameplay > Auto spin, off by default; turns only the controller stick
-   of the player's racer in spin sections, 7 turns/s (user's pick). Tested by the user on PC at 15/5/6 turns/s
-   (Splash Canyon), then at 7/s in a **2P split-screen race with two controllers: worked for both players**
-   (log: controller 1 -> racer 0, 2 -> racer 1, CPUs none; sections taken over on ports 1 and 2). Also played
-   by the user on the original Switch OLED and the S23 (dev build v0.8.7-28-g8989ab24): works. Not run: online,
-   3-4 players, other stages. Code: auto_spin.c, logs `[autospin]`.
-   **Next item, same release: hold-B boost** (plan file "Nitrous-style boost toggle", user details 2026-11-20).
+2. **Hold to boost + Auto spin (#23), one release; release on hold until the user accepts both.**
+   - Auto spin: merged to main 2026-11-20, not released; user-played on PC (1P + 2P split), Switch OLED, S23.
+   - Branch `claude/auto-spin` (pushed, **not merged**): **Hold to boost** (boost_hold.c): a boost started with
+     B or X lasts while that button is held; air taken at the gear's boost cost / 120 per frame; release, empty
+     tank, crash or hit end it. First build **user-played on PC**: works with B and X, air drain and out-of-air
+     stop OK, Super Sonic held 626 extra frames [confirmed, `[boost]` log]. User asked for more, all
+     **implemented, built on PC, not played**: speed pulled back to boost speed after turns/bumps; Super Sonic
+     ramps exponentially to 350 km/h over 4 s held; Riders Plus fold-out "Riders Plus features" (Auto spin, Hold
+     to boost, on by default, only with Riders Plus); Super Sonic gains 5000 fuel per spin turn; Auto spin gives
+     the stick back when the game counts no turns for 2 s (user lost stick control at a last-lap spin section
+     once; cause [likely], not proven). Online/recording sync coded (welcome m[6] bit 1, header flag 16), untested.
+   - **Overlay bug (user, 2026-11-20):** wrapping up past the top of a long (scrolling) Gameplay page lands the
+     cursor in the middle of the page instead of the very end. menu.cpp: page child is NavFlattened, wrap via
+     NavMoveRequestTryWrapping LoopY on the outer window; clipped items are not scored. Not fixed yet.
+   - Next: user PC test (normal gear + Super), fix the overlay wrap, then Switch + S23, docs, merge.
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
    perftest passed; test zip posted to #33. The reporter's APK **crashes at start** (crash report posted 2026-11-20 05:42,
    saved locally as .local/android-armv7/build/issue33-crash-20261120.txt); read it with log-reader next. Not merged.

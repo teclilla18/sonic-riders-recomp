@@ -39,6 +39,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_SCREEN=0..3` (4:3, 16:9, 2 = 16:9 (old stretched mode, removed), fit window); `SR_ANCHORLOG=<frame>`: that frame's 2D draws and their wide-screen anchors (notes/ultrawide-fov.md), `SR_FOV=80..130`, `SR_HUDSTRETCH=0/1`: screen settings for one run, not saved (notes/ultrawide-fov.md). `SR_WINDOW=WxH` (PC): the window's first size (wide captures, e.g. 3440x1440).
 - `SR_LOCALHUDLOG=<frame>`: final local split HUD ownership, source bounds, projection moves and whole-view
   effects. `SR_ANCHORLOG` precedes this completed-frame pass. No output at original 4:3 or online own-view.
+- `SR_BOOSTLOG=1`: Hold to boost: a line per held boost (button, level, cost, air) and why it ended (released, out of air, boost over) with frames added; Super Sonic spin-turn fuel lines (`[boost]`, `[spin]`).
 - `SR_LEVELLOG=1`: bounded per-racer/style/extended-level HUD cell diagnostics and Super's feedback consume
   event (native level, fuel, refill). Intended for checking #29 separately from renderer positioning.
 - `SR_SHOTS=1` or `SR_SHOTS=a,b,c` (Switch): `shot_<frame>.png` at 300 … 7200, or those frames. Off by default.

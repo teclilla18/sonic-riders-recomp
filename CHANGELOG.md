@@ -1,5 +1,13 @@
 # Changelog
 
+### Hold to boost and the Riders Plus features list (in progress, not released)
+
+- Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to
+  boost, both on by default and only active with Riders Plus.
+- Hold to boost: keep B (or X) held after boosting and the boost goes on, like nitrous, taking air at your gear's
+  boost rate; a tap is still the normal boost. Super Sonic keeps speeding up while held, up to 350 km/h.
+- Super Sonic gains rings in the stick-spin scenes. Auto spin gives the stick back if the game stops counting turns.
+
 ### Auto spin (Gameplay option, #23)
 
 - New option in the settings menu (F1 > Gameplay > Auto spin, off by default): in the scenes where the game asks
