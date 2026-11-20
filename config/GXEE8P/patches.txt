@@ -242,3 +242,13 @@ decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);
 # switch 81889E98 (racer r21). SR_FORCEITEM=cycle gives a player's racer types 7, 8, 9, 10 in turn (game_levels.c).
 decl uint32_t lv_force_item(uint32_t racer, uint32_t item);
 81889E98 before c->r[15] = lv_force_item(c->r[21], c->r[15]);
+
+# ---- Super Sonic's invisible ring magnet (game_levels.c lv_magnet_*): the Magnetic Barrier item's task kept on for him,
+# its 600-step timer held, its drawing skipped. 81815EF0: his fuel step (racer r29, stack r1); 818F0D38: the task's
+# timer test (task r8); 818F0DD8: the task's "draw now?" word (r0 != 0 skips the bubble).
+decl void lv_magnet_spawn(Cpu* c, uint32_t sp, uint32_t racer);
+decl void lv_magnet_keep(uint32_t task);
+decl int lv_magnet_hide(uint32_t task);
+81815EF0 before lv_magnet_spawn(c, c->r[1], c->r[29]);
+818F0D38 before lv_magnet_keep(c->r[8]);
+818F0DD8 after { if (lv_magnet_hide(c->r[8])) c->r[0] = 1; }

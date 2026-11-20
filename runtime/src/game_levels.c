@@ -188,6 +188,44 @@ uint32_t lv_force_item(uint32_t racer, uint32_t item) {
     return item;
 }
 
+/* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost). The game's
+ * Magnetic Barrier (item box type 7, "draws in rings like a magnet") is f_8188CC74(racer index): it sets racer +0xBB0
+ * bit 0x4 and starts task 818F0B94, which registers a collision sphere around the racer (f_81852314, touch callback
+ * 818F0EA4 pulls the rings), draws the electric bubble, and ends after 600 steps (timer task +0x1C) by clearing the
+ * bit. The flag alone does nothing (Switch 2 test). So: while a Super Sonic has no barrier, one is started for him
+ * (lv_magnet_spawn, at his fuel step); his barrier's timer is held at 0 (lv_magnet_keep) and its drawing is skipped
+ * (lv_magnet_hide). Game memory, game steps only: online and recordings stay in step (Riders Plus is synced). */
+void f_8188CC74(Cpu* c);
+
+static int magnet_racer(uint32_t task) {  /* the Super Sonic racer a Magnetic Barrier task belongs to, else 0 */
+    uint32_t work = ld32(task + 0x10u);
+    if (g_ring_cap == 100 || work < 0x80000000u || work >= 0x81800000u) return 0;
+    uint32_t idx = ld8(work + 0x3Cu);
+    if (idx >= 8) return 0;
+    uint32_t racer = GAME_PLAYERS + idx * GAME_PLAYER_SIZE;
+    return super_racer(racer) ? (int)racer : 0;
+}
+
+void lv_magnet_spawn(Cpu* c, uint32_t sp, uint32_t racer) {
+    if (g_ring_cap == 100 || !super_racer(racer) || (ld32(racer + 0xBB0u) & 4u)) return;
+    int i = racer_index(racer);
+    if (i < 0) return;
+    static Cpu saved;  /* game thread only */
+    saved = *c;
+    c->r[1] = (sp - 0x400u) & ~15u;  /* below the caller's live frame */
+    c->r[3] = (uint32_t)i;
+    c->lr = 0;
+    f_8188CC74(c);
+    *c = saved;
+    if (getenv("SR_BOOSTLOG")) rt_log("[magnet] racer %d: barrier started (+BB0 %08X)", i, ld32(racer + 0xBB0u));
+}
+
+void lv_magnet_keep(uint32_t task) {
+    if (magnet_racer(task)) st32(task + 0x1Cu, 0);
+}
+
+int lv_magnet_hide(uint32_t task) { return magnet_racer(task) != 0; }
+
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
  * ring-powered gear (+0x9D4 bit 0x400). With Ring Replenish, Super Sonic keeps them as fuel (his rings). */
 uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
@@ -438,14 +476,6 @@ void lv_racers_frame(void) {
     for (int i = 0; i < 8; i++) {
         uint32_t p = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
         if (super_racer(p) || g_lv[i].applied) lv_racer_update(p);
-        /* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost): the Magnet
-         * item (item box type 7, the electric bubble; Switch test 2026-11-20) sets racer +0xBB0 bit 0x4 and starts task
-         * 818F0B94, which shows the bubble and clears the bit when it ends. Here the bit is kept on for a transformed
-         * Super Sonic every step, without the task, so nothing is drawn. */
-        if (g_ring_cap != 100 && super_racer(p)) {
-            uint32_t f = ld32(p + 0xBB0u);
-            if (!(f & 4u)) st32(p + 0xBB0u, f | 4u);
-        }
     }
 }
 
