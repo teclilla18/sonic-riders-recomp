@@ -1262,13 +1262,13 @@ void page_installer(float w) {
             if (g_ic.home_icon) {
                 if (ImGui::Button("Pick prod.keys...")) {
                     std::wstring f = pick_file(GetActiveWindow(), L"prod.keys\0*.keys\0All files (*.*)\0*.*\0",
-                                               L"Your console's prod.keys (Lockpick_RCM)");
+                                               L"Your console's prod.keys (Lockpick_RCM_Pro)");
                     if (!f.empty()) g_ic.keys = f;
                 }
                 ImGui::SameLine();
                 ImGui::TextUnformatted(g_ic.keys.empty() ? "none" : short_path(g_ic.keys, 30).c_str());
-                note("Needs your console's prod.keys (dumped with Lockpick_RCM; read on this PC only, never copied), "
-                     "and DBI or Goldleaf plus up-to-date sigpatches to install the icon on the console.");
+                note("Needs your console's prod.keys (dumped with Lockpick_RCM_Pro; read on this PC only, never copied), "
+                     "and DBI or Goldleaf plus an up-to-date sys-patch (or sigpatches) to install the icon on the console.");
             }
         }
         ImGui::EndDisabled();

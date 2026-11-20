@@ -99,9 +99,9 @@ The setup can also make a small **HOME-screen icon** (a "forwarder" `.nsp`): it 
 full memory, without holding R over a game. Tick *Make a HOME-screen icon* in the installer window (the
 command-line setup asks right after "What to build"):
 
-- **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM](https://github.com/saneki/Lockpick_RCM)
+- **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM_Pro](https://github.com/sthetix/Lockpick_RCM_Pro/releases/latest) (unzip it onto the SD card, then hekate → Payloads → Lockpick_RCM_Pro.bin)
   (the setup finds them in `%USERPROFILE%\.switch\prod.keys` or asks where they are; they are read where they
-  are, never copied or uploaded), and on the console **DBI** or **Goldleaf** plus **up-to-date sigpatches**.
+  are, never copied or uploaded), and on the console **DBI** or **Goldleaf** plus an **up-to-date sys-patch** (or sigpatches).
 - **The picture (optional):** your own picture (`.png`, `.ico`, `.jpg`, `.bmp`; square, **256 x 256** or bigger
   looks best; it is made into the 256 x 256 JPEG the HOME menu shows), or the game's own memory-card icon.
   The same picture is used for the PC and Android icons when you build those too.
@@ -110,7 +110,7 @@ command-line setup asks right after "What to build"):
   *Install* (to the SD card); or Goldleaf → *Explore SD card* → the `.nsp` → *Install* → *SD card*. Go back to
   HOME: the icon is there, and the `.nsp` on the card can be deleted.
 - The icon starts `switch/sonicriders/sonicriders.nro`: keep the game there. Updating the game = replacing the
-  `.nro`; the icon stays. If opening the icon shows an error, update your sigpatches.
+  `.nro`; the icon stays. If opening the icon shows an error, update sys-patch (or your sigpatches).
 - The `.nsp` is packed with your keys: it is yours only, never share it.
 
 Already built the game? Run the setup again (it reuses the downloaded tools) and answer **y** to the HOME-screen

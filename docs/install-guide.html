@@ -198,12 +198,12 @@
     <section class="sd" id="switch-home-icon">
       <h2>🏠 Optional: a Sonic Riders icon on the HOME screen <span class="tag">about 10 minutes, once</span></h2>
       <p>With this icon the game starts straight from the HOME screen, like any other game. No more holding <span class="key">R</span>.</p>
-      <div class="callout info"><span class="ic">🧰</span><div><b>You need:</b> <span class="file">Lockpick_RCM.bin</span> (it reads your console's keys), <span class="gold">DBI</span> or <span class="gold">Goldleaf</span> in the Homebrew Menu, and up-to-date <span class="gold">sigpatches</span>.</div></div>
+      <div class="callout info"><span class="ic">🧰</span><div><b>You need:</b> <a href="https://github.com/sthetix/Lockpick_RCM_Pro/releases/latest">Lockpick_RCM_Pro</a> (it reads your console's keys), <span class="gold">DBI</span> or <span class="gold">Goldleaf</span> in the Homebrew Menu, and an up-to-date <span class="gold">sys-patch</span> (or sigpatches).</div></div>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Put <span class="file">Lockpick_RCM.bin</span> in the SD card's <span class="path">bootloader/payloads</span> folder.</span>
-          <span class="detail">How to connect the card: see <a class="sdref" href="#switch" data-go="switch-sd">Connecting the SD card</a> above.</span></li>
-        <li tabindex="0"><span class="txt">Restart the Switch into <span class="path">hekate</span>, then go to <span class="path">Payloads → Lockpick_RCM.bin</span>.</span></li>
-        <li tabindex="0"><span class="txt">Choose <span class="btn">Dump from SysNAND</span> and wait until it says it's done.</span>
+        <li tabindex="0"><span class="txt">Download <span class="file">Lockpick_RCM_Pro-x.x.x.zip</span> from its <a href="https://github.com/sthetix/Lockpick_RCM_Pro/releases/latest">latest release</a> and unzip it onto the SD card's top folder.</span>
+          <span class="detail">It puts <span class="file">Lockpick_RCM_Pro.bin</span> in <span class="path">bootloader/payloads</span> by itself. How to connect the card: see <a class="sdref" href="#switch" data-go="switch-sd">Connecting the SD card</a> above.</span></li>
+        <li tabindex="0"><span class="txt">Restart the Switch into <span class="path">hekate</span>, then go to <span class="path">Payloads → Lockpick_RCM_Pro.bin</span>.</span></li>
+        <li tabindex="0"><span class="txt">Choose to dump the keys from <span class="btn">SysNAND</span> and wait until it says it's done.</span>
           <span class="detail">It saves your keys as <span class="path">switch/prod.keys</span> on the SD card. Then go back to hekate.</span></li>
         <li tabindex="0"><span class="txt">Connect the SD card to the PC and open <span class="file">Install Sonic Riders (Switch).exe</span> again.</span></li>
         <li tabindex="0"><span class="txt">Under <span class="gold">3. ICON (OPTIONAL)</span>, tick <span class="gold">Make a HOME-screen icon</span>.</span></li>
@@ -217,7 +217,7 @@
         <li tabindex="0"><span class="txt">Go back to the HOME screen. The Sonic Riders icon is there. 🎉</span>
           <span class="detail">You can delete the <span class="file">.nsp</span> file from the card now.</span></li>
       </ol>
-      <div class="callout warn"><span class="ic">⚠️</span><div><b>The icon shows an error when you open it?</b> Update your sigpatches, then try again.</div></div>
+      <div class="callout warn"><span class="ic">⚠️</span><div><b>The icon shows an error when you open it?</b> Update sys-patch (or your sigpatches), then try again.</div></div>
       <div class="callout warn"><span class="ic">🔒</span><div><b>Never share the .nsp file or your prod.keys.</b> They are made from your own console's keys.</div></div>
       <div class="callout good"><span class="ic">🔄</span><div><b>Updating the game?</b> The icon keeps working. You don't need to make it again.</div></div>
     </section>

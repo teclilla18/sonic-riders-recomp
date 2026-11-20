@@ -22,7 +22,7 @@ Parameters (all optional; asked for when missing):
   -Icon PATH         your own icon picture for PC / Android / the Switch HOME screen (.ico or .png; other
                      pictures are converted) instead of the fan-made icon in setup\icon.png
   -HomeIcon yes|no   Switch: also make a HOME-screen icon (a forwarder .nsp); needs -Keys
-  -Keys PATH         Switch HOME-screen icon: your console's prod.keys (dumped with Lockpick_RCM; read in
+  -Keys PATH         Switch HOME-screen icon: your console's prod.keys (dumped with Lockpick_RCM_Pro; read in
                      place, never copied)
   -ToolsDir PATH     where the downloaded toolchain is kept (default %LOCALAPPDATA%\SonicRidersSetup\tools)
   -Yes               no questions: use the defaults (needs -Iso and -Target; -Sd or -NoSd)
@@ -235,9 +235,9 @@ if ($doSwitch -and -not $HomeIcon) {
     else {
         Log ""
         Log "Optional: a Sonic Riders icon on the Switch HOME screen (opens the game directly, no need to hold R)."
-        Log "  It needs your console's prod.keys (dump them with Lockpick_RCM). They are read where they are, never"
+        Log "  It needs your console's prod.keys (dump them with Lockpick_RCM_Pro). They are read where they are, never"
         Log "  copied or uploaded. The icon is a 256 x 256 picture: yours (square works best), or the game's own."
-        Log "  Installing the icon needs DBI or Goldleaf and up-to-date sigpatches on the console."
+        Log "  Installing the icon needs DBI or Goldleaf and an up-to-date sys-patch (or sigpatches) on the console."
         $HomeIcon = (Ask "Make the HOME-screen icon? (y/n)" "n") -replace "^[yY].*", "yes" -replace "^[nN].*", "no"
     }
 }
@@ -247,7 +247,7 @@ if ($HomeIcon -eq "yes") {
         if (Test-Path -LiteralPath $default) {
             if ((Ask "Use your keys at $default ? (y/n)" "y") -match "^[yY]") { $Keys = $default }
         }
-        if (-not $Keys) { $Keys = Pick-File "Select your Switch's prod.keys (from Lockpick_RCM)" "Switch keys (prod.keys)|*.keys|All files (*.*)|*.*" }
+        if (-not $Keys) { $Keys = Pick-File "Select your Switch's prod.keys (from Lockpick_RCM_Pro)" "Switch keys (prod.keys)|*.keys|All files (*.*)|*.*" }
     }
     if (-not $Keys -or -not (Test-Path -LiteralPath $Keys -PathType Leaf)) {
         Log "No prod.keys: the HOME-screen icon is skipped (the game still works from the Homebrew Menu)." "Yellow"
@@ -617,7 +617,7 @@ if ($sdDir) {
         Log "HOME-screen icon: install it once on the Switch:" "Green"
         Log "  DBI: Browse SD card > NSP > SonicRiders-HOME-icon.nsp > Install (to SD card)." "Green"
         Log "  or Goldleaf: Explore SD card > NSP > SonicRiders-HOME-icon.nsp > Install > SD card." "Green"
-        Log "  It needs up-to-date sigpatches. The icon starts switch/sonicriders/sonicriders.nro: keep it there." "Green"
+        Log "  It needs an up-to-date sys-patch (or sigpatches). The icon starts switch/sonicriders/sonicriders.nro: keep it there." "Green"
         Log "  You can delete the .nsp from the SD card afterwards." "Green"
     }
 } elseif ($builtNro) {
