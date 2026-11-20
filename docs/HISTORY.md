@@ -1995,3 +1995,28 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   [uncertain] online sync (welcome m[6] bit 1, recording flag 16), Switch, Android.
 - Deployed to the Switch OLED the same night (v0.8.7-33-gb72933d, SHA-256 readback verified, `SR_BOOSTLOG=1`);
   not booted on hardware yet [uncertain]. No Eden run (no renderer or platform change).
+
+## 2026-11-20 (later): Ring Replenish, Super boost view + sound, Super Sonic flight test (branch claude/auto-spin)
+
+- User-played Hold to boost on the Switch OLED: fun. Asked for, implemented (builds 01fcbeb..132ec19):
+  - **Ring Replenish** (Riders Plus features toggle, on by default): air rewards of a step collect in racer +0x988
+    and are thrown away for ring-powered gear (+0x9D4 bit 0x400) at 81815EEC; Super Sonic keeps them (capped at
+    4 rings a step), and every net fuel gain in the fuel step (81815F70 / 81816098 start, clamps 81815FEC /
+    818160C8) is cut to 30 %. In spin sections the game's own refill (5000 a turn) also lands there: dropped; only
+    the turn hook (818A78EC) pays, 500 fuel. Tuned three times; the user's Switch log of the first tuning showed
+    ~480 rings from gains, single gains up to 100 000 fuel [confirmed]. Third tuning not played yet.
+  - **Speed view + boost sound** (passive, no toggle: user decision): a held Super boost widens the FOV up to
+    +18 % with the climb and returns over 0.25 s (smoothstep); the mix is low-passed (16 kHz to 1.5 kHz) and
+    soft-clipped, on at once and off the moment the boost ends (audio_out.c nos_process). The first builds never
+    fired: CPU racers 1-3 also have controller structs; a player's racer also has +0xBC (CPU flag) = 0
+    [confirmed by code: race setup 818EE774 / 818EE7CC]. Sound not heard on hardware yet [uncertain].
+  - **Super Sonic flight** (user idea): super_flight.c swaps his riding animations for a chosen pose. Racer
+    animation: playing +0x764, queue +0x78C (16-byte entries), count +0x7CC; set at 818B66CC / 818B6790 /
+    818B6D24 [confirmed on PC]. State +0x1034: 5 board, 6 jump, 7 fall, 8-13 trick jumps, 17 spin, 18 grind.
+    The pose is picked by the user with a temporary F1 slider; PC could not show Super Sonic (forcing the racer's
+    character/gear bytes keeps Sonic's model; empty cards own only the default gear). SR_FORCESUPER test hooks in
+    patches.txt must be removed before merging.
+- Switch 2: same work merged onto the native branch locally (claude/switch2-holdboost, never pushed). One start-up
+  run stalled on SD I/O (disc reads 1.5-2.7 s, pipeline cache save 7.2 s on the render thread, log writes up to
+  3 s; clean exit) [confirmed by log]; cause unknown (no MTP running). The cache is rewritten in full on every
+  launch ("133 new"): worth fixing on the native branch.
