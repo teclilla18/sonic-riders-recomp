@@ -686,6 +686,13 @@ void tab_gameplay() {
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
         ImGui::TreePop();
     }
+    if (ImGui::TreeNode("Cheats")) {
+        if (check("No ring decrease (Super Sonic)", &g_settings.no_ring_drain,
+                  "Off by default. Your Super Sonic never loses rings: boosting, hits, falls and the steady drain "
+                  "cost nothing, and he still gains them as usual. Not used in online races."))
+            settings_apply();
+        ImGui::TreePop();
+    }
     /* TEMPORARY (test builds, 2026-11-20): pick Super Sonic's flying pose by eye */
     if (ImGui::TreeNode("Super Sonic flight test (temporary)")) {
         bool rings = g_super_rings != 0;
