@@ -79,6 +79,7 @@ int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
 void settings_fix_boost_hold(int on);
 int settings_boost_hold(void);  /* in effect: 1 = on */
 float boost_hold_fov(void);     /* boost_hold.c: this frame's extra field of view (1 = none), once per frame */
+double boost_hold_audio(void);  /* boost_hold.c: the same effect's strength 0..1 for the sound (audio_out.c) */
 int settings_auto_spin(void);   /* in effect (needs Riders Plus): 1 = on */
 void settings_fix_ring_replenish(int on);
 int settings_ring_replenish(void);  /* in effect (needs Riders Plus): 1 = on */

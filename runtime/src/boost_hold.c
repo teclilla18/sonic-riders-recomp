@@ -151,6 +151,8 @@ float boost_hold_fov(void) {
     return (float)(1.0 + FOV_BOOST_MAX * g_fov_now);
 }
 
+double boost_hold_audio(void) { return g_fov_now; }  /* read on the audio side; written once per video frame */
+
 static void stop(int i, uint32_t racer, const char* why) {
     if (log_on() && g_extra[i])
         rt_log("[boost] racer %d: held boost ended (%s), %u frames past the normal boost, air %d, speed %d km/h", i,
