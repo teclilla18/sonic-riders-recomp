@@ -138,6 +138,14 @@ decl void jump_charge_step(uint32_t racer);
 decl double jump_charge_scale(uint32_t racer, double orig);
 8186D6AC before jump_charge_step(c->r[30]);
 8186D750 before { double s_ = jump_charge_scale(c->r[30], c->f[0].ps0); c->f[0].ps0 = s_; c->f[0].ps1 = s_; }
+# ---- Hold to boost (boost_hold.c, Gameplay option): the boost tick fn 81896C9C (racer r31, once per racer per
+# game step while boosting) has just counted the timer +0x8AC down; a held boost may put it back before the test
+decl void boost_hold_tick(uint32_t racer);
+81896CC0 before boost_hold_tick(c->r[31]);
+# ---- Spin scenes (game_levels.c, Riders Plus): a counted stick turn (+0xA04 bit 31 just set, racer r3) also
+# fills Super Sonic's ring fuel
+decl void lv_super_spin_turn(uint32_t racer);
+818A78EC before lv_super_spin_turn(c->r[3]);
 # a charge right after a boost: the decay above top speed (racer r24; f3 = speed, f0 = speed - decay, stored
 # by stfs f0, 0xaac(r24)) waits during the same 0.75 s
 decl int jump_charge_grace(uint32_t racer);

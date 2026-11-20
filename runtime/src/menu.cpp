@@ -659,11 +659,25 @@ void tab_gameplay() {
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
-    if (check("Auto spin", &g_settings.auto_spin,
-              "Off by default. In the scenes where the game asks you to turn the stick round and round, the stick is "
-              "turned for you at a fast player's pace (7 turns a second): your air refills and you speed up without "
-              "wearing out your stick. Only your own racers, never the CPUs."))
-        settings_apply();
+    /* the Riders Plus extras: a fold-out list under its check box, each on by default, active only with it */
+    if (ImGui::TreeNode("Riders Plus features")) {
+        ImGui::BeginDisabled(!g_settings.ring_cap_999);
+        if (check("Auto spin", &g_settings.auto_spin,
+                  "On by default (with Riders Plus). In the scenes where the game asks you to turn the stick round "
+                  "and round, the stick is turned for you at a fast player's pace (7 turns a second): your air "
+                  "refills and you speed up without wearing out your stick. Only your own racers, never the CPUs."))
+            settings_apply();
+        if (check("Hold to boost", &g_settings.boost_hold,
+                  "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
+                  "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
+                  "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
+                  "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
+                  "350 km/h. Online, the host's setting is used."))
+            settings_apply();
+        ImGui::EndDisabled();
+        if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
+        ImGui::TreePop();
+    }
 }
 
 void tab_mods() {

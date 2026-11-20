@@ -337,6 +337,20 @@ void lv_texture_decoded(GxTexture* t) {
             make_cell(t, &k_kind[kind], 319 + 22 * e, 199, 22, 22, k_kind[kind].dx[e], k_kind[kind].dy);
 }
 
+/* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
+ * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. Each turn gives him the
+ * same 5000 fuel here (about 4.5 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
+void lv_super_spin_turn(uint32_t racer) {
+    if (g_ring_cap == 100 || !super_racer(racer)) return;
+    uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), air = ld32(racer + 0x984u);
+    if (!max_air || (int32_t)air < 0) return;
+    uint64_t cap = (uint64_t)max_air * (uint32_t)g_ring_cap / 100u, now = (uint64_t)air + 5000u;
+    if (now > cap) now = cap;
+    st32(racer + 0x984u, (uint32_t)now);
+    if (getenv("SR_BOOSTLOG")) rt_log("[spin] Super Sonic turn: fuel %u -> %u", air, (uint32_t)now);
+}
+
 /* Charge jump (also part of the option): holding A to charge a jump keeps the racer's speed for 0.75 s before
  * the game's slowdown starts. fn_1_6D5D4 (racer r30), while racer +0xA28 bit 0x1000 (charging) is set, counts
  * the charge t at racer +0x9F4 (+1 per step, at most 50) and each step takes 0.009259 x (t/50)^2 (up to 2 km/h)

@@ -66,11 +66,27 @@ static uint32_t spinning_racer(int port) {
 
 /* `frame` >= 0: the game frame this input is for (latched input); frame < 0: input read live by the game's own
  * polls, timed by the 60 Hz video field count */
+/* Safety: the game counts each accepted quarter step in racer +0xA20. If that has not moved for STUCK_TICKS
+ * while the stick is being turned, the game is not running a spin there (seen once, 2026-11-20: the stick stayed
+ * taken until the race ended), so the player gets the stick back until the racer leaves that section. */
+#define STUCK_TICKS 120  /* frames (or 60 Hz fields): 2 s */
 void auto_spin_pad(int port, GcPad* p, int64_t frame) {
-    if (!g_settings.auto_spin || port < 0 || port > 3 || !in_race()) return;
+    static uint64_t s_moved[4];     /* tick when +0xA20 last changed */
+    static uint16_t s_count[4];
+    static uint8_t s_active[4], s_given_back[4];
+    if (!settings_auto_spin() || port < 0 || port > 3 || !in_race()) { if (port >= 0 && port < 4) s_active[port] = 0; return; }
     uint32_t r = spinning_racer(port);
-    if (!r) return;
     uint64_t t = frame >= 0 ? (uint64_t)frame : vi_field_count();
+    if (!r) { s_active[port] = 0; s_given_back[port] = 0; return; }
+    uint16_t count = ld16(r + 0xA20u);
+    if (!s_active[port] || count != s_count[port]) { s_moved[port] = t; s_count[port] = count; }
+    s_active[port] = 1;
+    if (s_given_back[port]) return;
+    if (t > s_moved[port] + STUCK_TICKS) {
+        s_given_back[port] = 1;
+        rt_log("[autospin] port %d: the game counts no turns here, stick given back until the section ends", port + 1);
+        return;
+    }
     int next = (int)((t * QUARTERS / 15) & 3);  /* clockwise: at most a quarter per frame */
     p->stick_x = (uint8_t)(0x80 + k_dx[next]);
     p->stick_y = (uint8_t)(0x80 + k_dy[next]);

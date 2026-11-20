@@ -9,9 +9,11 @@
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
 /* the 999 ring cap starts on, the original 100 one menu switch away (user, 2026-11-12) */
-Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1, 1, 1};
 volatile int g_ring_cap = 999;  /* patches.txt: the most rings a racer holds */
 static int g_fixed_ring_cap;    /* settings_fix_ring_cap, 0 = the setting's */
+static int g_boost_hold;        /* Hold to boost in effect */
+static int g_fixed_boost_hold = -1;  /* settings_fix_boost_hold, -1 = the setting's */
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -73,13 +75,14 @@ float settings_game_k(void) { return (float)g_aspect_scale; }
 /* the log says what was on, at start-up and after each change in the menu (hardware test reports) */
 static void settings_log(const char* when) {
     rt_log("[settings] %sscreen: %s (%.3f), HUD %s, field of view %d%%, fps counter %s, resolution %s, frame rate %s, PC pictures %d/s, "
-           "sharpness %d%%, pad in background %s, handheld graphics %s, Chaos Emerald gear %s, ring cap %d, auto spin %s",
+           "sharpness %d%%, pad in background %s, handheld graphics %s, Chaos Emerald gear %s, ring cap %d, auto spin %s, hold to boost %s",
            when, settings_screen_name(g_settings.screen), settings_display_aspect(),
            g_settings.screen == SCREEN_FIT ? "at the edges" : g_settings.hud_stretch ? "stretched" : "4:3", g_settings.fov, g_settings.show_fps ? "on" : "off",
            settings_resolution_name(g_settings.resolution),
            settings_framerate_name(g_settings.framerate), g_settings.pc_fps,
            g_settings.sharpness, g_settings.pad_background ? "on" : "off", g_settings.handheld_gpu ? "384 MHz" : "system default",
-           g_settings.chaos_emerald ? "unlocked" : "as in the save", (int)g_ring_cap, g_settings.auto_spin ? "on" : "off");
+           g_settings.chaos_emerald ? "unlocked" : "as in the save", (int)g_ring_cap, g_settings.auto_spin ? "on" : "off",
+           g_settings.boost_hold ? "on" : "off");
 }
 
 static void apply_view(void) {
@@ -98,6 +101,8 @@ static void apply_view(void) {
 static void apply(void) {
     apply_view();
     g_ring_cap = g_fixed_ring_cap ? g_fixed_ring_cap : g_settings.ring_cap_999 ? 999 : 100;
+    /* part of Riders Plus: only with it (an online host / a recording: its value) */
+    g_boost_hold = g_fixed_boost_hold >= 0 ? g_fixed_boost_hold : g_settings.boost_hold && g_ring_cap != 100;
     platform_set_handheld_gpu(g_settings.handheld_gpu);
 }
 
@@ -140,6 +145,7 @@ void settings_load(void) {
             else if (!strcmp(line, "update_check")) g_settings.update_check = v != 0;
             else if (!strcmp(line, "ring_cap_999")) g_settings.ring_cap_999 = v != 0;
             else if (!strcmp(line, "auto_spin")) g_settings.auto_spin = v != 0;
+            else if (!strcmp(line, "boost_hold")) g_settings.boost_hold = v != 0;
         }
         fclose(f);
     } else if (settings_handheld_pc()) {
@@ -194,6 +200,15 @@ void settings_fix_ring_cap(int cap) {
 
 int settings_ring_cap(void) { return g_ring_cap; }
 
+void settings_fix_boost_hold(int on) {
+    g_fixed_boost_hold = on != 0;
+    apply();
+    rt_log("[settings] hold to boost fixed for this run: %s", g_boost_hold ? "on" : "off");
+}
+
+int settings_boost_hold(void) { return g_boost_hold; }
+int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */
+
 void settings_set_window_aspect(float aspect) {
     if (!(aspect > 0.1f) || fabsf(aspect - g_window_aspect) < 0.001f) return;
     g_window_aspect = aspect;
@@ -212,12 +227,12 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\nupdate_check=%d\nring_cap_999=%d\nauto_spin=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\nupdate_check=%d\nring_cap_999=%d\nauto_spin=%d\nboost_hold=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
             g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
-            g_settings.ring_cap_999, g_settings.auto_spin);
+            g_settings.ring_cap_999, g_settings.auto_spin, g_settings.boost_hold);
     fclose(f);
 }

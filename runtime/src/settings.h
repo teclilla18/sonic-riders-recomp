@@ -37,6 +37,7 @@ typedef struct Settings {
     int ring_cap_999;   /* races: a racer holds up to 999 rings (default) instead of the original 100
                            (g_ring_cap, read by the cap checks in config/GXEE8P/patches.txt) */
     int auto_spin;      /* races: the port turns the stick in the game's spin scenes (auto_spin.c, #23) */
+    int boost_hold;     /* races: a boost lasts while B (or X) is held, taking air (boost_hold.c) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -73,6 +74,10 @@ void settings_fix_wide_k(float k);
 /* the ring cap from a recording or the online host (999 or 100): game state, kept for this run */
 void settings_fix_ring_cap(int cap);
 int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
+/* Hold to boost from a recording or the online host (0 / 1): game state, kept for this run */
+void settings_fix_boost_hold(int on);
+int settings_boost_hold(void);  /* in effect: 1 = on */
+int settings_auto_spin(void);   /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);
