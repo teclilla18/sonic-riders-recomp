@@ -99,6 +99,27 @@ void lv_super_gain_start(uint32_t racer, uint32_t air) {
     g_gain_start = air;
 }
 
+/* "No ring decrease" (cheat, the user 2026-11-20): a player's Super Sonic (Chaos Emerald gear) never loses rings. His
+ * fuel (+0x984, rings = fuel x 100 / max air) is put back to the highest it has been this race at each fuel step, so
+ * boosts, hits, falls and the steady drain cost nothing while gains still count. A new race (no step for half a
+ * second) starts from its own value. Off online and in recordings (settings_no_ring_drain). */
+static void no_drain(uint32_t racer) {
+    static uint32_t best[8];
+    static uint64_t seen[8];
+    uint32_t d = racer - GAME_PLAYERS;
+    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE) return;
+    int i = (int)(d / GAME_PLAYER_SIZE);
+    uint32_t pad = ld32(racer);
+    if (ld8(racer + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD || ld8(racer + 0xBCu) != 0 ||
+        pad < 0x801AF9F0u || pad >= 0x801AF9F0u + 4u * 0x30u) return;  /* players only (CPU flag +0xBC, a pad) */
+    uint64_t now = rt_ticks();
+    int32_t air = (int32_t)ld32(racer + 0x984u);
+    if (now - seen[i] > 40500000ull / 2 || air < 0) best[i] = air < 0 ? 0 : (uint32_t)air;
+    seen[i] = now;
+    if ((uint32_t)air < best[i]) st32(racer + 0x984u, best[i]);
+    else best[i] = (uint32_t)air;
+}
+
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
  * ring-powered gear (+0x9D4 bit 0x400). With Ring Replenish, Super Sonic keeps them as fuel (his rings). */
 uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
@@ -110,6 +131,7 @@ uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
         uint32_t want = (uint32_t)((uint64_t)max_air * 150u / 100u);
         if (max_air && (int32_t)ld32(racer + 0x984u) < (int32_t)want) st32(racer + 0x984u, want);
     }
+    if (settings_no_ring_drain()) no_drain(racer);
     if (!settings_ring_replenish() || !super_racer(racer) || (int32_t)rewards <= 0) return original;
     uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), most = max_air / 100u * REWARD_MAX_RINGS;
     return most && rewards > most ? most : rewards;
@@ -214,7 +236,41 @@ void lv_racer_update(uint32_t racer) {
 
 /* Game thread, once per simulation step. Ring-powered racers can skip the native level checks;
  * also retire outstanding writes when toggled off, including a player whose native check is suspended. */
+/* SR_SUPERDIAG=1 (investigation, 2026-11-20: what turns Super Sonic blue / gold): each step, racer 0 with the Chaos
+ * Emerald gear: every byte of the racer that changes is logged for its first 3 changes this race (rarely changing
+ * fields: flags, ids, model pointers), with the rings (+0xB98), the animation (+0x764) and the state (+0x1034). */
+static void super_diag(void) {
+    static int on = -1;
+    static uint8_t snap[GAME_PLAYER_SIZE], cnt[GAME_PLAYER_SIZE];
+    static int have, lines;
+    static uint32_t step;
+    if (on < 0) { const char* e = getenv("SR_SUPERDIAG"); on = e && *e && *e != '0'; }
+    if (!on) return;
+    uint32_t p = GAME_PLAYERS;
+    if (!active_race() || ld8(p + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD) { have = 0; return; }
+    step++;
+    if (!have) {
+        for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) { snap[o] = ld8(p + o); cnt[o] = 0; }
+        have = 1;
+        rt_log("[superdiag] race start: char %u orig %u gear %u rings %u anim %u state %u", ld8(p + 0xBAu), ld8(p + 0xBFu),
+               ld8(p + 0xBBu), ld32(p + 0xB98u), ld32(p + 0x764u), ld8(p + 0x1034u));
+        return;
+    }
+    for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) {
+        uint8_t v = ld8(p + o);
+        if (v == snap[o]) continue;
+        if (cnt[o] < 3 && lines < 8000) {
+            cnt[o]++;
+            lines++;
+            rt_log("[superdiag] step %u +0x%03X: %02X -> %02X (n%u) rings %u anim %u state %u", step, o, snap[o], v, cnt[o],
+                   ld32(p + 0xB98u), ld32(p + 0x764u), ld8(p + 0x1034u));
+        } else if (cnt[o] < 255) cnt[o]++;
+        snap[o] = v;
+    }
+}
+
 void lv_racers_frame(void) {
+    super_diag();
     if (!active_race()) {
         lv_race_reset();
         return;
