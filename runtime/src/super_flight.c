@@ -15,9 +15,8 @@
 #include "runtime.h"
 #include "settings.h"
 
-/* the flying animation: not chosen yet. Test builds: the F1 slider (g_flight_pose, -1 = off) or SR_FLYANIM. */
-int g_flight_pose = -1;
-int g_super_rings;  /* test: Chaos Emerald racers keep 150 rings (game_levels.c) */
+/* the flying animation: 34 (the user picked it on Switch with a test slider, 2026-11-20). SR_FLYANIM=<n> tries another. */
+#define FLIGHT_POSE 34u
 
 static int fly_test = -2;  /* SR_FLYANIM, -1 = not set */
 
@@ -55,17 +54,7 @@ uint32_t super_flight_anim(uint32_t obj, uint32_t anim) {
         rt_log("[flight] racer 0: animation %u asked for, state %u, was %u", anim, st, ld32(obj + 0x764u));
     int super = ld8(obj + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
                 ld8(obj + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
-    if (t >= 0 ? d != 0 : !(super && settings_ring_cap() != 100 && g_flight_pose >= 0)) return anim;
+    if (t >= 0 ? d != 0 : !(super && settings_ring_cap() != 100)) return anim;
     if (!riding_anim(anim) || board_state(st)) return anim;
-    return t >= 0 ? (uint32_t)t : (uint32_t)g_flight_pose;
-}
-
-/* TEST ONLY: SR_FORCESUPER=1 turns racer 0 into Super Sonic where the game stores a racer's character / gear */
-uint32_t super_flight_force(uint32_t base, uint32_t v, int gear) {
-    static int on = -1;
-    if (on < 0) on = getenv("SR_FORCESUPER") != NULL;
-    if (!on || base != GAME_PLAYERS) return v;
-    rt_log("[flight] forcing racer 0 %s %u -> %u", gear ? "gear" : "character", v & 0xFF,
-           gear ? GAME_GEAR_CHAOS_EMERALD : GAME_CHAR_SUPER_SONIC);
-    return gear ? GAME_GEAR_CHAOS_EMERALD : GAME_CHAR_SUPER_SONIC;
+    return t >= 0 ? (uint32_t)t : FLIGHT_POSE;
 }

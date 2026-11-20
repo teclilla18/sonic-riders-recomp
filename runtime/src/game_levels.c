@@ -174,20 +174,6 @@ uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
     return old + paid;
 }
 
-/* TEST ONLY: SR_FORCEITEM=cycle (patches.txt): item boxes give a player's racer item types 7, 8, 9, 10 in turn, logged,
- * to find which one is the Magnet (item 7 sets racer +0xBB0 bit 0x4 and starts task 818F0B94; item 10 sets bit 0x1). */
-uint32_t lv_force_item(uint32_t racer, uint32_t item) {
-    static int on = -1;
-    static uint32_t next = 7;
-    if (on < 0) { const char* e = getenv("SR_FORCEITEM"); on = e && *e && *e != '0'; }
-    if (on && ld8(racer + 0xBCu) == 0) {
-        item = next;
-        next = next >= 10 ? 7 : next + 1;
-    }
-    rt_log("[item] racer %08X gets item %u (rings %u, +BB0 %08X)", racer, item, ld32(racer + 0xB98u), ld32(racer + 0xBB0u));
-    return item;
-}
-
 /* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost). The game's
  * Magnetic Barrier (item box type 7, "draws in rings like a magnet") is f_8188CC74(racer index): it sets racer +0xBB0
  * bit 0x4 and starts task 818F0B94, which registers a collision sphere around the racer (f_81852314, touch callback
@@ -229,14 +215,6 @@ int lv_magnet_hide(uint32_t task) { return magnet_racer(task) != 0; }
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
  * ring-powered gear (+0x9D4 bit 0x400). With Ring Replenish, Super Sonic keeps them as fuel (his rings). */
 uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
-    static int full = -1;  /* SR_SUPERRINGS=1 (testing): Chaos Emerald racers' fuel kept at 150 rings, every step */
-    extern int g_super_rings;  /* super_flight.c: the F1 test switch */
-    if (full < 0) full = getenv("SR_SUPERRINGS") != NULL;
-    if ((full || g_super_rings) && ld8(racer + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD) {
-        uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu);
-        uint32_t want = (uint32_t)((uint64_t)max_air * 150u / 100u);
-        if (max_air && (int32_t)ld32(racer + 0x984u) < (int32_t)want) st32(racer + 0x984u, want);
-    }
     if (settings_no_ring_drain()) no_drain(racer);
     uint32_t d = racer - GAME_PLAYERS;
     int i = d < 8 * GAME_PLAYER_SIZE && !(d % GAME_PLAYER_SIZE) ? (int)(d / GAME_PLAYER_SIZE) : -1;
