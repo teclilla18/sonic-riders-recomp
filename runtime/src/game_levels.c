@@ -120,21 +120,55 @@ static void no_drain(uint32_t racer) {
     else best[i] = (uint32_t)air;
 }
 
-/* Every place the game adds to a racer's step air rewards (+0x988; patches.txt "reward sources"). For now: each gain of
- * a player's Super Sonic is logged with its site, the racer's state (+0x1034: 8-13 trick jumps, 18 grinding) and
- * animation, so each kind (tricks by rank, flying, grinding, objects) can be scaled on its own (the user, 2026-11-20). */
+/* Every place the game adds to a racer's step air rewards (+0x988; patches.txt "reward sources"). With Ring Replenish,
+ * a player's Super Sonic is paid per kind here (the user, 2026-11-20, from a Switch race log of each site):
+ *   8187BCAC grinding (state 18, +347 a frame on a fast rail): RW_GRIND_NUM/DEN of it (was 1/2: "increase a more")
+ *   8187AC90 flying (state 19, grows each frame of a flight, about 260 to 830): its growth above FLY_KNEE is cut to
+ *            FLY_GROWTH and the whole to RW_FLY_NUM/DEN (was 1/2: "decrease ... and its exponential gain just a bit")
+ *   81879C20 / 818970D4 smashed objects and the like (10 000 / 15 000 / 20 000 / 30 000): as before, at most
+ *            REWARD_MAX_RINGS rings, then REPLENISH_NUM/DEN ("at a good rate, no change")
+ * Whatever reaches the fuel step that no site paid is the trick landing (lv_super_rewards). */
+#define RW_GRIND_NUM 7u
+#define RW_GRIND_DEN 10u
+#define FLY_KNEE     260u
+#define FLY_GROWTH_NUM 3u   /* 75 % of the growth above the knee */
+#define FLY_GROWTH_DEN 4u
+#define RW_FLY_NUM   9u     /* then 45 % of that */
+#define RW_FLY_DEN   20u
+static uint32_t g_site_paid[8];  /* this step's rewards paid through the sites (after tuning), per racer */
+
+static int super_player(uint32_t racer) {
+    uint32_t pad = ld32(racer);
+    return ld8(racer + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD && ld8(racer + 0xBCu) == 0 &&
+           pad >= 0x801AF9F0u && pad < 0x801AF9F0u + 4u * 0x30u;
+}
+
 uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
     uint32_t d = racer - GAME_PLAYERS;
-    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE || ld8(racer + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD ||
-        ld8(racer + 0xBCu) != 0) return value;
-    int32_t gain = (int32_t)(value - ld32(racer + 0x988u));
-    static unsigned lines;
-    if (gain != 0 && lines < 3000) {
-        lines++;
-        rt_log("[reward] racer %u site %08X %+d (rings %u, state %u, anim %u, rank byte %u)", d / GAME_PLAYER_SIZE, site,
-               gain, ld32(racer + 0xB98u), ld8(racer + 0x1034u), ld32(racer + 0x764u), ld8(racer + 0x1029u));
+    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE || !super_player(racer)) return value;
+    int i = (int)(d / GAME_PLAYER_SIZE);
+    uint32_t old = ld32(racer + 0x988u);
+    int32_t gain = (int32_t)(value - old);
+    if (gain <= 0 || !settings_ring_replenish()) return value;
+    uint32_t g = (uint32_t)gain, paid;
+    uint32_t ring = ld32(racer + 0x8DCu + 0x1Cu) / 100u;  /* fuel per ring */
+    if (site == 0x8187BCACu) {
+        paid = g * RW_GRIND_NUM / RW_GRIND_DEN;
+    } else if (site == 0x8187AC90u) {
+        uint32_t c = g <= FLY_KNEE ? g : FLY_KNEE + (g - FLY_KNEE) * FLY_GROWTH_NUM / FLY_GROWTH_DEN;
+        paid = c * RW_FLY_NUM / RW_FLY_DEN;
+    } else {
+        uint32_t most = ring * REWARD_MAX_RINGS;
+        paid = (most && g > most ? most : g) * REPLENISH_NUM / REPLENISH_DEN;
     }
-    return value;
+    g_site_paid[i] += paid;
+    static unsigned lines;
+    if (getenv("SR_BOOSTLOG") && lines < 3000) {
+        lines++;
+        rt_log("[reward] racer %d site %08X +%d paid %u (rings %u, state %u, anim %u)", i, site, gain, paid,
+               ld32(racer + 0xB98u), ld8(racer + 0x1034u), ld32(racer + 0x764u));
+    }
+    return old + paid;
 }
 
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
@@ -149,9 +183,20 @@ uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
         if (max_air && (int32_t)ld32(racer + 0x984u) < (int32_t)want) st32(racer + 0x984u, want);
     }
     if (settings_no_ring_drain()) no_drain(racer);
+    uint32_t d = racer - GAME_PLAYERS;
+    int i = d < 8 * GAME_PLAYER_SIZE && !(d % GAME_PLAYER_SIZE) ? (int)(d / GAME_PLAYER_SIZE) : -1;
+    uint32_t paid = i >= 0 ? g_site_paid[i] : 0;
+    if (i >= 0) g_site_paid[i] = 0;
     if (!settings_ring_replenish() || !super_racer(racer) || (int32_t)rewards <= 0) return original;
+    /* the sites' part is already tuned; the rest is a trick landing (or a source no site saw): until tricks are
+     * paid by rank, as before (at most REWARD_MAX_RINGS rings, then the share), and logged to find the rank tiers */
+    uint32_t rest = rewards > paid ? rewards - paid : 0;
     uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), most = max_air / 100u * REWARD_MAX_RINGS;
-    return most && rewards > most ? most : rewards;
+    uint32_t trick = (most && rest > most ? most : rest) * REPLENISH_NUM / REPLENISH_DEN;
+    if (rest && getenv("SR_BOOSTLOG"))
+        rt_log("[trick] racer %d: landing reward %u (paid %u), state %u, anim %u", i, rest, trick, ld8(racer + 0x1034u),
+               ld32(racer + 0x764u));
+    return paid + trick;
 }
 
 /* The native ring-powered path mirrors floor(fuel * 100 / max_air) into the ring word.
@@ -165,7 +210,7 @@ uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32
         /* a step that gained (rails, the air rewards above): only REPLENISH_NUM/DEN of the gain; off: none of the
          * rewards were kept, rails as before */
         if (settings_ring_replenish() && (int32_t)g_gain_start >= 0 && air > g_gain_start) {
-            uint32_t gained = air - g_gain_start, kept = (uint32_t)((uint64_t)gained * REPLENISH_NUM / REPLENISH_DEN);
+            uint32_t gained = air - g_gain_start, kept = gained;  /* each part tuned at its source (lv_reward_site) */
             /* in a spin section the game's own refill (5000 a turn) also lands here: only lv_super_spin_turn pays
              * there (Switch log 2026-11-20: both paid) */
             if (ld16(racer + 0x624u) == 1) kept = 0;
