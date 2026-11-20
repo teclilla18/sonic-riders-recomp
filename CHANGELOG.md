@@ -15,7 +15,7 @@
   keep the board), an invisible ring magnet (the game's Magnetic Barrier, kept on without its bubble), and his held
   boost burns rings 2.9 times as fast as other gears burn air.
 - Switch: no more lost start-ups after a long pause while the game loads (the sleep fix now starts once the game runs).
-- Anyone can be anyone: several players can pick the same character in Player Entry (for example two Super
+- Same character can be chosen: several players can pick the same character in Player Entry (for example two Super
   Sonics in a split-screen race).
 - New Cheats tab in the settings menu: "No ring decrease (Super Sonic)". Cheats are never used online.
 - Settings menu: Up on the top row jumps to Close / Quit at the bottom of the page, Down there jumps back to the top.
