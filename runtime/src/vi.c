@@ -281,6 +281,8 @@ static int vi_thread(void* arg) {
     g_field_start = rt_ticks();
     for (;;) {
         uint64_t next = g_field_start + TICKS_PER_FIELD;
+        static unsigned fields;
+        if (++fields == 300) rt_clock_gap_arm();
         uint64_t skipped = rt_clock_take_skipped_ns();
         if (skipped) rt_log("[clock] the process was frozen %.1f s (sleep or suspension): taken out of the game's time", skipped / 1e9);
         /* far behind (the console slept, or the process was held): carry on from now instead of
