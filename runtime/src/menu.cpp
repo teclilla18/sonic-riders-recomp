@@ -707,13 +707,6 @@ void tab_gameplay() {
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Cheats")) {
-        if (check("No ring decrease (Super Sonic)", &g_settings.no_ring_drain,
-                  "Off by default. Your Super Sonic never loses rings: boosting, hits, falls and the steady drain "
-                  "cost nothing, and he still gains them as usual. Not used in online races."))
-            settings_apply();
-        ImGui::TreePop();
-    }
     /* TEMPORARY (test builds, 2026-11-20): pick Super Sonic's flying pose by eye */
     if (ImGui::TreeNode("Super Sonic flight test (temporary)")) {
         bool rings = g_super_rings != 0;
@@ -726,6 +719,17 @@ void tab_gameplay() {
              "A new pose shows from his next jump or landing. Tell Claude the numbers that look like flying.");
         ImGui::TreePop();
     }
+}
+
+/* Cheats (the user, 2026-11-20: their own tab). Each is off by default and never used in online races,
+ * recordings or replays. */
+void tab_cheats() {
+    heading("Cheats");
+    if (check("No ring decrease (Super Sonic)", &g_settings.no_ring_drain,
+              "Off by default. Your Super Sonic never loses rings: boosting, hits, falls and the steady drain "
+              "cost nothing, and he still gains them as usual. Not used in online races."))
+        settings_apply();
+    note("Cheats are never used in online races.");
 }
 
 void tab_mods() {
@@ -887,7 +891,8 @@ void settings_window() {
             void (*draw)();
         };
         static const Tab tabs[] = {{"Display", tab_display}, {"Performance", tab_performance}, {"Controls", tab_controls},
-                                   {"Gameplay", tab_gameplay}, {"Mods", tab_mods},          {"About", tab_about}};
+                                   {"Gameplay", tab_gameplay}, {"Cheats", tab_cheats},     {"Mods", tab_mods},
+                                   {"About", tab_about}};
         const int ntabs = (int)(sizeof tabs / sizeof tabs[0]);
         if (ImGui::BeginTabBar("tabs", ImGuiTabBarFlags_FittingPolicyShrink)) {
             for (int i = 0; i < ntabs; i++) {
@@ -1199,8 +1204,8 @@ int overlay_input(unsigned held) {
         }
     }
     if (!g_quit_popup) {
-        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 5) % 6;
-        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 6;
+        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 6) % 7;
+        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 7;
     }
     feed(ImGuiKey_GamepadDpadUp, held, changed, OV_UP);
     feed(ImGuiKey_GamepadDpadDown, held, changed, OV_DOWN);
