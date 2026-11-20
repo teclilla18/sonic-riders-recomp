@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdatomic.h>
 #include <threads.h>
 
 #include "gx.h"
@@ -656,25 +657,100 @@ static VkPipeline quad_pipe(int kind, int target, VkColorComponentFlags mask) {
     return pipe_get((1ull << 63) | (uint64_t)kind | (uint64_t)target << 4 | (uint64_t)mask << 8);
 }
 
+/* Saving the pipeline cache (Switch 2 log 2026-11-20: a 2.8 MB save on the render thread took 7.6 s while the SD card
+ * was busy, and the whole file was rewritten on every launch because every pipeline made at start-up counts as new even
+ * when the cache already had it). Now the data is compared with what is on the card (size + hash) and only a real
+ * change is written, by a short-lived writer thread, to a temporary file renamed into place. A save at exit (force)
+ * still writes on the calling thread so it finishes before the process ends. */
+static size_t g_pcache_disk_len;
+static uint64_t g_pcache_disk_hash;
+static atomic_int g_pcache_writing;
+
+static uint64_t pcache_hash(const void* d, size_t n) {
+    const uint8_t* b = (const uint8_t*)d;
+    uint64_t h = 1469598103934665603ull;
+    for (size_t i = 0; i < n; i++) h = (h ^ b[i]) * 1099511628211ull;
+    return h;
+}
+
+typedef struct { void* data; size_t n; uint64_t hash; } PcacheJob;
+
+static int pcache_write(PcacheJob* j) {
+    uint64_t t0 = platform_now_ns();
+    char tmp[512];
+    snprintf(tmp, sizeof tmp, "%s.tmp", PIPE_CACHE_FILE);
+    int ok = 0;
+    FILE* f = fopen(tmp, "wb");
+    if (f) {
+        ok = fwrite(j->data, 1, j->n, f) == j->n;
+        ok = fclose(f) == 0 && ok;
+        if (ok) {
+            remove(PIPE_CACHE_FILE);
+            ok = rename(tmp, PIPE_CACHE_FILE) == 0;
+        }
+    }
+    if (ok) {
+        g_pcache_disk_len = j->n;
+        g_pcache_disk_hash = j->hash;
+    }
+    rt_log("[vk] pipeline cache %s: %zu KB in %.0f ms", ok ? "written" : "write FAILED", j->n >> 10,
+           (double)(platform_now_ns() - t0) / 1e6);
+    free(j->data);
+    free(j);
+    return ok;
+}
+
+static int pcache_writer(void* arg) {
+    rt_thread_pin(2);  /* off the game's core */
+    pcache_write((PcacheJob*)arg);
+    atomic_store(&g_pcache_writing, 0);
+    return 0;
+}
+
 static void pcache_save(int force) {
     uint64_t now = platform_now_ns();
     if (!force && now - g_pcache_saved_ns < 10000000000ull) return;
     keys_save();
     if (!g_pipes_new) return;
+    if (!force && atomic_load(&g_pcache_writing)) return;  /* the last write is still going: try again later */
     size_t n = 0;
     if (vkGetPipelineCacheData(g_dev, g_pcache, &n, NULL) != VK_SUCCESS || !n) return;
     void* d = malloc(n);
-    if (vkGetPipelineCacheData(g_dev, g_pcache, &n, d) == VK_SUCCESS) {
-        FILE* f = fopen(PIPE_CACHE_FILE, "wb");
-        if (f) {
-            fwrite(d, 1, n, f);
-            fclose(f);
-        }
-        rt_log("[vk] pipeline cache saved: %u pipelines, %zu KB (%u new)", g_pipes_total, n >> 10, g_pipes_new);
+    if (!d) return;
+    if (vkGetPipelineCacheData(g_dev, g_pcache, &n, d) != VK_SUCCESS) {
+        free(d);
+        return;
     }
-    free(d);
+    uint64_t h = pcache_hash(d, n);
+    unsigned fresh = g_pipes_new;
     g_pipes_new = 0;
     g_pcache_saved_ns = now;
+    if (n == g_pcache_disk_len && h == g_pcache_disk_hash) {
+        rt_log("[vk] pipeline cache unchanged (%u pipelines, %zu KB): not rewritten", g_pipes_total, n >> 10);
+        free(d);
+        return;
+    }
+    rt_log("[vk] pipeline cache saving: %u pipelines, %zu KB (%u made since the last save)", g_pipes_total, n >> 10, fresh);
+    PcacheJob* j = malloc(sizeof *j);
+    if (!j) {
+        free(d);
+        return;
+    }
+    j->data = d;
+    j->n = n;
+    j->hash = h;
+    if (force) {
+        pcache_write(j);
+        return;
+    }
+    thrd_t t;
+    atomic_store(&g_pcache_writing, 1);
+    if (thrd_create(&t, pcache_writer, j) == thrd_success) {
+        thrd_detach(t);
+    } else {
+        atomic_store(&g_pcache_writing, 0);
+        pcache_write(j);
+    }
 }
 
 /* ---------------------------------------------------------------- setup */
@@ -995,6 +1071,10 @@ static void device_setup(void) {
             len = 0;
         }
         rt_log("[vk] pipeline cache: %zu KB from the last run", len >> 10);
+        if (len) {  /* what is on the card: a save of the same data is skipped (pcache_save) */
+            g_pcache_disk_len = len;
+            g_pcache_disk_hash = pcache_hash(data, len);
+        }
         free(data);
         g_pcache_saved_ns = platform_now_ns();
     }
