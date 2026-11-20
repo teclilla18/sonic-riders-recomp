@@ -829,6 +829,13 @@ void tab_about() {
 #endif
 }
 
+/* Up / Down wrap (the user, 2026-11-20): Up on the tab row jumps to the Close / Quit row with the page scrolled to its
+ * bottom; Down on the Close / Quit row jumps to the tab row with the page scrolled to its top. ImGui's own wrapping
+ * picked whatever page item was on screen and left the page where it was. */
+enum { WRAP_NONE, WRAP_BOTTOM, WRAP_TOP };
+static int g_wrap;
+static ImGuiID g_close_id, g_quit_id, g_tab_ids[8];
+
 void quit_row() {
     const float w_close = ImGui::CalcTextSize("Close").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::PushStyleColor(ImGuiCol_Text, kNote);
@@ -841,11 +848,16 @@ void quit_row() {
 #if defined(__SWITCH__) && !defined(__SWITCH2__)
     /* no Quit Game: games on the Switch are closed from the HOME menu */
     ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close);
+    if (g_wrap == WRAP_BOTTOM) ImGui::SetKeyboardFocusHere();
     if (ImGui::Button("Close")) close_menu();
+    g_close_id = ImGui::GetItemID();
+    g_quit_id = 0;
 #else
     const float w_quit = ImGui::CalcTextSize("Quit Game").x + 2 * ImGui::GetStyle().FramePadding.x;
     ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close - w_quit - ImGui::GetStyle().ItemSpacing.x);
+    if (g_wrap == WRAP_BOTTOM) ImGui::SetKeyboardFocusHere();
     if (ImGui::Button("Close")) close_menu();
+    g_close_id = ImGui::GetItemID();
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.62f, 0.12f, 0.12f, 0.90f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.82f, 0.20f, 0.18f, 1.0f));
@@ -853,6 +865,7 @@ void quit_row() {
         g_quit_popup = true;
         ImGui::OpenPopup("Quit Sonic Riders?");
     }
+    g_quit_id = ImGui::GetItemID();
     ImGui::PopStyleColor(2);
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W * 0.5f, OVERLAY_H * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("Quit Sonic Riders?", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
@@ -890,6 +903,16 @@ void settings_window() {
             const char* name;
             void (*draw)();
         };
+        {
+            ImGuiID nav = ImGui::GetFocusID();
+            bool up = ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp, false) || ImGui::IsKeyPressed(ImGuiKey_UpArrow, false);
+            bool down = ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown, false) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, false);
+            bool on_tab = false;
+            for (ImGuiID id : g_tab_ids) on_tab |= id != 0 && id == nav;
+            g_wrap = WRAP_NONE;
+            if (nav && up && on_tab && !g_quit_popup) g_wrap = WRAP_BOTTOM;
+            else if (nav && down && (nav == g_close_id || nav == g_quit_id) && !g_quit_popup) g_wrap = WRAP_TOP;
+        }
         static const Tab tabs[] = {{"Display", tab_display}, {"Performance", tab_performance}, {"Controls", tab_controls},
                                    {"Gameplay", tab_gameplay}, {"Cheats", tab_cheats},     {"Mods", tab_mods},
                                    {"About", tab_about}};
@@ -897,10 +920,15 @@ void settings_window() {
         if (ImGui::BeginTabBar("tabs", ImGuiTabBarFlags_FittingPolicyShrink)) {
             for (int i = 0; i < ntabs; i++) {
                 ImGuiTabItemFlags f = g_select_tab == i ? ImGuiTabItemFlags_SetSelected : 0;
-                if (ImGui::BeginTabItem(tabs[i].name, nullptr, f)) {
+                if (g_wrap == WRAP_TOP && i == g_tab) ImGui::SetKeyboardFocusHere();
+                bool open = ImGui::BeginTabItem(tabs[i].name, nullptr, f);
+                if (i < 8) g_tab_ids[i] = ImGui::GetItemID();
+                if (open) {
                     g_tab = i;
                     /* the page ends one row above the window's bottom: the Close / Quit row */
                     ImGui::BeginChild("page", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 4), ImGuiChildFlags_NavFlattened);
+                    if (g_wrap == WRAP_BOTTOM) ImGui::SetScrollY(ImGui::GetScrollMaxY());
+                    if (g_wrap == WRAP_TOP) ImGui::SetScrollY(0.0f);
                     tabs[i].draw();
 #ifdef SR_PHONE
                     touch_scroll();
@@ -914,8 +942,6 @@ void settings_window() {
         }
         ImGui::Separator();
         quit_row();
-        /* up from the top row (the tabs) goes to the Close / Quit row and down from there back to the top */
-        ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY);
     }
     ImGui::End();
 }
