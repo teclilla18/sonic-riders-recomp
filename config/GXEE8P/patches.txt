@@ -237,3 +237,8 @@ decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);
 8193E7E0 after c->r[0] = 0;
 8193E0A0 after c->r[0] = 0;
 8193EA10 after c->r[0] = 0;
+
+# ---- TEST ONLY (2026-11-20, finding the Magnet item): the item box's item type (r15, 0..13) just before the item
+# switch 81889E98 (racer r21). SR_FORCEITEM=cycle gives a player's racer types 7, 8, 9, 10 in turn (game_levels.c).
+decl uint32_t lv_force_item(uint32_t racer, uint32_t item);
+81889E98 before c->r[15] = lv_force_item(c->r[21], c->r[15]);

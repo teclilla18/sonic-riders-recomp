@@ -174,6 +174,20 @@ uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
     return old + paid;
 }
 
+/* TEST ONLY: SR_FORCEITEM=cycle (patches.txt): item boxes give a player's racer item types 7, 8, 9, 10 in turn, logged,
+ * to find which one is the Magnet (item 7 sets racer +0xBB0 bit 0x4 and starts task 818F0B94; item 10 sets bit 0x1). */
+uint32_t lv_force_item(uint32_t racer, uint32_t item) {
+    static int on = -1;
+    static uint32_t next = 7;
+    if (on < 0) { const char* e = getenv("SR_FORCEITEM"); on = e && *e && *e != '0'; }
+    if (on && ld8(racer + 0xBCu) == 0) {
+        item = next;
+        next = next >= 10 ? 7 : next + 1;
+    }
+    rt_log("[item] racer %08X gets item %u (rings %u, +BB0 %08X)", racer, item, ld32(racer + 0xB98u), ld32(racer + 0xBB0u));
+    return item;
+}
+
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
  * ring-powered gear (+0x9D4 bit 0x400). With Ring Replenish, Super Sonic keeps them as fuel (his rings). */
 uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
