@@ -84,13 +84,13 @@ static int active_race(void) {
 
 /* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
  * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
-#define REPLENISH_NUM 3
-#define REPLENISH_DEN 10
+#define REPLENISH_NUM 1
+#define REPLENISH_DEN 2   /* 50 % (fourth tuning, 2026-11-20: 30 % felt "too nerfed ... pointless") */
 /* the second tuning (the user, 2026-11-20: "still too broken", chains of hoops / grinds / objects grew the
  * game's reward each time): one step's air rewards count up to this many rings before the share above, and a
  * counted spin turn gives SPIN_FUEL (the game's 5000 x 0.1, about 0.45 rings; the third tuning) */
-#define REWARD_MAX_RINGS 4u
-#define SPIN_FUEL 500u
+#define REWARD_MAX_RINGS 8u   /* fourth tuning: was 4 */
+#define SPIN_FUEL 1000u        /* fourth tuning: was 500, now about 0.9 rings a turn */
 static uint32_t g_gain_racer, g_gain_start;  /* the racer the fuel step is on, and its fuel before the step */
 
 /* The fuel step fn 81815xxx (racer r29): just before it adds the step's air rewards (+0x988) to the fuel. */
@@ -387,7 +387,7 @@ void lv_texture_decoded(GxTexture* t) {
 
 /* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
  * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
- * gives him SPIN_FUEL here (500, about 0.45 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * gives him SPIN_FUEL here (1000, about 0.9 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
     if (!settings_ring_replenish() || !super_racer(racer)) return;

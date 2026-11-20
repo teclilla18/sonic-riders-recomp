@@ -110,10 +110,13 @@ static uint32_t held_buttons(uint32_t racer) {  /* 0 for a CPU racer (no control
  * view widens with his climb towards SUPER_CAP, up to FOV_BOOST_MAX. When the held boost ends it goes straight back to
  * the player's own field of view on a smooth curve over FOV_OUT_FRAMES (the user: "smoothly and immediately"). The
  * camera is shared by every screen, so only with one local player (split screen: off). Picture only: safe online. */
-#define FOV_BOOST_MAX  0.18      /* +18 % at the top of the climb */
-#define FOV_EASE_IN    0.03      /* share of the gap closed per frame while widening */
+#define FOV_BOOST_MAX  0.18      /* +18 %, reached within about 0.4 s of holding (the user, 2026-11-20: the 4 s
+                                    * climb was "waaaaay too slow") */
+#define FOV_BOOST_PAST 0.04      /* a little more on top while his speed climbs past the boost speed to SUPER_CAP */
+#define FOV_EASE_IN    0.12      /* share of the gap closed per frame while widening */
 #define FOV_OUT_FRAMES 15        /* the way back: 0.25 s at 60 fps */
-static double g_fov_target;      /* 0..1 of FOV_BOOST_MAX, set by the ticks */
+static double g_fov_target;      /* in FOV_BOOST_MAX units: 1 plus the climb's share of FOV_BOOST_PAST */
+static double g_fov_climb;       /* 0..1: the climb towards SUPER_CAP */
 static double g_fov_now, g_fov_from;  /* now; the value the way back started from */
 static int g_fov_owner = -1;     /* the racer whose held boost widens the view, -1 = none (on the way back) */
 static uint32_t g_fov_frame, g_fov_tick, g_fov_out;  /* boost_hold_fov calls; at the last tick; frames back */
@@ -131,7 +134,8 @@ static void fov_tick(int i, uint32_t racer) {
     for (int j = 0; j < 8; j++)
         if (j != i && human(GAME_PLAYERS + (uint32_t)j * GAME_PLAYER_SIZE)) return;  /* split screen */
     g_fov_owner = i;
-    g_fov_target = (double)ramp(g_held[i]) / 4096.0;
+    g_fov_climb = (double)ramp(g_held[i]) / 4096.0;
+    g_fov_target = 1.0 + g_fov_climb * (FOV_BOOST_PAST / FOV_BOOST_MAX);
     g_fov_tick = g_fov_frame;
 }
 
@@ -155,8 +159,14 @@ float boost_hold_fov(void) {
 }
 
 /* the sound (the user, 2026-11-20: "immediately rather than gradually, like in NFS"): full at once while a held
- * Super boost goes on (80 %, up to 100 % with the climb), nothing the moment it ends; audio_out.c smooths the steps */
-double boost_hold_audio(void) { return g_fov_owner >= 0 ? 0.8 + 0.2 * g_fov_target : 0.0; }
+ * Super boost goes on (80 %, up to 100 % with the climb), nothing the moment it ends; audio_out.c smooths the steps.
+ * Off since the user's test the same day ("I don't like the sound muffle", another approach later): only with
+ * SR_BOOSTSOUND=1 for experiments. */
+double boost_hold_audio(void) {
+    static int on = -1;
+    if (on < 0) { const char* e = getenv("SR_BOOSTSOUND"); on = e && *e && *e != '0'; }
+    return on && g_fov_owner >= 0 ? 0.8 + 0.2 * g_fov_climb : 0.0;
+}
 
 static void stop(int i, uint32_t racer, const char* why) {
     if (log_on() && g_extra[i])
