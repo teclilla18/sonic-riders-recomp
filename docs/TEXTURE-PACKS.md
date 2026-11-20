@@ -5,8 +5,8 @@ Texture packs give the game sharper, redrawn pictures: menus, characters, boards
 
 ![Three steps: download a pack, add it to the game, play.](images/texture-packs/overview.svg)
 
-**Jump to your device:** [PC (Windows)](#pc-windows) · [Switch](#switch-and-switch-2) ·
-[Switch 2](#switch-and-switch-2) · [Android](#android) · [iPhone and iPad](#iphone-and-ipad) ·
+**Jump to your device:** [PC (Windows)](#pc-windows) · [Switch](#switch) ·
+[Switch 2](#switch-2) · [Android](#android) · [iPhone and iPad](#iphone-and-ipad) ·
 [Linux and Steam Deck](#linux-and-steam-deck) · [Turn packs on or off](#turn-packs-on-or-off) ·
 [Something's wrong?](#somethings-wrong)
 
@@ -48,31 +48,46 @@ is in [Copying a pack by hand](#copying-a-pack-by-hand) below.
 
 ---
 
-## Switch and Switch 2
+## Switch
 
 The installer you used to put the game on the console copies the pack to the SD card for you.
 
-![The installer's options: 3 marks Add texture pack.](images/installation/switch-options.png)
+![The Switch installer's options: 3 marks Add texture pack.](images/installation/switch-options.png)
 
-1. Put the console's SD card in your PC (or connect the console the way you did when installing).
-2. Open the installer: **Install Sonic Riders (Switch).exe** (Switch 2: **Install Sonic Riders (Switch2).exe**).
+1. Put the Switch's SD card in your PC.
+2. Open **Install Sonic Riders (Switch).exe**.
 3. Under **4. TEXTURE PACKS (OPTIONAL)**, click **Add texture pack...** and pick the pack you downloaded
    (or **Add a pack folder...** for an unpacked one).
 4. Click **BUILD AND INSTALL** (or **UPDATE NOW** if the game is already installed).
-5. Put the SD card back in the console and play.
-
-![Where packs go on the SD card: switch, sonicriders (or sonicriders-switch2), mods, then the pack folder.](images/texture-packs/switch-sd.svg)
+5. Put the SD card back in the Switch and play.
 
 <details>
 <summary>Prefer to copy it yourself?</summary>
 
-1. On the SD card, open `switch` → `sonicriders` (**Switch 2:** `switch` → `sonicriders-switch2`).
-2. Open the `mods` folder there. No `mods` folder? Make one with exactly that name.
-3. Put your pack folder in it, laid out as in [Copying a pack by hand](#copying-a-pack-by-hand).
+On the SD card open `switch` → `sonicriders` → `mods` (make `mods` if it isn't there) and put your pack folder
+in it, laid out as in [Copying a pack by hand](#copying-a-pack-by-hand).
 
 </details>
 
 > The first time a new HD texture shows up, the game may pause for a moment while it loads. After that it's smooth.
+
+---
+
+## Switch 2
+
+The Switch 2 alpha installer has **no** texture-pack button yet, so on Switch 2 you copy the pack by hand.
+
+![Where packs go on the SD card. Switch: switch, sonicriders, mods. Switch 2: switch, sonicriders-switch2, mods.](images/texture-packs/switch-sd.svg)
+
+1. On your PC, **unpack** the download (right-click → **Extract All**). Find the `GXEE8P` folder inside.
+2. Make the pack folder as shown in [Copying a pack by hand](#copying-a-pack-by-hand)
+   (a folder with `mod.ini` and `textures` in it).
+3. Turn the Switch 2 off and put its SD card in your PC.
+4. On the SD card open `switch` → `sonicriders-switch2`. Make a folder named `mods` there if it isn't there yet.
+5. Copy your pack folder into `mods`. A big pack can take a few minutes.
+6. Put the SD card back, turn the console on and play.
+
+Pick the pack's **smallest size**: big 4K packs only take longer to load and use more of the card.
 
 ---
 
