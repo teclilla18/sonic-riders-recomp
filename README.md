@@ -21,6 +21,16 @@
 </p>
 
 <p align="center">
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Plus website</a>
+  &nbsp;·&nbsp;
+  <a href="https://www.facebook.com/ridersplusgame">Facebook</a>
+  &nbsp;·&nbsp;
+  <a href="https://www.instagram.com/ridersplusgame/">Instagram</a>
+  &nbsp;·&nbsp;
+  <a href="https://bsky.app/profile/ridersplus.bsky.social">Bluesky</a>
+</p>
+
+<p align="center">
   <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
   <a href="https://decompbuddy.com/games/sonic-riders-gamecube?install"><img src="https://decompbuddy.com/install-button.svg" alt="Install With Decomp Buddy"></a>
 </p>
