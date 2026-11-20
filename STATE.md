@@ -55,8 +55,8 @@
    (controller per racer at race start; each section taken over). Next: a 2P split-screen race to check port 2.
    **Next item, same release: hold-B boost** (plan file "Nitrous-style boost toggle", user details 2026-11-20).
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
-   perftest passed; test zip posted to #33. The reporter (23:32) will build an APK from it and offered a video;
-   waiting for their result. Not merged.
+   perftest passed; test zip posted to #33. The reporter's APK **crashes at start** (crash report posted 2026-11-20 05:42,
+   saved locally as .local/android-armv7/build/issue33-crash-20261120.txt); read it with log-reader next. Not merged.
 4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
    Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
 5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in

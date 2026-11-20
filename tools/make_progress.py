@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 VERSION = "v0.8.7"
-UPDATED = "2026-11-18"
+UPDATED = "2026-11-20"
 
 # (label, weight, percent done); labels must match the README table's first column
 AREAS = [
@@ -29,7 +29,7 @@ AREAS = [
     ("Switch performance",             15, 70),
     ("Platforms",                      15, 85),
     ("Online play",                    15, 55),
-    ("Features and polish",            15, 72),
+    ("Features and polish",            15, 73),
 ]
 
 W = 720
