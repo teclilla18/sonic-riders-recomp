@@ -89,22 +89,29 @@ static _Atomic uint64_t g_clock_held_ns;  /* time since boot when held */
  * same "An error has occurred" screen; no applet message arrived): the clock is read hundreds of times a
  * second (the VI thread alone every few ms), so a gap of CLOCK_GAP_NS between two reads means the whole
  * process was frozen. That gap is taken out of the time base, less one frame. */
+/* Only once the game is running (rt_clock_gap_arm, from the VI thread after its first 300 retraces): during start-up a
+ * host stall of a few seconds (Switch 2, 2026-11-20: Vulkan setup, 2.4 s) is not a sleep, and shifting the clock
+ * there left a disc read waiting forever (the game never started). The base is read before the time, so a thread
+ * racing a shift can only see an earlier base (a later time), never a time before the base. */
 #define CLOCK_GAP_NS 2000000000ull
 static _Atomic uint64_t g_clock_last_ns, g_clock_skipped_ns;
+static _Atomic int g_clock_gap_armed;
+void rt_clock_gap_arm(void) { atomic_store(&g_clock_gap_armed, 1); }
 uint64_t rt_clock_take_skipped_ns(void) { return atomic_exchange(&g_clock_skipped_ns, 0); }
 uint64_t rt_ticks(void) {
     if (atomic_load(&g_clock_held)) return atomic_load(&g_clock_held_ns) * 81 / 2000;
+    uint64_t t0 = atomic_load(&g_t0);
     uint64_t now = host_ns(), last = atomic_load(&g_clock_last_ns);
-    if (last && now > last + CLOCK_GAP_NS) {
+    if (last && now > last + CLOCK_GAP_NS && atomic_load(&g_clock_gap_armed)) {
         if (atomic_compare_exchange_strong(&g_clock_last_ns, &last, now)) {  /* one thread takes it out */
             uint64_t gap = now - last - 16666667ull;
-            atomic_fetch_add(&g_t0, gap);
+            t0 = atomic_fetch_add(&g_t0, gap) + gap;
             atomic_fetch_add(&g_clock_skipped_ns, gap);
         }
     } else if (now > last) {
         atomic_store(&g_clock_last_ns, now);
     }
-    return (now - atomic_load(&g_t0)) * 81 / 2000;  /* ns * 40.5e6 / 1e9 */
+    return now > t0 ? (now - t0) * 81 / 2000 : 0;  /* ns * 40.5e6 / 1e9 */
 }
 void rt_clock_hold(int on) {
     if (on == atomic_load(&g_clock_held)) return;

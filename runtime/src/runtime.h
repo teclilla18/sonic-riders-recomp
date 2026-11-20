@@ -68,6 +68,7 @@ void load_game(void);   /* DOL sections, boot info, FST, the REL module linked a
 void cpu_init(Cpu* c);
 uint64_t rt_ticks(void);  /* guest timebase ticks since boot (40.5 MHz) */
 void rt_clock_hold(int on);  /* cpu.c: stop/restart the time base (host pause) */
+void rt_clock_gap_arm(void);  /* cpu.c: start taking freezes (sleep) out of the game's time; the VI thread, once running */
 uint64_t rt_clock_take_skipped_ns(void);  /* cpu.c: time taken out of the time base after a freeze (sleep), since the last call */
 
 /* sched.c: guest threads and interrupts */
