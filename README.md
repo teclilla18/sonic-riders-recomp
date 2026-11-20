@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><b>🎮 Play on Switch 2 (Alpha)</b></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3"><b>🎮 Play on Switch 2 (Alpha)</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><b>⬇️ Download for every other platform</b></a>
   &nbsp;·&nbsp;
@@ -39,7 +39,7 @@
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><img src="https://img.shields.io/github/v/release/teclilla18/sonic-riders-recomp?label=Release&color=0aa5e8" alt="Latest release"></a>
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases"><img src="https://img.shields.io/github/downloads/teclilla18/sonic-riders-recomp/total?label=Downloads&color=teal" alt="Downloads"></a>
   <a href="#status"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fteclilla18%2Fsonic-riders-recomp%2Fmain%2Fdocs%2Fprogress.json" alt="Road to v1.0 progress"></a>
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%202-orange" alt="Nintendo Switch 2: experimental Alpha 2"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3"><img src="https://img.shields.io/badge/Nintendo%20Switch%202-Alpha%203-orange" alt="Nintendo Switch 2: experimental Alpha 3"></a>
   <img src="https://img.shields.io/badge/Platform-PC%20%7C%20Switch%20%7C%20Switch%202%20Alpha%20%7C%20Android%20%7C%20Linux%20%7C%20iOS-green" alt="Platforms: PC, Switch, Switch 2 Alpha, Android, Linux, iOS">
   <img src="https://img.shields.io/badge/Status-Playable-brightgreen" alt="Status: playable">
   <a href="https://github.com/teclilla18/sonic-riders-recomp/stargazers"><img src="https://img.shields.io/github/stars/teclilla18/sonic-riders-recomp?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
@@ -58,7 +58,7 @@
 > you to the Switch 2 homebrew developers for making this possible.
 > [What to expect](docs/SWITCH2-ALPHA.md)
 >
-> **🦔 New in v0.8.7:** Super Sonic joins Riders Plus (999 rings, Lv. 4/5, faster stats), with a better split-screen HUD.
+> **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
 ## Riders Plus: break the limits
 
@@ -124,7 +124,7 @@ Updating? Stable versions update with one press of **UPDATE NOW** in the app (th
 
 | I want to play on... | Download | Guide |
 |---|---|---|
-| **Nintendo Switch 2** (experimental alpha) | [Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) (separate pre-release) | [Picture booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch2.html) · [Alpha guide](docs/SWITCH2-ALPHA.md) |
+| **Nintendo Switch 2** (experimental alpha) | [Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3) (separate pre-release) | [Picture booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch2.html) · [Alpha guide](docs/SWITCH2-ALPHA.md) |
 | a modded **Nintendo Switch** / Lite / OLED | `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../releases/latest) | [Picture booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch.html) · [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |

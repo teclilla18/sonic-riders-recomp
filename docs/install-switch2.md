@@ -2,15 +2,15 @@
 
 ## Experimental Alpha Release
 
-Checked for **Alpha 2 · v0.8.7-switch2-alpha.2** on November 18, 2026.
+Checked for **Alpha 3 · v0.9.0-switch2-alpha.3** on November 18, 2026.
 
-This is an early test version. Bugs can interrupt play. Read the audio warning below before you begin.
+This is an early test version (an alpha). Bugs can interrupt play.
 
 [Illustrated HTML booklet](install-switch2.html) · [Choose your console](index.md) · [Nintendo Switch — Stable](install-switch.md)
 
 Tick the checkpoints as you go. Pictures have text descriptions.
 
-**Please read first:** Alpha 2 can develop severe, lasting audio distortion in Race Select, sometimes after a freeze. Switching Unlimited off or leaving the menu did not fix the reported session. This is unresolved. If you want a trouble-free first homebrew project, wait for a more mature native release.
+**Please read first:** this is an alpha (early test version). It plays well in our tests, but bugs can still interrupt play. Report anything odd with your log.
 
 ## Installation steps
 
@@ -81,21 +81,21 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 ## 03. Download the correct setup package
 
-![Illustration of the GitHub download choices: select SonicRiders-Switch2-Setup-Alpha2.zip under Assets, not Source code.](images/installation/switch2-release.svg)
+![Illustration of the GitHub download choices: select SonicRiders-Switch2-Setup-Alpha3.zip under Assets, not Source code.](images/installation/switch2-release.svg)
 
 *Illustration, not a screenshot.*
 
-1. Open the [Nintendo Switch 2 release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.
-2. Check the heading. This page should say **Switch 2 Alpha 2**. The **Pre-release** label is expected. Alpha means it is still being tested.
+1. Open the [Nintendo Switch 2 release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.
+2. Check the heading. This page should say **Switch 2 Alpha 3**. The **Pre-release** label is expected. Alpha means it is still being tested.
 3. Scroll down to **Assets**. Assets means the downloadable files. If the list is folded up, click **Assets** to open it.
-4. Click **`SonicRiders-Switch2-Setup-Alpha2.zip`**. You can also use the big download button below.
+4. Click **`SonicRiders-Switch2-Setup-Alpha3.zip`**. You can also use the big download button below.
 5. Wait for the download to finish. Do not choose **Source code (zip)** or **Source code (tar.gz)**. Those are for developers and do not contain the ready-to-use Windows installer.
 
-**[Download SonicRiders-Switch2-Setup-Alpha2.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7-switch2-alpha.2/SonicRiders-Switch2-Setup-Alpha2.zip)**
+**[Download SonicRiders-Switch2-Setup-Alpha3.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.9.0-switch2-alpha.3/SonicRiders-Switch2-Setup-Alpha3.zip)**
 
 > Keep this alpha package separate from stable downloads. Its updates are manual.
 
-- [ ] **Checkpoint:** The downloaded filename is exactly `SonicRiders-Switch2-Setup-Alpha2.zip`.
+- [ ] **Checkpoint:** The downloaded filename is exactly `SonicRiders-Switch2-Setup-Alpha3.zip`.
 
 <a id="extract"></a>
 
@@ -106,11 +106,11 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 *Illustration, not a screenshot.*
 
 1. Open **File Explorer**. It is the yellow folder app on the Windows taskbar, at the bottom of the screen.
-2. Click **Downloads** in the left column. Find `SonicRiders-Switch2-Setup-Alpha2.zip`. If you chose a different download location, open that folder instead.
+2. Click **Downloads** in the left column. Find `SonicRiders-Switch2-Setup-Alpha3.zip`. If you chose a different download location, open that folder instead.
 3. Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP stores several files in one file. Extracting restores those files to a normal folder.
 4. In the extraction window, choose a short place you can find again, such as `C:\SonicRidersAlpha`. Use English letters and numbers in the path. Spaces work, but accented characters in the path can stop the tools.
 5. Click **Extract**. Wait until it finishes. Keep all the extracted files together.
-6. Open the extracted folder. Open `SonicRiders-Switch2-Alpha2` if there is one more folder inside. Stop when you can see `Install Sonic Riders (Switch2).exe`, `setup`, and `tools` together.
+6. Open the extracted folder. Open `SonicRiders-Switch2-Alpha3` if there is one more folder inside. Stop when you can see `Install Sonic Riders (Switch2).exe`, `setup`, and `tools` together.
 
 > Do not double-click the installer while browsing inside the ZIP. Copying only the EXE is not enough. [Windows extraction help](https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/zip-and-unzip-files).
 
@@ -344,7 +344,7 @@ SD card (top folder)
 *Illustration, not a screenshot.*
 
 1. In the game, hold **Minus (−)** for about half a second. This opens the port’s settings menu.
-2. Open **About**. Check the version/build information against **Alpha 2 · v0.8.7-switch2-alpha.2**. If an old version is still shown, follow **Update without losing your progress** below.
+2. Open **About**. Check the version/build information against **Alpha 3 · v0.9.0-switch2-alpha.3**. If an old version is still shown, follow **Update without losing your progress** below.
 3. Keep normal **60 FPS** selected for a first test. **Unlimited rendering** is experimental. The number 60 is a target, not a guarantee for every scene or setup.
 4. To quit normally, open the Minus menu, choose **Quit Game**, and confirm. Wait to return to Homebrew Menu. Do not remove the SD card while the game is saving.
 
@@ -360,7 +360,7 @@ SD card (top folder)
 
 1. Quit Sonic Riders normally before you update. Connect the SD card to your computer using the same safe steps as before.
 2. **Back up first.** Copy the whole `/switch/sonicriders-switch2/` folder from the SD card to a safe folder on your computer. A backup is a spare copy. Keep it until you know the update works.
-3. Open the [Nintendo Switch 2 release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2). For a future update, check for a newer release for **this same platform**. Download its matching setup ZIP.
+3. Open the [Nintendo Switch 2 release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3). For a future update, check for a newer release for **this same platform**. Download its matching setup ZIP.
 4. Extract the new ZIP to a **new normal folder** on the PC. Open its installer. Select your same own game image and the same SD card root.
 5. Build and install. Keep the existing full game image if it is already verified on the card; **Copy the disc image too** can be unticked for that case.
 6. For a manual update, copy **only** the new `sonicriders-switch2.nro` and its matching `build-info.json` into the existing game folder. Replace that pair together. Do not overwrite your SD card’s `env.txt` or `settings.ini` with fresh defaults.
@@ -377,7 +377,7 @@ SD card (top folder)
 
 ### My download does not contain the right installer
 
-Check the full ZIP name: `SonicRiders-Switch2-Setup-Alpha2.zip`. Open the release page and choose that asset. **Source code (zip)** is not the setup package. Keep all extracted files together.
+Check the full ZIP name: `SonicRiders-Switch2-Setup-Alpha3.zip`. Open the release page and choose that asset. **Source code (zip)** is not the setup package. Keep all extracted files together.
 
 [Picture and steps](#download).
 
@@ -431,7 +431,7 @@ Check the native Switch 2 package, native Homebrew Menu, full ISO/GCM, and exact
 
 ### Known problems that are still open
 
-**Unresolved:** Race Select (Free Race / Time Attack / World Grand Prix) can develop severe persistent audio distortion, sometimes after a freeze. Turning Unlimited off and leaving the menu did not recover the reported session. Quitting and relaunching may help, but it is not a proven cure. Missing music/announcer audio, stutters and slow startup are also known alpha issues. Keep normal 60 FPS for the first test. Save logs before relaunching. Do not treat an audio problem as proof that you installed it incorrectly.
+**Fixed in Alpha 3:** the Race Select audio distortion of Alpha 2 no longer happens in our tests. **Open:** Super Sonic flight is experimental and off by default (after an air trick he can stay on his board until your next move). This is still an alpha: report anything odd with your log.
 
 [Picture and steps](#play).
 
@@ -459,7 +459,7 @@ Compare the new local NRO with the file in `/switch/sonicriders-switch2/`. Make 
 
 ```text
 Platform: Nintendo Switch 2
-Setup ZIP: SonicRiders-Switch2-Setup-Alpha2.zip
+Setup ZIP: SonicRiders-Switch2-Setup-Alpha3.zip
 Version/build in About: …
 Firmware and homebrew loader/version: …
 Handheld or docked; known clocks: …

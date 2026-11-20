@@ -15,10 +15,10 @@ def guide(native=False):
     platform = 'Nintendo Switch 2' if native else 'Nintendo Switch'
     mode = 'switch2' if native else 'switch'
     edition = 'Experimental Alpha Release' if native else 'Stable Release'
-    version = 'Alpha 2 · v0.8.7-switch2-alpha.2' if native else 'v0.8.7'
-    tag = 'v0.8.7-switch2-alpha.2' if native else 'v0.8.7'
-    archive = 'SonicRiders-Switch2-Setup-Alpha2.zip' if native else 'SonicRiders-Switch-Setup-v0.8.7.zip'
-    extracted = 'SonicRiders-Switch2-Alpha2' if native else 'SonicRiders-Switch-v0.8.7'
+    version = 'Alpha 3 · v0.9.0-switch2-alpha.3' if native else 'v0.9.0'
+    tag = 'v0.9.0-switch2-alpha.3' if native else 'v0.9.0'
+    archive = 'SonicRiders-Switch2-Setup-Alpha3.zip' if native else 'SonicRiders-Switch-Setup-v0.9.0.zip'
+    extracted = 'SonicRiders-Switch2-Alpha3' if native else 'SonicRiders-Switch-v0.9.0'
     exe = 'Install Sonic Riders (Switch2).exe' if native else 'Install Sonic Riders (Switch).exe'
     app = 'sonicriders-switch2' if native else 'sonicriders'
     output = 'build/switch2/sd/switch/sonicriders-switch2' if native else 'build/switch'
@@ -33,7 +33,7 @@ def guide(native=False):
                 '[Nintendo Homebrew’s Switch setup guide](https://switch.hacks.guide/)')
     ready = ('A compatible **native homebrew** setup. Native means made for Switch 2. It must already open the native Homebrew Menu.' if native else
              '**Atmosphère custom firmware** and **Homebrew Menu**, already working. Custom firmware lets your console run community-made apps.')
-    intro = ('This is an early test version. Bugs can interrupt play. Read the audio warning below before you begin.' if native else
+    intro = ('This is an early test version (an alpha). Bugs can interrupt play.' if native else
              'Follow these steps to install Sonic Riders on your console. No coding is required.')
     prerequisites = [
         f'Check the console’s name. This booklet is for **{platform}**. ' +
@@ -65,7 +65,7 @@ def guide(native=False):
       extra='**For helpers:** accepted disc ID `GXEE8P`, revision `0`; full ISO size `1,459,978,240 bytes`; SHA-1 `ce0cecf57034bef8bab7d6f588ce92c85a849613`. The installer checks this fingerprint automatically. A filename alone does not prove that a dump is supported.'),
       chapter('download','Download the correct setup package',[
         f'Open the [{platform} release page]({release}). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.',
-        f'Check the heading. This page should say **{("Switch 2 Alpha 2" if native else "v0.8.7")}**. ' + ('The **Pre-release** label is expected. Alpha means it is still being tested.' if native else 'This is the stable release for this booklet.'),
+        f'Check the heading. This page should say **{("Switch 2 Alpha 3" if native else "v0.9.0")}**. ' + ('The **Pre-release** label is expected. Alpha means it is still being tested.' if native else 'This is the stable release for this booklet.'),
         'Scroll down to **Assets**. Assets means the downloadable files. If the list is folded up, click **Assets** to open it.',
         f'Click **`{archive}`**. You can also use the big download button below.',
         'Wait for the download to finish. Do not choose **Source code (zip)** or **Source code (tar.gz)**. Those are for developers and do not contain the ready-to-use Windows installer.'
@@ -248,7 +248,7 @@ def guide(native=False):
       ('black-screen','I get a black screen or a crash','launch',
        ('Check the native Switch 2 package, native Homebrew Menu, full ISO/GCM, and exact folder first. Do not use the original Switch NRO or rename it. If those match, preserve the logs and report it. Alpha compatibility is limited; there is no verified universal black-screen fix.' if native else 'First check that you launched Homebrew Menu by holding R while opening an installed game. Album mode has too little memory. Next check the full ISO/GCM and exact folder. These checks fix setup mistakes; they do not establish the cause of every crash. If it still fails, preserve the logs and report it.')),
       ('known','Known problems that are still open','play',
-       ('**Unresolved:** Race Select (Free Race / Time Attack / World Grand Prix) can develop severe persistent audio distortion, sometimes after a freeze. Turning Unlimited off and leaving the menu did not recover the reported session. Quitting and relaunching may help, but it is not a proven cure. Missing music/announcer audio, stutters and slow startup are also known alpha issues. Keep normal 60 FPS for the first test. Save logs before relaunching. Do not treat an audio problem as proof that you installed it incorrectly.' if native else '**Unresolved:** rare hangs on **Now Loading** are tracked in [issue #6]('+REPO+'/issues/6). Texture packs can briefly freeze the original Switch when new textures load. Test a fresh install before adding packs. There is no verified fix for every loading hang. An old version still appearing after an update is reported in [issue #31]('+REPO+'/issues/31); its cause is still being investigated.')),
+       ('**Fixed in Alpha 3:** the Race Select audio distortion of Alpha 2 no longer happens in our tests. **Open:** Super Sonic flight is experimental and off by default (after an air trick he can stay on his board until your next move). This is still an alpha: report anything odd with your log.' if native else '**Unresolved:** rare hangs on **Now Loading** are tracked in [issue #6]('+REPO+'/issues/6). Texture packs can briefly freeze the original Switch when new textures load. Test a fresh install before adding packs. There is no verified fix for every loading hang. An old version still appearing after an update is reported in [issue #31]('+REPO+'/issues/31); its cause is still being investigated.')),
       ('old-version','About still shows the old version','update',
        f'Compare the new local NRO with the file in `{sdpath}`. Make sure you copied to the card you actually use. Follow the manual update route, then launch that app again and check **Minus → About**. Keep your backup and save. If the version remains old, report both the downloaded ZIP name and the displayed version. Do not assume this identifies the cause of issue #31.')
     ]

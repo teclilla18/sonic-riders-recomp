@@ -2041,3 +2041,13 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Super Sonic looks blue whenever on foot (state +0x1034 = 1 run-up, 25 out of rings) although +0xBA stays 11; the
   model choice is not found yet (SR_SUPERDIAG=1 logs racer 0's rarely changing bytes). Flight poses from the user:
   34 flying, 21 kick-off, 67 jog, 68 run, 70 board mount, 71 board leaving, 47/48/51/66/75-80/87-90 T-pose.
+
+## 2026-11-20 (late): v0.9.0 release prep
+
+- Super Sonic flight became an experimental Riders Plus feature, off by default (F1 > Gameplay > Riders Plus
+  features > "Super Sonic flight"; off in online races, recordings and replays). Why: on the user's Switch 1
+  (a363ae30) and Switch 2 (1e6033829f7d) builds he stayed on his board after an air trick until the next action.
+  The cause is not found [uncertain]; the toggle only hides it. Builds (Switch) with the toggle; not played.
+- Versions bumped to v0.9.0 / Switch 2 Alpha 3 in README, both easy-read guides, the booklets and progress; the
+  Switch 2 Race Select audio warning dropped (the user reported it gone on the hold-boost test builds). iOS stays
+  on v0.8.7 until the Mac session builds v0.9.0.
