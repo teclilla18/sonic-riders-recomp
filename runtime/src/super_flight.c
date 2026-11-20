@@ -39,6 +39,16 @@ static int riding_anim(uint32_t a) {
     }
 }
 
+/* animations kept as they are while riding (the user, 2026-11-20: he only went back to flying after a jump, because
+ * a boost (65), a smash or a landing pose left him on the board until the next jump animation): jump charge, crashes,
+ * smashing objects, trick rank landings, finish poses, getting on / off the board */
+static int keep_anim(uint32_t a) {
+    return a == 20 || a == 25 || a == 32 || a == 33 || a == 55 || a == 56 || (a >= 62 && a <= 64) ||
+           (a >= 66 && a <= 73);
+}
+
+static int riding_state(uint32_t st) { return st >= 5 && st <= 7; }  /* on the board, jumping, falling */
+
 static int board_state(uint32_t st) {  /* on the board on purpose: tricks, spin sections, rails */
     return (st >= 8 && st <= 13) || st == 17 || st == 18;
 }
@@ -55,6 +65,7 @@ uint32_t super_flight_anim(uint32_t obj, uint32_t anim) {
     int super = ld8(obj + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
                 ld8(obj + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
     if (t >= 0 ? d != 0 : !(super && settings_ring_cap() != 100)) return anim;
-    if (!riding_anim(anim) || board_state(st)) return anim;
+    if (board_state(st)) return anim;
+    if (riding_state(st) ? keep_anim(anim) : !riding_anim(anim)) return anim;
     return t >= 0 ? (uint32_t)t : FLIGHT_POSE;
 }
