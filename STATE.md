@@ -10,10 +10,10 @@
   PASS: PC (+ space path), Android. iOS v0.9.0 not built yet (needs the Mac); guides point iOS to v0.8.7.
 - **[Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3)**
   (pre-release; tag `67710d8`, branch `release/switch2-alpha3` = local claude/switch2-holdboost + main v0.9.0).
-  Cold Sandbox PASS (NRO bc9dd55883f6-class build). The user played the test builds before the flight toggle on
+  Cold Sandbox PASS. The user played the test builds before the flight toggle on
   Switch 2 (Race Select audio breakup gone); the final package was not played on hardware.
-- Not done (needed the user's OK each time): "Newer version available" lines on the v0.8.7 / Alpha 2 pages, and
-  deleting the v0.8.6 / v0.8.4 release pages (5-newest rule; keep tags).
+- Done with the user's OK: "Newer version" lines on v0.8.7 / Alpha 2; v0.8.6 / v0.8.4 release pages deleted (tags kept).
+- Installed (readback verified), not yet played: Switch OLED v0.9.0 NRO 4d120ba5..., Switch 2 Alpha 3 bc9dd55883f6.
 
 ## Riders Plus website (2026-11-19)
 
@@ -43,6 +43,10 @@
 
 ## Open items (priority order; the user moved online play to the top, 2026-11-19)
 
+0. **Super Sonic flight fix** (off-by-default option in v0.9.0): after an air trick he stays on his board until the
+   next action. Log racer 0 animation requests with SR_FLYLOG=1 (runtime/src/super_flight.c), find what the game
+   asks for after a trick, fix, then default it on. Also: iOS v0.9.0 zip from the Mac session.
+
 1. **Online play** (Road to v1.0 area, 55 %). Works today: PC-PC, PC-Switch and Switch-Switch lockstep races on a
    home network, two players, PC launcher lobby (docs/ONLINE.md "Lobby in the Windows launcher"). Next, per the
    agreed lobby design (docs/ONLINE.md "Lobby design", not implemented): internet play with 6-character room codes,
@@ -70,8 +74,8 @@
    perftest passed. The reporter's APK stopped with "cannot open the disc image" (no .iso in the app folder; 32-bit
    memory setup worked) [confirmed, crash report]. Plain copy-the-iso steps posted 2026-11-20; waiting for them.
    Recommended code fix (not done): an on-screen message instead of closing, and also accept an .iso in files/.
-4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
-   Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
+4. **Switch 2 Race Select audio breakup**: the user reported it gone on the hold-boost test builds (2026-11-20);
+   watch for it in Alpha 3 reports. Cause never found.
 5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in
    v0.8.7; ask the user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 6. **Super Sonic overhaul** (Riders Plus only, after the items above are stable): always flying, golden aura and

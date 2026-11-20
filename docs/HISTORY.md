@@ -2051,3 +2051,9 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Versions bumped to v0.9.0 / Switch 2 Alpha 3 in README, both easy-read guides, the booklets and progress; the
   Switch 2 Race Select audio warning dropped (the user reported it gone on the hold-boost test builds). iOS stays
   on v0.8.7 until the Mac session builds v0.9.0.
+- Released (2026-11-20): v0.9.0 (tag bce3a5f; PC, Switch, Android, Linux zips) and Switch 2 Alpha 3 (tag 67710d8,
+  branch release/switch2-alpha3). Cold Windows Sandbox installs from the zips: PC (+ path with spaces), Android,
+  Switch 2: PASS [confirmed]. Release pages v0.8.6 / v0.8.4 deleted (tags kept); "Newer version" lines on v0.8.7 /
+  Alpha 2. Easy-read guides republished; website rebuilt. iOS v0.9.0 not built (needs the Mac).
+- Installed for the user to play: Switch OLED v0.9.0 NRO 4d120ba5..., Switch 2 Alpha 3 bc9dd55883f6 (over FTP;
+  NRO 9188dd15...); both readback verified. Not played yet: flight toggle, final packages [uncertain].
