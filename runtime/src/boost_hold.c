@@ -51,6 +51,10 @@
 #define PULL_MIN       (1.5 * KMH)
 #define SUPER_CAP      (350.0 * KMH)
 #define SUPER_RAMP     240       /* frames held to reach SUPER_CAP: 4 s */
+/* Super Sonic's held boost costs this much more than the gear's rate (the user, 2026-11-20, after 3 laps on Switch 2:
+ * "ring consumption should be nerfed ... almost twice as much") */
+#define SUPER_HOLD_COST_NUM 19
+#define SUPER_HOLD_COST_DEN 10
 
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
 static uint32_t g_extra[8];      /* frames added to the current boost (log) */
@@ -207,6 +211,7 @@ void boost_hold_tick(uint32_t racer) {
     if (cost == 0 || cost > 10000000u) { stop(i, racer, "no boost cost"); return; }
     uint32_t frames = (uint32_t)(HOLD_T - (t < -1 ? -1 : t));
     uint32_t need = (uint32_t)(((uint64_t)frames * cost + BOOST_FRAMES - 1) / BOOST_FRAMES);  /* rounded up */
+    if (super_racer(racer)) need = (uint32_t)((uint64_t)need * SUPER_HOLD_COST_NUM / SUPER_HOLD_COST_DEN);
     int32_t air = (int32_t)ld32(racer + R_AIR);
     if (air <= 0 || (uint32_t)air < need) { stop(i, racer, "out of air"); return; }
     st32(racer + R_AIR, (uint32_t)(air - (int32_t)need));
