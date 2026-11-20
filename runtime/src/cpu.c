@@ -85,9 +85,26 @@ static uint64_t host_ns(void) { return platform_now_ns(); }
  * read: the SDK's drive timeout alarm fired on waking and the game showed its "An error has occurred" screen. */
 static _Atomic int g_clock_held;
 static _Atomic uint64_t g_clock_held_ns;  /* time since boot when held */
+/* The same for a pause nobody announced (Switch sleep with the game open, 2026-11-20: 2.5 h asleep, then the
+ * same "An error has occurred" screen; no applet message arrived): the clock is read hundreds of times a
+ * second (the VI thread alone every few ms), so a gap of CLOCK_GAP_NS between two reads means the whole
+ * process was frozen. That gap is taken out of the time base, less one frame. */
+#define CLOCK_GAP_NS 2000000000ull
+static _Atomic uint64_t g_clock_last_ns, g_clock_skipped_ns;
+uint64_t rt_clock_take_skipped_ns(void) { return atomic_exchange(&g_clock_skipped_ns, 0); }
 uint64_t rt_ticks(void) {
     if (atomic_load(&g_clock_held)) return atomic_load(&g_clock_held_ns) * 81 / 2000;
-    return (host_ns() - atomic_load(&g_t0)) * 81 / 2000;  /* ns * 40.5e6 / 1e9 */
+    uint64_t now = host_ns(), last = atomic_load(&g_clock_last_ns);
+    if (last && now > last + CLOCK_GAP_NS) {
+        if (atomic_compare_exchange_strong(&g_clock_last_ns, &last, now)) {  /* one thread takes it out */
+            uint64_t gap = now - last - 16666667ull;
+            atomic_fetch_add(&g_t0, gap);
+            atomic_fetch_add(&g_clock_skipped_ns, gap);
+        }
+    } else if (now > last) {
+        atomic_store(&g_clock_last_ns, now);
+    }
+    return (now - atomic_load(&g_t0)) * 81 / 2000;  /* ns * 40.5e6 / 1e9 */
 }
 void rt_clock_hold(int on) {
     if (on == atomic_load(&g_clock_held)) return;
@@ -96,6 +113,7 @@ void rt_clock_hold(int on) {
         atomic_store(&g_clock_held, 1);
     } else {
         atomic_store(&g_t0, host_ns() - atomic_load(&g_clock_held_ns));  /* before the flag clears */
+        atomic_store(&g_clock_last_ns, host_ns());  /* the hold is not a gap */
         atomic_store(&g_clock_held, 0);
     }
 }
