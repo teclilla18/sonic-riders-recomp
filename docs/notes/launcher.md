@@ -79,6 +79,15 @@ write build\update_test.txt, exit 0 when updated). 2026-11-09: PASS from an unpa
 (as v0.7.0): real download from GitHub, exe swapped, saves kept, marker written.
 
 
+## Unpacked but not installed (2026-11-19, on main, not released)
+
+A release ZIP unzipped over an older folder replaces the sources but not `build\host-mingw\sonicriders.exe`; the old
+shortcut then runs the old game. `refresh_ready()` sets `g_ready.stale` when the root's `VERSION` (first line) is not
+found inside the exe (`file_contains`, 4 MB chunks); the Play page then shows "UPDATE NOT FINISHED" and the big button
+is FINISH UPDATE (`start_install`). The game's `update_check.c` `check_unpacked()` does the same check against
+`g_build_version` (Windows: 30 s banner + F1 > About warning). Test: write a VERSION that differs, then
+`SR_LAUNCHER_UI_TEST=1 SR_LAUNCHER_SHOT=<png>`; game with `SR_MINIMIZED=1 SR_SCREENSHOT=400`.
+
 ## Eject SD card (installer, 2026-11-15, v0.8.4)
 
 `eject_sd()` / `eject_button()` in launcher.cpp, shown on the Switch installer's DONE page when an SD card was chosen:

@@ -1937,3 +1937,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   socials.json updates (and a broken socials.json keeping the old links) all work; 770 links checked; every live
   page and asset answers 200, missing URLs get the 404 page. [uncertain] Not checked on a real phone, Safari or
   an old browser; GitHub API rate limits (60/h per visitor, cached 20 min) fall back to the build snapshot.
+
+## 2026-11-19 (PC, night): "freshly downloaded game says I'm outdated" (unpacked but not installed)
+
+- The user's PC game showed v0.8.6 (e19f0dd0) and "Update available: v0.8.7" after downloading v0.8.7.
+  [confirmed] All v0.8.7 setup ZIPs (PC/Android/iOS) carry VERSION v0.8.7 and the website links point at v0.8.7.
+  [confirmed] Cause: the v0.8.7 ZIP had been unzipped over `<home>/Desktop/SonicRiders-PC` (a v0.8.6 install) and the
+  old `Sonic Riders` shortcut started the old exe; setup.log ended at the v0.8.6 install. Rerunning the PC setup
+  rebuilt it to v0.8.7 (cf243a9f), saves kept.
+- Fix (merged to main, not released): the launcher compares the folder's VERSION with the string inside
+  `build\host-mingw\sonicriders.exe` (`file_contains`, `Ready.stale`): Play page "UPDATE NOT FINISHED" and a
+  FINISH UPDATE button (runs the install; PLAY afterwards). The game (`update_check.c` `check_unpacked`, Windows)
+  shows a 30 s banner and an F1 > About line, logs `[update] this folder holds ...`, and skips the "Update
+  available" banner then. No VERSION file (git checkout) = no check.
+- [confirmed] PC: launcher pictures with mismatched and matching VERSION (FINISH UPDATE / PLAY); game capture shows
+  the banner, log line present. [uncertain] FINISH UPDATE through a real install not run; Linux has no banner.

@@ -1,4 +1,4 @@
-# State (2026-11-19)
+# State (2026-11-19, night)
 
 ## Released
 
@@ -32,6 +32,13 @@
   README table numbers from one AREAS list; `.github/workflows/progress.yml` reruns it on push to main
   (first run: success, nothing to change). Overall 77 %, unchanged.
 
+## Unpacked-but-not-installed check (2026-11-19, merged to main, not released)
+
+- Implemented + tested on PC (launcher pictures, game banner capture): when a release ZIP is unzipped over an old
+  folder without running the install, the launcher shows FINISH UPDATE instead of PLAY and the game shows a
+  banner + F1 > About warning. Not run: FINISH UPDATE through a real install. Ships with the next release.
+  docs/notes/launcher.md "Unpacked but not installed".
+
 ## Open items (priority order; the user moved online play to the top, 2026-11-19)
 
 1. **Online play** (Road to v1.0 area, 55 %). Works today: PC-PC, PC-Switch and Switch-Switch lockstep races on a
@@ -44,7 +51,8 @@
 2. **Auto stick-spin / air refill (#23)**: approved, plan in docs/notes/plans-2026-11.md "Auto air refill /
    stick spin". Not started. (Turned off in online races if it changes game memory, like the other options.)
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
-   perftest passed; test zip posted to #33, waiting for the reporter's result. Not merged.
+   perftest passed; test zip posted to #33. The reporter (23:32) will build an APK from it and offered a video;
+   waiting for their result. Not merged.
 4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
    Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
 5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in
