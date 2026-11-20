@@ -311,9 +311,7 @@ def booklet(g):
   <a class="btn btn-ghost" href="{g['other']}"><span class="btn-in">Wrong console? {E(g['other_name'])}</span></a></div>
 </section>'''
     if alpha:
-        h += ('<aside class="callout callout-warn"><b>Please read first.</b> Alpha 2 can develop severe, lasting audio distortion '
-              'in Race Select, sometimes after a freeze. Switching Unlimited off or leaving the menu did not fix the reported '
-              'session. This is unresolved. If you want a trouble-free first homebrew project, wait for a more mature native release.</aside>')
+        h += ('<aside class="callout callout-warn"><b>Please read first.</b> this is an alpha (early test version). It plays well in our tests, but bugs can still interrupt play. Report anything odd with your log.</aside>')
     h += f'''<div class="booklet-layout">
 <nav class="booklet-toc panel" aria-label="Booklet pages"><p class="eyebrow">Pages</p><ol>{toc}
 <li><a href="#help"><span class="hud-num">?</span>Troubleshooting</a></li><li><a href="#report"><span class="hud-num">!</span>Report a problem</a></li></ol>
