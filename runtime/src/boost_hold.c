@@ -118,9 +118,12 @@ static double g_fov_now, g_fov_from;  /* now; the value the way back started fro
 static int g_fov_owner = -1;     /* the racer whose held boost widens the view, -1 = none (on the way back) */
 static uint32_t g_fov_frame, g_fov_tick, g_fov_out;  /* boost_hold_fov calls; at the last tick; frames back */
 
-static int human(uint32_t racer) {  /* a racer with a controller struct (not a CPU) */
+/* a player's racer: a controller struct and the CPU flag +0xBC clear (racers 1-3 have controller structs in a
+ * 1-player race too, driven by the CPU with +0xBC = 1; race setup 818EE774 / 818EE7CC) */
+static int human(uint32_t racer) {
     uint32_t pad = ld32(racer);
-    return pad >= PAD_STRUCTS && pad < PAD_STRUCTS + 4 * PAD_STRUCT_SZ && !((pad - PAD_STRUCTS) % PAD_STRUCT_SZ);
+    return pad >= PAD_STRUCTS && pad < PAD_STRUCTS + 4 * PAD_STRUCT_SZ && !((pad - PAD_STRUCTS) % PAD_STRUCT_SZ) &&
+           ld8(racer + 0xBCu) == 0;
 }
 
 static void fov_tick(int i, uint32_t racer) {
