@@ -23,6 +23,7 @@
  * player's level-up check (fn 81836054) sees the byte at 1 and the rings over 60, so it raises it to 2 as
  * on a real Lv. 2 -> 3. */
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "game_addrs.h"
@@ -310,7 +311,7 @@ static void super_diag(void) {
     static uint8_t snap[GAME_PLAYER_SIZE], cnt[GAME_PLAYER_SIZE];
     static int have, lines;
     static uint32_t step;
-    if (on < 0) { const char* e = getenv("SR_SUPERDIAG"); on = e && *e && *e != '0'; }
+    if (on < 0) { const char* e = getenv("SR_SUPERDIAG"); on = e && atoi(e) == 1; }
     if (!on) return;
     uint32_t p = GAME_PLAYERS;
     if (!active_race() || ld8(p + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD) { have = 0; return; }
@@ -335,8 +336,64 @@ static void super_diag(void) {
     }
 }
 
+/* SR_SUPERDIAG=2 (the user's test, 2026-11-20: transform and lose it again and again in front of a ring line): racer
+ * 0 with the Chaos Emerald gear; at each change of its state byte +0x1034 every byte that differs from the previous
+ * change is logged, except bytes that change on most steps (positions, timers). Bytes that flip with every
+ * gold <-> blue switch are the form. Also, once per race, every racer word that looks like a pointer (objects to
+ * follow next). */
+static void super_diag2(void) {
+    static int on = -1;
+    static uint8_t snap[GAME_PLAYER_SIZE], prev[GAME_PLAYER_SIZE];
+    static uint16_t changes[GAME_PLAYER_SIZE];
+    static uint32_t step, events;
+    static int have;
+    if (on < 0) { const char* e = getenv("SR_SUPERDIAG"); on = e && atoi(e) == 2; }
+    if (!on) return;
+    uint32_t p = GAME_PLAYERS;
+    if (!active_race() || ld8(p + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD) { have = 0; return; }
+    if (!have) {
+        for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) { snap[o] = prev[o] = ld8(p + o); changes[o] = 0; }
+        have = 1;
+        step = 0;
+        char line[600];
+        int n = 0;
+        for (uint32_t o = 0; o + 4 <= GAME_PLAYER_SIZE && n < 560; o += 4) {
+            uint32_t w = ld32(p + o);
+            if ((w >= 0x80000000u && w < 0x81800000u) || (w >= 0x81800000u && w < 0x81C00000u))
+                n += snprintf(line + n, sizeof line - (size_t)n, " %03X=%08X", o, w);
+            if (n > 520) { rt_log("[superdiag2] pointers:%s", line); n = 0; }
+        }
+        if (n) rt_log("[superdiag2] pointers:%s", line);
+        return;
+    }
+    step++;
+    for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) {
+        uint8_t v = ld8(p + o);
+        if (v != prev[o] && changes[o] < 65535) changes[o]++;
+        prev[o] = v;
+    }
+    static uint8_t last_state = 0xFF;
+    uint8_t st = ld8(p + 0x1034u);
+    if (st == last_state) return;
+    last_state = st;
+    events++;
+    char line[700];
+    int n = snprintf(line, sizeof line, "[superdiag2] #%u step %u state %u anim %u rings %u:", events, step, st,
+                     ld32(p + 0x764u), ld32(p + 0xB98u));
+    for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) {
+        uint8_t v = ld8(p + o);
+        if (v != snap[o] && changes[o] * 4u < step) {  /* not a byte that changes on most steps */
+            n += snprintf(line + n, sizeof line - (size_t)n, " %03X:%02X>%02X", o, snap[o], v);
+            if (n > 640) { rt_log("%s", line); n = snprintf(line, sizeof line, "[superdiag2] #%u more:", events); }
+        }
+        snap[o] = v;
+    }
+    rt_log("%s", line);
+}
+
 void lv_racers_frame(void) {
     super_diag();
+    super_diag2();
     if (!active_race()) {
         lv_race_reset();
         return;
