@@ -52,8 +52,8 @@
 #define SUPER_CAP      (350.0 * KMH)
 #define SUPER_RAMP     240       /* frames held to reach SUPER_CAP: 4 s */
 /* Super Sonic's held boost costs this much more than the gear's rate (the user, 2026-11-20, after 3 laps on Switch 2:
- * "ring consumption should be nerfed ... almost twice as much") */
-#define SUPER_HOLD_COST_NUM 19
+ * "ring consumption should be nerfed ... almost twice as much"; 1.9x, then 2.3x after the ring magnet, Switch 1) */
+#define SUPER_HOLD_COST_NUM 23
 #define SUPER_HOLD_COST_DEN 10
 
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
