@@ -674,6 +674,12 @@ void tab_gameplay() {
                   "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
                   "350 km/h. Online, the host's setting is used."))
             settings_apply();
+        if (check("Ring Replenish", &g_settings.ring_replenish,
+                  "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "
+                  "nothing where other racers refill air. With this on he gains rings instead: in the spin "
+                  "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes. Online, "
+                  "the host's setting is used."))
+            settings_apply();
         ImGui::EndDisabled();
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
         ImGui::TreePop();
