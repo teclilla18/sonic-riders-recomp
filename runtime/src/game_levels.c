@@ -135,6 +135,8 @@ static void no_drain(uint32_t racer) {
 #define FLY_GROWTH_DEN 4u
 #define RW_FLY_NUM   9u     /* then 45 % of that */
 #define RW_FLY_DEN   20u
+#define TRICK_X_REWARD 100000u  /* the game's landing reward for an X rank */
+#define TRICK_X_RINGS  75u
 static uint32_t g_site_paid[8];  /* this step's rewards paid through the sites (after tuning), per racer */
 
 static int super_player(uint32_t racer) {
@@ -188,11 +190,13 @@ uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
     uint32_t paid = i >= 0 ? g_site_paid[i] : 0;
     if (i >= 0) g_site_paid[i] = 0;
     if (!settings_ring_replenish() || !super_racer(racer) || (int32_t)rewards <= 0) return original;
-    /* the sites' part is already tuned; the rest is a trick landing (or a source no site saw): until tricks are
-     * paid by rank, as before (at most REWARD_MAX_RINGS rings, then the share), and logged to find the rank tiers */
+    /* the sites' part is already tuned; the rest is a trick landing. The game's landing reward follows the rank
+     * (Switch log 2026-11-20: 20 000, 30 000, 40 000, 45 000, 50 000, 60 000 and 100 000 for the top rank, X); Super
+     * Sonic gets rings in proportion, TRICK_X_RINGS for X (the user: "X rank should give 75 rings"), at most that */
     uint32_t rest = rewards > paid ? rewards - paid : 0;
-    uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), most = max_air / 100u * REWARD_MAX_RINGS;
-    uint32_t trick = (most && rest > most ? most : rest) * REPLENISH_NUM / REPLENISH_DEN;
+    uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), ring = max_air / 100u;
+    uint64_t t = (uint64_t)(rest > TRICK_X_REWARD ? TRICK_X_REWARD : rest) * TRICK_X_RINGS * ring / TRICK_X_REWARD;
+    uint32_t trick = (uint32_t)t;
     if (rest && getenv("SR_BOOSTLOG"))
         rt_log("[trick] racer %d: landing reward %u (paid %u), state %u, anim %u", i, rest, trick, ld8(racer + 0x1034u),
                ld32(racer + 0x764u));
