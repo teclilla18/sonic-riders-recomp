@@ -1970,4 +1970,5 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Tested: PC, user-played Splash Canyon runs at 15, 5 and 6 turns/s: air refilled, speed rose (5/s: main scene
   peak 1.50). Then 7/s in a user-played 2P split-screen race with two controllers: worked for both players
   [confirmed] (`[autospin]` log: controller 1 -> racer 0, 2 -> racer 1, CPU racers none; sections taken over on
-  both ports). [uncertain] online, 3-4 players, other stages and the Switch/Android builds not tested.
+  both ports). The user also played it on the original Switch OLED and the S23 Ultra (dev build
+  v0.8.7-28-g8989ab24): works on both [confirmed]. [uncertain] online, 3-4 players, other stages not tested.
