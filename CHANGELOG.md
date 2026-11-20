@@ -11,6 +11,10 @@
   Tricks pay by rank: C 15, B 22, A 30, AA 33, S 37, SS 45, X 75 rings. Grinding, flying, smashing objects and
   each stick-spin turn (about 1.5 rings) add more.
 - Holding a Super boost widens the view within half a second, and a little more as he speeds up to 350 km/h.
+- Super Sonic (Riders Plus): flies (a flying pose instead of standing on his board; rails, tricks and spin scenes
+  keep the board), an invisible ring magnet (the game's Magnetic Barrier, kept on without its bubble), and his held
+  boost burns rings 2.9 times as fast as other gears burn air.
+- Switch: no more lost start-ups after a long pause while the game loads (the sleep fix now starts once the game runs).
 - Anyone can be anyone: several players can pick the same character in Player Entry (for example two Super
   Sonics in a split-screen race).
 - New Cheats tab in the settings menu: "No ring decrease (Super Sonic)". Cheats are never used online.
