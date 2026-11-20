@@ -48,27 +48,26 @@
    every platform, joining by restart + catch-up replay. Also left: a room-wide 30 fps switch for slow consoles,
    phones, 3-4 players, ping and delay settings. Code: netplay.c (`SR_NET`), launcher/lobby.cpp, launcher.cpp
    `page_online`. Not started this session.
-2. **Hold to boost + Auto spin (#23), one release; release on hold until the user accepts both.**
-   - Auto spin: merged to main 2026-11-20, not released; user-played on PC (1P + 2P split), Switch OLED, S23.
-   - Branch `claude/auto-spin` (pushed, **not merged**): **Hold to boost** (boost_hold.c): a boost started with
-     B or X lasts while that button is held; air taken at the gear's boost cost / 120 per frame; release, empty
-     tank, crash or hit end it. First build **user-played on PC**: works with B and X, air drain and out-of-air
-     stop OK, Super Sonic held 626 extra frames [confirmed, `[boost]` log]. User asked for more, all
-     **implemented, built on PC, not played**: speed pulled back to boost speed after turns/bumps; Super Sonic
-     ramps exponentially to 350 km/h over 4 s held; Riders Plus fold-out "Riders Plus features" (Auto spin, Hold
-     to boost, on by default, only with Riders Plus); Super Sonic gains 5000 fuel per spin turn; Auto spin gives
-     the stick back when the game counts no turns for 2 s (user lost stick control at a last-lap spin section
-     once; cause [likely], not proven). Online/recording sync coded (welcome m[6] bit 1, header flag 16), untested.
-   - **Overlay bug (user, 2026-11-20):** wrapping up past the top of a long (scrolling) Gameplay page lands the
-     cursor in the middle of the page instead of the very end. menu.cpp: page child is NavFlattened, wrap via
-     NavMoveRequestTryWrapping LoopY on the outer window; clipped items are not scored. Not fixed yet.
-   - **On the Switch OLED (2026-11-20 night):** dev build v0.8.7-33-gb72933d (NRO SHA-256 1e245000..., readback
-     verified, env.txt `SR_BOOSTLOG=1`); not started yet. Rollback: sonicriders.autospin-20261120.nro. S23: still
-     the Auto spin build.
-   - Next: user plays PC and/or Switch (normal gear + Super), fix the overlay wrap, S23 build, merge.
+2. **Hold to boost + Super Sonic package + Auto spin (#23), one release; on hold until the user accepts it all.**
+   - Auto spin: merged to main 2026-11-20, not released; user-played on PC (1P + 2P), Switch OLED, S23.
+   - Branch `claude/auto-spin` (pushed, **not merged**; Switch 2 copy: local `claude/switch2-holdboost`, never push):
+     Hold to boost, Super climb to 350 km/h, Super boost view (full in ~0.4 s), Ring Replenish paid per source
+     (grind 70 %, flying 45 % + growth cut, objects as before, spin turn ~1.45 rings, tricks by rank C 15 / B 22 /
+     A 30 / AA 33 / S 37 / SS 45 / X 75 rings), Cheats tab ("No ring decrease (Super Sonic)", never online), overlay
+     Up/Down wrap with scrolling, clock-gap fix for Switch sleep. **Accepted by the user on Switch 1 (2026-11-20):
+     "Super Sonic feels super"**; overlay wrap tested by remote on Switch 1; sleep fix not retested; boost
+     muffle sound turned off (user disliked it; SR_BOOSTSOUND=1 keeps it).
+   - Before merging: remove the temporary F1 "Super Sonic flight test" section, SR_FORCESUPER hooks, SR_SUPERDIAG;
+     pick the flying pose (34) as default; S23 build; release chart of trick rings.
+   - **Next (user, 2026-11-20):** (a) let P2-P4 pick the same character (several Super Sonics): find Player Entry's
+     "taken" check (docs/notes/roster.md: taken bytes work + 0x20 + id; f_81941560 is the *gear* cursor, not
+     characters); (b) keep Super Sonic gold on foot (run-up, standing at the start, out of rings): he is blue
+     whenever on foot (state +0x1034 = 1 / 25) while +0xBA stays 11; model choice not found; then board hidden in
+     the flying pose.
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
-   perftest passed; test zip posted to #33. The reporter's APK **crashes at start** (crash report posted 2026-11-20 05:42,
-   saved locally as .local/android-armv7/build/issue33-crash-20261120.txt); read it with log-reader next. Not merged.
+   perftest passed. The reporter's APK stopped with "cannot open the disc image" (no .iso in the app folder; 32-bit
+   memory setup worked) [confirmed, crash report]. Plain copy-the-iso steps posted 2026-11-20; waiting for them.
+   Recommended code fix (not done): an on-screen message instead of closing, and also accept an .iso in files/.
 4. **Switch 2 Race Select audio breakup** (one freeze, then lasting distortion; Unlimited off did not help).
    Cause unknown; whether Alpha 1 had it at the same severity is unproven. Start from the saved log with log-reader.
 5. **#6** rare post-race "Now Loading" hang (notes: docs/notes/loading-hang.md). **#29**: fix released in
@@ -83,9 +82,9 @@
 
 ## Next hardware test
 
-- Hold to boost on the Switch OLED (build above): hold through turns/bumps, Super Sonic to 350 km/h, Super rings in
-  spin scenes, fold-out in F1 > Gameplay, no stuck stick. Report docked/handheld (docked CPU 1785 / GPU 1152 /
-  MEM 2133; handheld CPU 1785 / GPU 614 / MEM 2133); pull /switch/sonicriders/sonicriders.log for log-reader.
+- Installed: Switch 1 ba1b391 (NRO a2a726ea..., env.txt SR_BOOSTLOG=1), Switch 2 49fa438ebf79. Next: several
+  Super Sonics in 2P split screen once (a) exists; a long sleep with the game open (sleep fix). Report docked /
+  handheld (docked CPU 1785 / GPU 1152 / MEM 2133; handheld CPU 1785 / GPU 614 / MEM 2133).
 
 - Online: a PC-Switch race over the internet once room codes + relay exist (original Switch OLED, overclocked:
   docked CPU 1785 / GPU 1152 / MEM 2133; state the mode and clocks). Online test hardware: gaming laptop + two

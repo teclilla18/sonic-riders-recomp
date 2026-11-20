@@ -112,3 +112,4 @@ Environment variables read by `tools/recomp/gcrecomp.py` when generating code (a
   if ninja says there is nothing to do [uncertain].
 
 - `SR_SHUTDOWN_DELAY_MS=1..5000` (Android): diagnostic hold after explicit Vulkan/SDL cleanup and owned exit handlers, before direct process termination; verifies delayed shutdown faults. Normal quits have no delay.
+- `SR_SUPERDIAG=1`: logs racer 0's (Chaos Emerald gear) rarely changing bytes each race (game_levels.c super_diag). `SR_BOOSTSOUND=1`: the held Super boost muffle/clip sound (off by default). With `SR_BOOSTLOG=1`, `[reward]` / `[trick]` lines show each Super Sonic reward by source.
