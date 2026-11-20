@@ -342,36 +342,46 @@ static void super_diag(void) {
  * gold <-> blue switch are the form. Also, once per race, every racer word that looks like a pointer (objects to
  * follow next). */
 static void super_diag2(void) {
+    /* regions: the racer, then the objects its words +0x6B8 / +0x820 / +0xA3C point to (0x800 bytes each) */
+    enum { NREG = 4, OBJ = 0x800, TOT = GAME_PLAYER_SIZE + 3 * OBJ };
+    static const uint32_t ptr_off[NREG] = {0, 0x6B8u, 0x820u, 0xA3Cu};
+    static const uint32_t reg_len[NREG] = {GAME_PLAYER_SIZE, OBJ, OBJ, OBJ};
     static int on = -1;
-    static uint8_t snap[GAME_PLAYER_SIZE], prev[GAME_PLAYER_SIZE];
-    static uint16_t changes[GAME_PLAYER_SIZE];
+    static uint8_t snap[TOT], prev[TOT];
+    static uint16_t changes[TOT];
+    static uint32_t base[NREG];
     static uint32_t step, events;
     static int have;
     if (on < 0) { const char* e = getenv("SR_SUPERDIAG"); on = e && atoi(e) == 2; }
     if (!on) return;
     uint32_t p = GAME_PLAYERS;
     if (!active_race() || ld8(p + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD) { have = 0; return; }
+    for (int r = 0; r < NREG; r++) {
+        uint32_t b = r ? ld32(p + ptr_off[r]) : p;
+        if (b < 0x80000000u || b >= 0x81800000u - OBJ) b = 0;  /* MEM1 heap objects only */
+        if (r && b != base[r]) have = 0;  /* a new object: start over */
+        base[r] = r ? b : p;
+    }
     if (!have) {
-        for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) { snap[o] = prev[o] = ld8(p + o); changes[o] = 0; }
+        uint32_t k = 0;
+        for (int r = 0; r < NREG; r++)
+            for (uint32_t o = 0; o < reg_len[r]; o++, k++) {
+                snap[k] = prev[k] = base[r] ? ld8(base[r] + o) : 0;
+                changes[k] = 0;
+            }
         have = 1;
         step = 0;
-        char line[600];
-        int n = 0;
-        for (uint32_t o = 0; o + 4 <= GAME_PLAYER_SIZE && n < 560; o += 4) {
-            uint32_t w = ld32(p + o);
-            if ((w >= 0x80000000u && w < 0x81800000u) || (w >= 0x81800000u && w < 0x81C00000u))
-                n += snprintf(line + n, sizeof line - (size_t)n, " %03X=%08X", o, w);
-            if (n > 520) { rt_log("[superdiag2] pointers:%s", line); n = 0; }
-        }
-        if (n) rt_log("[superdiag2] pointers:%s", line);
+        rt_log("[superdiag2] regions: racer %08X, +6B8 -> %08X, +820 -> %08X, +A3C -> %08X", base[0], base[1], base[2], base[3]);
         return;
     }
     step++;
-    for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) {
-        uint8_t v = ld8(p + o);
-        if (v != prev[o] && changes[o] < 65535) changes[o]++;
-        prev[o] = v;
-    }
+    uint32_t k = 0;
+    for (int r = 0; r < NREG; r++)
+        for (uint32_t o = 0; o < reg_len[r]; o++, k++) {
+            uint8_t v = base[r] ? ld8(base[r] + o) : 0;
+            if (v != prev[k] && changes[k] < 65535) changes[k]++;
+            prev[k] = v;
+        }
     static uint8_t last_state = 0xFF;
     uint8_t st = ld8(p + 0x1034u);
     if (st == last_state) return;
@@ -380,14 +390,16 @@ static void super_diag2(void) {
     char line[700];
     int n = snprintf(line, sizeof line, "[superdiag2] #%u step %u state %u anim %u rings %u:", events, step, st,
                      ld32(p + 0x764u), ld32(p + 0xB98u));
-    for (uint32_t o = 0; o < GAME_PLAYER_SIZE; o++) {
-        uint8_t v = ld8(p + o);
-        if (v != snap[o] && changes[o] * 4u < step) {  /* not a byte that changes on most steps */
-            n += snprintf(line + n, sizeof line - (size_t)n, " %03X:%02X>%02X", o, snap[o], v);
-            if (n > 640) { rt_log("%s", line); n = snprintf(line, sizeof line, "[superdiag2] #%u more:", events); }
+    k = 0;
+    for (int r = 0; r < NREG; r++)
+        for (uint32_t o = 0; o < reg_len[r]; o++, k++) {
+            uint8_t v = base[r] ? ld8(base[r] + o) : 0;
+            if (v != snap[k] && changes[k] * 4u < step) {  /* not a byte that changes on most steps */
+                n += snprintf(line + n, sizeof line - (size_t)n, " %c%03X:%02X>%02X", "RABC"[r], o, snap[k], v);
+                if (n > 640) { rt_log("%s", line); n = snprintf(line, sizeof line, "[superdiag2] #%u more:", events); }
+            }
+            snap[k] = v;
         }
-        snap[o] = v;
-    }
     rt_log("%s", line);
 }
 
