@@ -62,7 +62,10 @@
    - **Overlay bug (user, 2026-11-20):** wrapping up past the top of a long (scrolling) Gameplay page lands the
      cursor in the middle of the page instead of the very end. menu.cpp: page child is NavFlattened, wrap via
      NavMoveRequestTryWrapping LoopY on the outer window; clipped items are not scored. Not fixed yet.
-   - Next: user PC test (normal gear + Super), fix the overlay wrap, then Switch + S23, docs, merge.
+   - **On the Switch OLED (2026-11-20 night):** dev build v0.8.7-33-gb72933d (NRO SHA-256 1e245000..., readback
+     verified, env.txt `SR_BOOSTLOG=1`); not started yet. Rollback: sonicriders.autospin-20261120.nro. S23: still
+     the Auto spin build.
+   - Next: user plays PC and/or Switch (normal gear + Super), fix the overlay wrap, S23 build, merge.
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
    perftest passed; test zip posted to #33. The reporter's APK **crashes at start** (crash report posted 2026-11-20 05:42,
    saved locally as .local/android-armv7/build/issue33-crash-20261120.txt); read it with log-reader next. Not merged.
@@ -79,6 +82,10 @@
    changing the history check.
 
 ## Next hardware test
+
+- Hold to boost on the Switch OLED (build above): hold through turns/bumps, Super Sonic to 350 km/h, Super rings in
+  spin scenes, fold-out in F1 > Gameplay, no stuck stick. Report docked/handheld (docked CPU 1785 / GPU 1152 /
+  MEM 2133; handheld CPU 1785 / GPU 614 / MEM 2133); pull /switch/sonicriders/sonicriders.log for log-reader.
 
 - Online: a PC-Switch race over the internet once room codes + relay exist (original Switch OLED, overclocked:
   docked CPU 1785 / GPU 1152 / MEM 2133; state the mode and clocks). Online test hardware: gaming laptop + two

@@ -1993,3 +1993,5 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   section never ran is [likely], not proven.
 - Open: overlay wrap from the top of a long page lands mid-page (NavFlattened child, clipped items not scored).
   [uncertain] online sync (welcome m[6] bit 1, recording flag 16), Switch, Android.
+- Deployed to the Switch OLED the same night (v0.8.7-33-gb72933d, SHA-256 readback verified, `SR_BOOSTLOG=1`);
+  not booted on hardware yet [uncertain]. No Eden run (no renderer or platform change).
