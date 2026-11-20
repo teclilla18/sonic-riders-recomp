@@ -88,9 +88,9 @@ static int active_race(void) {
 #define REPLENISH_DEN 10
 /* the second tuning (the user, 2026-11-20: "still too broken", chains of hoops / grinds / objects grew the
  * game's reward each time): one step's air rewards count up to this many rings before the share above, and a
- * counted spin turn gives SPIN_FUEL (the game's 5000 x 0.15, about 0.7 rings) */
+ * counted spin turn gives SPIN_FUEL (the game's 5000 x 0.1, about 0.45 rings; the third tuning) */
 #define REWARD_MAX_RINGS 4u
-#define SPIN_FUEL 750u
+#define SPIN_FUEL 500u
 static uint32_t g_gain_racer, g_gain_start;  /* the racer the fuel step is on, and its fuel before the step */
 
 /* The fuel step fn 81815xxx (racer r29): just before it adds the step's air rewards (+0x988) to the fuel. */
@@ -127,6 +127,9 @@ uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32
          * rewards were kept, rails as before */
         if (settings_ring_replenish() && (int32_t)g_gain_start >= 0 && air > g_gain_start) {
             uint32_t gained = air - g_gain_start, kept = (uint32_t)((uint64_t)gained * REPLENISH_NUM / REPLENISH_DEN);
+            /* in a spin section the game's own refill (5000 a turn) also lands here: only lv_super_spin_turn pays
+             * there (Switch log 2026-11-20: both paid) */
+            if (ld16(racer + 0x624u) == 1) kept = 0;
             air = g_gain_start + kept;
             if (getenv("SR_BOOSTLOG") && gained >= 500)
                 rt_log("[replenish] Super Sonic fuel +%u (of +%u), now %u", kept, gained, air);
@@ -384,7 +387,7 @@ void lv_texture_decoded(GxTexture* t) {
 
 /* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
  * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
- * gives him SPIN_FUEL here (750, about 0.7 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * gives him SPIN_FUEL here (500, about 0.45 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
     if (!settings_ring_replenish() || !super_racer(racer)) return;

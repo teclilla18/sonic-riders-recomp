@@ -154,7 +154,9 @@ float boost_hold_fov(void) {
     return (float)(1.0 + FOV_BOOST_MAX * g_fov_now);
 }
 
-double boost_hold_audio(void) { return g_fov_now; }  /* read on the audio side; written once per video frame */
+/* the sound (the user, 2026-11-20: "immediately rather than gradually, like in NFS"): full at once while a held
+ * Super boost goes on (80 %, up to 100 % with the climb), nothing the moment it ends; audio_out.c smooths the steps */
+double boost_hold_audio(void) { return g_fov_owner >= 0 ? 0.8 + 0.2 * g_fov_target : 0.0; }
 
 static void stop(int i, uint32_t racer, const char* why) {
     if (log_on() && g_extra[i])
