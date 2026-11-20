@@ -9,6 +9,15 @@ Tails/Wave/NiGHTS -12, Cream -14, Rouge -11, Knuckles/AiAi/E-10R -7, Amy/Storm/E
 Matches the racer level blocks (game-addresses.md): block +0x08 = top speed, +0x34 = boost (x216 = these units).
 Blue Star in RAM: +0x08 162/162/180, +0x34 200/230/250, +0x30 (drift dash) 50/80/100, +0x28 boost cost 25/30/40 x1000.
 
+Super Sonic (Chaos Emerald, internal gear 18) uses the first live block and stays at native level 0.
+Unmodified baseline measured on PC: top 182, drift dash 100, boost 250; max-air/fuel scale 110000.
+Riders Plus multiplies these live values, including stat mods, rather than substituting the gear-table row:
+Local balance targets, top/boost/drift km/h: Base195/270/110; Lv.4 220/300/125; Lv.5 240/330/140.
+Each field uses target/vanilla-baseline ratios; Base ownership also restores original stats when disabled.
+The fuel ceiling is max-air × 999/100; the ring conversion denominator and costs remain original.
+These are live block values, not a claim that every terrain/state reaches that road speed.
+See [implementation and validation](riders-plus-local-hud.md).
+
 | # | Gear | Top speed Lv1-2 | Lv3 | Boost Lv1 / Lv2 / Lv3 | Off-road |
 |---|---|---|---|---|---|
 | 1 | Blue Star | 162 | 180 | 200 / 230 / 250 | (Lv1) 85, (Lv2/3) 95 |

@@ -101,7 +101,8 @@ static void rec_open(const char* path, int flags) {
     memcpy(h, "SRINPUT1", 8);
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
-    put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u));
+    put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u) |
+          (settings_boost_hold() ? 16u : 0u));
     float k = settings_game_k();  /* the game's camera aspect (an online session's: the room's) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -134,6 +135,7 @@ static int rep_open(const char* path) {
     if (get32(h + 16) & 2) g_online_save = 1;  /* recorded on the generated online save: replayed on it too */
     if (get32(h + 16) & 8) g_online_rules = 1;  /* the online rules changed the controllers: replayed with them */
     settings_fix_ring_cap(get32(h + 16) & 4 ? 999 : 100);  /* the recorded ring cap: game state */
+    settings_fix_boost_hold(get32(h + 16) & 16 ? 1 : 0);   /* and Hold to boost (older recordings: off) */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
@@ -254,7 +256,8 @@ static void net_send_input(void) {
 /* welcome: player number, input delay, players, the host's ring cap (byte 6 bit 0: 999, else 100) and
  * camera aspect (EFB width factor k, f32 at byte 8): game state, so every machine in the session uses the host's */
 static void net_send_welcome(void) {
-    uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players, settings_ring_cap() == 999, 0};
+    uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players,
+                     (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0)), 0};
     float k = settings_game_k();  /* the room's camera aspect (the wider of the two screens) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -330,12 +333,14 @@ static void net_poll(int ms) {
 static void net_frame(GcPad* pads) {
     if (g_net_ended) {  /* alone: our controller as player g_me, the other one neutral */
         input_get_pad(0, &pads[g_me]);
+        auto_spin_pad(g_me, &pads[g_me], g_frame + 1);
         return;
     }
     uint32_t f = g_frame + 1;
     GcPad local;
     input_get_pad(0, &local);
     g_local_upto = f + (uint32_t)g_delay;
+    auto_spin_pad(g_me, &local, g_local_upto);  /* the frame it is for */
     pack(&local, g_in[g_me][g_local_upto % RING]);
     g_in_f[g_me][g_local_upto % RING] = g_local_upto;
     net_send_input();
@@ -540,6 +545,7 @@ static void net_connect(const char* spec) {
                 memcpy(&k, &kb, 4);
                 settings_fix_wide_k(k);  /* the host's camera aspect */
                 settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
+                settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
                 break;
             }
         }
@@ -554,7 +560,7 @@ static void net_connect(const char* spec) {
     g_net = 1;
     g_recv_upto = g_peer_ack = (uint32_t)g_delay;  /* the first D frames: neutral for everyone, never sent */
     g_last_recv_ns = platform_now_ns();
-    atexit(net_bye_at_exit);
+    rt_atexit(net_bye_at_exit);
     overlay_set_banner(NULL);
 }
 
@@ -574,7 +580,7 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
     const char* n = getenv("SR_PADS");
     g_ports = n && atoi(n) > 1 ? (atoi(n) > MAXP ? MAXP : atoi(n)) : 1;
     if (rep && !rep_open(rep)) rt_fatal("SR_REPLAY: cannot replay %s", rep);
-    atexit(rec_close);
+    rt_atexit(rec_close);
 }
 
 void netplay_connect(void) {  /* main(), after the memory card is loaded, before the game runs */
@@ -583,6 +589,7 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
      * host and a recording use this machine's, a joiner the host's (net_connect) */
     if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
+    if (g_active) settings_fix_boost_hold(settings_boost_hold());  /* and Hold to boost */
     if (net) net_connect(net);
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
@@ -707,7 +714,7 @@ static void online_rules(GcPad* pads) {
 void netplay_latch(GcPad* pads) {
     for (int ch = 0; ch < MAXP; ch++) pads[ch] = k_neutral;
     if (!g_active) {
-        for (int ch = 0; ch < MAXP; ch++) input_get_pad(ch, &pads[ch]);
+        for (int ch = 0; ch < MAXP; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], g_frame + 1); }
         return;
     }
     uint32_t f = g_frame + 1, sum = g_sum_next;
@@ -733,7 +740,7 @@ void netplay_latch(GcPad* pads) {
         sum_check(f);
         net_frame(pads);
     } else {
-        for (int ch = 0; ch < g_ports; ch++) input_get_pad(ch, &pads[ch]);
+        for (int ch = 0; ch < g_ports; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], f); }
     }
     if (g_online_rules && !g_rep) online_rules(pads);  /* a replay reads them as recorded (already applied) */
     if (g_rec) {

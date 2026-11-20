@@ -15,6 +15,7 @@ faster it gets fixed:
      folder: attach the zip. (Steam Deck in Game Mode: the zip is in the game's folder, reachable from Desktop
      Mode.) The logs hold folder names from your PC; look through it first if that matters to you.
    - Switch: in `switch/sonicriders/` on the SD card.
+   - Switch 2 Alpha: in `switch/sonicriders-switch2/`; include runtime/previous and `lifecycle-NNNNNN.log`. State firmware, kaiHEN/loader version, handheld/docked mode, known clocks, stage/character/gear and approximate audio/stutter event times. Review logs for private paths; never attach your NRO or disc. [Known issues](SWITCH2-ALPHA.md).
    - PC by hand: in the install folder. Android: the app shows a crash report after a crash.
 
    If the game crashed or froze, copy them soon: each start moves the last log to

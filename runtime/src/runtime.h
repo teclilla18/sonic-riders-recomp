@@ -21,6 +21,7 @@ uint64_t platform_now_ns(void);  /* monotonic, cheap (called thousands of times 
 void platform_sleep_ns(uint64_t ns);  /* a precise sleep (sub-millisecond) */
 void rt_host_pause(int on);  /* frame_pacing.c: hold the game thread at its next frame end (iOS background) */
 void platform_audio_pause(int on);  /* audio_sdl.c: stop the output and drop what is queued */
+void platform_audio_shutdown(void);  /* SDL hosts: close once, prevent later producer calls into SDL */
 #ifdef __ANDROID__
 void platform_game_step_work(uint64_t work_ns);  /* the game thread's work for one step (ADPF hint) */
 #endif
@@ -36,6 +37,9 @@ void game_mods_frame(void);   /* once a presented frame (gx_render.c) */  /* bel
 /* log.c */
 void rt_log(const char* fmt, ...);
 _Noreturn void rt_fatal(const char* fmt, ...);
+/* Application-owned persistent-data handlers; Android runs these before process termination. */
+int rt_atexit(void (*handler)(void));
+_Noreturn void rt_exit(int status);
 
 /* memory.c: the guest physical window (see ppc.h) */
 #define MEM1_SIZE 0x01800000u        /* what the game sees */
@@ -130,6 +134,8 @@ typedef struct GcPad {
     uint8_t trig_l, trig_r;
 } GcPad;
 void input_get_pad(int chan, GcPad* out);
+/* auto_spin.c: turns the stick of port `port` in a spin scene (frame >= 0: the game frame it is for) */
+void auto_spin_pad(int port, GcPad* p, int64_t frame);
 int input_connected(int chan);  /* GameCube port 0-3 has a controller (port 0 always does) */
 /* SDL builds: row i of the button map (GameCube input, key, controller button); 0 past the end */
 int input_map_row(int i, const char** gc, const char** key, const char** pad);

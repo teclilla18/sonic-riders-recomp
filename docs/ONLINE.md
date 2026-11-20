@@ -181,6 +181,10 @@ moves. Checked [confirmed, PC frames, offline `SR_VIEW`]: Metal City 2P route fr
 and Fit 16:9. Not checked: other tracks, 3-4P, Switch/phones, a played session; far objects at the new top and
 bottom edges may be missing (the game culls to its own view; none seen).
 
+The separate local split-HUD pass (2026-11-18) runs only when no own-view player is selected. It reuses bounding
+boxes but does not apply own-view cropping/hiding/camera expansion. Original 4:3 also bypasses it. See
+[local HUD validation](notes/riders-plus-local-hud.md); offline `SR_VIEW=1/2` checks are distinct from a live peer test.
+
 **Two-player race route** (test scripts, not in the repository): from boot on the online save, both players pick
 characters at Player Entry (player 2 presses A on its box), START, and both steer (main stick held forward, left and
 right, A) through Metal City. In lockstep each copy gets its own player's part of the script.

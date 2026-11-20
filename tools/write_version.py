@@ -20,8 +20,9 @@ def build_version():
                 return v
     except OSError:
         pass
+    # --tags: releases are lightweight tags (v0.8.7), which plain describe skips (it named v0.8.3, the last annotated one)
     try:
-        return subprocess.run(["git", "describe", "--always", "--dirty", "--abbrev=8"], cwd=ROOT,
+        return subprocess.run(["git", "describe", "--tags", "--always", "--dirty", "--abbrev=8"], cwd=ROOT,
                               capture_output=True, text=True, check=True).stdout.strip() or "unknown"
     except (OSError, subprocess.CalledProcessError):
         return "unknown"

@@ -4,7 +4,13 @@ For native Switch 2 Alpha 1, use the [separate alpha guide](SWITCH2-ALPHA.md). S
 
 [← Back to the README](../README.md)
 
+**First time? Use a separate illustrated booklet:**
+[Nintendo Switch — Stable](install-switch.md) · [Nintendo Switch 2 — Experimental Alpha](install-switch2.md).
+Each includes actual installer pictures, one-action steps, SD folder examples, updates and help.
+The existing technical instructions below remain available.
+
 - [What you need](#what-you-need)
+- [Install on Switch 2 Alpha](#install-on-switch-2-alpha)
 - [Install on Switch](#install-on-switch)
 - [Install on PC](#install-on-pc)
 - [Install on Android](#install-on-android)
@@ -55,6 +61,12 @@ For native Switch 2 Alpha 1, use the [separate alpha guide](SWITCH2-ALPHA.md). S
   Android build tools (a 1.1 GB download the first time, about 3 GB unpacked, kept for updates).
 - A **USB cable** between the phone and the PC, and **USB debugging** turned on (step 1 below).
 
+## Install on Switch 2 Alpha
+
+Use the [separate Alpha 2 pre-release](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2), not the original Switch ZIP or stable automatic updater. Start with the [illustrated beginner booklet](install-switch2.md), or follow the [technical Switch 2 guide](SWITCH2-ALPHA.md) for advanced details.
+
+The target folder is `/switch/sonicriders-switch2/`. Fresh defaults are 2x, 60 FPS and no automatic exit; live resolution changes are disabled. Keep existing settings, saves and caches. Hold Minus about half a second, choose Quit Game and confirm for hbmenu. Stuttering, music/announcer dropout and temporary distortion remain known alpha issues. Updates are manual and separate from original Switch auto-updates.
+
 ## Install on Switch
 
 1. **Download** `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../../releases/latest).
@@ -89,9 +101,9 @@ The setup can also make a small **HOME-screen icon** (a "forwarder" `.nsp`): it 
 full memory, without holding R over a game. Tick *Make a HOME-screen icon* in the installer window (the
 command-line setup asks right after "What to build"):
 
-- **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM](https://github.com/saneki/Lockpick_RCM)
+- **What you need:** your console's **`prod.keys`**, dumped with [Lockpick_RCM_Pro](https://github.com/sthetix/Lockpick_RCM_Pro/releases/latest) (unzip it onto the SD card, then hekate → Payloads → Lockpick_RCM_Pro.bin)
   (the setup finds them in `%USERPROFILE%\.switch\prod.keys` or asks where they are; they are read where they
-  are, never copied or uploaded), and on the console **DBI** or **Goldleaf** plus **up-to-date sigpatches**.
+  are, never copied or uploaded), and on the console **DBI** or **Goldleaf** plus an **up-to-date sys-patch** (or sigpatches).
 - **The picture (optional):** your own picture (`.png`, `.ico`, `.jpg`, `.bmp`; square, **256 x 256** or bigger
   looks best; it is made into the 256 x 256 JPEG the HOME menu shows), or the game's own memory-card icon.
   The same picture is used for the PC and Android icons when you build those too.
@@ -100,7 +112,7 @@ command-line setup asks right after "What to build"):
   *Install* (to the SD card); or Goldleaf → *Explore SD card* → the `.nsp` → *Install* → *SD card*. Go back to
   HOME: the icon is there, and the `.nsp` on the card can be deleted.
 - The icon starts `switch/sonicriders/sonicriders.nro`: keep the game there. Updating the game = replacing the
-  `.nro`; the icon stays. If opening the icon shows an error, update your sigpatches.
+  `.nro`; the icon stays. If opening the icon shows an error, update sys-patch (or your sigpatches).
 - The `.nsp` is packed with your keys: it is yours only, never share it.
 
 Already built the game? Run the setup again (it reuses the downloaded tools) and answer **y** to the HOME-screen
@@ -272,6 +284,8 @@ pauses the game. The game's log is `sonicriders.log` in the app's folder (Files 
 *Sonic Riders*); the setup's log is `setup.log` in the install folder.
 
 ## Updating to a new version
+
+**Switch 2 Alpha:** download its dedicated pre-release ZIP, extract to a new folder and rerun its installer. Keep `/switch/sonicriders-switch2/` saves/settings/caches/env.txt. This target does not use the original Switch automatic updater. [Full instructions](SWITCH2-ALPHA.md#update-and-rollback).
 
 > 👉 **[Easy-read update guide](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN)**: the same steps, colour coded, in a reading-friendly font, with a tab for each device.
 

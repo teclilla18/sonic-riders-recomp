@@ -1,4 +1,5 @@
 # Building from source
+**Native Switch 2 Alpha:** use the [published alpha setup/source package](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.6-switch2-alpha.1) and [its guide](SWITCH2-ALPHA.md). Main does not include the experimental runtime target; do not use the original Switch build for Switch 2.
 
 [← Back to the README](../README.md)
 

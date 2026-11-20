@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__ANDROID__) || defined(SR_IOS)
+#include <SDL.h>
+#endif
 
 #include "imgui.h"
 #include "imgui_internal.h"  /* ClearActiveID: touch scrolling (phones) */
@@ -67,6 +70,7 @@ void platform_open_game_folder(void);
 #endif
 #ifdef _WIN32
 const char* update_available(void);  /* update_check.c: the newer release's tag, or NULL */
+const char* update_unbuilt(void);    /* update_check.c: a newer version unpacked here but not built, or NULL */
 const char* update_notes(void);      /* its release notes, or NULL */
 int SDL_OpenURL(const char* url);
 #define UPDATE_PAGE "https://github.com/teclilla18/sonic-riders-recomp/releases/latest"
@@ -123,6 +127,10 @@ Job* g_done;       /* drawn (helper -> render thread) */
 bool g_busy;       /* a job is out (render thread only) */
 bool g_retry;      /* a changed picture waits for the helper */
 bool g_worker_started;
+bool g_worker_stopping, g_worker_stopped;
+#if defined(__ANDROID__) || defined(SR_IOS)
+SDL_Thread* g_raster_thread;
+#endif
 
 void job_free(Job* j) {
     for (ImDrawList* l : j->dd.CmdLists) IM_DELETE(l);
@@ -167,7 +175,8 @@ int raster_thread(void*) {
         Job* j;
         {
             std::unique_lock<std::mutex> lk(g_mx);
-            g_cv.wait(lk, [] { return g_job != nullptr; });
+            g_cv.wait(lk, [] { return g_job != nullptr || g_worker_stopping; });
+            if (g_worker_stopping) break;
             j = g_job;
             g_job = nullptr;
         }
@@ -179,6 +188,11 @@ int raster_thread(void*) {
         std::lock_guard<std::mutex> lk(g_mx);
         g_done = j;
     }
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        g_worker_stopped = true;
+    }
+    g_cv.notify_all();
     return 0;
 }
 
@@ -666,6 +680,25 @@ void tab_gameplay() {
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
+    /* the Riders Plus extras: a fold-out list under its check box, each on by default, active only with it */
+    if (ImGui::TreeNode("Riders Plus features")) {
+        ImGui::BeginDisabled(!g_settings.ring_cap_999);
+        if (check("Auto spin", &g_settings.auto_spin,
+                  "On by default (with Riders Plus). In the scenes where the game asks you to turn the stick round "
+                  "and round, the stick is turned for you at a fast player's pace (7 turns a second): your air "
+                  "refills and you speed up without wearing out your stick. Only your own racers, never the CPUs."))
+            settings_apply();
+        if (check("Hold to boost", &g_settings.boost_hold,
+                  "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
+                  "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
+                  "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
+                  "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
+                  "350 km/h. Online, the host's setting is used."))
+            settings_apply();
+        ImGui::EndDisabled();
+        if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
+        ImGui::TreePop();
+    }
 }
 
 void tab_mods() {
@@ -689,6 +722,13 @@ void tab_about() {
     heading("Sonic Riders native port");
     ImGui::Text("Version: %s", g_build_version);
 #ifdef _WIN32
+    if (const char* unpacked = update_unbuilt()) {
+        char line[160];
+        snprintf(line, sizeof line, "%.*s is unpacked in this folder but not installed yet.", (int)strcspn(unpacked, " "), unpacked);
+        warn(line);
+        help("Quit the game, open SonicRidersLauncher.exe and press FINISH UPDATE (or run Install Sonic Riders (PC).bat). "
+             "Your saves and settings stay.");
+    }
     if (const char* latest = update_available()) {
         char line[96];
         snprintf(line, sizeof line, "Update available: %s", latest);
@@ -954,7 +994,12 @@ void frame() {
     content_box(dd, j->box);
     if (!g_worker_started) {
         g_worker_started = true;
+#if defined(__ANDROID__) || defined(SR_IOS)
+        g_raster_thread = SDL_CreateThreadWithStackSize(raster_thread, "menu-raster", 8u << 20, nullptr);
+        if (!g_raster_thread) rt_fatal("[menu] cannot create raster thread: %s", SDL_GetError());
+#else
         rt_thread_start(raster_thread, nullptr);
+#endif
     }
     g_busy = true;
     {
@@ -1047,6 +1092,33 @@ void overlay_mouse_wheel(float dx, float dy) {
 }
 
 void overlay_request_quit(void) { g_quit_request = 1; }
+
+void overlay_shutdown(void) {
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        if (g_worker_stopping) return;
+        g_worker_stopping = true;
+    }
+    g_cv.notify_all();
+#if defined(__ANDROID__) || defined(SR_IOS)
+    if (g_raster_thread) {
+        SDL_WaitThread(g_raster_thread, nullptr);
+        g_raster_thread = nullptr;
+    }
+#else
+    if (g_worker_started) {
+        std::unique_lock<std::mutex> lk(g_mx);
+        g_cv.wait(lk, [] { return g_worker_stopped; });
+    }
+#endif
+    /* No worker can retain an ImDrawList or font-atlas pointer after this point. */
+    if (g_job) job_free(g_job);
+    if (g_done) job_free(g_done);
+    g_job = g_done = nullptr;
+    g_busy = g_open = g_had_image = false;
+    if (g_ready) ImGui::DestroyContext();
+    g_ready = false;
+}
 
 int overlay_take_quit_request(void) {
     int r = g_quit_request;

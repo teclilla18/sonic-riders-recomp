@@ -78,6 +78,23 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
   https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) and the first-time install guide (`docs/install-guide.html`,
   https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W). Bump the versions and zip names inside both, republish each
   to its same URL, and put both links in the release notes; the README's top links to them too.
+- **Release downloads are setup ZIPs only** (user, 2026-11-19): no `.sha256` / `SHA256SUMS` files, pictures or
+  other extras in a release's assets. A checksum, if wanted, goes in the notes' folded test details; pictures go
+  in `docs/images/` and are linked by their raw `main` URL.
+- **Release-notes style** (user approved, 2026-11-19; copy v0.8.7 / Switch 2 Alpha 2): banner picture (Switch 2
+  releases: `docs/images/switch2-poster.jpg`; Riders Plus: `docs/images/riders-plus/riders-plus-banner.jpg`),
+  centred title + one line, ✨ Highlights (emoji + bold lead per bullet), 📥 Download, 🔄 Already installed?,
+  ⚠️ Known issues, ❤️ Thanks, test details folded in `<details>`, then "Full changelog" + a compare link. Plain,
+  short words. The newest stable notes show in the app's "See what's new", which prints tables as raw text: use
+  lists there, not tables. When a newer release comes out, add a "Newer version available" line to older pages.
+- **README style** (user approved, 2026-11-19): the Switch 2 poster stays first, then the progress bar, the
+  two-line hook, the three buttons and **all badges together**; a short news box; the showcase pictures; one
+  "Get it" table holding every download and guide link (no repeated links elsewhere); long text folded in
+  `<details>` or moved to `docs/`. New sections must fit this order instead of stacking announcements on top.
+- **Progress, every release and whenever an area moves:** edit `AREAS` / `VERSION` / `UPDATED` in
+  `tools/make_progress.py` and run it. It redraws the top bar, the Status card, the live badge
+  (`docs/progress.json`) and the README table numbers together (CI also runs it on push to main); update the
+  table's "Left for v1.0" text by hand.
 
 ## End of every session
 
