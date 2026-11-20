@@ -43,8 +43,9 @@ static int riding_anim(uint32_t a) {
  * a boost (65), a smash or a landing pose left him on the board until the next jump animation): jump charge, crashes,
  * smashing objects, trick rank landings, finish poses, getting on / off the board */
 static int keep_anim(uint32_t a) {
-    return a == 20 || a == 25 || a == 32 || a == 33 || a == 55 || a == 56 || (a >= 62 && a <= 64) ||
-           (a >= 66 && a <= 73);
+    /* not the trick rank landings (55/56) or smashes (32/33): the game asks for nothing after them, so he stayed on
+     * the board until the next jump (Switch 1, 2026-11-20) */
+    return a == 20 || a == 25 || (a >= 62 && a <= 64) || (a >= 66 && a <= 73);
 }
 
 static int riding_state(uint32_t st) { return st >= 5 && st <= 7; }  /* on the board, jumping, falling */
