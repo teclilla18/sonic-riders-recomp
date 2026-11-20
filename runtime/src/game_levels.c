@@ -222,7 +222,8 @@ uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
     if (i >= 0) g_site_paid[i] = 0;
     if (!settings_ring_replenish() || !super_racer(racer) || (int32_t)rewards <= 0) return original;
     /* the sites' part is already tuned; the rest is a trick landing. The game's landing reward follows the rank
-     * (Switch log 2026-11-20: 20 000, 30 000, 40 000, 45 000, 50 000, 60 000 and 100 000 for the top rank, X); Super
+     * (Switch log 2026-11-20, ranks from the user: C 20 000, B 30 000, A 40 000, AA 45 000, S 50 000, SS 60 000,
+     * X 100 000); Super
      * Sonic gets rings in proportion, TRICK_X_RINGS for X (the user: "X rank should give 75 rings"), at most that */
     uint32_t rest = rewards > paid ? rewards - paid : 0;
     uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), ring = max_air / 100u;

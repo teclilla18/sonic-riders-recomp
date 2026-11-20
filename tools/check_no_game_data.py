@@ -64,6 +64,7 @@ OWN_ART = {
     "docs/images/switch2-alpha1-banner.jpg": "b4be7ce0f7e34e3b56735283781a58c775fc5161",  # user-approved Lanmana banner, unchanged with signature (2026-11-18)
     "docs/images/switch2-poster.jpg": "1b3ad238b2a0864f3b838fbde681415262cc5d47",  # README Switch 2 poster, Lanmana art with signature (user's choice, 2026-11-19)
     "docs/images/riders-plus/riders-plus-banner.jpg": "db92bc23219a1cc21e32f950d26c205b56a49c11",  # README Riders Plus banner (user's choice, 2026-11-19)
+    "docs/images/v0.9.0/super-sonic-banner.jpg": "66e4eda38e8f110669f51927ebde8a326b82d195",  # Super Sonic release banner (user's AI art, 2026-11-20)
     "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",
     # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four
     "docs/images/compare/original-1.jpg": "4bd5401024ca6f240715dc878434d6d298f59421",

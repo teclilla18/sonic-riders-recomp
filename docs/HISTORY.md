@@ -1620,154 +1620,116 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
   spaces (reproduced fine in WSL). setup_linux.py now logs zig's error and keeps zig's cache in the tools folder
   [tested in WSL; whether it fixes the Deck: uncertain]; Linux zip replaced on v0.8.6; reply posted.
 
-## 2026-11-17: experimental native Switch 2 bring-up
+## 2026-11-18: public Switch 2 Alpha 1 announcement
 
-- **Tested [confirmed]** standalone SR2Diag48b77e581423 on the user's physical
-  firmware23.0.1 Switch2, handheld(mode0), clocks not recorded: services, timing,
-  workers/TLS/cores, input, audible audio, stack SVC guest mapping and confirmed
-  Vulkan colors. Explicit resource cleanup succeeds; post-main exit hook is
-  unobserved [likely stdio-order logging gap]. Code-map path automatically skips
-  missing advertised SVC hints, not an invalid process handle.
-- **Implemented/build-tested [confirmed]** separate switch2 target using pinned
-  ounce-devkit and shared core/Vulkan shaders, native input/audio/window services,
-  permitted-core discovery, matching sparse RW guest layout, cooperative worker
-  joins and FsFile lifecycle markers. Original Switch preprocessing and Android
-  renderer syntax checks pass; no full other-platform replay was performed.
-- **Untested:** integrated Switch2 boot, shaders, gameplay, audio pacing, shutdown,
-  loader return and performance. No acceptance/release claim. Next is bounded
-  first boot, then complete race. Work stays on feature/switch2-native locally;
-  no push, merge or publication. Details: notes/switch2.md.
+Documentation/art-only main update: user-supplied banner copied unchanged with exact
+approved SHA-1 and Lanmana credit; exact requested announcement, separate alpha links,
+platform/download/install/reporting references. Both easy-read HTML guides gain a
+Switch 2 tab using existing interactive checklists. Stable versions and other tabs
+preserved. External Claude Artifact pages require republication/verification separately.
+No runtime merge, rebuild, or release asset changes.
+Headless Edge checks passed six-tab navigation and mouse/keyboard checklist toggles
+in both guides; original platform panels, supplied artwork bytes and exact announcement
+verified, with game-data audit clean [confirmed].
 
-## 2026-11-17: native Switch 2 working build accepted
+## 2026-11-18: final Alpha 1 presentation and continuity
 
-- **Tested/accepted [confirmed]:** user reports build 7d1bc5fcd419 gameplay,
-  controls, graphics, music/sound, overlay/aspect/bloom and tried enhancements
-  working; initial loading still rocky. Handheld mode 0, clocks unrecorded.
-- Retrieved logs and exact NRO over authorized FTP read-only; SHA256 matches
-  deployed build. Preserved local binary/manifest/log snapshot and 9000-frame
-  env. Input raw handheld A reaches guest SI; 85 audio summaries show no drops
-  or delivery errors; owned cleanup and EXIT_HOOK complete.
-- **Loading cause [confirmed]:** warm startup frame240 spends 6736.22ms saving
-  pipeline cache, 0.03ms presenting, zero new pipelines. Serialization versus SD
-  write remains unmeasured. No speculative runtime fix, rebuild or deployment.
-- Local source checkpoint preserves previous targeted fixes and acceptance
-  evidence. No push, merge or publication. Extended coverage remains pending.
+Player-facing release description prepared with unchanged prior technical information
+in a collapsed section. Shared agent rules and native architecture/fix/test/release
+handoff consolidated; no runtime changes, bug investigation or builds. Thirteen-race
+regression evidence is promising, not proof of permanent freeze elimination. External
+Claude Artifact republication remains pending. Release assets/tag/stable stay unchanged.
 
-## 2026-11-17: prepare native Switch 2 Alpha 1 installer
+## 2026-11-18: consolidated Claude Code resume checkpoint
 
-- Isolated accepted f05fd81 runtime; unvalidated FPS implementation excluded.
-  User then reported build67341d614683 freezes at Player Entry with Sonic and
-  Chaos Emerald gear. Failed binary/logs/config preserved via FTP; exact
-  accepted7d1bc5fcd419 restored, pc_fps0 only, env frames0 retained.
-- Existing setup/GUI/release/Sandbox infrastructure gains a native target.
-  Compiler/SDK/build/SD destinations isolated; hashes pinned; ISO/RVZ flow reused.
-  Source-commit record avoids needing Git in a cold release install. User data
-  retained. Default60/no automatic exit; manual alpha updates remain separate.
-- Local GUI compile and targeted installer/cold-input regressions pass. Whole
-  ZIP audit and exact cold GUI/CLI/space test are mandatory candidate gates;
-  precise results/checksum/source commit recorded locally before approval.
-  Physical acceptance remains baseline-only; no release publication yet.
+Archived superseded local handoff entries and replaced the canonical handoff with
+current branch/worktree/deployment and evidence indexes. Expanded the public native
+note with implementation inventory, input/audio findings, dependency pins, source
+map, regression chronology, cache measurements and resume gates [confirmed existing
+records]. Audio causes and permanent freeze elimination remain unproven. No runtime
+edits, builds, log deletion, rollout or release changes during this handoff.
 
+## 2026-11-18: local Riders Plus Super Sonic and adaptive split HUD review
 
-## 2026-11-18: isolated native stall diagnostics
+- [confirmed, static + minimized PC] Super stays native level 0 and reads first live block, while old extension
+  required level 2/third block. Actual gear +BB=18, transformed +BA=11/original +BF=0; +1034 is an ability mask.
+  Ring mirror derives from fuel/max-air; two native fuel clamps also limited him to 100. Both now use the 999-ring
+  ceiling without changing resource denominator/costs. Own baseline182/100/250 scales to202.222/110/275 and
+  217.389/125/300; below200/disable restores it. Feedback uses effect branch after level/speed/refill writes.
+- [confirmed, source tests + PC] Field-wise ownership avoids compounded partial stat mods. Reset before the true
+  constructor818F2008/caller81817150 and race init; preserve native level/resource and independent racer state.
+- [confirmed, PC captures] 3/4P mode4 bypassed old mode8 edge gate; shared640x480 HUD pass hides per-player viewport
+  ownership. Completed-frame pass detects half/quadrant perspectives, groups HUD artwork per owner, translates
+  projection copies, preserves sizes, timer/map, centred notifications and silhouette. No shader/backend/RAM writes.
+- Separately #29: old alternate split digit hooks never ran in local Free Race. Added actual8182D528/r4 and
+  8182D5F8/r3 cell-pointer hooks. Mixed3P Super+normal racers show4/5; issue not closed and no reply posted.
+- [confirmed] Actual-source C regressions pass thresholds, fuel clamp, partial mods, equal-valued new baseline,
+  reset/disable/gear change/eight racers; synthetic complete frames cover2/3/4P xfive aspects and state isolation.
+  PC20/20 actual races (1-4P x4:3/16:9/16:10/21:9/32:9),80 captures including pause; scene RAM checked.
+  Final mixed3P has two Super feedback events/native0/refill0 and correct per-racer digits. Plus-off baseline kept.
+  Both offline own-view players:6701 checksum steps each, full28MiB RAM and active/pause PNG files identical.
+- Full PC/Switch builds and Android ARM64 affected-source compilation pass; Eden0.1.1 boots and renders3P with
+  own captures;48DKSH scratch0. Emulator timing is not hardware evidence. Existing capped MMIO noise also occurs
+  on baseline. Early ring-only/single-clamp attempts and a stale intermediate build are explicitly superseded.
+- [unproven] Audible feedback, natural999-ring collection, full boost/drift/damage/fall/capsule play, consecutive
+  races/gear changes on devices, all stages/results/story, live peers and hardware performance/user acceptance.
+  Detailed evidence/limits: notes/riders-plus-local-hud.md. All captures/dumps/binaries/logs remain ignored/local.
+- User scope: local review only; no push/merge/release/deployment/asset replacement/replies. Private/native and
+  dirty sr-main work preserved. Inbox at start: #32 reporter confirms one completed race; #29 remained open.
+- Final renderer review found score/header artwork overlapping its gauge by six source pixels and reusing its
+  atlas. Separate groups across shared/global layers and retain a wider centre zone for compact messages.
+  Targeted3P16:9/4P32:9 final captures and same-atlas overlap regression pass; full guest RAM remains identical.
+- Later user steering authorizes Switch2 FTP deployment for playtest, retaining source local/no push or merge.
+  Native integration will use a separate checkout based on the installed personal build, matching NRO/manifest
+  backups and readback verification; it does not authorize publishing native/private experiments.
+- Authorized native playtest follow-up deployed from a separate local checkout based on the installed personal
+  baseline. Full native build/scheduler/Unlimited regressions pass; staged/final NRO/manifest hashes verified,
+  old pair backed up locally/onSD, settings/env byte-identical and saves/ISO/caches untouched. No agent launch;
+  user hardware gameplay/acceptance pending. No push/merge/release/replies; exact build/rollback inlocalhandoff.
 
-No confirmed freeze fix. Existing native no-op profiler omitted originalSwitch
-stall dump. Reuse that monitor with bounded reports and native worker-wait and
-render-queue observations; no timing/rate/resource policy changes or FPS work.
-Validated release ZIP unchanged; physical diagnosis pending.
+### 2026-11-18 - Local Super balance and OunceMTP workflow
 
+- [confirmed] Super-only Riders Plus active top/boost/drift targets: Base195/270/110, Lv4 220/300/125,
+  Lv5 240/330/140 km/h. Ratios from captured baselines preserve stat mods; applied ownership includes Base.
+  No fuel/cost/cap/native-level/feedback/HUD/acceleration/animation/board changes in this follow-up.
+- [confirmed] Actual-source regressions pass, including100 updates/tier, whole-racer non-speed isolation,
+  partial mods, Base reset/disable and standard/eight-racer controls. Minimized PC on/off routes each reach
+  six captures; exact target snapshots/native0, two on feedback events/refill0, no off feedback or spam.
+- [confirmed] Native local build7a05aa6f5f02 from4459752 validates header/identity/source hashes/sidecar;
+  hardware balance play/acceptance remains untested. Prior installedda8da376c5f4 stays unchanged.
+- [confirmed] Windows Shell COM/WPD enumerate OunceMTP SD.65,537-byte Shell and33,554,449-byte WPD SHA-256
+  roundtrips, rename/delete/overwrite refusal pass; final wrapper1,048,593-byte probe passes with cleanup.
+  Installed NRO/manifest downloaded twice/match known hashes, screenshots/log retrieved read-only.
+- Own-source local utility implements backup, temporary probe and explicitly gated NRO/manifest staging,
+  retained SD backups, SHA-256 readbacks and recovery journal. Eight fake-transport tests pass, including
+  mismatch/disconnect/no-apply gates; real installed promotion and FTP adapter not exercised this session.
+- User reports prior-build2P GUI problem,3P/4P mostly fine. Returned2P capture confirms issue;4P overlay
+  limits inspection. Log-reader finds repeated Lv5 bookkeeping at548/568 rings, no proof of repeated effects;
+  normal shutdown. No hardware benchmark claim without mode/clocks. Keep HUD unchanged in this task.
+- No installed replacement, push, merge, publish, release or external reply. Separate Issue32 owner handles
+  new Amy/Splash Canyon and Tails/Green Cave loading-hang reports. Generic workflow in notes/switch2-mtp.md;
+  exact machine paths/backups/builds in excluded canonical handoff. Progress remains76%, polish70%.
 
-## 2026-11-18: first stall snapshots and handoff mapping refinement
-
-Frame1780 fixed while VI advances; renderqueue empty, guesthandoff tag fixed,
-DVD completion recorded with guestcommand still executing and IRQqueued.
-No rootcause established. Added native-only guestctx-to-hostcondvar mapping,
-handoff phase/target and scheduler/IRQ queue/lock snapshots for next hardware
-test. Music-only dropout shared cause unconfirmed. Release ZIP unchanged.
-
-
-## 2026-11-18: selected guest remains parked; targeted native wait fix
-
-New snapshots map selected guest to an indefinite host wait, no permanent mutex
-contention, empty renderer and one pending IRQ. DVD no longer executing. Native
-50ms wait wrapper hid timeout returns from the caller predicate; timeout/signal
-race can consume a wake then park forever. Return legal spurious success for
-internal indefinite timeouts, preserve explicit deadlines/driver waits. Actual
-wrapper regression fails before/passes after. Native build/artifact and platform
-checks pass; physical acceptance pending, no claimed music fix.
-
-
-## 2026-11-18: six-race scheduler-fix stress test
-
-Hardware/user: six2x races without selectionfreeze and cleanQuit; promising, not
-permanent elimination. Preserve exact4a6ead build and checkpoint5db73f5. Music/
-announcer loss persists, two races stutter with multi-second audiofeed gaps and
-renderwaits not explained by short Vulkan execution or earlier cache events.
-No supported nextfix. Add bounded native guestvoice/stream/wait/progress and
-inputpumptiming diagnostics; scheduler regression/platform/build checks pass.
-New build67582dd7f046 pending hardware. Validated release ZIP unchanged.
-
-
-## 2026-11-18: localize recovered stutter and persistent audio loss
-
-Three67582races noselectionfreeze. Firstmajorhitch aligns694ms input/eventpump;
-PCMvoicecountsdropthenreturn, guestloaderthreads laterresume. Musicidentity/
-rootcauseunconfirmed. Do not claim globalmute/deaddecoder. Refined native
-applet/HID/logIOtiming plus dedicatedPCM/stoppedvoice snapshots; scheduler
-fixretained. Regression/platform/artifactchecksPASS. No speculativeaudiofix.
-
-
-## 2026-11-18: confirmed native logging stutter; bounded writer fix
-
-Native heartbeat4162ms matches sharedlogflush4161.99ms; other118/817/982ms
-stalls correlate too. Move routine native logging behind bounded nonblocking
-FIFO/backgroundwriter, retain explicitflush/stopbarriers and dropvisibility.
-Queue/regression/platform/artifact checks pass; hardware cleanup/behaviorpending.
-PCMvoicesstop/recycle, mono resumes/laterstops withoutbigstutter; music/announcer
-rootcause not established. No decoderfix or releaseZIPchanges.
-
-
-## 2026-11-18: prioritize Alpha1 publication readiness
-
-User selected tested c8c06fdda996/fa2ec57 baseline including scheduler and
-asynchronous logging fixes. Latesttwo races noselectfreeze; temporary stalls/
-distortion and audio dropouts remainknownissues. Logs preserved withoutanalysis.
-Stop furtherdebugging; package Switch2only with default2x/60/noexitlimit and
-disabledlivechanges, audit and finalcoldSandbox, prepare forapproval.
-
-
-## 2026-11-18: personal Unlimited rendering build
-
-User requested a personal-only Unlimited toggle. Reuse existing Vulkan
-interpolation/ownership/presentation implementation atop released scheduler and
-logging fixes, keeping game timing and normal60 default. Local rate/ownership/
-regression/platform/native checks pass; physical acceptance pending. No changes
-to published ZIP/tag/main. Personal rollback backup preserved on deployment.
-
-## 2026-11-18: isolated personal Switch 2 Riders Plus / HUD integration
-
-User authorized deploying latest local fixes over FTP. New local branch from installed personal source5b59adc;
-original personal/native/public checkouts preserved. Applied only five shared fix source files and three focused
-tests from public local3dfb3f0/3e46743 using clean3-way patches, preserving native/Unlimited code.
-Integrated actual-source gameplay/frame tests pass; native condition-wait and actual interpolation/rate/ownership
-regressions pass. Native build/deployment pending. No physical acceptance, no source push/merge/release/replies.
-- Native follow-up [confirmed build/transfer only]: code checkpoint791de65, buildda8da376c5f4,
-  NRO29,469,225bytes SHA256e00d7d6c49a77bf210081f18543b37b01bcb12aafbdb942ab90bf99b70765fbb.
-  Staged and installed NRO/manifest readbacks match; old pair backed up locally/onSD. Settings/env byte-identical,
-  other data untouched; Unlimited stays enabled. Native wait/interpolation/rate/ownership regressions pass.
-  User may exitFTPandlaunch; physical gameplay/user acceptance pending. No push/merge/release/replies.
-
-### 2026-11-18 - Local Super balance deployed through OunceMTP
-- Implemented Super-only Plus targets Base195/270/110, Lv4 220/300/125, Lv5 240/330/140 top/boost/drift.
-  Baseline ratios/mod compatibility/Base ownership restore correctly. No other mechanics changed here.
-- Actual-source regressions and public minimized PC on/off exact-stat/control routes pass. Native build
-  7a05aa6f5f02 from4459752 validates header/identity/source hashes/sidecar; new balance not hardware-accepted.
-- User granted standing connected-device dev/test deployment permission. OunceMTP/WPD transaction backs up
-  prior installedda8pair locally/onSD, verifies stages + installed NRO/manifest SHA256 readbacks. Unlimited,
-  settings/env/cache preserved; saves/unrelated entries untouched. Rollback plan validated, not applied.
-- User prior-build test confirms2P GUI problem,3P/4P mostly fine; returned screenshots/log retrieved read-only.
-  Investigations of2P timer/group overlap and finished-phase repeatedLv5 bookkeeping proceed on public local
-  review branch. This native balance build includes neither fix. No push/publish/public asset change.
+#### Authorized deployment and investigation follow-up
+- User granted standing connected-device development/test deployment permission, recorded only in excluded
+  local AGENTS.md/AI_HANDOFF.md. Public release/public asset changes still require explicit approval.
+- [confirmed] Installed7a05aa6f5f02 through new OunceMTP utility: local twice-read backup of previousda8pair,
+  verified stages, retained SD pair, final NRO/manifest SHA256 readbacks. Unlimitedpc_fps=-1, settings/env/cache
+  byte-identical; saves/unrelated entries preserved. Rollback plan validates; rollback not applied. User notified.
+- [confirmed]2P actual trace assigns sharedtimer toplayer0; timer/adjacent HUD backing overlap about3source
+  pixels in sameatlas. Actual-renderer probes show shared timer pulled left with a tall group, compact P1 HUD
+  pulled inward when tall column is separate. Existing synthetic tests omitted this overlap. Hardware exact
+  command sequence remains unproven; no HUD behavior fix in this investigation/installedbuild.
+- [confirmed] Finished phaseA clears ownership each frame, but nativehooks reapply Lv5. Actual-source probe:
+  100cycles/600speed stores. Instrumented PC normal2P racer568rings: race resets, no constructor resets;
+  repeatedstatapply/native2->1 feedback rearming. Actual guestbranch818360E4 counter confirms230effect-path
+  entries during phaseA, matching230armedfeedback/statapplies. Visible animation/sound/individualrefillstores
+  not measured. This is more than log spam. Small consistent phasegate is next; no behavioralfiximplemented.
+- Temporary source/patch instrumentation saved only in ignoredbuild; reviewed balance sources restored equal
+  across public/native, regenerated outputs contain no counter, final Windows artifact rebuilt. All10utility
+  and actual-source gameplay/HUD regressions pass. Progress unchanged pending fixes/hardwareacceptance.
+- Final inbox: separate Android agent closed32 and linked GreenCave/Tails loadinghang to open6. No replies,
+  push, publish or publicasset modification by this task. Native local docs checkpoint5f688ab preserves code4459752.
 
 
 ### 2026-11-18 -2P timer, finished Lv5 effects and universal native icon
@@ -1793,18 +1755,75 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
   console launch; native binary cannot be smoke-tested in Eden. All10 deployment regressions pass.
 - Full/staged data guards + ignored-status/hooks preserved for local checkpoints. No push/publish/release/
   asset change or external reply. Inbox unchanged (32closed/6open). Local handoff owns exact backups/paths.
+## 2026-11-18: experimental Android Vulkan 1.1 fallback (#32)
+
+- Implemented feature/dependency negotiation and automatic legacy render passes in the shared Vulkan renderer; supported devices retain dynamic rendering. Framebuffers follow existing view retirement/fences/resize/swapchain/device recovery; prewarm-safe compatible passes and separate caches [confirmed, source/tests].
+- Corrected depth-clear image usage, checked formats/limits, capped the image pool and added dedicated spills. Audited shaders; single-source variants and separate alpha writes preserve the historical solid-floor TEV-alpha distinction (0c00ba4), including on no-dual-source devices.
+- Tested S23 Ultra / Adreno 740 / Vulkan 1.3.128: full 1P/2P effects routes dynamic 50.283/56.734 fps, legacy 49.650/56.240 fps, each 1800 measured steps. Sequential runs do not establish a speed regression. Captures match closely; displayed FPS and simulation speed both fall together [confirmed].
+- Khronos validation found invalid internal ALL_COMMANDS subpass masks; corrected to attachment graphics stages. Corrected legacy/no-dual/no-push race + simulated device recovery and dynamic recovery have zero validation warnings/errors/VUIDs. Legacy background/resume continues rendering [confirmed].
+- Source-extracted helper tests run on Windows and ARM64; Vulkan 1.1 SPIR-V validation and Switch zero-scratch checks pass. Experimental branch only; no public release, main merge, issue reply or closure. Mali and real MoltenVK execution, real GPU reset and exhaustive alpha/depth overlap remain unproven.
+- User observed slow-motion below 60 fps. Frame-pacing audit is a separate follow-up after #32; do not change simulation/pacing as part of the renderer fix. Details: docs/notes/vulkan-legacy.md.
+
+## 2026-11-18: separate S23 Auto pacing audit after #32
+
+- The slow-motion observation came from matched-capture runs with SR_DETCLOCK=1: frame_pacing.c explicitly bypasses adaptive pacing in deterministic mode [confirmed, source]. It did not demonstrate a normal Auto regression.
+- Without deterministic timing, Auto at 2x with bloom25/grading/FSR50 maintains full speed on both paths: dynamic 1P 59.95steps/s at44.56fps,2P59.94at52.64;legacy1P59.94at42.93,2P59.95at51.76. Each scene measured1800steps [confirmed,S23 Adreno740 Vulkan1.3.128]. GPU25-26ms/render waits16-20ms reduce drawing while skipped-draw iterations keep simulation near60.
+- No normal Auto regression reproduced in these routes; no pacing, VI, settings or frame-queue source changed. Leave SR_DETCLOCK off for ordinary gameplay/performance checks. Android platform_gpu_frame_ms is unavailable (-1); actual GPU timings are in the Vulkan log, a separate hint/hysteresis audit item if needed. Not proof for every load/hitch/device.
+
+## 2026-11-18: #32 reporter confirms Mali race; quit crash remains
+
+- Crashmania468 confirms the experimental source setup boots and completes a race without issues (issue comment 6988716603) [confirmed, reporter]. Returned build3b2592b7 log identifies Mali-G57MC3,Vulkan1.1.177,driver08001000; automatic legacy fallback,separate alpha pass,descriptor pool,17700presented frames,59/59shader-coverage samples100%.
+- Race samples30.6-58.5fps;Auto usually59.8-60steps/s,including60steps/s at30.6fps [confirmed,log]. Cold-load pipeline compilation still hitches:worst1077msframe,1059ms compiling18pipelines;temporary simulation dips during cold loads.
+- Important limit:the same log ends with [android]quit immediately followed by SIGSEGV. No Vulkan error/device-loss line precedes it. Existing render_thread exit(0) path is unchanged by #32; cause is unproven, not safe to attribute/exclude renderer lifetime. Need useful fault stack/tombstone. Boot/race success does not establish clean shutdown.
+- Validation documentation updated only; no runtime edits, merge, release, reply or issue closure. Real MoltenVK and broader stress/alpha/depth cases remain unproven.
 
 
-### 2026-11-18 - v0.8.7 and native Alpha2 published
-- Stable381a3694:four source setupZIPs, coldPC/Android+space PASS; uploadedSHA256readbacks match;lateststable.
-- Native1ca54eb0:v0.8.7-switch2-alpha.2 separateprerelease, coldGUI/CLI+space/preservation PASS; source/distribution
-  audit and fullreadback PASS. Runtime/config pinned unchanged to accepted80304ca; no untested audiofix.
-- Alpha2 fresh60FPS defaults; Unlimitedexplicitlyexperimental; serious persistentRaceSelect audio issue clear
-  inREADME/notes/guides. Current/historicallogs preserved; source/native output counters do not prove leak
-  orunderrun. Useraccepted Superbalance/highringfinish/icon/2PFitHUD. Othercoverage explicitlylimited.
-- Notes follow requested v0.8.6/4/3/2 andAlpha1 style, player-focused headings, bothguides,updatehelp,artist/
-  homebrewcredits andcommunitytesting invitation. UpdatedHTMLguides inGitHub; userdefers sameURLClaude
-  Artifactrepublication untilweeklyreset afterbrowserpolicy stop. No furtherbrowserautomation attempted.
+## 2026-11-18: #32 Android quit lifecycle follow-up (experimental)
+
+- Original quit block calling exit(0) predates the Vulkan fallback. Unchanged S23 baseline menu/full-race quits passed both paths; original Mali SIGSEGV not reproduced [confirmed]. The Mali unmapped PC remains insufficient for exact attribution.
+- An intermediate explicit-cleanup candidate still using libc exit reproduced a dynamic-path FORTIFY destroyed-mutex SIGABRT in Android/vendor RenderThread, 8 ms after cleanup. EXIT_SELF/status0 was also recorded [confirmed]. Bionic finalizers can race surviving graphics threads; shared Android lifecycle hazard, not legacy-only. Identical cause on Mali remains uncertain.
+- Implemented producer gate, real SDL prewarm/UI worker joins (8 MiB stacks), safe concurrent audio close, existing GPU-idle/device teardown and framebuffer-before-view destruction, surface/instance/window/SDL cleanup. Owned rt_atexit save/net/record handlers and stream flush precede Android _Exit; other platforms preserve libc semantics. Crash handling remains active.
+- Full S23 Ultra / Adreno740 / Vulkan1.3.128 Khronos validation routes pass natural quit: dynamic1P59.95steps/s51.09fps,2P59.95/56.38; legacy/no-dual/no-push1P59.83/26.59,2P59.97/55.27 (1800steps each). Zero validation warnings/errors/VUIDs/fatals; 500 ms post-cleanup holds pass. Validation runs are not release performance comparisons [confirmed].
+- Both paths also pass simulated loss/rebuild at31, Home/resume and menu rendering59.9fps, then clean exit after5s hold. Menu resume only, not mid-race or real GPU reset. Normal signed APK menu quits pass without delay; validation settings restored [confirmed].
+- Windows/ARM64 actual-helper concurrency and exit-handler regressions pass; Android x86_64 syntax passes. Floor shaders/compatibility/pacing behaviour preserved. Real MoltenVK and exact Mali shutdown retest remain unproven. Updated source/setup package prepared experimentally; no merge/release/issue closure/reply.
+
+
+## 2026-11-18: #32 Mali shutdown verified; separate Green Cave loading evidence
+
+- Reviewed the two latest reporter comments and attachments35054029/35054699 [confirmed]. Both are90868613,Mali-G57MC3,Vulkan1.1.177,automaticlegacy,separatealpha,descriptorpool; all shutdown/application-handler phases finish,status0,no subsequent signal. Updated shutdown verified in both supplied logs.
+- Green Cave/Tails completes race then stalls on loading for~130s while four-draw frames and simulation stay~59.9/s,GPU~7ms,renderwait0.04-0.05ms,disc54MB/0furthercompletions. No Vulkanerror/device-loss/GPUblock evidenced [confirmed]. Separate guestloading/game-state progress failure likely; exact#6CRI/DI signature uncertain without watchdog/IRQ/threads. No speculativefix; disc/scheduler/OS/frame_pacing source unchanged by#32.
+- Preserved both raw logs locally with hashes/provenance; docs/notes/loading-hang.md links original attachments and compares historical PC/Eden CRI/filetail/loader-resume research. Keep#6open for a targeted watchdog reproduction.
+- User conditionally authorizes existingv0.8.6Android asset update and explicitly authorizes cold PC/Android Sandbox checks. Source/setup ZIP only; tag/main/otherplatformassets/issues remain unchanged. Publication results follow separately.
+
+
+## 2026-11-18: v0.8.6 Android-only release asset updated (#32)
+
+- After reporter verification and explicit Sandbox permission, cold PC/Android setups PASS both normal and space paths (fresh downloads, exit0, expected EXE/APK). PCsource90868613; exactAndroidZIPfaab3dd4 differs only in verification docs, runtime unchanged [confirmed].
+- Replaced only SonicRiders-Android-Setup-v0.8.6.zip on existingv0.8.6:249entries,8210435bytes,SHA256fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e. Downloaded public asset matches hash [confirmed]. Original releasebody preserved; appended Android fix/source/checksum and separate#6 knownhang note. Tag/releaseidentity/otherassetIDsanddigests unchanged; originalAndroidasset retained locally for rollback.
+- No main merge,newtag,APKupload,issuecommentorclosure. Branch-only docs and excluded canonical handoff updated; raw Mali logs remain local with immutable hashes/provenance. Green Cave exactcause and realMoltenVK remain unproven; no speculative loader fix shipped.
+
+
+## 2026-11-18: released Android fixes integrated into main; #32 resolved
+
+- User authorized source integration, reporter thanks/closure and separate#6evidence. Mainbf9f723 was an ancestor; merge-tree matched the fix tree and guarded fast-forward reached510df14 without conflicts. No runtime/build implementation changes relative to the tested/public package. Dirty sr-main's7existingdocfiles and staging were preserved; no stash/reset/worktree rewrite.
+- Public Android source pinned to faab3dd43fd5f5e9f4e64674694ac66016496cb5, runtime90868613, embeddedVERSIONv0.8.6(faab3dd4). Manifest and verifier added. All245source+3generatedtextentries match publicZIP. Fresh own-source launcher differs only by2PEtimestampbytes; restoring recordedtimestamp reproduces full publicZIP SHA256fa1b71f0ef35bdeef810458d925a6c90fd6af39f7b66708fb38990846678d67e [confirmed]. Negative verifier checks reject mismatches/input overwrite. No APK/game output uploaded.
+- Focused Vulkanpass/feature/framebuffer/pool, concurrentcompiler/audio/shutdown, exit-handler and quit-verifier regressions pass. Prior S23/Mali and cold PC/Android validation retained; no redundant release/device deployment. Real MoltenVK remains untested.
+- Thanked Crashmania468 and linked public installer; #32 closed COMPLETED (comment6993712427). #6 remains OPEN with findings/original attachment35054699 (comment6993712013). Exact loading cause remains uncertain; research preserved separately, no speculativefix.
+- No new release, tag move, release-body edit or asset replacement in integration; tag and allassetIDs/digests verified unchanged. STATE/canonical excluded handoff updated; other native/HUD/Super work remains separate.
+
+
+### 2026-11-18 - v0.8.7 stable published; Alpha2 validation in progress
+- Explicit user publication authorization. Merge381a3694 integrates validated Riders Plus/Super/HUD/finish
+  fixes with mainAndroid32/Linux30 work; dirty sr-main/concurrent native/private checkouts preserved.
+- Cold Windows Sandbox PC and Android PASS separately, fresh downloads and space-path repeat. Four setup
+  ZIPs audited against source and full uploaded SHA256 readbacks equal. v0.8.7 published as latest stable.
+- User requested release writing style matching v0.8.6/4/3/2 and Alpha1; all five descriptions read before
+  drafting player-focused notes with guides/update instructions/credits. Existing iOSv0.8.4 left untouched.
+- Browser policy stopped Claude Artifact access (could not verify current URL). User explicitly defers external
+  republication, allows releases now; updated HTML guides committed, existing URLs retained with older-version
+  notice. Pending same-URL republication belongs in excluded handoff for after weekly reset.
+- Native Alpha2 retains accepted80304ca runtime/config unchanged, fresh60FPS defaults/Unlimited experimental,
+  universal game icon, serious RaceSelect audio limitation documented. Native cold GUI/CLI testing pending.
 
 
 ### 2026-11-18 - Both releases verified; iOS archives preserved
@@ -1816,3 +1835,219 @@ regressions pass. Native build/deployment pending. No physical acceptance, no so
   notice; user explicitly deferred hosted republication until weekly reset and prohibited browser retries.
 - [uncertain] Native Race Select severe audio remains unresolved and prominently documented; 60 FPS did
   not recover the observed session. Accepted gameplay fixes preserved; no new console deployment this session.
+
+
+### 2026-11-18 - Shared installer layout maintenance
+- Implemented responsive one/two-column layout, complete banner containment, DPI-change handling, safe
+  swap-chain resize, scrollable wrapped logs, fixed action bar and platform-specific output-folder button.
+- Corrected native Switch 2 completion/no-SD instructions separately; no runtime or SDK changes.
+- [confirmed] Initial 176 off-screen render cases passed resize/maximize/restore and simulated DPI/state
+  coverage; fixture user files unchanged. Final source/package and cold-install validation follows.
+- Existing-release replacement authorized by the user; keep versions, tags, filenames, descriptions and
+  unrelated assets. Do not equate simulated DPI checks with physical multi-monitor acceptance.
+
+- Package validation rejected initial stable candidates containing absolute library assertion paths;
+  adopted the native installer compiler prefix maps and reproducible PE timestamps before rebuilding.
+  Failed candidates were never uploaded. Initial cold PC/space-path install passed; final candidates retest.
+
+
+### 2026-11-18 - Installer maintenance packages replaced in existing releases
+- [confirmed] Final public source `cf243a9f` / native source `d680eb2b`: 176 off-screen UI cases across 11 geometries,
+  four install states and 100–250% simulated DPI; maximize/restore, matching client/backbuffer and actual
+  output-button clicks pass. App-owned default/small/ultrawide/high-DPI and cold-completion captures reviewed.
+- [confirmed] Exact rebuilt PC, original Switch, Android and Switch2 ZIPs pass independent cold Sandbox
+  GUI installs and space-path repeats. Native CLI repeat confirms user-data/original-Switch preservation;
+  real no-SD completion branch confirms native output paths and native-game hbmenu instructions.
+- [confirmed] Replaced only PC/Android/Switch ZIPs plus stable SHA256SUMS in v0.8.7 and native Alpha2
+  ZIP/.sha256 in its existing prerelease. Full anonymous public download/readback hashes match. Original
+  assets/metadata retained locally for rollback. No version/tag move, new release, description/flag change
+  or unrelated-asset replacement; Linux/iOS remain unchanged. Guarded source commits/pushes completed.
+- [uncertain] Physical monitor migration/OS scale-setting changes were not manually exercised; simulated
+  DPI messages test the rendering/resize handlers. No gameplay/render/audio changes or console deployment.
+
+
+### 2026-11-18 — Separate illustrated console installation booklets
+- [confirmed] Implemented Switch Stable and Switch 2 Experimental Alpha HTML/Markdown booklets using
+  Claude’s existing easy-read visual language. Ten newly captured, annotated current-installer UI images;
+  26 original labelled diagrams; 17 checkpoints per platform; exact downloads/SD layouts/manual updates.
+  Existing technical documentation remains. Font subsets are embedded offline with open-font licenses.
+- [confirmed] Downloaded current public v0.8.7 Switch and Alpha2 ZIPs; SHA-256/CRC match. Ran both actual
+  GUI installers, full ISO transfer/SHA-1 and repeated updates in disposable SD folders. Save/mod/cache/
+  settings/env sentinels survive. Both real output-button clicks open their correct local folders.
+  Warm-cache checks only; earlier cold package evidence remains separately documented.
+- [confirmed] Both guides pass local link/image/privacy/platform checks (225 references), 16 external
+  HTTP links and 8 offline phone/tablet/desktop layouts, including fonts, theme, checkboxes, help and print.
+  A native fixture-only junction mismatch was corrected using a direct cache; no package/source fix.
+- [confirmed] GitHub Pages enabled from main/docs for account-free booklet access; README and legacy
+  easy-read pages link the separate guides. Current release descriptions receive corresponding links.
+  Versions/tags/assets stay unchanged. No game build was published, and no console was overwritten.
+- [uncertain] No new physical console launch, SD ejection, disc dumping or child-user acceptance test.
+  Native audio/Race Select limitations and #6 loading hang remain unresolved. Latest #31 comment still
+  reports old Switch version after updating; no cause/fix inferred and no external reply sent.
+
+### 2026-11-18 — Neutral installation-guide wording
+- [confirmed] User approved the illustrated presentation and clarified that simple language should address
+  adults respectfully. Replaced diminutives and playful headings in both shared guide sources, generated
+  HTML/Markdown and diagram labels; documented the editorial convention in the maintenance note.
+- [confirmed] Screenshots, fonts, CSS, platform filenames/paths/download links and anchors stay unchanged.
+  Guide link/image/privacy/platform checks and offline browser layouts verify the wording revision.
+  No installer/package rebuild, runtime change, device action or new hardware test.
+- Inbox: maintainer reply on #31 now links the guide; no new issue or discussion. No reply sent by this task.
+
+### 2026-11-19 — iOS v0.8.7 setup ZIP (Mac)
+- iOS was still on v0.8.4. Built `SonicRiders-iOS-Setup-v0.8.7.zip` from tag v0.8.7 (381a3694) and, with the
+  user's OK, added it to the existing v0.8.7 release (no new tag/release); notes' iOS line updated. Uploaded
+  SHA-256 `6f640eb7...3391`, download readback equal [confirmed].
+- [confirmed] Cold Mac test from the zip (fresh folder/tools, `--unsigned`, scratch ipa dir): 7/7 steps, 85 s.
+- [confirmed] iPhone 17 Pro, iOS 27.0, over Wi-Fi; signed build from main 229d6ee (no code diff to the tag):
+  Metal City Free Race normal (user), 55-60 fps, GPU ~6.5 ms, specialized shaders 48012/48012; 3 background/return
+  cycles (Control Center, lock/unlock) recovered picture and sound (user + log); `SR_VK_FORCE_LEGACY=1` race normal
+  (user), 58-60 fps; menu Quit Game ran the full shutdown sequence, exit 0.
+- [uncertain] No iPad retested (none reachable; the iPad Pro is excluded). Guides/README iOS lines: PC session.
+## 2026-11-19: front page and release pages cleaned up (Claude, docs only)
+
+- README rewritten around the Switch 2 alpha: new Lanmana "Now on Nintendo Switch 2!" poster on top
+  (`docs/images/switch2-poster.jpg`), a two-line hook and three buttons, all badges together under it, a short
+  Switch 2 box, the new Riders Plus "Break the limits" banner (`docs/images/riders-plus/riders-plus-banner.jpg`),
+  a screenshot gallery, side-by-side original vs port, and one Get it table for every platform and guide. The
+  neon-city banner (unknown artist) and the stale "updates paused" box are gone; long sections fold away.
+- All 8 release pages rewritten to one layout (banner, title + one line, Highlights, Download, Already
+  installed?, Known issues, Thanks, folded details, changelog + compare link). Stale "coming Thursday" lines
+  removed; older pages point at the newest release. The `.sha256` assets of both Switch 2 alphas were deleted
+  (the hashes are in their notes). New rule (user): release downloads are setup ZIPs only (CLAUDE.md).
+- [confirmed] Guard passes with the two new pictures in OWN_ART and the removed banner in PAST_ART. The
+  launcher's "See what's new" drops HTML tags but shows tables as raw text, so v0.8.7's downloads are a list.
+- Later the same day: a self-updating Road to v1.0 bar at the top of the README (`docs/images/progress-bar.svg`)
+  and a live shields.io badge (`docs/progress.json`), both drawn with the Status card and the table numbers by
+  `tools/make_progress.py`; `.github/workflows/progress.yml` reruns it on push to main. [confirmed] first CI run
+  passed with nothing to change; the badge renders "Road to v1.0: 77%". The style rules went into CLAUDE.md.
+## 2026-11-19: Riders Plus website live (Claude, gh-pages branch; main docs only)
+
+- The user named the project **Riders Plus** and asked for an official site. Built a static site on a new orphan
+  `gh-pages` branch (worktree `.local/gh-pages`): home (hero with the new logo and the Lanmana poster, stable vs
+  experimental release cards, one download card per platform with direct ZIP links, GameCube-vs-port slider, Road
+  to v1.0, community), Download, Riders Plus rules, guides hub, easy-read install/update guides (ported from the
+  Claude guides), both console booklets rendered from `tools/console_guide_data.py`, FAQ/troubleshooting,
+  community/credits/legal, 404. Background: the user's grid picture, measured element by element and redrawn
+  at 2x (4x master in the user's Pictures folder). Details and procedures: docs/notes/website.md.
+- Pages source switched from `main` `/docs` to `gh-pages` `/` with the user's OK. Booklet URLs used by releases,
+  README and the Claude guides kept; old easy-read guide URLs redirect.
+- [confirmed] Desktop (1440) and phone (390) layouts checked in Chrome through scaled iframes (the test monitor is
+  portrait); no horizontal scroll; tabs, version picker, step ticks, saved checkpoints, slider, live GitHub data,
+  socials.json updates (and a broken socials.json keeping the old links) all work; 770 links checked; every live
+  page and asset answers 200, missing URLs get the 404 page. [uncertain] Not checked on a real phone, Safari or
+  an old browser; GitHub API rate limits (60/h per visitor, cached 20 min) fall back to the build snapshot.
+
+## 2026-11-19 (PC, night): "freshly downloaded game says I'm outdated" (unpacked but not installed)
+
+- The user's PC game showed v0.8.6 (e19f0dd0) and "Update available: v0.8.7" after downloading v0.8.7.
+  [confirmed] All v0.8.7 setup ZIPs (PC/Android/iOS) carry VERSION v0.8.7 and the website links point at v0.8.7.
+  [confirmed] Cause: the v0.8.7 ZIP had been unzipped over `<home>/Desktop/SonicRiders-PC` (a v0.8.6 install) and the
+  old `Sonic Riders` shortcut started the old exe; setup.log ended at the v0.8.6 install. Rerunning the PC setup
+  rebuilt it to v0.8.7 (cf243a9f), saves kept.
+- Fix (merged to main, not released): the launcher compares the folder's VERSION with the string inside
+  `build\host-mingw\sonicriders.exe` (`file_contains`, `Ready.stale`): Play page "UPDATE NOT FINISHED" and a
+  FINISH UPDATE button (runs the install; PLAY afterwards). The game (`update_check.c` `check_unpacked`, Windows)
+  shows a 30 s banner and an F1 > About line, logs `[update] this folder holds ...`, and skips the "Update
+  available" banner then. No VERSION file (git checkout) = no check.
+- [confirmed] PC: launcher pictures with mismatched and matching VERSION (FINISH UPDATE / PLAY); game capture shows
+  the banner, log line present. [uncertain] FINISH UPDATE through a real install not run; Linux has no banner.
+
+## 2026-11-20: Auto spin option (#23)
+
+- Asked for in #23: an overlay option that turns the stick in the stick-spin scenes (air refill + speed-up).
+- Found with a per-frame dump of racer 0 and pad 0 while the user played Splash Canyon (temporary recorder, not
+  committed): input fn 818A6E60 turns the stick into one of four directions (racer +0xA08: 0x1000 up, 0x2000 down,
+  0x4000 left, 0x8000 right; read from the racer's controller struct, racer +0x0 -> 801AF9F0 + port x 0x30, +0x8 bits).
+  A clockwise step adds 1 to +0xA20, anticlockwise subtracts 1; at +-4 a turn is counted (+0xA04 bit 31). A spin
+  section sets racer +0x624 (u16) to 1, +0x626 counts its progress (ends at 50 in the long ones), +0x628 is the
+  section's number in the stage's table (spin object fn 81881068, which sets speed +0xAAC). Air +5000 per turn
+  until full; every turn adds speed with no cap. [confirmed, PC dumps + static]
+- Fix: `auto_spin.c` overrides only the controller stick of a port whose racer has +0x624 = 1, clockwise, timed by
+  the game frame (latched input) or the 60 Hz field count (live polls). One quarter per frame (15 turns/s) is the
+  game's limit and left scenes at ~2x a human's speed (2.57 vs 1.31); the user chose a fast human's pace. 5 and 6
+  turns/s were played by the user; 7 turns/s chosen by the user without a further run. [likely]
+- Tested: PC, user-played Splash Canyon runs at 15, 5 and 6 turns/s: air refilled, speed rose (5/s: main scene
+  peak 1.50). Then 7/s in a user-played 2P split-screen race with two controllers: worked for both players
+  [confirmed] (`[autospin]` log: controller 1 -> racer 0, 2 -> racer 1, CPU racers none; sections taken over on
+  both ports). The user also played it on the original Switch OLED and the S23 Ultra (dev build
+  v0.8.7-28-g8989ab24): works on both [confirmed]. [uncertain] online, 3-4 players, other stages not tested.
+
+## 2026-11-20: Hold to boost (branch claude/auto-spin, not merged)
+
+- Asked for (plans-2026-11.md "Nitrous-style boost toggle"): holding B keeps boosting, a tap stays the game's boost.
+- Found with a temporary per-frame recorder of racer 0 + controller struct 0 while the user raced (not committed):
+  boost state racer +0xA28 bit 0x400; timer +0x8AC set to 120 at the start, counted down by fn 81896C9C (once per
+  racer per step while boosting; below 0 the boost ends); a crash or hit ends it earlier. Cost booked through
+  +0x98C = active level block +0x28 (25 000 / 30 000 / 40 000 on the tested gear); running drain block +0x20 (16).
+  Controller struct +0x8 held bits: B 0x0002, X 0x0004 (both boost), A 0x1000. +0x764 = animation (65 boost pose,
+  only the first frames). The boost start / end write the top speed +0xAB4 (818969B8.., 81896D50). [confirmed]
+- Fix: boost_hold.c, hook before 81896CC0: a boost whose first tick sees B/X held keeps its timer at 4 frames
+  while that button stays held, taking the refunded frames' air at cost / 120 each. User-played on PC: works, X
+  too, out-of-air stop, Super Sonic 626 extra frames [confirmed].
+- User follow-ups, implemented, not played: pull back to boost speed (10 % of the gap per frame) after turns and
+  bumps; Super Sonic ramps exponentially to 350 km/h in 4 s held (integer curve, no libm); "Riders Plus features"
+  fold-out with Auto spin and Hold to boost (on by default, only with Riders Plus); Super Sonic +5000 fuel per
+  counted spin turn (hook 818A78EC, turn set at 818A78E8); Auto spin hands the stick back when +0xA20 does not move
+  for 2 s. The user lost the stick near the end of a last lap right after a spin section was taken over: that the
+  section never ran is [likely], not proven.
+- Open: overlay wrap from the top of a long page lands mid-page (NavFlattened child, clipped items not scored).
+  [uncertain] online sync (welcome m[6] bit 1, recording flag 16), Switch, Android.
+- Deployed to the Switch OLED the same night (v0.8.7-33-gb72933d, SHA-256 readback verified, `SR_BOOSTLOG=1`);
+  not booted on hardware yet [uncertain]. No Eden run (no renderer or platform change).
+
+## 2026-11-20 (later): Ring Replenish, Super boost view + sound, Super Sonic flight test (branch claude/auto-spin)
+
+- User-played Hold to boost on the Switch OLED: fun. Asked for, implemented (builds 01fcbeb..132ec19):
+  - **Ring Replenish** (Riders Plus features toggle, on by default): air rewards of a step collect in racer +0x988
+    and are thrown away for ring-powered gear (+0x9D4 bit 0x400) at 81815EEC; Super Sonic keeps them (capped at
+    4 rings a step), and every net fuel gain in the fuel step (81815F70 / 81816098 start, clamps 81815FEC /
+    818160C8) is cut to 30 %. In spin sections the game's own refill (5000 a turn) also lands there: dropped; only
+    the turn hook (818A78EC) pays, 500 fuel. Tuned three times; the user's Switch log of the first tuning showed
+    ~480 rings from gains, single gains up to 100 000 fuel [confirmed]. Third tuning not played yet.
+  - **Speed view + boost sound** (passive, no toggle: user decision): a held Super boost widens the FOV up to
+    +18 % with the climb and returns over 0.25 s (smoothstep); the mix is low-passed (16 kHz to 1.5 kHz) and
+    soft-clipped, on at once and off the moment the boost ends (audio_out.c nos_process). The first builds never
+    fired: CPU racers 1-3 also have controller structs; a player's racer also has +0xBC (CPU flag) = 0
+    [confirmed by code: race setup 818EE774 / 818EE7CC]. Sound not heard on hardware yet [uncertain].
+  - **Super Sonic flight** (user idea): super_flight.c swaps his riding animations for a chosen pose. Racer
+    animation: playing +0x764, queue +0x78C (16-byte entries), count +0x7CC; set at 818B66CC / 818B6790 /
+    818B6D24 [confirmed on PC]. State +0x1034: 5 board, 6 jump, 7 fall, 8-13 trick jumps, 17 spin, 18 grind.
+    The pose is picked by the user with a temporary F1 slider; PC could not show Super Sonic (forcing the racer's
+    character/gear bytes keeps Sonic's model; empty cards own only the default gear). SR_FORCESUPER test hooks in
+    patches.txt must be removed before merging.
+- Switch 2: same work merged onto the native branch locally (claude/switch2-holdboost, never pushed). One start-up
+  run stalled on SD I/O (disc reads 1.5-2.7 s, pipeline cache save 7.2 s on the render thread, log writes up to
+  3 s; clean exit) [confirmed by log]; cause unknown (no MTP running). The cache is rewritten in full on every
+  launch ("133 new"): worth fixing on the native branch.
+
+## 2026-11-20 (evening): Ring Replenish per source, tricks by rank, Cheats tab, sleep fix (branch claude/auto-spin)
+
+- User test of 132ec19 (Switch 1/2): no start-up freeze; boost muffle disliked -> off (SR_BOOSTSOUND=1 keeps it);
+  FOV too slow -> full in ~0.4 s, +4 % on the climb; rings too nerfed.
+- Reward sources found from a Switch log of hooks on every +0x988 store (patches.txt "reward sources", 32 sites)
+  [confirmed]: 8187BCAC grinding (state 18, +347/frame on a fast rail), 8187AC90 flying (state 19, grows per frame
+  ~260 -> 830), 81879C20 / 818970D4 objects (10k/15k/20k/30k). Tricks reach the fuel step through no hooked site; the
+  game's landing reward by rank: C 20 000, B 30 000, A 40 000, AA 45 000, S 50 000, SS 60 000, X 100 000 (ranks from
+  the user). Super Sonic is paid per source: grind 70 %, flying 45 % with growth above 260 cut to 75 %, objects as
+  before (8-ring cap, 50 %), tricks 75 rings x reward / 100 000, spin turn 1600 fuel. User played it: "Super Sonic
+  feels super" [accepted, Switch 1].
+- Cheat "No ring decrease (Super Sonic)" in a new Cheats tab (off online / recordings: ppc_detclock).
+- Overlay wrap: Up on the tab row -> Close/Quit with the page scrolled to the bottom; Down there -> tab row, page top
+  [tested: Switch 1 by remote].
+- Switch 1 "An error has occurred" after a 2.5 h sleep with the game open: the SDK drive timeout alarm saw the sleep
+  as a stalled read (no applet message arrived). rt_ticks now takes any >2 s gap between clock reads out of the time
+  base [implemented, sleep not retested].
+- Super Sonic looks blue whenever on foot (state +0x1034 = 1 run-up, 25 out of rings) although +0xBA stays 11; the
+  model choice is not found yet (SR_SUPERDIAG=1 logs racer 0's rarely changing bytes). Flight poses from the user:
+  34 flying, 21 kick-off, 67 jog, 68 run, 70 board mount, 71 board leaving, 47/48/51/66/75-80/87-90 T-pose.
+
+## 2026-11-20 (late): v0.9.0 release prep
+
+- Super Sonic flight became an experimental Riders Plus feature, off by default (F1 > Gameplay > Riders Plus
+  features > "Super Sonic flight"; off in online races, recordings and replays). Why: on the user's Switch 1
+  (a363ae30) and Switch 2 (1e6033829f7d) builds he stayed on his board after an air trick until the next action.
+  The cause is not found [uncertain]; the toggle only hides it. Builds (Switch) with the toggle; not played.
+- Versions bumped to v0.9.0 / Switch 2 Alpha 3 in README, both easy-read guides, the booklets and progress; the
+  Switch 2 Race Select audio warning dropped (the user reported it gone on the hold-boost test builds). iOS stays
+  on v0.8.7 until the Mac session builds v0.9.0.

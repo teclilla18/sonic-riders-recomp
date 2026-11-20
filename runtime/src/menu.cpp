@@ -705,9 +705,10 @@ void tab_gameplay() {
     if (ImGui::TreeNode("Riders Plus features")) {
         ImGui::BeginDisabled(!g_settings.ring_cap_999);
         if (check("Auto spin", &g_settings.auto_spin,
-                  "On by default (with Riders Plus). In the scenes where the game asks you to turn the stick round "
-                  "and round, the stick is turned for you at a fast player's pace (7 turns a second): your air "
-                  "refills and you speed up without wearing out your stick. Only your own racers, never the CPUs."))
+                  "On by default (with Riders Plus). In the Automatic Trails, where the game takes over and asks you "
+                  "to rotate the Control Stick as fast as you can, it is spun for you at a fast player's pace (7 turns "
+                  "a second): your speed and air climb, and no more wrecking your sticks. Only your own racers, never "
+                  "the CPUs."))
             settings_apply();
         if (check("Hold to boost", &g_settings.boost_hold,
                   "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
@@ -721,6 +722,11 @@ void tab_gameplay() {
                   "nothing where other racers refill air. With this on he gains rings instead: in the spin "
                   "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes. Online, "
                   "the host's setting is used."))
+            settings_apply();
+        if (check("Super Sonic flight (experimental)", &g_settings.super_flight,
+                  "Off by default (experimental). Super Sonic rides off his board in a flying pose, except on "
+                  "rails, in tricks, in the spin scenes and while charging a jump. Known issue: after an air trick "
+                  "he can stay on his board until your next move; a fix is coming. Not used in online races."))
             settings_apply();
         ImGui::EndDisabled();
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");

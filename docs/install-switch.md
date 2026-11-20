@@ -2,7 +2,7 @@
 
 ## Stable Release
 
-Checked for **v0.8.7** on November 18, 2026.
+Checked for **v0.9.0** on November 18, 2026.
 
 Follow these steps to install Sonic Riders on your console. No coding is required.
 
@@ -78,21 +78,21 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 
 ## 03. Download the correct setup package
 
-![Illustration of the GitHub download choices: select SonicRiders-Switch-Setup-v0.8.7.zip under Assets, not Source code.](images/installation/switch-release.svg)
+![Illustration of the GitHub download choices: select SonicRiders-Switch-Setup-v0.9.0.zip under Assets, not Source code.](images/installation/switch-release.svg)
 
 *Illustration, not a screenshot.*
 
-1. Open the [Nintendo Switch release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.
-2. Check the heading. This page should say **v0.8.7**. This is the stable release for this booklet.
+1. Open the [Nintendo Switch release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0). GitHub is the website that holds this project’s downloads. You can read the page and download without an account.
+2. Check the heading. This page should say **v0.9.0**. This is the stable release for this booklet.
 3. Scroll down to **Assets**. Assets means the downloadable files. If the list is folded up, click **Assets** to open it.
-4. Click **`SonicRiders-Switch-Setup-v0.8.7.zip`**. You can also use the big download button below.
+4. Click **`SonicRiders-Switch-Setup-v0.9.0.zip`**. You can also use the big download button below.
 5. Wait for the download to finish. Do not choose **Source code (zip)** or **Source code (tar.gz)**. Those are for developers and do not contain the ready-to-use Windows installer.
 
-**[Download SonicRiders-Switch-Setup-v0.8.7.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.8.7/SonicRiders-Switch-Setup-v0.8.7.zip)**
+**[Download SonicRiders-Switch-Setup-v0.9.0.zip](https://github.com/teclilla18/sonic-riders-recomp/releases/download/v0.9.0/SonicRiders-Switch-Setup-v0.9.0.zip)**
 
 > A PC, Android, or Linux setup ZIP will not install the Switch version. The separate Switch 2 ZIP is for a different console.
 
-- [ ] **Checkpoint:** The downloaded filename is exactly `SonicRiders-Switch-Setup-v0.8.7.zip`.
+- [ ] **Checkpoint:** The downloaded filename is exactly `SonicRiders-Switch-Setup-v0.9.0.zip`.
 
 <a id="extract"></a>
 
@@ -103,11 +103,11 @@ Tick the checkpoints as you go. Pictures have text descriptions.
 *Illustration, not a screenshot.*
 
 1. Open **File Explorer**. It is the yellow folder app on the Windows taskbar, at the bottom of the screen.
-2. Click **Downloads** in the left column. Find `SonicRiders-Switch-Setup-v0.8.7.zip`. If you chose a different download location, open that folder instead.
+2. Click **Downloads** in the left column. Find `SonicRiders-Switch-Setup-v0.9.0.zip`. If you chose a different download location, open that folder instead.
 3. Click the ZIP with the **right mouse button**. Choose **Extract All…**. A ZIP stores several files in one file. Extracting restores those files to a normal folder.
 4. In the extraction window, choose a short place you can find again, such as `C:\SonicRiders`. Use English letters and numbers in the path. Spaces work, but accented characters in the path can stop the tools.
 5. Click **Extract**. Wait until it finishes. Keep all the extracted files together.
-6. Open the extracted folder. Open `SonicRiders-Switch-v0.8.7` if there is one more folder inside. Stop when you can see `Install Sonic Riders (Switch).exe`, `setup`, and `tools` together.
+6. Open the extracted folder. Open `SonicRiders-Switch-v0.9.0` if there is one more folder inside. Stop when you can see `Install Sonic Riders (Switch).exe`, `setup`, and `tools` together.
 
 > Do not double-click the installer while browsing inside the ZIP. Copying only the EXE is not enough. [Windows extraction help](https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/zip-and-unzip-files).
 
@@ -339,7 +339,7 @@ SD card (top folder)
 *Illustration, not a screenshot.*
 
 1. In the game, hold **Minus (−)** for about half a second. This opens the port’s settings menu.
-2. Open **About**. Check the version/build information against **v0.8.7**. If an old version is still shown, follow **Update without losing your progress** below.
+2. Open **About**. Check the version/build information against **v0.9.0**. If an old version is still shown, follow **Update without losing your progress** below.
 3. For a first test, keep the normal settings. Stock-clock consoles can run races at 30 FPS. This booklet does not require overclocking.
 4. To quit normally, open the Minus menu, choose **Quit Game**, and confirm. Wait to return to Homebrew Menu. Do not remove the SD card while the game is saving.
 
@@ -355,7 +355,7 @@ SD card (top folder)
 
 1. Quit Sonic Riders normally before you update. Connect the SD card to your computer using the same safe steps as before.
 2. **Back up first.** Copy the whole `/switch/sonicriders/` folder from the SD card to a safe folder on your computer. A backup is a spare copy. Keep it until you know the update works.
-3. Open the [Nintendo Switch release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7). For a future update, check for a newer release for **this same platform**. Download its matching setup ZIP.
+3. Open the [Nintendo Switch release page](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0). For a future update, check for a newer release for **this same platform**. Download its matching setup ZIP.
 4. Extract the new ZIP to a **new normal folder** on the PC. Open its installer. Select your same own game image and the same SD card root.
 5. Build and install. Keep the existing full game image if it is already verified on the card; **Copy the disc image too** can be unticked for that case.
 6. For a manual update, copy **only** the new `sonicriders.nro` into the existing game folder and replace that file.
@@ -372,7 +372,7 @@ SD card (top folder)
 
 ### My download does not contain the right installer
 
-Check the full ZIP name: `SonicRiders-Switch-Setup-v0.8.7.zip`. Open the release page and choose that asset. **Source code (zip)** is not the setup package. Keep all extracted files together.
+Check the full ZIP name: `SonicRiders-Switch-Setup-v0.9.0.zip`. Open the release page and choose that asset. **Source code (zip)** is not the setup package. Keep all extracted files together.
 
 [Picture and steps](#download).
 
@@ -454,7 +454,7 @@ Compare the new local NRO with the file in `/switch/sonicriders/`. Make sure you
 
 ```text
 Platform: Nintendo Switch
-Setup ZIP: SonicRiders-Switch-Setup-v0.8.7.zip
+Setup ZIP: SonicRiders-Switch-Setup-v0.9.0.zip
 Version/build in About: …
 Firmware and homebrew loader/version: …
 Handheld or docked; known clocks: …

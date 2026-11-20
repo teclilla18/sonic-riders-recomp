@@ -65,7 +65,7 @@ uint32_t super_flight_anim(uint32_t obj, uint32_t anim) {
         rt_log("[flight] racer 0: animation %u asked for, state %u, was %u", anim, st, ld32(obj + 0x764u));
     int super = ld8(obj + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
                 ld8(obj + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
-    if (t >= 0 ? d != 0 : !(super && settings_ring_cap() != 100)) return anim;
+    if (t >= 0 ? d != 0 : !(super && settings_super_flight())) return anim;
     if (board_state(st)) return anim;
     if (riding_state(st) ? keep_anim(anim) : !riding_anim(anim)) return anim;
     return t >= 0 ? (uint32_t)t : FLIGHT_POSE;

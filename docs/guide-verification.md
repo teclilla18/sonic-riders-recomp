@@ -6,8 +6,8 @@ Checked November 18, 2026. These are documentation changes, not a new game relea
 
 | Platform | Public release | Exact setup asset | SHA-256 |
 | --- | --- | --- | --- |
-| Nintendo Switch | [Stable v0.8.7](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7) | `SonicRiders-Switch-Setup-v0.8.7.zip` | `ad21ee145873bfec161d4ecf8600a21724cb9429158b3b08ff1bd00538fb4687` |
-| Nintendo Switch 2 | [Experimental Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2) | `SonicRiders-Switch2-Setup-Alpha2.zip` | `dde6e5125981ecee948af030b45076431289eaceadfdd049579a567c1f1aa6d7` |
+| Nintendo Switch | [Stable v0.9.0](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0) | `SonicRiders-Switch-Setup-v0.9.0.zip` | `ad21ee145873bfec161d4ecf8600a21724cb9429158b3b08ff1bd00538fb4687` |
+| Nintendo Switch 2 | [Experimental Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3) | `SonicRiders-Switch2-Setup-Alpha3.zip` | `dde6e5125981ecee948af030b45076431289eaceadfdd049579a567c1f1aa6d7` |
 
 The current installers were maintenance replacements in these existing releases. Their installer source is
 stable `cf243a9fec432d5ecd0ab5631a70b0a0ac5b99a6` and native
@@ -70,7 +70,7 @@ can change. Read their current instructions rather than assuming a firmware vers
   A correct install does not establish that every loading hang is solved.
 - Issue #24 was a Linux static-library build problem, confirmed by that reporter and fixed there.
   Its Linux package command is deliberately not presented as a Windows/Switch solution.
-- Native Alpha 2's severe persistent Race Select audio distortion, freeze at onset, music/announcer loss
+- Native Alpha 3's severe persistent Race Select audio distortion, freeze at onset, music/announcer loss
   and stutters remain disclosed. Normal 60 FPS is a starting default, not a verified audio cure.
 
 ## Picture provenance and privacy

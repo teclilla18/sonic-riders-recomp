@@ -1,54 +1,106 @@
 # Changelog
 
-## v0.8.7-switch2-alpha.2 (2026-11-18)
+### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
-- Super Sonic feels super again with Riders Plus:999rings,Lv4/5 and improved speed balance.
-- Cleaner multiplayer HUD, correct Lv4/5 indicators and no repeated level-ups after finishing.
-- Universal game icon in hbmenu; Unlimited rendering available as an explicitly experimental option.
-- Fresh installs default60FPS; updates retain saves/settings/caches. Known severe RaceSelect audio distortion
-  and occasional freeze remain. Lower render rate did not recover the reported accumulated state.
+- Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to
+  boost, both on by default and only active with Riders Plus.
+- Hold to boost: keep B (or X) held after boosting and the boost goes on, like nitrous, taking air at your gear's
+  boost rate; a tap is still the normal boost. Super Sonic keeps speeding up while held, up to 350 km/h.
+- Super Sonic gains rings in the stick-spin scenes. Auto spin gives the stick back if the game stops counting turns.
+- Ring Replenish (Riders Plus feature, on by default): Super Sonic's rings refill where other racers refill air.
+  Tricks pay by rank: C 15, B 22, A 30, AA 33, S 37, SS 45, X 75 rings. Grinding, flying, smashing objects and
+  each stick-spin turn (about 1.5 rings) add more.
+- Holding a Super boost widens the view within half a second, and a little more as he speeds up to 350 km/h.
+- Super Sonic (Riders Plus): flight as an experimental option, off by default (F1 > Gameplay > Riders Plus features >
+  "Super Sonic flight": a flying pose instead of standing on his board; rails, tricks and spin scenes keep the board;
+  known issue: after an air trick he can stay on his board until the next move; never online), an invisible ring magnet (the game's Magnetic Barrier, kept on without its bubble), and his held
+  boost burns rings 2.9 times as fast as other gears burn air.
+- Switch: no more lost start-ups after a long pause while the game loads (the sleep fix now starts once the game runs).
+- Same character can be chosen: several players can pick the same character in Player Entry (for example two Super
+  Sonics in a split-screen race).
+- New Cheats tab in the settings menu: "No ring decrease (Super Sonic)". Cheats are never used online.
+- Settings menu: Up on the top row jumps to Close / Quit at the bottom of the page, Down there jumps back to the top.
+- Switch: the game no longer shows "An error has occurred" after the console slept with the game open.
 
-## Local development test — not published
+### Auto spin (Gameplay option, #23)
+
+- New option in the settings menu (F1 > Gameplay > Auto spin, off by default): in the scenes where the game asks
+  you to turn the stick round and round, the port turns it for you at a fast player's pace (7 turns a second).
+  Your air refills and you speed up as with a good hand spin, without wearing out your stick. Only your own
+  racers; it also works in online races (the other side receives the turned stick as your input).
+
+### PC: an unpacked update that was never installed is now noticed
+
+- Unzipping a new version over an old folder and then starting the old shortcut kept running the old game.
+  The launcher now shows UPDATE NOT FINISHED with a FINISH UPDATE button, and the game shows a banner and
+  an F1 > About line saying which version is unpacked but not installed yet.
+
+### Illustrated installation booklets
+
+- Use clear, neutral headings and callouts for all readers while retaining the illustrated presentation.
+- Separate beginner booklets for Switch Stable and Switch 2 Experimental Alpha, in HTML and Markdown.
+- Retain the Claude-made easy-read guides' colors, typography and friendly numbered presentation.
+- Add actual annotated current-installer captures, labelled console/folder illustrations, checkpoints,
+  direct downloads, safe updates, verified troubleshooting and privacy-aware bug-report steps.
+- Publish through GitHub Pages with prominent README and current-release links; retain technical docs.
+- Documentation only: no game/runtime changes, rebuilt release packages or new game version.
+
+### Installer maintenance for existing v0.8.7 downloads
+
+- Responsive installer columns, uncropped aspect-correct banner, readable wrapped build logs and live DPI changes.
+- Clear completion state and a persistent Open Output Folder action for PC, Switch, Android and Switch 2.
+- Correct native Switch 2 output paths and hbmenu instructions; saves/settings/caches remain preserved.
+- Existing PC/Switch/Android/Alpha2 setup assets rebuilt and replaced after cold installation, UI and SHA-256 download validation; versions, tags and release descriptions unchanged.
+
+
+## v0.8.7 (2026-11-18)
+
+- iPhone / iPad: the iOS setup ZIP is now on v0.8.7 (added to the v0.8.7 release on 2026-11-19).
+- Super Sonic works with Riders Plus:999 rings, Lv4/5 progression and active top/boost/drift targets
+  195/270/110 Base,220/300/125 Lv4 and240/330/140 Lv5 km/h. Native level/resource costs and stat mods preserved.
+- Adaptive multiplayer HUD positioning, independent shared2P timer and correct multiplayer Lv4/5 digits29.
+- Stop finished-race repeated stat application and native level-up effects.
+- Includes validated Android Vulkan compatibility/shutdown fixes32 and Linux/SteamDeck setup fix30.
+- Windows, originalSwitch, Android and Linux setup packages; existing iOSv0.8.4 remains available separately.
+
+### More Riders Plus details
 
 - Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
 - Stop finished-race Lv5 stat reapplication and repeated native level-up effect-path entries.
 - Native Switch2 builds permanently embed the universal game icon from setup/icon_256.jpg, with
   tracked dependencies/resource identity and exact asset validation. Latest local test build deployed.
 
-- Riders Plus Super balance: Base195/270/110, Lv4 220/300/125, Lv5 240/330/140 km/h
-  top/boost/drift, preserving captured stat mods without compounding. Native test build installed with
-  verified OunceMTP backups/readbacks; settings/Unlimited/data preserved. The following fixes are included in the latest local build.
+- Riders Plus Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
+  Lv.5 240/330/140 km/h, scaled from unmodified fields to preserve stat mods without compounding.
+  Standard characters and Plus-off Super retain their existing stats. Released in v0.8.7.
+- Add a local Windows OunceMTP deployment utility: read-only detection/backups, temporary transfer probes,
+  staged NRO/manifest deployment with explicit apply/current-hash gates, SHA-256 readback and FTP fallback.
+- Riders Plus supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own
+  live stats, while retaining his native level, ring costs and transformation. Extended feedback skips air refill.
+- Wide local split-screen HUD groups follow each player's view edges, keeping their size, shared timer/map,
+  centred notifications and the 3P silhouette. Rendering changes do not write guest RAM.
+- Separately, fix the missing split-screen Lv. 4/5 digit hooks (#29), including Super Sonic's multiplayer HUD.
+  Validation and remaining checks: [Riders Plus / HUD note](docs/notes/riders-plus-local-hud.md).
+## Android download update — v0.8.6 (#32, 2026-11-18)
 
-## v0.8.6-switch2-alpha.1 (experimental candidate; not published)
+- Automatically use traditional render passes on drivers without dynamic rendering;
+  preserve the existing path on supported devices. Tested on the S23 by forcing both paths;
+  the reporter confirms a completed Mali-G57 race. iOS/MoltenVK still requires testing.
+- Check optional features, format/allocation limits and depth-clear usage. Preserve
+  the solid-floor destination-alpha fix on devices without dual-source blending.
+- Shut down Android renderer/audio workers and Vulkan/SDL resources in order. Preserve save/record
+  handlers while avoiding a reproduced library-finalizer race with Android graphics threads.
+  S23 tests pass and both updated Mali logs complete clean shutdown without another signal.
+- The separately reported Green Cave/Tails loading hang remains under investigation (#6);
+  no speculative loading/loader change is included.
+- Diagnostic `SR_VK_FORCE_LEGACY=1`; technical details in `docs/notes/vulkan-legacy.md`.
 
-- Final baseline is hardware-tested c8c06fdda996/fa2ec57, retaining scheduler
-  wakeup and asynchronous native logging fixes. Fresh defaults: 2x, 60 FPS,
-  no automatic exit; live resolution changes disabled.
-- Known issues: intermittent stutters/temporary freezes, music/announcer
-  dropout and temporary audio distortion. Playable alpha, not bug-free.
-  No further optional fixes before this release.
+## Documentation — Switch 2 Alpha 1
 
-- First dedicated native Switch 2 setup ZIP, using the existing GUI/PowerShell
-  installer and pinned toolchain. Local own-disc compilation, isolated SD path,
-  manual-transfer layout and preservation of saves/settings/caches.
-- Runtime source is the tested fa2ec57/c8c06fdda996 baseline. No higher-FPS
-  interpolation; its Player Entry freeze is preserved for separate investigation.
-- Manual exit/no time cap by default; persistent runtime/lifecycle diagnostics.
-  Startup/cache-save hitches remain known. Hardware acceptance covers one
-  reported environment/route; cold installer validation is a separate release gate.
+- Announce the separate experimental Switch 2 release with Lanmana banner/credit,
+  installation and bug-report links, and dedicated interactive install/update tabs.
+  Stable platform releases and runtime source are unchanged.
 
-## Unreleased (experimental Switch 2 branch)
-
-- Native player 1 uses the diagnostic-verified merged handheld/No1 input path;
-  add native HID-to-SI, audio-delivery and separate cache/present diagnostics.
-  The user confirms working gameplay/input/audio/overlay and tried enhancements.
-  Startup cache-saving stalls remain known; extended coverage is still pending.
-
-- Add a separate native Switch 2 build using libounce/OunceVK and the existing
-  recompilation core/Vulkan renderer. Includes staged diagnostics, isolated
-  runtime data, permitted-core discovery and explicit resource cleanup.
-  The standalone diagnostic is hardware-tested; integrated game boot and
-  gameplay remain untested on Switch 2. No release is published.
 
 ## v0.8.6 (2026-11-16; Linux zip updated the same day)
 

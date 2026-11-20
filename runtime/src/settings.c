@@ -9,12 +9,7 @@
 
 /* the Chaos Emerald unlock starts off: players who want to earn it themselves (user, 2026-11-07) */
 /* the 999 ring cap starts on, the original 100 one menu switch away (user, 2026-11-12) */
-#ifdef __SWITCH2__
-#define DEFAULT_RES RES_2X
-#else
-#define DEFAULT_RES RES_1X
-#endif
-Settings g_settings = {SCREEN_4_3, 0, DEFAULT_RES, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1};
+Settings g_settings = {SCREEN_4_3, 0, RES_1X, 0, 0, FR_AUTO, 1, 0, 100, 2, 1, 0, 0, 100, 100, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1};
 volatile int g_ring_cap = 999;  /* patches.txt: the most rings a racer holds */
 static int g_fixed_ring_cap;    /* settings_fix_ring_cap, 0 = the setting's */
 static int g_boost_hold;        /* Hold to boost in effect */
@@ -38,13 +33,7 @@ const char* settings_resolution_name(int res) {
     return res >= 0 && res < RES_MODES ? names[res] : "?";
 }
 
-#ifdef __SWITCH2__
-/* Switch 2: a fixed choice up to 120 (the user, 2026-11-20: Unlimited "was causing severe problems"); a saved
- * Unlimited (-1) is no longer valid, so it loads as the game's own 60 */
-const int settings_pc_fps_presets[] = {60, 90, 120, 0};
-#else
 const int settings_pc_fps_presets[] = {30, 45, 60, 120, 144, 180, 240, PC_FPS_UNLIMITED, 0};
-#endif
 int settings_pc_fps_valid(int v) {
     if (v == 0) return 1;
     for (int i = 0; settings_pc_fps_presets[i]; i++)
@@ -162,6 +151,7 @@ void settings_load(void) {
             else if (!strcmp(line, "auto_spin")) g_settings.auto_spin = v != 0;
             else if (!strcmp(line, "boost_hold")) g_settings.boost_hold = v != 0;
             else if (!strcmp(line, "ring_replenish")) g_settings.ring_replenish = v != 0;
+            else if (!strcmp(line, "super_flight")) g_settings.super_flight = v != 0;
             else if (!strcmp(line, "no_ring_drain")) g_settings.no_ring_drain = v != 0;
         }
         fclose(f);
@@ -233,6 +223,10 @@ void settings_fix_ring_replenish(int on) {
 
 int settings_ring_replenish(void) { return g_ring_replenish; }
 /* a cheat: never in online play, a recording or a replay (they all run on the game-driven clock) */
+int settings_super_flight(void) {
+    int ppc_detclock(void);
+    return g_settings.super_flight && g_ring_cap != 100 && !ppc_detclock();
+}
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
 int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */
 
@@ -254,13 +248,13 @@ void settings_apply(void) {
         rt_log("[settings] cannot write %s", platform_settings_path());
         return;
     }
-    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\nupdate_check=%d\nring_cap_999=%d\nauto_spin=%d\nboost_hold=%d\nring_replenish=%d\nno_ring_drain=%d\n",
+    fprintf(f, "screen=%d\nshow_fps=%d\nresolution=%d\nchaos_emerald_shop=%d\nfullscreen=%d\nframerate=%d\nhandheld_gpu=%d\nhud_stretch=%d\nfov=%d\npc_scale=%d\nmsaa=%d\nbloom=%d\ngrade_bright=%d\ngrade_contrast=%d\ngrade_sat=%d\ngrade_warm=%d\nchar_light=%d\npc_fps=%d\npad_background=%d\nsharpness=%d\nupdate_check=%d\nring_cap_999=%d\nauto_spin=%d\nboost_hold=%d\nring_replenish=%d\nno_ring_drain=%d\nsuper_flight=%d\n",
             g_settings.screen,
             g_settings.show_fps, g_settings.resolution, g_settings.chaos_emerald, g_settings.fullscreen, g_settings.framerate,
             g_settings.handheld_gpu, g_settings.hud_stretch, g_settings.fov, g_settings.pc_scale, g_settings.msaa,
             g_settings.bloom, g_settings.grade_bright, g_settings.grade_contrast, g_settings.grade_sat, g_settings.grade_warm,
             g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
             g_settings.ring_cap_999, g_settings.auto_spin, g_settings.boost_hold,
-            g_settings.ring_replenish, g_settings.no_ring_drain);
+            g_settings.ring_replenish, g_settings.no_ring_drain, g_settings.super_flight);
     fclose(f);
 }
