@@ -51,8 +51,9 @@
 2. **Auto spin (#23)**: implemented and merged to main 2026-11-20, **not released** (the user is holding the
    release for one more change). F1 > Gameplay > Auto spin, off by default; turns only the controller stick
    of the player's racer in spin sections, 7 turns/s (user's pick). Tested by the user on PC at 15/5/6 turns/s
-   (Splash Canyon); 7/s, online, 2-4 players and other stages not run. Code: auto_spin.c. Logs `[autospin]`
-   (controller per racer at race start; each section taken over). Next: a 2P split-screen race to check port 2.
+   (Splash Canyon), then at 7/s in a **2P split-screen race with two controllers: worked for both players**
+   (log: controller 1 -> racer 0, 2 -> racer 1, CPUs none; sections taken over on ports 1 and 2). Not run:
+   online, 3-4 players, other stages, Switch/Android builds. Code: auto_spin.c, logs `[autospin]`.
    **Next item, same release: hold-B boost** (plan file "Nitrous-style boost toggle", user details 2026-11-20).
 3. **#33 32-bit Android**: branch `claude/android-armv7` (armeabi-v7a build, setup `-Abi auto`); S23 32-bit
    perftest passed; test zip posted to #33. The reporter's APK **crashes at start** (crash report posted 2026-11-20 05:42,
