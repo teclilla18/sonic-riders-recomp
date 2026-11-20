@@ -38,7 +38,13 @@ const char* settings_resolution_name(int res) {
     return res >= 0 && res < RES_MODES ? names[res] : "?";
 }
 
+#ifdef __SWITCH2__
+/* Switch 2: a fixed choice up to 120 (the user, 2026-11-20: Unlimited "was causing severe problems"); a saved
+ * Unlimited (-1) is no longer valid, so it loads as the game's own 60 */
+const int settings_pc_fps_presets[] = {60, 90, 120, 0};
+#else
 const int settings_pc_fps_presets[] = {30, 45, 60, 120, 144, 180, 240, PC_FPS_UNLIMITED, 0};
+#endif
 int settings_pc_fps_valid(int v) {
     if (v == 0) return 1;
     for (int i = 0; settings_pc_fps_presets[i]; i++)
