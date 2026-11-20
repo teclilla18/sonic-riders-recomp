@@ -439,6 +439,14 @@ void lv_racers_frame(void) {
     for (int i = 0; i < 8; i++) {
         uint32_t p = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
         if (super_racer(p) || g_lv[i].applied) lv_racer_update(p);
+        /* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost): the Magnet
+         * item (item box type 7, the electric bubble; Switch test 2026-11-20) sets racer +0xBB0 bit 0x4 and starts task
+         * 818F0B94, which shows the bubble and clears the bit when it ends. Here the bit is kept on for a transformed
+         * Super Sonic every step, without the task, so nothing is drawn. */
+        if (g_ring_cap != 100 && super_racer(p)) {
+            uint32_t f = ld32(p + 0xBB0u);
+            if (!(f & 4u)) st32(p + 0xBB0u, f | 4u);
+        }
     }
 }
 
