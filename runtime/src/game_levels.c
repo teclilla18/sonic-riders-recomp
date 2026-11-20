@@ -90,7 +90,7 @@ static int active_race(void) {
  * game's reward each time): one step's air rewards count up to this many rings before the share above, and a
  * counted spin turn gives SPIN_FUEL (the game's 5000 x 0.1, about 0.45 rings; the third tuning) */
 #define REWARD_MAX_RINGS 8u   /* fourth tuning: was 4 */
-#define SPIN_FUEL 1000u        /* fourth tuning: was 500, now about 0.9 rings a turn */
+#define SPIN_FUEL 1600u        /* fifth tuning (user: more in spin sections): was 1000, now about 1.45 rings a turn */
 static uint32_t g_gain_racer, g_gain_start;  /* the racer the fuel step is on, and its fuel before the step */
 
 /* The fuel step fn 81815xxx (racer r29): just before it adds the step's air rewards (+0x988) to the fuel. */
@@ -118,6 +118,23 @@ static void no_drain(uint32_t racer) {
     seen[i] = now;
     if ((uint32_t)air < best[i]) st32(racer + 0x984u, best[i]);
     else best[i] = (uint32_t)air;
+}
+
+/* Every place the game adds to a racer's step air rewards (+0x988; patches.txt "reward sources"). For now: each gain of
+ * a player's Super Sonic is logged with its site, the racer's state (+0x1034: 8-13 trick jumps, 18 grinding) and
+ * animation, so each kind (tricks by rank, flying, grinding, objects) can be scaled on its own (the user, 2026-11-20). */
+uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
+    uint32_t d = racer - GAME_PLAYERS;
+    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE || ld8(racer + GAME_RACER_GEAR) != GAME_GEAR_CHAOS_EMERALD ||
+        ld8(racer + 0xBCu) != 0) return value;
+    int32_t gain = (int32_t)(value - ld32(racer + 0x988u));
+    static unsigned lines;
+    if (gain != 0 && lines < 3000) {
+        lines++;
+        rt_log("[reward] racer %u site %08X %+d (rings %u, state %u, anim %u, rank byte %u)", d / GAME_PLAYER_SIZE, site,
+               gain, ld32(racer + 0xB98u), ld8(racer + 0x1034u), ld32(racer + 0x764u), ld8(racer + 0x1029u));
+    }
+    return value;
 }
 
 /* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
@@ -443,7 +460,7 @@ void lv_texture_decoded(GxTexture* t) {
 
 /* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
  * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
- * gives him SPIN_FUEL here (1000, about 0.9 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * gives him SPIN_FUEL here (1600, about 1.45 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
     if (!settings_ring_replenish() || !super_racer(racer)) return;
