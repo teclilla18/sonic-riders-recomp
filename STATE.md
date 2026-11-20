@@ -2,16 +2,18 @@
 
 ## Released
 
-- **[v0.8.7 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7)** (latest; tag
-  `381a369`): Windows, original Switch, Android, Linux and iOS setup ZIPs. Super Sonic in Riders Plus (999 rings,
-  Lv. 4/5; top/boost/drift Base 195/270/110, Lv. 4 220/300/125, Lv. 5 240/330/140 km/h), adaptive split-screen
-  HUD, multiplayer Lv. 4/5 digits (#29), no repeated finished-race level-ups, Android Vulkan 1.1 + quit fixes
-  (#32), Linux setup fix (#30). Tested: PC matrix and both own-view checksum routes, cold Sandbox PC + Android,
-  cold Mac + iPhone 17 Pro race. iPads not retested.
-- **[Switch 2 Alpha 2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.8.7-switch2-alpha.2)**
-  (pre-release; tag `1ca54eb`, runtime = accepted build `0d995f3def88`). **Accepted by the user on Switch 2:**
-  icon, Super Sonic feel, high-ring finish, 2P Fit HUD. Fresh installs default to 60 FPS; Unlimited experimental.
-- Release downloads are setup ZIPs only (rule in CLAUDE.md); both alphas' `.sha256` files were removed.
+- **[v0.9.0 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0)** (latest, 2026-11-20;
+  tag `bce3a5f`): Hold to boost for everyone, Auto spin (#23), same character for several players, Super Sonic
+  ring magnet / Ring Replenish / 2.9x held boost to 350 km/h, Cheats tab, Switch sleep + start-up clock fixes,
+  unpacked-not-installed check. **Super Sonic flight is an experimental option, off by default** (after an air trick
+  he can stay on his board until the next move; cause not found). Zips: PC, Switch, Android, Linux. Cold Sandbox
+  PASS: PC (+ space path), Android. iOS v0.9.0 not built yet (needs the Mac); guides point iOS to v0.8.7.
+- **[Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3)**
+  (pre-release; tag `67710d8`, branch `release/switch2-alpha3` = local claude/switch2-holdboost + main v0.9.0).
+  Cold Sandbox PASS (NRO bc9dd55883f6-class build). The user played the test builds before the flight toggle on
+  Switch 2 (Race Select audio breakup gone); the final package was not played on hardware.
+- Not done (needed the user's OK each time): "Newer version available" lines on the v0.8.7 / Alpha 2 pages, and
+  deleting the v0.8.6 / v0.8.4 release pages (5-newest rule; keep tags).
 
 ## Riders Plus website (2026-11-19)
 
