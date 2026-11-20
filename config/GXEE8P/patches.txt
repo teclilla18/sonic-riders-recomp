@@ -108,6 +108,14 @@ decl void lv_racer_reset(uint32_t racer);
 # Ring-powered fuel is clamped before conversion back to rings. Super keeps his own max-air
 # denominator (and per-ring cost); only the ceiling is extended, never the stat's resource scale.
 decl uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32_t original);
+# Ring Replenish (game_levels.c, Riders Plus option): Super Sonic keeps the step's air rewards (+0x988, thrown
+# away for ring-powered gear at 81815EEC), and the fuel before the step's gains is noted (both branches) so the
+# clamps below keep only part of a gain
+decl uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original);
+decl void lv_super_gain_start(uint32_t racer, uint32_t air);
+81815EEC before c->r[0] = lv_super_rewards(c->r[29], c->r[3], c->r[0]);
+81815F70 before lv_super_gain_start(c->r[29], c->r[5]);
+81816098 before lv_super_gain_start(c->r[29], c->r[4]);
 81815FEC before c->r[0] = lv_super_air_cap(c->r[29], c->r[6], ld32(c->r[3] + 0x1Cu), c->r[0]);
 818160C8 before c->r[0] = lv_super_air_cap(c->r[29], c->r[6], ld32(c->r[3] + 0x1Cu), c->r[0]);
 8182B864 before lv_racer_update(c->r[8]);

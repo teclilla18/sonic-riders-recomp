@@ -28,6 +28,7 @@
 #include "game_addrs.h"
 #include "gx_render.h"
 #include "runtime.h"
+#include "settings.h"
 
 extern volatile int g_ring_cap;
 
@@ -81,12 +82,42 @@ static int active_race(void) {
            ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
 }
 
+/* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
+ * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
+#define REPLENISH_NUM 7
+#define REPLENISH_DEN 10
+static uint32_t g_gain_racer, g_gain_start;  /* the racer the fuel step is on, and its fuel before the step */
+
+/* The fuel step fn 81815xxx (racer r29): just before it adds the step's air rewards (+0x988) to the fuel. */
+void lv_super_gain_start(uint32_t racer, uint32_t air) {
+    g_gain_racer = racer;
+    g_gain_start = air;
+}
+
+/* 81815EEC: the step's air rewards (+0x988: tricks, smashed objects, flying, air boxes...) are thrown away for
+ * ring-powered gear (+0x9D4 bit 0x400). With Ring Replenish, Super Sonic keeps them as fuel (his rings). */
+uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original) {
+    if (!settings_ring_replenish() || !super_racer(racer) || (int32_t)rewards <= 0) return original;
+    return rewards;
+}
+
 /* The native ring-powered path mirrors floor(fuel * 100 / max_air) into the ring word.
  * Keep that denominator and all costs intact; only extend the fuel clamp. Raising max_air itself
  * would dilute each ring and would still leave the mirror bounded to 100. */
 uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32_t original) {
     if (g_ring_cap == 100 || !super_racer(racer) || !max_air) return original;
     if ((int32_t)air < 0) return 0;
+    if (racer == g_gain_racer) {
+        g_gain_racer = 0;
+        /* a step that gained (rails, the air rewards above): only REPLENISH_NUM/DEN of the gain; off: none of the
+         * rewards were kept, rails as before */
+        if (settings_ring_replenish() && (int32_t)g_gain_start >= 0 && air > g_gain_start) {
+            uint32_t gained = air - g_gain_start, kept = (uint32_t)((uint64_t)gained * REPLENISH_NUM / REPLENISH_DEN);
+            air = g_gain_start + kept;
+            if (getenv("SR_BOOSTLOG") && gained >= 500)
+                rt_log("[replenish] Super Sonic fuel +%u (of +%u), now %u", kept, gained, air);
+        }
+    }
     uint64_t cap = (uint64_t)max_air * (uint32_t)g_ring_cap / 100u;
     if (cap > INT32_MAX) cap = INT32_MAX;
     return (uint32_t)((uint64_t)air < cap ? air : cap);
@@ -338,14 +369,15 @@ void lv_texture_decoded(GxTexture* t) {
 }
 
 /* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
- * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. Each turn gives him the
- * same 5000 fuel here (about 4.5 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
+ * gives him REPLENISH_NUM/DEN of those 5000 fuel here (3500, about 3 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
-    if (g_ring_cap == 100 || !super_racer(racer)) return;
+    if (!settings_ring_replenish() || !super_racer(racer)) return;
     uint32_t max_air = ld32(racer + 0x8DCu + 0x1Cu), air = ld32(racer + 0x984u);
     if (!max_air || (int32_t)air < 0) return;
-    uint64_t cap = (uint64_t)max_air * (uint32_t)g_ring_cap / 100u, now = (uint64_t)air + 5000u;
+    uint64_t cap = (uint64_t)max_air * (uint32_t)g_ring_cap / 100u,
+             now = (uint64_t)air + 5000u * REPLENISH_NUM / REPLENISH_DEN;
     if (now > cap) now = cap;
     st32(racer + 0x984u, (uint32_t)now);
     if (getenv("SR_BOOSTLOG")) rt_log("[spin] Super Sonic turn: fuel %u -> %u", air, (uint32_t)now);

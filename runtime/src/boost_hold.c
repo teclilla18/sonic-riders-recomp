@@ -106,6 +106,38 @@ static uint32_t held_buttons(uint32_t racer) {  /* 0 for a CPU racer (no control
     return ld32(pad + 0x8u);
 }
 
+/* Speed view (the user, 2026-11-20, "like some Need for Speed games"): while Super Sonic holds a boost the field of
+ * view widens with his climb towards SUPER_CAP, up to FOV_BOOST_MAX, and eases back after. The camera is shared by
+ * every screen, so only with one local player (split screen: off). Picture only, no game state: safe online. */
+#define FOV_BOOST_MAX  0.18      /* +18 % at the top of the climb */
+#define FOV_EASE_IN    0.03      /* share of the gap closed per frame */
+#define FOV_EASE_OUT   0.06
+static double g_fov_target;      /* 0..1 of FOV_BOOST_MAX, set by the ticks */
+static double g_fov_now;
+static uint32_t g_fov_frame, g_fov_tick;  /* boost_hold_fov calls; the call count at the last Super tick */
+
+static int human(uint32_t racer) {  /* a racer with a controller struct (not a CPU) */
+    uint32_t pad = ld32(racer);
+    return pad >= PAD_STRUCTS && pad < PAD_STRUCTS + 4 * PAD_STRUCT_SZ && !((pad - PAD_STRUCTS) % PAD_STRUCT_SZ);
+}
+
+static void fov_tick(int i, uint32_t racer) {
+    if (!super_racer(racer) || !human(racer)) return;
+    for (int j = 0; j < 8; j++)
+        if (j != i && human(GAME_PLAYERS + (uint32_t)j * GAME_PLAYER_SIZE)) return;  /* split screen */
+    g_fov_target = (double)ramp(g_held[i]) / 4096.0;
+    g_fov_tick = g_fov_frame;
+}
+
+float boost_hold_fov(void) {
+    g_fov_frame++;
+    if (g_fov_frame - g_fov_tick > 4) g_fov_target = 0.0;  /* no held Super boost lately (released, race over) */
+    double ease = g_fov_target > g_fov_now ? FOV_EASE_IN : FOV_EASE_OUT;
+    g_fov_now += (g_fov_target - g_fov_now) * ease;
+    if (g_fov_now < 0.001) g_fov_now = 0.0;
+    return (float)(1.0 + FOV_BOOST_MAX * g_fov_now);
+}
+
 static void stop(int i, uint32_t racer, const char* why) {
     if (log_on() && g_extra[i])
         rt_log("[boost] racer %d: held boost ended (%s), %u frames past the normal boost, air %d, speed %d km/h", i,
@@ -138,6 +170,7 @@ void boost_hold_tick(uint32_t racer) {
     uint32_t blk = racer + R_BLOCKS + 0x38u * lv;
     g_held[i]++;
     hold_speed(i, racer, blk);
+    fov_tick(i, racer);
     if (t >= HOLD_T) return;
     uint32_t cost = ld32(blk + 0x28u);
     if (cost == 0 || cost > 10000000u) { stop(i, racer, "no boost cost"); return; }

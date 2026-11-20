@@ -38,6 +38,7 @@ typedef struct Settings {
                            (g_ring_cap, read by the cap checks in config/GXEE8P/patches.txt) */
     int auto_spin;      /* races: the port turns the stick in the game's spin scenes (auto_spin.c, #23) */
     int boost_hold;     /* races: a boost lasts while B (or X) is held, taking air (boost_hold.c) */
+    int ring_replenish; /* races: Super Sonic gains rings where others gain air (game_levels.c) */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -77,7 +78,10 @@ int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
 /* Hold to boost from a recording or the online host (0 / 1): game state, kept for this run */
 void settings_fix_boost_hold(int on);
 int settings_boost_hold(void);  /* in effect: 1 = on */
+float boost_hold_fov(void);     /* boost_hold.c: this frame's extra field of view (1 = none), once per frame */
 int settings_auto_spin(void);   /* in effect (needs Riders Plus): 1 = on */
+void settings_fix_ring_replenish(int on);
+int settings_ring_replenish(void);  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);

@@ -102,7 +102,8 @@ static void rec_open(const char* path, int flags) {
     put32(h + 8, 1);
     put32(h + 12, (uint32_t)g_ports);
     put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u) |
-          (settings_boost_hold() ? 16u : 0u));
+          (settings_boost_hold() ? 16u : 0u) |
+          (settings_ring_replenish() ? 32u : 0u));
     float k = settings_game_k();  /* the game's camera aspect (an online session's: the room's) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -136,6 +137,7 @@ static int rep_open(const char* path) {
     if (get32(h + 16) & 8) g_online_rules = 1;  /* the online rules changed the controllers: replayed with them */
     settings_fix_ring_cap(get32(h + 16) & 4 ? 999 : 100);  /* the recorded ring cap: game state */
     settings_fix_boost_hold(get32(h + 16) & 16 ? 1 : 0);   /* and Hold to boost (older recordings: off) */
+    settings_fix_ring_replenish(get32(h + 16) & 32 ? 1 : 0);  /* and Ring Replenish (older: off) */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
@@ -257,7 +259,8 @@ static void net_send_input(void) {
  * camera aspect (EFB width factor k, f32 at byte 8): game state, so every machine in the session uses the host's */
 static void net_send_welcome(void) {
     uint8_t m[12] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players,
-                     (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0)), 0};
+                     (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0) |
+                               (settings_ring_replenish() ? 4 : 0)), 0};
     float k = settings_game_k();  /* the room's camera aspect (the wider of the two screens) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -546,6 +549,7 @@ static void net_connect(const char* spec) {
                 settings_fix_wide_k(k);  /* the host's camera aspect */
                 settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
                 settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
+                settings_fix_ring_replenish(m[6] & 4 ? 1 : 0);  /* and Ring Replenish */
                 break;
             }
         }

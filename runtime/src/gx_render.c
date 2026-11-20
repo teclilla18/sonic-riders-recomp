@@ -89,7 +89,7 @@ static GxFrame* frame(void) {
                        ld32(GAME_TOP_MODE), ld32(GAME_MENU_FLAG), ld32(GAME_RACE_PHASE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
             last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
         }
-        float fov = (float)g_fov_scale;
+        float fov = (float)g_fov_scale * boost_hold_fov();  /* Super Sonic's held boost widens the view */
         memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
         float asp = settings_game_k() / k;  /* online: the room's camera wider than this screen */
         memcpy(&g_gx.xf_reg[GX_XR_ASPECT], &asp, 4);
