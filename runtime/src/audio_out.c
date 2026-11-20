@@ -13,8 +13,8 @@
 /* ---- Super Sonic's held boost, "like Need for Speed nitrous" (the user, 2026-11-20): with the speed view's
  * strength b (0..1, boost_hold_audio), the whole mix is muffled (a low-pass that closes from 16 kHz to about
  * 1.5 kHz) and driven into a soft clip whose drive rises with b squared, so the grit builds slowly and then
- * rushes near the top. b follows the field of view: it ends 0.25 s after the held boost does. b = 0: the mix
- * is passed through untouched. */
+ * rushes near the top. b comes on at once with a held Super boost and goes the moment it ends (boost_hold.c);
+ * b = 0: the mix is passed through untouched. */
 #define NOS_RATE      32000.0
 #define NOS_FC_OPEN   16000.0
 #define NOS_FC_SHUT   1500.0
@@ -23,7 +23,12 @@
 static double g_nos_lp[2];      /* the low-pass state per channel */
 static int g_nos_on;
 
-static void nos_process(int16_t* lr, unsigned frames, double b) {
+static double g_nos_b;          /* the strength in use: follows boost_hold_audio within ~15 ms (no clicks) */
+
+static void nos_process(int16_t* lr, unsigned frames, double want) {
+    g_nos_b += (want - g_nos_b) * 0.35;  /* per 5 ms mix */
+    if (want <= 0.0 && g_nos_b < 0.01) g_nos_b = 0.0;
+    double b = g_nos_b;
     if (b <= 0.0005) { g_nos_on = 0; return; }
     if (!g_nos_on) {  /* start the filter at the signal: no click */
         g_nos_on = 1;
@@ -76,7 +81,7 @@ void audio_submit(uint32_t addr, uint32_t bytes) { (void)addr; (void)bytes; }
 void audio_frame(const int16_t* lr, unsigned frames) {
     static int16_t nos_buf[2 * 2048];
     double b = boost_hold_audio();
-    if ((b > 0.0005 || g_nos_on) && frames <= 2048) {
+    if ((b > 0.0005 || g_nos_on || g_nos_b > 0.0) && frames <= 2048) {
         memcpy(nos_buf, lr, frames * 4u);
         nos_process(nos_buf, frames, b);
         lr = nos_buf;
