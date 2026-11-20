@@ -59,6 +59,11 @@ per id, hard-coded arrays), `src/handlers/ingame/customcss.cpp`, `src/gears/twea
   in the PC route) only drives the highlight. Test route: `SR_POKEAT=3520:803E2994:02,3520:81A0D7FA:02` on
   the 1P route picks Knuckles (both bytes; the racer byte alone is the choice). Scripted D-pad / stick
   presses for player 1 do not move this cursor (player 2's do; cause unknown).
+- **Taken bytes and duplicates (2026-11-20):** REL `.text` starts at 0x818000BC, so `fn_1_141720` (the cursor) =
+  `f_819417DC`; Player Entry passes it r5 = work + 0x20 (one "taken" byte per id). Confirm sets it (8193DF8C,
+  8193E118, 8193E8AC, 8193EA88), cancel clears it; reads: cursor skip 81941918, pushed off a taken tile 8193DEA8 /
+  8193E7E0, random pick 8193E0A0 / 8193EA10 (which also skips Sonic while any confirmed racer holds Chaos Emerald).
+  patches.txt "Anyone can be anyone" makes all five reads see "free" (built in, no toggle; user's decision).
 - **Id 17 on unmodified vanilla** (poke racer + 0xBA = 0x11): no crash; the info panel is empty (no name,
   stats, portrait) and A does not confirm. The panel looks up per-id resources and finds none.
 - **Vanilla vs TE character files:** vanilla has one full pack per character per gear (`PS00`..`PS49`, ~100 KB:
