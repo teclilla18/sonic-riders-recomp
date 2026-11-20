@@ -224,3 +224,16 @@ decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);
 819520A0 before c->r[0] = lv_reward_site(0x819520A0u, c->r[29], c->r[0]);
 81983DE4 before c->r[7] = lv_reward_site(0x81983DE4u, c->r[3], c->r[7]);
 819A58BC before c->r[0] = lv_reward_site(0x819A58BCu, c->r[25], c->r[0]);
+
+# ---- Anyone can be anyone (built in, the user 2026-11-20): Player Entry keeps one "taken" byte per character id
+# (work + 0x20 + id; set to 1 when a player confirms a character at 8193DF8C / 8193E118 / 8193E8AC / 8193EA88, back to
+# 0 on cancel). The player's side reads it in five places: the cursor skips a taken tile (f_819417DC, the notes'
+# fn_1_141720; REL .text starts at 0x818000BC), a cursor resting on a tile someone just took is pushed off
+# (8193DEA8, 8193E7E0), and the random pick re-rolls a taken character (8193E0A0, 8193EA10). Each read is made to
+# see "free", so several players can pick the same character (several Super Sonics). The bytes themselves are
+# still written, and CPU racers choose their characters elsewhere.
+81941918 after c->r[8] = 0;
+8193DEA8 after c->r[0] = 0;
+8193E7E0 after c->r[0] = 0;
+8193E0A0 after c->r[0] = 0;
+8193EA10 after c->r[0] = 0;

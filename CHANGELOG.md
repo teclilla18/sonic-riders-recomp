@@ -11,6 +11,8 @@
   Tricks pay by rank: C 15, B 22, A 30, AA 33, S 37, SS 45, X 75 rings. Grinding, flying, smashing objects and
   each stick-spin turn (about 1.5 rings) add more.
 - Holding a Super boost widens the view within half a second, and a little more as he speeds up to 350 km/h.
+- Anyone can be anyone: several players can pick the same character in Player Entry (for example two Super
+  Sonics in a split-screen race).
 - New Cheats tab in the settings menu: "No ring decrease (Super Sonic)". Cheats are never used online.
 - Settings menu: Up on the top row jumps to Close / Quit at the bottom of the page, Down there jumps back to the top.
 - Switch: the game no longer shows "An error has occurred" after the console slept with the game open.
