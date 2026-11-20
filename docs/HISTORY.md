@@ -2020,3 +2020,24 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   run stalled on SD I/O (disc reads 1.5-2.7 s, pipeline cache save 7.2 s on the render thread, log writes up to
   3 s; clean exit) [confirmed by log]; cause unknown (no MTP running). The cache is rewritten in full on every
   launch ("133 new"): worth fixing on the native branch.
+
+## 2026-11-20 (evening): Ring Replenish per source, tricks by rank, Cheats tab, sleep fix (branch claude/auto-spin)
+
+- User test of 132ec19 (Switch 1/2): no start-up freeze; boost muffle disliked -> off (SR_BOOSTSOUND=1 keeps it);
+  FOV too slow -> full in ~0.4 s, +4 % on the climb; rings too nerfed.
+- Reward sources found from a Switch log of hooks on every +0x988 store (patches.txt "reward sources", 32 sites)
+  [confirmed]: 8187BCAC grinding (state 18, +347/frame on a fast rail), 8187AC90 flying (state 19, grows per frame
+  ~260 -> 830), 81879C20 / 818970D4 objects (10k/15k/20k/30k). Tricks reach the fuel step through no hooked site; the
+  game's landing reward by rank: C 20 000, B 30 000, A 40 000, AA 45 000, S 50 000, SS 60 000, X 100 000 (ranks from
+  the user). Super Sonic is paid per source: grind 70 %, flying 45 % with growth above 260 cut to 75 %, objects as
+  before (8-ring cap, 50 %), tricks 75 rings x reward / 100 000, spin turn 1600 fuel. User played it: "Super Sonic
+  feels super" [accepted, Switch 1].
+- Cheat "No ring decrease (Super Sonic)" in a new Cheats tab (off online / recordings: ppc_detclock).
+- Overlay wrap: Up on the tab row -> Close/Quit with the page scrolled to the bottom; Down there -> tab row, page top
+  [tested: Switch 1 by remote].
+- Switch 1 "An error has occurred" after a 2.5 h sleep with the game open: the SDK drive timeout alarm saw the sleep
+  as a stalled read (no applet message arrived). rt_ticks now takes any >2 s gap between clock reads out of the time
+  base [implemented, sleep not retested].
+- Super Sonic looks blue whenever on foot (state +0x1034 = 1 run-up, 25 out of rings) although +0xBA stays 11; the
+  model choice is not found yet (SR_SUPERDIAG=1 logs racer 0's rarely changing bytes). Flight poses from the user:
+  34 flying, 21 kick-off, 67 jog, 68 run, 70 board mount, 71 board leaving, 47/48/51/66/75-80/87-90 T-pose.

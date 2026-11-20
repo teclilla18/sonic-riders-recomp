@@ -7,6 +7,13 @@
 - Hold to boost: keep B (or X) held after boosting and the boost goes on, like nitrous, taking air at your gear's
   boost rate; a tap is still the normal boost. Super Sonic keeps speeding up while held, up to 350 km/h.
 - Super Sonic gains rings in the stick-spin scenes. Auto spin gives the stick back if the game stops counting turns.
+- Ring Replenish (Riders Plus feature, on by default): Super Sonic's rings refill where other racers refill air.
+  Tricks pay by rank: C 15, B 22, A 30, AA 33, S 37, SS 45, X 75 rings. Grinding, flying, smashing objects and
+  each stick-spin turn (about 1.5 rings) add more.
+- Holding a Super boost widens the view within half a second, and a little more as he speeds up to 350 km/h.
+- New Cheats tab in the settings menu: "No ring decrease (Super Sonic)". Cheats are never used online.
+- Settings menu: Up on the top row jumps to Close / Quit at the bottom of the page, Down there jumps back to the top.
+- Switch: the game no longer shows "An error has occurred" after the console slept with the game open.
 
 ### Auto spin (Gameplay option, #23)
 
