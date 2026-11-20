@@ -132,7 +132,8 @@ Updating? Stable versions update with one press of **UPDATE NOW** in the app (th
 | an **iPhone** or **iPad** (built on a Mac) | `SonicRiders-iOS-Setup-<version>.zip` | [Install on iPhone / iPad](docs/INSTALL.md#install-on-iphone--ipad) |
 
 Easy-read guides for every platform: [first install](https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W) ·
-[updating](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN).
+[updating](https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN) ·
+[HD texture packs, every device, with pictures](docs/TEXTURE-PACKS.md).
 
 **In short:** extract the zip, double-click `Install Sonic Riders`, pick your disc image, and wait 10-30 minutes
 the first time. **You need** your own **Sonic Riders (USA)** disc image (`GXEE8P`, a full `.iso` or Dolphin's
@@ -152,7 +153,9 @@ Android: touch controls (top-left button = settings menu) or any controller. Up 
 2 on one phone. [Full controls, settings and multiplayer](docs/PLAYING.md)
 
 <details>
-<summary><b>HD texture packs (PC and Switch)</b></summary>
+<summary><b>HD texture packs (every device)</b></summary>
+
+**Step by step with pictures for PC, Switch, Switch 2, Android, iPhone and Linux: [docs/TEXTURE-PACKS.md](docs/TEXTURE-PACKS.md).**
 
 Texture packs made for **Dolphin** work as they are: `.png` or `.dds`, in a `.zip`, `.7z` or `.rar`, or already
 unpacked. Download the pack yourself (we don't host packs), then:

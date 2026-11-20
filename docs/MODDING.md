@@ -195,6 +195,8 @@ gear, field or section.
 
 ## Texture packs
 
+> **Just want to install a pack?** Follow the [easy guide with pictures](TEXTURE-PACKS.md) (every device).
+
 A mod can change how the game looks without touching its files: put PNG pictures in a `textures` folder
 (any subfolders), named the way **Dolphin** dumps and loads custom textures:
 
