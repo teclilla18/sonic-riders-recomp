@@ -342,10 +342,11 @@ static void super_diag(void) {
  * gold <-> blue switch are the form. Also, once per race, every racer word that looks like a pointer (objects to
  * follow next). */
 static void super_diag2(void) {
-    /* regions: the racer, then the objects its words +0x6B8 / +0x820 / +0xA3C point to (0x800 bytes each) */
-    enum { NREG = 4, OBJ = 0x800, TOT = GAME_PLAYER_SIZE + 3 * OBJ };
-    static const uint32_t ptr_off[NREG] = {0, 0x6B8u, 0x820u, 0xA3Cu};
-    static const uint32_t reg_len[NREG] = {GAME_PLAYER_SIZE, OBJ, OBJ, OBJ};
+    /* regions: the racer, then the objects its words +0x820 / +0xA3C point to (0x800 bytes each; +0x6B8 is a track
+     * path node that moves every few frames, Switch log 2026-11-20) */
+    enum { NREG = 3, OBJ = 0x800, TOT = GAME_PLAYER_SIZE + 2 * OBJ };
+    static const uint32_t ptr_off[NREG] = {0, 0x820u, 0xA3Cu};
+    static const uint32_t reg_len[NREG] = {GAME_PLAYER_SIZE, OBJ, OBJ};
     static int on = -1;
     static uint8_t snap[TOT], prev[TOT];
     static uint16_t changes[TOT];
@@ -371,7 +372,7 @@ static void super_diag2(void) {
             }
         have = 1;
         step = 0;
-        rt_log("[superdiag2] regions: racer %08X, +6B8 -> %08X, +820 -> %08X, +A3C -> %08X", base[0], base[1], base[2], base[3]);
+        rt_log("[superdiag2] regions: racer %08X, +820 -> %08X, +A3C -> %08X", base[0], base[1], base[2]);
         return;
     }
     step++;
@@ -379,7 +380,17 @@ static void super_diag2(void) {
     for (int r = 0; r < NREG; r++)
         for (uint32_t o = 0; o < reg_len[r]; o++, k++) {
             uint8_t v = base[r] ? ld8(base[r] + o) : 0;
-            if (v != prev[k] && changes[k] < 65535) changes[k]++;
+            if (v != prev[k]) {
+                /* a byte's first change once the race has settled (10 s in): item effects such as the Magnet box's
+                 * timer show up here */
+                static unsigned news;
+                if (!changes[k] && step > 600 && news < 600) {
+                    news++;
+                    rt_log("[superdiag2] new step %u %c%03X: %02X>%02X state %u anim %u rings %u", step, "RAB"[r], o, prev[k],
+                           v, ld8(p + 0x1034u), ld32(p + 0x764u), ld32(p + 0xB98u));
+                }
+                if (changes[k] < 65535) changes[k]++;
+            }
             prev[k] = v;
         }
     static uint8_t last_state = 0xFF;
@@ -395,7 +406,7 @@ static void super_diag2(void) {
         for (uint32_t o = 0; o < reg_len[r]; o++, k++) {
             uint8_t v = base[r] ? ld8(base[r] + o) : 0;
             if (v != snap[k] && changes[k] * 4u < step) {  /* not a byte that changes on most steps */
-                n += snprintf(line + n, sizeof line - (size_t)n, " %c%03X:%02X>%02X", "RABC"[r], o, snap[k], v);
+                n += snprintf(line + n, sizeof line - (size_t)n, " %c%03X:%02X>%02X", "RAB"[r], o, snap[k], v);
                 if (n > 640) { rt_log("%s", line); n = snprintf(line, sizeof line, "[superdiag2] #%u more:", events); }
             }
             snap[k] = v;
