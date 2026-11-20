@@ -158,3 +158,32 @@ decl void lv_super_spin_turn(uint32_t racer);
 # by stfs f0, 0xaac(r24)) waits during the same 0.75 s
 decl int jump_charge_grace(uint32_t racer);
 81815ABC before { if (jump_charge_grace(c->r[24])) { c->f[0].ps0 = c->f[3].ps0; c->f[0].ps1 = c->f[3].ps0; } }
+# ---- Super Sonic in constant flight (super_flight.c, Riders Plus): an object's playing animation +0x764 is set from
+# its queue (+0x78C, 16-byte entries, count +0x7CC) at three places; a Super Sonic's riding animations become the
+# flying one there
+decl uint32_t super_flight_anim(uint32_t obj, uint32_t anim);
+818B66CC before c->r[4] = super_flight_anim(c->r[3], c->r[4]);
+818B6790 before c->r[4] = super_flight_anim(c->r[3], c->r[4]);
+818B6D24 before c->r[3] = super_flight_anim(c->r[26], c->r[3]);
+# TEST ONLY (remove before merging): SR_FORCESUPER=1 makes racer 0 Super Sonic at every character/gear store
+decl uint32_t super_flight_force(uint32_t base, uint32_t v, int gear);
+8184D34C before c->r[8] = super_flight_force(c->r[7], c->r[8], 0);
+818EE784 before c->r[0] = super_flight_force(c->r[8], c->r[0], 0);
+818EE7F8 before c->r[0] = super_flight_force(c->r[8], c->r[0], 0);
+81915FD4 before c->r[4] = super_flight_force(c->r[3], c->r[4], 0);
+8191FF48 before c->r[4] = super_flight_force(c->r[11], c->r[4], 0);
+8193BD3C before c->r[4] = super_flight_force(c->r[25], c->r[4], 0);
+8193E0BC before c->r[0] = super_flight_force(c->r[14], c->r[0], 0);
+819134EC before c->r[27] = super_flight_force(c->r[26], c->r[27], 1);
+819159CC before c->r[30] = super_flight_force(c->r[25], c->r[30], 1);
+818BD800 before c->r[6] = super_flight_force(c->r[3], c->r[6], 1);
+818BD818 before c->r[7] = super_flight_force(c->r[3], c->r[7], 1);
+818EE7B4 before c->r[9] = super_flight_force(c->r[8], c->r[9], 1);
+818EE828 before c->r[4] = super_flight_force(c->r[8], c->r[4], 1);
+8193BD60 before c->r[0] = super_flight_force(c->r[25], c->r[0], 1);
+8193BD78 before c->r[3] = super_flight_force(c->r[25], c->r[3], 1);
+8193D618 before c->r[0] = super_flight_force(c->r[14], c->r[0], 1);
+8193DAC8 before c->r[7] = super_flight_force(c->r[29], c->r[7], 1);
+8193DF5C before c->r[0] = super_flight_force(c->r[14], c->r[0], 1);
+8193E0E8 before c->r[0] = super_flight_force(c->r[14], c->r[0], 1);
+8193E350 before c->r[4] = super_flight_force(c->r[14], c->r[4], 1);

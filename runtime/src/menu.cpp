@@ -28,6 +28,8 @@
 #endif
 
 extern "C" {
+extern int g_flight_pose;  /* super_flight.c (temporary test section) */
+extern int g_super_rings;
 extern const char g_build_version[];
 int mods_count(void);
 const char* mods_title(int i);
@@ -703,6 +705,18 @@ void tab_gameplay() {
             settings_apply();
         ImGui::EndDisabled();
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
+        ImGui::TreePop();
+    }
+    /* TEMPORARY (test builds, 2026-11-20): pick Super Sonic's flying pose by eye */
+    if (ImGui::TreeNode("Super Sonic flight test (temporary)")) {
+        bool rings = g_super_rings != 0;
+        if (ImGui::Checkbox("Infinite rings for Super Sonic", &rings)) g_super_rings = rings;
+        ImGui::SliderInt("Flight pose", &g_flight_pose, -1, 90, g_flight_pose < 0 ? "off" : "%d");
+        if (ImGui::Button("-1##pose") && g_flight_pose > -1) g_flight_pose--;
+        ImGui::SameLine();
+        if (ImGui::Button("+1##pose") && g_flight_pose < 90) g_flight_pose++;
+        note("Replaces Super Sonic's riding animations (not on rails, in tricks, spin sections or a jump charge). "
+             "A new pose shows from his next jump or landing. Tell Claude the numbers that look like flying.");
         ImGui::TreePop();
     }
 }
