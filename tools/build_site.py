@@ -47,6 +47,11 @@ IMAGES = [
     ('docs/images/compare/original-2.jpg', 'assets/img/compare/original-2.jpg'),
     ('docs/images/compare/recomp-2.jpg', 'assets/img/compare/recomp-2.jpg'),
     ('docs/images/settings-display.jpg', 'assets/img/settings-display.jpg'),
+    ('docs/images/v0.9.0/super-sonic-banner.jpg', 'assets/img/riders-plus/super-sonic-banner.jpg'),
+    ('docs/images/v0.9.0/at-a-glance.svg', 'assets/img/riders-plus/at-a-glance.svg'),
+    ('docs/images/v0.9.0/hold-boost-speed.svg', 'assets/img/riders-plus/hold-boost-speed.svg'),
+    ('docs/images/v0.9.0/trick-rank-rings.svg', 'assets/img/riders-plus/trick-rank-rings.svg'),
+    ('docs/images/v0.9.0/super-ring-sources.svg', 'assets/img/riders-plus/super-ring-sources.svg'),
 ]
 GUIDE_PICTURES = 'docs/images/installation/'   # every *.svg / *.png in it -> assets/guide/
 

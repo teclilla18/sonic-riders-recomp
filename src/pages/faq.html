@@ -12,7 +12,7 @@
     <details class="panel"><summary>What is Riders Plus?</summary><div class="ans">
       <p>A fan-made native port of Sonic Riders (GameCube, 2006). The game's PowerPC code is translated into C ahead of time
         (static recompilation) and the GameCube hardware is rebuilt natively, so it runs as a real app on each device. It is not an emulator.</p>
-      <p>Riders Plus is also the name of our optional gameplay rules (999 rings, Lv. 4 and 5); see <a href="riders-plus.html">Riders Plus rules</a>.</p></div></details>
+      <p>Riders Plus is also the name of our optional gameplay rules (999 rings, Lv. 4 and 5, hold to boost, Auto spin); see <a href="riders-plus.html">Riders Plus rules</a>.</p></div></details>
     <details class="panel"><summary>Is it free? Do I need to buy anything?</summary><div class="ans">
       <p>The port is free. You need your own copy of Sonic Riders (USA) for GameCube, saved as a disc image. We don't sell, host or send the game.</p></div></details>
     <details class="panel"><summary>Why can't I just download the game?</summary><div class="ans">
@@ -44,9 +44,10 @@
       <p>On v0.8.3 or newer, open the installer or launcher and press <span class="k-btn">UPDATE NOW</span>. Saves, settings and your disc image stay.
         Step by step: <a href="update.html">update guide</a>. On Android, never uninstall the app to update.</p></div></details>
     <details class="panel"><summary>Can I use HD texture packs?</summary><div class="ans">
-      <p>Yes, on PC and Switch. Packs made for Dolphin work as they are. Download the pack yourself (we don't host packs), then add it on the
-        launcher's <b>Mods</b> page (PC) or under <b>Texture packs</b> in the Switch installer.
-        <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/MODDING.md#texture-packs">Details</a>.</p></div></details>
+      <p>Yes, on every device. Packs made for Dolphin (folder <code>GXEE8P</code>) work as they are. Download the pack yourself (we don't host packs),
+        then add it on the launcher's <b>Mods</b> page (PC) or under <b>Texture packs</b> in the Switch installer. On a Switch, pick the
+        pack's smallest size: it loads faster. <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/TEXTURE-PACKS.md">The easy
+        texture pack guide</a> has pictures for each device.</p></div></details>
     <details class="panel"><summary>How do I open the settings menu?</summary><div class="ans">
       <p>Hold <span class="k-key">−</span> on Switch, <span class="k-key">F1</span> or Back on PC, View on Steam Deck, or tap the top-left button on Android.
         The version number is in the <b>About</b> tab. <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/PLAYING.md">All controls</a>.</p></div></details>
@@ -71,6 +72,8 @@
         <tr><th scope="row"><span class="plat-tag">Switch</span>Slow motion or low frame rate</th><td>Set the frame rate to 30 or 60 fps (hold − for the settings), or overclock at your own risk.</td></tr>
         <tr><th scope="row"><span class="plat-tag">Switch</span>About still shows the old version</th><td>Make sure the update went to the SD card you actually use, then launch again. Still old? <a href="install-switch.html#help-old-version">See the booklet's fix</a>.</td></tr>
         <tr><th scope="row"><span class="plat-tag">PC</span>The game doesn't start</th><td>Check <code>sonicriders.log</code> in the install folder, and update your graphics driver (OpenGL 3.3 is needed).</td></tr>
+        <tr><th scope="row"><span class="plat-tag">Switch</span>"An error has occurred" after sleep</th><td>Fixed in v0.9.0: update, then the console can sleep with the game open.</td></tr>
+        <tr><th scope="row"><span class="plat-tag">PC</span>The launcher shows <span class="k-btn">FINISH UPDATE</span></th><td>The new version was unzipped over your install but never installed. Press <span class="k-btn">FINISH UPDATE</span>; saves and settings stay.</td></tr>
         <tr><th scope="row"><span class="plat-tag">PC</span>No sound</th><td>Check Windows' default playback device; the game uses it.</td></tr>
         <tr><th scope="row"><span class="plat-tag">Linux</span>The installer opens in a text editor</th><td>Right-click it → Properties → Permissions → tick <b>Is executable</b>, or run <code>sh 'Install Sonic Riders (Linux).sh'</code> in a terminal there.</td></tr>
         <tr><th scope="row"><span class="plat-tag">Linux</span>"SDL2 library … was not found"</th><td>Install your distribution's SDL2 package (<code>libsdl2-2.0-0</code> on Debian/Ubuntu, <code>sdl2</code> on Arch/SteamOS, <code>SDL2</code> on Fedora).</td></tr>
