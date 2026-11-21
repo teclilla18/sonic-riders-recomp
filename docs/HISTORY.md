@@ -2094,3 +2094,24 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Tested: link check, site guard, and a look in Chrome at 1440 and 390 px wide (no sideways scroll); that look
   found a narrow banner, an unbalanced Super Sonic panel and a wrapping home stat label, all fixed [confirmed].
 - Rule (user): after every release, update all relevant website info, keeping it pleasing and easy to read.
+
+## 2026-11-21 (afternoon): LAN lobby between two consoles; Switch 2 online crash narrowed
+
+- **Neither console saw the other** (OLED + Switch 2, Online Beta lobby). A PC probe listening on the lobby ports
+  heard the Switch 2's 255.255.255.255 room announcements, and the OLED listed the probe's fake room, but nothing
+  from the OLED ever arrived [confirmed]. Fix: rooms and searches also go to the /24 network's own broadcast
+  (x.x.x.255; address looked up on a helper thread), plus a **Join by address** keypad and the host's address on
+  screen. Result: the OLED found the Switch 2's race and joined, 600 checksums equal (both handheld) [confirmed].
+  Branches codex/online-beta 5d70c89, codex/online-beta-switch2 be04843 (not merged, not released).
+- Switch 2 only: the address lookup hung the lobby (black screen) and sending to x.x.x.255 blocked ~200 ms per
+  packet, so neither is used there [likely]. Handheld Joy-Cons can report style 6 / attributes 7 (only the left
+  half connected) and were read as a sideways single Joy-Con (d-pad down = A) [confirmed]; the per-button
+  `[input2]` SD log line took 0.2-1.8 s per write and froze the menu controls [confirmed]. Both fixed on be04843;
+  the released Alpha 3 probably has them too [uncertain].
+- **Switch 2 GPU device loss** (`completion join failed status 7`, then vkCreateDevice -4) at game frame ~662-712 on
+  8 of 8 runs; once (loading screen off) it reached frame 5788 and failed at track load. Still with direct SR_NET (no
+  lobby), no loading screen, no texture packs [confirmed]; read-ahead ruled out earlier. Cause unknown; the 11-20
+  build (c572d99 + music) raced 22,618 frames on the same console.
+- The user accepted the OLED + S23 LAN match. Decisions: the first public online test ships LAN and internet play
+  together, without any server we run; a second app/icon per device sharing one disc image; a "Play together"
+  board on the website; Switch 2 left out until the crash is fixed.
