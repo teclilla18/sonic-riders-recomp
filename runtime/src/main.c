@@ -89,6 +89,53 @@ static int game_thread(void* arg) {
     rt_fatal("the game's entry point returned");
 }
 
+/* Everything from the online lobby to starting the game thread. On iOS and the native Switch 2 the render loop
+ * runs on the main thread (render_main_loop), so the online lobby (which presents frames and reads input
+ * through that loop) must wait on another thread, or it waits for a renderer that never starts. */
+static int boot_rest(void* arg) {
+    (void)arg;
+    { void online_boot_wait(void); online_boot_wait(); }
+    { void netplay_init(void); netplay_init(); }
+    load_game();
+    cpu_init(&g_main_cpu);
+    sched_init();
+    dsp_init();
+    di_init();
+    {
+        const char* card = getenv("SR_CARD");
+        int perftest_on(void); int netplay_online_save(void);
+        /* SR_PERFTEST, and online play (the generated save, docs/ONLINE.md): a fresh card in memory;
+         * the player's save is left alone */
+        if (perftest_on() || netplay_online_save()) exi_init(NULL);
+        else exi_init(card ? card : platform_save_path());
+    }
+    { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine first */
+    vi_init();
+    const char* wd = getenv("SR_WATCHDOG");
+    if (getenv("SR_TRACE_MIN")) g_trace_min = (uint32_t)strtoul(getenv("SR_TRACE_MIN"), NULL, 16);
+    if (wd && atoi(wd) > 0) {
+        g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
+        rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
+    }
+    { void trace_loads_init(void); trace_loads_init(); }  /* SR_TRACE_LOADS (debug builds) */
+    const char* w = getenv("SR_WATCH");
+    if (w && sscanf(w, "%x,", &g_watch_addr) == 1 && strchr(w, ',')) {
+        const char* v = strchr(w, ',') + 1;
+        g_watch_leave = *v == '~' ? 1 : *v == '*' ? 2 : 0;
+        g_watch_val = (uint32_t)strtoul(v + (g_watch_leave != 0), NULL, 16);
+        const char* m = strchr(v, ',');
+        for (int k = 0; k < 3 && m; k++, m = strchr(m + 1, ',')) g_watch_more[k] = (uint32_t)strtoul(m + 1, NULL, 16);
+        rt_thread_start(watch_thread, NULL);
+    }
+    rt_log("[boot] %u recompiled functions, %u native replacements; starting at %08X",
+           g_recomp_func_count, g_recomp_hle_count, g_recomp_entry_point);
+    /* the game's boot code runs on a thread of our own (a large stack: guest calls are host calls);
+     * this thread only waits */
+    profile_start();
+    rt_thread_start(game_thread, NULL);
+    return 0;
+}
+
 extern const char g_build_version[]; /* build/<target>/gen/version.c, written by configure.py */
 
 #if defined(__ANDROID__) || defined(SR_IOS)
@@ -174,45 +221,11 @@ int main(int argc, char** argv) {
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
     gx_init();
     render_start();
-    { void online_boot_wait(void); online_boot_wait(); }
-    { void netplay_init(void); netplay_init(); }
-    load_game();
-    cpu_init(&g_main_cpu);
-    sched_init();
-    dsp_init();
-    di_init();
-    {
-        const char* card = getenv("SR_CARD");
-        int perftest_on(void); int netplay_online_save(void);
-        /* SR_PERFTEST, and online play (the generated save, docs/ONLINE.md): a fresh card in memory;
-         * the player's save is left alone */
-        if (perftest_on() || netplay_online_save()) exi_init(NULL);
-        else exi_init(card ? card : platform_save_path());
-    }
-    { void netplay_connect(void); netplay_connect(); }  /* online: meet the other machine first */
-    vi_init();
-    const char* wd = getenv("SR_WATCHDOG");
-    if (getenv("SR_TRACE_MIN")) g_trace_min = (uint32_t)strtoul(getenv("SR_TRACE_MIN"), NULL, 16);
-    if (wd && atoi(wd) > 0) {
-        g_ppc_trace = !getenv("SR_WATCHDOG_NOTRACE");  /* the trace slows the game: may hide races */
-        rt_thread_start(watchdog, (void*)(intptr_t)atoi(wd));
-    }
-    { void trace_loads_init(void); trace_loads_init(); }  /* SR_TRACE_LOADS (debug builds) */
-    const char* w = getenv("SR_WATCH");
-    if (w && sscanf(w, "%x,", &g_watch_addr) == 1 && strchr(w, ',')) {
-        const char* v = strchr(w, ',') + 1;
-        g_watch_leave = *v == '~' ? 1 : *v == '*' ? 2 : 0;
-        g_watch_val = (uint32_t)strtoul(v + (g_watch_leave != 0), NULL, 16);
-        const char* m = strchr(v, ',');
-        for (int k = 0; k < 3 && m; k++, m = strchr(m + 1, ',')) g_watch_more[k] = (uint32_t)strtoul(m + 1, NULL, 16);
-        rt_thread_start(watch_thread, NULL);
-    }
-    rt_log("[boot] %u recompiled functions, %u native replacements; starting at %08X",
-           g_recomp_func_count, g_recomp_hle_count, g_recomp_entry_point);
-    /* the game's boot code runs on a thread of our own (a large stack: guest calls are host calls);
-     * this thread only waits */
-    profile_start();
-    rt_thread_start(game_thread, NULL);
+#if defined(SR_IOS) || defined(__SWITCH2__)
+    { int online_lobby_visible(void); if (online_lobby_visible()) rt_thread_start(boot_rest, NULL); else boot_rest(NULL); }
+#else
+    boot_rest(NULL);
+#endif
 #if defined(SR_IOS) || defined(__SWITCH2__)
     { void render_main_loop(void); render_main_loop(); }  /* never returns (render_vk.c) */
 #ifdef __SWITCH2__

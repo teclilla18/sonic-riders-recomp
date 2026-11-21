@@ -1700,10 +1700,10 @@ static void draw_overlay_and_touch(void) {
     if (!(img && g_ov_box[0] < g_ov_box[2]) && !nt) return;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 0);
-    if (online_loading()) {
-        VkClearAttachment black={VK_IMAGE_ASPECT_COLOR_BIT,0,{.color={{0,0,0,1}}}};
-        VkClearRect rect={{{0,0},g_ext},0,1};
-        vkCmdClearAttachments(g_cmd,1,&black,1,&rect);
+    if (online_loading()) {  /* black over the whole presented image: a fill quad (the overlay's own draw path);
+                              * vkCmdClearAttachments on the swapchain image is suspected in a Switch 2 device loss */
+        float all[4] = {0, 0, W, H}, black[4] = {0, 0, 0, 1};
+        quad(Q_FILL, TGT_SWAP, 15, NULL, NULL, W, H, all, NULL, black, NULL);
     }
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
 #ifndef __SWITCH2__
