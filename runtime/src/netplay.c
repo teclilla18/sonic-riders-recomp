@@ -729,6 +729,19 @@ static int menu_screen(uint32_t* work) {
 }
 #define SCREEN_MAIN_MENU 0x0F  /* Normal Race, Story, Tag, Survival, ... (0x0E is the step between it and the title) */
 static int g_reached_tracks;  /* the session's start has reached the main menu (the start-up presses stop) */
+/* the racer driven by controller port p has crossed the finish line (the game hands it to the CPU: +0xBC = 1) */
+static int racer_finished(int p) {
+    for (uint32_t r = 0; r < 8; r++) {
+        uint32_t racer = 0x81A0D740u + 0x1080u * r;  /* player array (docs/notes/game-addresses.md) */
+        if (ld32(racer) != 0x801AF9F0u + 0x30u * (uint32_t)p) continue;
+        int done = ld8(racer + 0xBCu) != 0;
+        static int logged[MAXP];
+        if (done != logged[p]) { logged[p] = done; if (done) rt_log("[net] frame %u: player %d crossed the finish line", g_frame, p + 1); }
+        return done;
+    }
+    return 0;
+}
+
 static void online_rules(GcPad* pads) {
     static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     uint32_t work = 0;
@@ -765,8 +778,17 @@ static void online_rules(GcPad* pads) {
     }
     if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
-    else if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE)  /* finished: the results and the end-of-race menu are player 1's */
-        for (int p = 1; p < g_ports && p < MAXP; p++) pads[p] = neutral;
+    else if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE)
+        /* The phase turns "finished" when the FIRST player crosses the line, while the others still race (2026-11-21:
+         * the OLED finished first and the S23's player 2 lost control). Each player's racer is handed to the CPU at
+         * its own finish (racer +0xBC = 1, found by a per-racer probe of a two-copy race): a player is silenced for
+         * the results and the end-of-race menu (player 1's) only once its own racer has finished. */
+        for (int p = 0; p < g_ports && p < MAXP; p++) {
+            int done = racer_finished(p);  /* also logs each player's finish */
+            if (p == 0) continue;          /* player 1 keeps the results and the end-of-race menu */
+            if (done) pads[p] = neutral;
+            else pads[p].buttons &= (uint16_t)~0x1000u;  /* still racing: everything but START */
+        }
 }
 
 /* si.c, at each frame end under SR_DETCLOCK: the controllers for the next frame */

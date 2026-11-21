@@ -32,6 +32,32 @@ Game protocol 5 adds that number to HELLO/WELCOME; both build strings are logged
 gameplay. Keep the rolling full-memory checksum coverage and the host's synced gameplay/camera settings.
 Presentation-only platform differences need no compatibility bump. There is no ANYBUILD bypass in this branch.
 
+## Internet play (invite codes, no server of ours)
+
+`inet.c` owns one UDP socket (7777, or 7787 when taken) for STUN, the lobby and the game; `lan_lobby_handoff()`
+gives it to netplay (`SR_NET=inet:host:<delay>` / `inet:join`), and `inet_close()` closes it exactly once (netplay's
+failure and exit paths, or the lobby when leaving). LAN mode is unchanged (ports 7777-7779, SRLB v1).
+- **Code**: the host's public IPv4 as 10 digits when its public port is 7777, else 15 digits (ip * 100000 + port).
+  The public address is the STUN answer (stun.l.google.com:19302, stun.cloudflare.com:3478, sent on the shared
+  socket); a UPnP mapping (cancellable worker, 2 s steps, 6 s cap, lease 2 h, renewed every 30 min, removed on
+  leave/exit, external 7777 then 7787) is used only when the router's external address equals STUN's. A private or
+  CGNAT router address = double NAT note. Two STUN servers seeing different ports = strict NAT note.
+- **Keepalive**: one binding request every 10 s while in the lobby. Without it a carrier NAT moved an idle host to a
+  new port within minutes and its shown code went stale [confirmed, S23 on a phone hotspot]; if the port still
+  changes, the code updates and the screen says so.
+- **Joining**: JOIN 10/s for 3 s then 2/s, for 90 s; the host answers WAIT and shows "<name> wants to join"
+  (Let them in / Say no); a refused address is refused for 60 s; one pending player; at most 8 JOINs/s handled.
+  Accepted: a random 64-bit session id in LIST, PING/PONG (timestamped, every 250 ms), START and LEAVE.
+- **Both codes**: a host behind a NAT that drops unsolicited packets adds the joiner's own code (shown on the
+  joiner's screen): the host sends PUNCH to it (10/s for 3 s, then 4/s, up to 60 s) while the joiner keeps
+  sending JOIN. Carrier NATs that change ports per destination cannot be traversed without a relay.
+- **Delay**: median RTT and jitter (mean absolute deviation) of up to 16 pings; delay = ceil((rtt/2 + 2 x
+  jitter) / 16.7 ms) + 1, 2..15 frames, - / + / Auto on the host; fixed when Start is pressed (carried in START and
+  WELCOME). The game handshake only accepts the exact address the lobby let in.
+- **Privacy**: public addresses are written as a.b.x.x in logs (logs are attached to public issues).
+- Test hooks: `SR_LOBBY_TEST=inet-host` (lets the first asker in, starts after 12 pings) and
+  `inet-join:<code>`; `SR_INET_TEST_IP=127.0.0.1` makes codes loopback for two copies on one PC.
+
 ## Disc cache
 
 `disc_cache.c` serves deterministic DI reads through two 256 KiB windows. One worker reads a separate, read-only
@@ -67,6 +93,19 @@ zero means unavailable. An emulator or PC run cannot prove a Switch CPU gain.
   calls): the game continued offline to the intro, no `[net]` lines, card copy and original byte-identical.
 - **Native package audit**: baseline is released Switch 2 Alpha 3 (67710d8, build bc9dd55883f6; user's choice
   2026-11-21); only the listed Online Beta runtime files may differ (`tools/audit_switch2_release.py`).
+- **Tested, internet (2026-11-21)**: protocol test `--inet` PASS (malformed/STUN-like packets, version refusal,
+  approval, session id, full room, ping/pong, START delay, handshake on the handed-over socket, stranger on the same
+  IP ignored). Two PC copies (loopback codes, 7777 + 7787): 13,200 frames equal. **S23 on an iPhone hotspot
+  (carrier NAT, 15-digit code) hosting, PC on home ethernet joining**: first attempts failed (stale code, see
+  Keepalive; a raw UDP probe received nothing); with a fresh code and both codes: connected, ping 66 ms, delay 5,
+  equal through frame 14,400. **S23 (hotspot) hosting, OLED (handheld, CPU 1785 / GPU 614.4 / MEM 2133) on home
+  Wi-Fi joining** with both codes: ping 97 ms, jitter 42 ms, delay 8, equal through frame 26,328; ended cleanly
+  when the S23 left. UPnP: no device on the home network answered (unproven).
+- **Fixed, end of race**: the race phase turns "finished" at the FIRST player's finish; the online rules then
+  silenced every player but player 1, so a player still racing lost control (OLED finished first, the S23's
+  player 2 could not steer) [confirmed by the user]. Now a player is silenced only after its own racer has
+  finished (racer +0xBC = 1, the game's CPU takeover at the finish). PC two-copy run: each finish logged on the
+  same frame on both machines ([net] "player N crossed the finish line"), checksums equal through 24,600.
 - **Still needed**: native Switch 2 hardware, slow-SD stutter comparison, cold package tests (ask before Sandbox),
   user acceptance and explicit permission before a release, issue post or Discussions thread.
 

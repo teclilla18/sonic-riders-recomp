@@ -324,6 +324,7 @@ static void inet_atexit(void) {
     for (int i = 0; i < 60 && atomic_load(&upnp_live) > 0; i++) platform_sleep_ns(25000000ull); /* <= 1.5 s */
 }
 
+static void finish_code(void);
 /* ---------------------------------------------------------------- STUN on the shared socket */
 static uint8_t stun_tid[2][12];
 static int stun_tries[2], stun_answered[2];
@@ -357,6 +358,17 @@ static int stun_handle(const uint8_t* b, int n, const struct sockaddr_in* from) 
     }
     if (!ip || !port) return 1;
     stun_answered[i] = 1;
+    if (info.ready && i == 0) { /* a keepalive answer */
+        if (ip != info.stun_ip || port != info.stun_port) {
+            char m[20]; inet_mask(ip, m, sizeof m);
+            rt_log("[inet] the router/carrier moved this device to %s:%d (was port %d)", m, port, info.stun_port);
+            info.stun_ip = ip; info.stun_port = port;
+            char old[20]; snprintf(old, sizeof old, "%s", info.code);
+            finish_code();
+            if (strcmp(old, info.code)) info.changes++;
+        }
+        return 1;
+    }
     if (i == 0 || !info.stun_ip) { info.stun_ip = ip; info.stun_port = port; }
     if (i == 1) info.stun_port2 = port;
     char t[20]; inet_mask(ip, t, sizeof t);
@@ -426,7 +438,19 @@ static void finish_code(void) {
     rt_log("[inet] code ready: %s (%s:%d; STUN %d/%d, UPnP %d)%s", info.code[0] ? "yes" : "no", info.pub_ip ? t : "-", info.pub_port,
            info.stun_port, info.stun_port2, info.upnp, test ? " [SR_INET_TEST_IP]" : "");
 }
+static uint64_t refresh_last;
+/* Carrier NATs forget an idle mapping within ~30-60 s and then hand out a new port, which makes a shown code
+ * stale (seen 2026-11-21: a phone on a hotspot moved from one port to another while hosting). A binding request
+ * every 10 s keeps the mapping alive; if the address still changes, the code is updated and the lobby says so. */
+static void refresh(uint64_t now) {
+    if (!cur || atomic_load(&cur->stun_resolved[0]) != 1 || now - refresh_last < 10000000000ull) return;
+    refresh_last = now;
+    stun_answered[0] = 0;
+    for (int k = 0; k < 12; k++) stun_tid[0][k] = (uint8_t)rnd64();
+    stun_send(0);
+}
 const InetInfo* inet_info(void) {
+    if (info.open && info.ready && atomic_load(&g_owner) == OWNER_LOBBY) { refresh(platform_now_ns()); return &info; }
     if (!info.open || info.ready || !cur) return &info;
     uint64_t now = platform_now_ns(), age = now - opened_ns;
     for (int i = 0; i < 2; i++)
@@ -443,6 +467,7 @@ const InetInfo* inet_info(void) {
     if (stun_done && upnp_done) {
         if (info.upnp == INET_UPNP_PENDING) { info.upnp = INET_UPNP_NONE; rt_log("[inet] UPnP: no answer within 6 s"); }
         info.ready = 1;
+        refresh_last = now;
         finish_code();
     }
     return &info;

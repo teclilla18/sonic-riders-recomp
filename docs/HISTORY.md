@@ -2121,3 +2121,20 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Switch 2 package: the homebrew menu shows one app per folder, so the online NRO next to the normal one was hidden on
   the user's Switch 2, and its setup would have replaced the normal app. Fixed on `codex/online-beta-switch2` (7cc264a):
   own folder `/switch/sonicriders-switch2-online/`; data stays in `/switch/sonicriders-switch2/`.
+
+## 2026-11-21 (evening): Online Beta internet play, end-of-race control fix (branch codex/online-beta)
+
+- **Internet races without a server** (inet.c, lan_lobby.c, netplay.c, menu.cpp): invite codes (10 digits =
+  public IPv4 on port 7777, 15 with the port), one UDP socket for STUN + lobby + game handed to netplay, host
+  approval, session id, ping-based delay, both-codes punching, best-effort UPnP. Details and tests:
+  docs/notes/online-beta.md "Internet play". [confirmed] S23 on an iPhone hotspot hosting vs PC (home ethernet):
+  equal through frame 14,400; vs OLED (handheld, CPU 1785 / GPU 614.4 / MEM 2133): equal through 26,328.
+- **Stale code**: the first S23 code stopped working after minutes (carrier NAT moved the idle port 4793 -> 4772;
+  a raw UDP probe from the PC got nothing). Fix: STUN keepalive every 10 s in the lobby, the code updates if the
+  port still moves. [likely: the cause fits the port change; the keepalive itself not yet run on a device for long]
+- **Player 2 lost control after player 1 finished** (user, OLED + S23): the race phase 0xA means the FIRST finish;
+  the online rules silenced every player but player 1 from then. Fix: per-player finish (racer +0xBC, the game's CPU
+  takeover). [confirmed on PC: player 2 drove only after player 1's finish and still finished; 42,600 frames
+  equal] Not yet replayed on the devices.
+- Plan only: docs/notes/online-roadmap.md (3-4 players, Super Sonic online rules, quick chat, stage voting,
+  rematches).

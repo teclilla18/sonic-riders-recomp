@@ -164,6 +164,7 @@ static void close_session(void) {
 static void fail(const char* error) {
     close_session(); v.state=LAN_IDLE; v.players=0; v.ready=0; v.waiting=v.pending=v.punching=0;
     snprintf(v.error,sizeof v.error,"%s",error);
+    rt_log("[lobby] stopped: %.120s",error);
 }
 static void list(void) {
     Packet p=packet(LIST); p.b[p.n++]=(unsigned char)v.players;
@@ -296,7 +297,7 @@ static void rtt_add(int us) {
     /* frames the input must wait: half the round trip plus twice the jitter, rounded up, plus one */
     int d=(int)((med/2+2*jit+16666)/16667)+1;
     v.delay_auto=d<2?2:d>15?15:d;
-    v.delay=v.delay_manual?v.delay_manual:v.delay_auto;
+    if (v.state!=LAN_STARTING) v.delay=v.delay_manual?v.delay_manual:v.delay_auto; /* fixed once Start is pressed */
 }
 static int refused_ip(uint32_t ip,uint64_t now) { for (int i=0;i<20;i++) if (refused[i].ip==ip && refused[i].until>now) return 1; return 0; }
 static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* from,uint64_t now) {
@@ -361,6 +362,10 @@ static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* f
 }
 static void inet_timers(uint64_t now) {
     const InetInfo* in=inet_info();
+    if (in->ready && v.inet_ready && strcmp(v.my_code,in->code)) { /* the network moved our port: a new code */
+        snprintf(v.my_code,sizeof v.my_code,"%s",in->code);
+        snprintf(v.note,sizeof v.note,"Your code changed because your network moved the game's port. Send the new code.");
+    }
     if (in->ready && !v.inet_ready) {
         v.inet_ready=1; snprintf(v.my_code,sizeof v.my_code,"%s",in->code); snprintf(v.note,sizeof v.note,"%s",in->note);
         if (!in->code[0] && v.state==LAN_HOSTING) fail(in->note);
@@ -368,16 +373,16 @@ static void inet_timers(uint64_t now) {
     if (v.state==LAN_HOSTING) {
         if (v.pending && now-pend_heard>6000000000ull) { v.pending=0; rt_log("[lobby] the waiting player stopped asking"); }
         if (v.players==2 && now-heard>6000000000ull) { v.players=1; sid=0; rt_log("[lobby] lost the other player"); }
-        if (v.punching && v.players<2) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 15 s */
+        if (v.punching && v.players<2) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 60 s */
             uint64_t age=now-punch_since, gap=age<3000000000ull?100000000ull:250000000ull;
-            if (age>15000000000ull) { v.punching=0; snprintf(v.error,sizeof v.error,"Could not reach your friend's code. Check it, and ask them to try joining again."); }
+            if (age>60000000000ull) { v.punching=0; snprintf(v.error,sizeof v.error,"Could not reach your friend's code. Check it, and ask them to try joining again."); }
             else if (now-punch_last>gap) { punch_last=now; Packet p=packet(PUNCH); compat(&p); ssend(p,&punch_to); }
         }
     } else if (v.state==LAN_JOINING) {
         uint64_t age=now-joining, gap=age<3000000000ull?100000000ull:500000000ull;
         if (now-tick>gap) { tick=now; Packet p=packet(JOIN); compat(&p); string(&p,my_name); ssend(p,&host); }
         if (v.waiting && now-heard>6000000000ull) fail("Lost the host while waiting. Ask them to host again.");
-        else if (!v.waiting && age>30000000000ull)
+        else if (!v.waiting && age>90000000000ull) /* long enough for the host to add this player's code */
             fail("Could not reach your friend. Try: your friend hosts and you join, or the other way round; both add each other's codes; "
                  "or turn on UPnP on the router. Some mobile and work networks cannot connect directly without a relay server, which this beta doesn't have.");
     } else if (v.state==LAN_JOINED && now-heard>6000000000ull) fail("Lost the host. Please report it with sonicriders.log from both machines.");

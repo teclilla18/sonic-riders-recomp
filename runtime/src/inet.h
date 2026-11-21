@@ -18,6 +18,7 @@ typedef struct {
     uint32_t pub_ip; int pub_port; /* what the code says */
     char code[20];              /* digits only, empty when unknown */
     char note[200];             /* one plain line about the network, may be empty */
+    int changes;                /* times the code changed after it was shown (the network moved the port) */
 } InetInfo;
 
 int inet_open(void);                    /* lobby: bind 7777 (or 7787), start the address search; 1 = ok */
