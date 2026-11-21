@@ -1,4 +1,4 @@
-# State (2026-11-21, evening)
+# State (2026-11-21, night)
 
 ## Released
 
@@ -38,20 +38,24 @@
    build; nothing run on a device yet. Next: PC launcher check, Switch 2 hardware run (log `[vk] ... dynamic`),
    README/booklets/guides, then one release with the user's OK and Sandbox tests (PC, Android, Switch 2).
 
-3. **LAN and Online test** (`codex/online-beta` 5d70c89 for PC/Switch/Android; `codex/online-beta-switch2` be04843;
-   pushed, not merged). LAN lobby, names, black loading screen, checksummed lockstep. 2026-11-21: consoles could not
-   see each other (the OLED's 255.255.255.255 packets never reach the network); fixed with x.x.x.255 broadcast +
-   Join by address keypad; tested OLED <-> Switch 2 found and joined [confirmed]. OLED + S23 LAN match **accepted**
-   by the user. User's decisions: ship LAN **and internet play together**; internet with no server we run (invite
-   code from public STUN + UPnP + hole punching, both-codes fallback); a second app/icon per device sharing the one
-   disc image; website "Play together" tab (giscus on Discussions). **Switch 2 left out**: GPU device loss at game
-   frame ~662-712 on 8 of 8 runs, also with direct SR_NET, no loading screen and no texture packs; its normal app
-   (11-20 build) once raced 22,618 frames. Switch 2 handheld d-pad=A and SD-log control freezes fixed on be04843
-   (probably also in released Alpha 3: carry into switch2-mainline).
+3. **Online Beta: LAN + internet** (`codex/online-beta` 75d6b87, pushed, not merged; PC / Switch / Android;
+   `codex/online-beta-switch2` be04843 for Switch 2, left out). Internet play **implemented and tested**: invite
+   codes (public IPv4, 10 digits / 15 with the port), one UDP socket STUN + lobby + game, host approval, session id,
+   ping-based delay, both-codes punching, best-effort UPnP (unproven: nothing answered at home), 10 s STUN keepalive.
+   [confirmed] S23 on an iPhone hotspot hosting vs PC (ethernet): equal through 14,400; vs OLED (handheld, CPU 1785 /
+   GPU 614.4 / MEM 2133): equal through 26,328; both needed both codes. LAN regression S23 host / OLED join: two
+   races equal through 29,741 (user-played). Fixed: player 2 losing control when player 1 finished (per-player
+   finish, racer +0xBC) [confirmed]; Super Sonic flight now follows the host online (NET_COMPAT 2) [PC only].
+   Known: slow-motion countdown online when a device has texture packs (first-use lookups up to 682 ms on the OLED
+   stall the lockstep); posted codes reveal the host's IP (share privately). Notes: docs/notes/online-beta.md.
+   Plan only (needs approval): docs/notes/online-roadmap.md (4P, Super Sonic online rules: no held boost + Ring
+   Replenish at half, quick chat, stage voting, rematches).
 
 ## Open items (priority order)
 
-1. LAN and Online test: internet play (invite codes) first, then second-app packaging, website tab, zips, Sandbox.
+1. Online Beta: background texture-pack loading (time each part of a lookup on the OLED first; isolated branch),
+   then beta release prep: website third channel (site.js/build_site.py treat every pre-release as Switch 2),
+   online_bug.yml (still LAN-only text), privacy line about codes, Online page; zips, Sandbox, user OK.
    Music packs: launcher page, then the guide (above).
 2. Switch 2 into the main release (above).
 3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
@@ -71,7 +75,12 @@
 
 - **Switch 1 (OLED)**: v0.9.0 + music loader + Music tab (NRO dda4015f..., from claude/music-loader before the format
   commit); v0.9.0 kept as /switch/sonicriders/sonicriders.before-music.nro. Mods: the user's own local music pack (64
-  songs, 16 stages) and an HD texture pack shrunk to 512 max.
+  songs, 16 stages) and an HD texture pack shrunk to 512 max. Online app sonicriders-online.nro = beta build
+  c4519639 (794a9f8; previous kept as sonicriders-online.before-inet.nro). GXSRTE marker file renamed .png.off.
+- **Son's Switch 1** (2026-11-21, by USB mass storage): the OLED's normal NRO (0b2467b8), Online app c4519639,
+  /NSP/SonicRidersOnline.nsp (to install with DBI/Goldleaf), mods GXSRTE (marker fix) + astro waterfall +
+  super-srdx-hd-textures; his old NRO kept as sonicriders.before-20261121.nro. SD nearly full (2.5 GB free).
+- **S23**: online beta APK 9503d679 (794a9f8); backup of the previous one in .local/online-beta/build/old/phone-backup/.
 - **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
   Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
   Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed
@@ -79,9 +88,9 @@
 
 ## Next hardware test
 
-- Internet play: S23 on mobile data (hotspot) hosting, OLED or PC on home Wi-Fi joining by invite code; checksums
-  equal into a race; LAN still works. State mode and clocks.
-
+- Online (OLED + S23 or the son's Switch, LAN and internet): a race with Super Sonic flight on at the host; CPU / 1P
+  markers visible with GXSRTE (marker file renamed); host waits 3+ min before the join (keepalive); state mode +
+  clocks. Texture packs on vs off: countdown speed.
 - Switch 2: play the music build (Music tab, D-pad picks) and the 512 texture pack; report whether the music speed
   wobble is gone on both consoles (docked CPU 1785 / GPU 1152 / MEM 2133; handheld GPU 614; state the mode).
 - An MP3 or OGG song in a pack on a Switch: conversion time at the race's loading.

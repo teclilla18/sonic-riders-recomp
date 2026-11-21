@@ -2115,3 +2115,12 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - The user accepted the OLED + S23 LAN match. Decisions: the first public online test ships LAN and internet play
   together, without any server we run; a second app/icon per device sharing one disc image; a "Play together"
   board on the website; Switch 2 left out until the crash is fixed.
+
+## 2026-11-21 (night): internet play on the Online Beta branch
+
+- `codex/online-beta` (ed371f1..75d6b87, not merged): internet races with invite codes and no server (STUN, UPnP,
+  both-codes punching, host approval, ping-based delay), per-player finish fix, flight following the host. Device
+  results and details: that branch's docs/HISTORY.md and docs/notes/online-beta.md. [confirmed] S23 on a phone
+  hotspot vs PC and vs OLED raced with equal checksums; LAN regression passed.
+- GXSRTE texture pack: its blank `tex1_256x256_d8d7b29f...` hides the 1P-4P / COM markers [likely, file found
+  fully transparent]; renamed to .png.off on the user's devices.
