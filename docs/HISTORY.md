@@ -2082,3 +2082,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   nothing run on a device yet [uncertain].
 - Rules from the user: never delete a GitHub release again (download totals reset); the game-data guard's per-file
   limit is 1 MB (was 512 KB) on the music branch, for dr_flac.h.
+
+## 2026-11-21: website brought up to v0.9.0
+
+- What was wrong: the site's release cards and downloads update from GitHub on their own, but the hand-written
+  pages (Riders Plus rules, home, FAQ) still described v0.8.7 after the v0.9.0 release.
+- Fix (gh-pages fa21b1d + 98f33f0): Riders Plus page gets a v0.9.0 section (Hold to boost, Auto spin, same
+  character), the Super Sonic section (350 km/h held boost, ring magnet, Ring Replenish, flight option), the feature
+  toggles and Cheats tab, plus the five approved v0.9.0 release pictures; home ticker/teaser; FAQ texture-pack answer
+  links docs/TEXTURE-PACKS.md, troubleshooting rows for the Switch sleep fix and FINISH UPDATE.
+- Tested: link check, site guard, and a look in Chrome at 1440 and 390 px wide (no sideways scroll); that look
+  found a narrow banner, an unbalanced Super Sonic panel and a wrapping home stat label, all fixed [confirmed].
+- Rule (user): after every release, update all relevant website info, keeping it pleasing and easy to read.
