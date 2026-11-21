@@ -1,5 +1,14 @@
 # Changelog
 
+### Online Beta 1 candidate (not released)
+
+- Online settings tab and a controller-driven LAN lobby: choose a name, host a race or join a discovered race.
+- A black, silent "Loading online multiplayer" screen covers startup until Mode Select.
+- Compatible platform builds can play together; incompatible online versions are refused before racing.
+- A read-ahead worker reduces synchronous disc access without changing deterministic DVD completion timing.
+- A dedicated Online Beta issue form asks for both devices' logs; failed joins and desyncs request those logs.
+- LAN only, two players. Music packs are unavailable; texture-pack first-use stutter and #35 remain known issues.
+
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
 - Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to

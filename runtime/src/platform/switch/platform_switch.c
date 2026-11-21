@@ -85,6 +85,35 @@ void platform_set_handheld_gpu(int on) {
     rt_log("[switch] handheld performance configuration -> 0x%08X (%s): rc 0x%X", want, on ? "GPU 384 MHz" : "system default", rc);
 }
 
+void platform_log_clocks(void) {
+    u32 hz[3]={0};
+    Result rc=clkrstInitialize();
+    if (R_SUCCEEDED(rc)) {
+        const PcvModuleId ids[]={PcvModuleId_CpuBus,PcvModuleId_GPU,PcvModuleId_EMC};
+        for (int i=0;i<3;i++) {
+            ClkrstSession s;
+            if (R_SUCCEEDED(clkrstOpenSession(&s,ids[i],3))) {
+                clkrstGetClockRate(&s,&hz[i]);
+                clkrstCloseSession(&s);
+            }
+        }
+        clkrstExit();
+    }
+    rt_log("[hardware] %s, CPU %.1f / GPU %.1f / MEM %.1f MHz (0 = unavailable; clock service rc 0x%X)",
+           appletGetOperationMode()==AppletOperationMode_Console?"docked":"handheld",
+           hz[0]/1000000.0,hz[1]/1000000.0,hz[2]/1000000.0,rc);
+}
+
+int platform_restart_online(void) {
+    extern const char* g_launch_path;
+    if (!g_launch_path || !*g_launch_path) return 0;
+    char args[1024];
+    snprintf(args,sizeof args,"%s online",g_launch_path);
+    envSetNextLoad(g_launch_path,args);
+    exit(0);
+    return 1;
+}
+
 void platform_init(void) {
     appletHook(&g_hook, applet_hook, NULL);  /* before the render thread runs appletMainLoop */
     mkdir(BASE_DIR, 0777);
@@ -96,6 +125,7 @@ void platform_init(void) {
     static char logbuf[64 * 1024];
     setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);  /* flushed by rt_log at most once a second */
     rt_log("[switch] Sonic Riders native port; log started");
+    platform_log_clocks();
     /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
     FILE* f = fopen(BASE_DIR "/env.txt", "r");
     if (f) {

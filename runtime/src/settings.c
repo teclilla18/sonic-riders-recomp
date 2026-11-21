@@ -125,7 +125,11 @@ void settings_load(void) {
             if (!eq) continue;
             *eq = 0;
             int v = atoi(eq + 1);
-            if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
+            if (!strcmp(line, "online_name")) {
+                void lan_clean_name(char*, const char*);
+                lan_clean_name(g_settings.online_name, eq + 1);
+            }
+            else if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
             else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
             /* a new key: older builds saved "chaos_emerald" as on by default */
@@ -256,5 +260,6 @@ void settings_apply(void) {
             g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
             g_settings.ring_cap_999, g_settings.auto_spin, g_settings.boost_hold,
             g_settings.ring_replenish, g_settings.no_ring_drain, g_settings.super_flight);
+    fprintf(f, "online_name=%s\n", g_settings.online_name);
     fclose(f);
 }

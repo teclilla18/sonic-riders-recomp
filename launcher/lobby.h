@@ -30,10 +30,10 @@ struct View {
     std::string host_ip;               /* joined: the host's address (the game joins it) */
     std::string error;                 /* the last problem, for the page */
     std::vector<Found> found;
-    bool ready = false;                /* the game file is read (its fingerprint is known) */
+    bool ready = false;                /* networking and the shared compatibility version are ready */
 };
 
-void init(const std::wstring& game_exe);  /* starts the thread; reads the game's fingerprint */
+void init(const std::wstring& game_exe);  /* starts the lobby thread */
 void shutdown();
 void host(const std::string& name);
 void join(const std::string& ip, const std::string& name);

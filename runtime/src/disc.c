@@ -48,6 +48,7 @@ int disc_open(const char* path) {
     disc_read(fst_off, g_fst, g_fst_size);
     void mods_build_fst(uint8_t** fst, uint32_t* size);
     mods_build_fst(&g_fst, &g_fst_size);  /* the mods folder (mods.c): a virtual disc */
+    { void disc_cache_path(const char*); disc_cache_path(path); }
     rt_log("[disc] %s: %.6s \"%s\", FST %u bytes", path, (const char*)g_header, (const char*)g_header + 0x20, g_fst_size);
     return 1;
 }

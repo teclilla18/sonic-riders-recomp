@@ -1,4 +1,4 @@
-# State (2026-11-20, late night)
+# State (2026-11-20): Online Beta 1 candidate
 
 ## Released
 
@@ -17,6 +17,16 @@
   line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
 
 ## Work in progress (branches, not on main)
+
+0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
+   black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
+   PC-PC finish: all checksums equal through 24,600 frames. Cache-on PC pair through 6,600; PC/OLED racing
+   through 17,400 equal (mode/clocks not captured, so no hardware speed claim). S23 restart into lobby tested;
+   PC/Android race segment through 6,600 equal on both. Final affinity/clocks menu/cache check passed.
+   Separate native candidate: `codex/online-beta-switch2` from public Alpha 3, builds; hardware pending.
+   **Next:** guarded candidate source/packages, cold Sandbox only with permission, native hardware, user acceptance.
+   Every release, issue post or Discussions thread requires explicit OK. Notes: docs/notes/online-beta.md.
+
 
 1. **Music packs** (`claude/music-loader`, worktree `.local/music-loader`, pushed): own songs per stage
    (`mods/<pack>/music/<stage>/`, MP3/OGG/FLAC/WAV/ADX), shuffle per race, D-pad hold picks song 1-4, Music tab in
@@ -39,29 +49,30 @@
 2. Switch 2 into the main release (above).
 3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
-4. **Online play** (Road to v1.0 area, 55 %): internet play with room codes, hole punching + relay
-   (docs/ONLINE.md "Lobby design", docs/notes/online-research.md), Online tab in the in-game overlay.
+4. **Online Beta 1 validation** (60 %): finish candidate testing/packages; internet room codes and relay, a shared
+   30 fps mode, 3-4 players and ping/delay controls remain later work.
 5. **#33 32-bit Android**: branch `claude/android-armv7`; the reporter's APK ran but found no disc image; plain
-   copy-the-iso steps posted 2026-11-20, waiting. Code fix idea: on-screen message, accept an .iso in files/.
+   copy-the-iso steps posted 2026-11-20; latest reply: OK. Code fix idea: on-screen message, accept an .iso in files/.
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-7. **Discussion #34** (new, 2026-11-20): "why the GameCube version?"; not answered (the user decides replies).
+7. **Discussion #34**: user replied. #35: 2P character placement with Fit to screen remains a known issue.
 8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
 9. Super Sonic overhaul (Riders Plus only; plan only). History-only CI failure: ask before changing `--history`.
 
-## Devices (user's own)
+## Development device checks
 
-- **Switch 1 (OLED)**: v0.9.0 + music loader + Music tab (NRO dda4015f..., from claude/music-loader before the format
-  commit); v0.9.0 kept as /switch/sonicriders/sonicriders.before-music.nro. Mods: the user's own local music pack (64
-  songs, 16 stages) and an HD texture pack shrunk to 512 max.
-- **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
-  Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
-  Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed
-  on a folder create by full path; cwd + MKD name worked.
+- OLED: the ONLINE application has development build 59f17677537b, NRO and manifest readbacks verified.
+  Normal application preserved; previous online build backed up locally. Final menu/cache check: handheld,
+  CPU 1785 / GPU 614.4 / MEM 2133 MHz, no worker-core affinity failure. The earlier race used unrecorded clocks.
+- S23 Ultra: beta APK cb7ff5ce78a8 installed with readback verification and original APK retained.
+  Open Online process restart and PC/Android race segment tested; settings/saves/caches retained.
+- Native Switch 2: separate candidate built, not installed or hardware-tested.
 
 ## Next hardware test
 
-- Switch 2: play the music build (Music tab, D-pad picks) and the 512 texture pack; report whether the music speed
-  wobble is gone on both consoles (docked CPU 1785 / GPU 1152 / MEM 2133; handheld GPU 614; state the mode).
-- An MP3 or OGG song in a pack on a Switch: conversion time at the race's loading.
+- Native Switch 2 candidate: name entry, discovery in both directions, loading screen and a cross-platform race.
+  Record mode and actual CPU/GPU/memory clocks. Preserve the normal application, settings/saves/caches;
+  backup and verify staged/installed NRO and manifest by SHA-256, keep rollback.
+- Slow-SD comparison: deterministic read-ahead must keep checksums equal and reduce disc-wait hitches.
+- Cold candidate packages need explicit permission before Windows Sandbox; no release/post without OK.

@@ -68,6 +68,8 @@ static void put(int16_t l, int16_t r) {
 }
 
 void platform_audio_push(const int16_t* lr, unsigned frames) {
+    int online_loading(void);
+    if (online_loading()) return;
     if (g_state == 0) g_state = start();
     if (g_state < 0) return;
     reclaim();

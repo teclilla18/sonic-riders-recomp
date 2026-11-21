@@ -17,6 +17,7 @@
 #include "gx_shader_key.h"
 #include "gx_shaders_gl.h"  /* generated: tools/embed_shaders.py */
 #include "overlay.h"
+#include "online_boot.h"
 #include "runtime.h"
 #include "settings.h"
 #include "fsr1_gl.h"  /* AMD FSR 1 shaders (MIT) */
@@ -424,6 +425,10 @@ static void draw_overlay(int ww, int wh) {
         g_ov_version = version;
     }
     p_glUseProgram(g_ov_prog);
+    if (online_loading()) { /* black outside the menu's 16:9 rectangle too */
+        glDisable(GL_SCISSOR_TEST); glColorMask(1,1,1,1);
+        glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
+    }
     {
         /* the overlay is a 16:9 picture (the menu's layout): centred, not stretched over a 4:3 window */
         int vw = ww, vh = ww * 9 / 16;
@@ -1249,6 +1254,7 @@ static void execute(GxFrame* f) {
             glDrawElements(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,
                            (GLsizei)c->b, GL_UNSIGNED_INT, (const void*)((uintptr_t)c->a * 4));
             break;
+        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
         case GXC_COPY:
             if (cur) efb_copy(c, cur);
             if (cur) apply_state(cur);
@@ -1319,6 +1325,9 @@ static void mouse_to_overlay(int mx, int my, float* ox, float* oy) {
 }
 
 static void handle_event(const SDL_Event* e) {
+    if (e->type == SDL_TEXTINPUT) overlay_text(e->text.text);
+    if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP)
+        overlay_edit_key(e->key.keysym.scancode == SDL_SCANCODE_BACKSPACE, e->type == SDL_KEYDOWN);
     if (e->type == SDL_QUIT) g_quit = 1;
     /* the mouse works the settings menu (F1) */
     float ox, oy;

@@ -2,12 +2,40 @@
 
 Goal: race other players over the internet, PC and Switch together (cross-play).
 
+## Online Beta 1 candidate: races on a home network
+
+Implemented on the beta branch; **not released yet**. Two players, one per device, on the same home network.
+PC, Switch and Android are built from main. A separate native Switch 2 candidate is built from Alpha 3;
+it still needs hardware validation. Room codes for internet play and a relay are for a later beta.
+
+1. Open **Online** in the Windows launcher, or the game's settings menu > **Online** > **Open Online**.
+   Opening Online restarts the game before any race begins. Switch can also use its separate ONLINE application.
+2. Choose your own name once. It is saved; the game never uses the device or account name.
+3. One player chooses **Host a race**. The other chooses that race from the list, then **Join**.
+   Both devices must be on the same home network; guest Wi-Fi can prevent devices from finding each other.
+4. The host chooses **Start race**. Both see **Loading online multiplayer** while the game walks to Mode Select.
+   The host chooses menus; both players choose their character. Each device shows its own racer's view.
+
+No address, command or settings-file edit is needed. **Back to offline** leaves the lobby and starts normal
+offline play. Offline saves are preserved; online uses its generated, fully unlocked save.
+
+The same online compatibility version is required on both devices. Platform build strings may differ.
+Music packs are unavailable in this candidate (the music loader has not merged); a later merge must keep
+replacements disabled online. First use of a texture pack can still stutter. The 2P character model can sit
+outside its panel with Fit to screen (#35). Internet play, 3-4 players and a shared 30 fps mode are not in Beta 1.
+
+After a problem, attach **sonicriders.log from both devices** using the **Online Beta problem** issue form.
+The form explains where each platform saves its log. Keep the desync frame shown on screen, if any.
+Never attach a disc image, build, save, extracted game files or keys.
+
+Implementation and precise test limits: [Online Beta notes](notes/online-beta.md).
+
 ## Rules
 
 - **One player per machine.** Online races are joined from single-player: each machine brings exactly
   one local racer (its first controller); other local controllers are ignored while online. The rest
   of the grid (up to 4 racers) is COM.
-- **Cross-play.** PC and Switch players can race each other. Every machine runs the same game build
+- **Cross-play.** PC and Switch players can race each other. Every machine runs a compatible online version
   and must compute exactly the same race.
 
 ## How it works
@@ -358,7 +386,7 @@ the host's **Start race** makes every launcher start the game with `SR_NET` (hos
 - UDP, a thread: the host's lobby socket 7778, announcements broadcast to 7779 every second (every adapter's
   broadcast address, 255.255.255.255 and 127.0.0.1); JOIN / LIST / REFUSE / PING / LEAVE / START messages (lobby.cpp
   header). Players are dropped after 6 s without a word. Two players (the game's sessions); a third is refused ("The
-  lobby is full"), another game build too (fingerprint = hash of sonicriders.exe); names are made unique ("Name (2)").
+  lobby is full"), incompatible online versions too (shared NET_COMPAT); names are made unique ("Name (2)").
 - Join code: the host's local IPv4 in 7 characters (`ABC-DEFG`, no 0 O 1 I), so it works on the same network; over
   the internet only with UDP 7777-7778 forwarded. The lobby server with real codes (notes/online-research.md) replaces
   this later.

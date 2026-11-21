@@ -44,6 +44,8 @@ void overlay_pointer(float x, float y, int down);  /* touch on the open menu (ov
 void overlay_mouse_pos(float x, float y);
 void overlay_mouse_button(int button, int down);
 void overlay_mouse_wheel(float dx, float dy);
+void overlay_text(const char* text); /* SDL_TEXTINPUT, for the chosen online name */
+void overlay_edit_key(int backspace, int down);
 
 #ifdef __cplusplus
 }

@@ -2082,3 +2082,20 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   nothing run on a device yet [uncertain].
 - Rules from the user: never delete a GitHub release again (download totals reset); the game-data guard's per-file
   limit is 1 MB (was 512 KB) on the music branch, for dr_flac.h.
+
+## 2026-11-20: Online Beta 1 LAN candidate (not released)
+
+- Implemented a portable SRLB lobby before guest boot, saved player names, Online restart entry points and a
+  silent black loading screen until Mode Select. Compatible platform builds use NET_COMPAT instead of exact
+  version strings; incompatible lobby/game handshakes are refused. Added the tester issue form and both-log request.
+- PC two-copy discovered-lobby race finished with all compared checksums equal through 24,600 [confirmed].
+  A cache-on PC run stayed equal through 6,600. PC/OLED race segment stayed equal through 17,400 reports;
+  the bounded PC test then closed. First hardware mode/clocks were not captured: no speed claim.
+- Android foreground helper fixed an alarm-based restart failure; S23 Open Online restarted into the lobby
+  [confirmed]. PC/Android reached a race, both logs agree through 6,600 [confirmed].
+- Deterministic disc read-ahead uses two 256 KiB windows and a separate read-only handle. Guest completion points
+  unchanged; synthetic stream/boundary/EOF/mod tests pass. PC/OLED each served 457/600 reads from memory.
+  OLED rejected core 3 affinity; final build uses allowed helper core 2, and the final menu/cache check passed (handheld CPU 1785 / GPU 614.4 / MEM 2133 MHz).
+- Switch lobby rendered in Eden v0.1.1 [confirmed]. Separate native Switch 2 candidate builds from public Alpha 3;
+  not hardware-tested. Music loader is absent from main, so no replacements online. Slow-SD improvement, cold
+  packages, user acceptance and release remain unproven. No issue, Discussion, release or tag was posted.

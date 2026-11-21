@@ -23,6 +23,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/architecture.md](notes/architecture.md) | Reference | project goal, GLSL (uam) rules, device/HLE boundary, shader cache plan, architecture decisions, SDK map, naming |
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |
 | [notes/online-research.md](notes/online-research.md) | Draft | online play and cross-play research (2026-11-14): how Dolphin, Slippi, Anchor, CoopNet, Ryujinx connect players; recommended lobby codes + hole punching + relay server; steps |
+| [notes/online-beta.md](notes/online-beta.md) | Reference | LAN lobby, pre-game launch/restart, compatibility version, deterministic disc read-ahead and Beta 1 test limits |
 | [notes/ultrawide-fov.md](notes/ultrawide-fov.md) | Plan | ultrawide without stretching (fit-window mode, wider EFB, 2D at 4:3 proportions) and a FOV setting; FOV input of `fn_800645DC` |
 | [notes/picture-options-port.md](notes/picture-options-port.md) | Draft | PC picture options on Linux / Android / Switch: what exists, agreed order, Android (Vulkan) pass design |
 | [notes/reference-projects.md](notes/reference-projects.md) | Reference | other recompilation projects we borrow ideas from: what each is, what was taken, license cautions |
