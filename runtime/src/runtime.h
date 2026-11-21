@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 /* platform layer (platform/<target>/platform_*.c) */
+extern const char* g_launch_path;  /* argv[0] (the NRO's path on the Switch), or "" */
 void platform_init(void);                   /* logging, file system, clocks */
 const char* platform_disc_path(void);       /* default location of the game's disc image */
 const char* platform_save_path(void);       /* memory card image for slot A */

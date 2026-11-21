@@ -109,7 +109,10 @@ static void ios_message(const char* title, const char* text) {
 }
 #endif
 
+const char* g_launch_path = "";
+
 int main(int argc, char** argv) {
+    if (argc > 0 && argv[0]) g_launch_path = argv[0];
 #if defined(__ANDROID__) || defined(SR_IOS)
     argc = platform_android_args(argc, argv);  /* launch arguments KEY=VALUE -> environment */
 #endif

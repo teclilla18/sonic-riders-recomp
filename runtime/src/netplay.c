@@ -474,7 +474,11 @@ static void net_connect(const char* spec) {
             memcpy(build, m + 8, 64);
             build[64] = 0;
             if (m[3] != PROTO) snprintf(why, sizeof why, "a different online protocol version");
-            else if (strncmp(build, g_build_version, 63)) snprintf(why, sizeof why, "a different game build (%.60s, the host has %.60s)", build, g_build_version);
+            else if (strncmp(build, g_build_version, 63)) {
+                const char* any = getenv("SR_NET_ANYBUILD");  /* test only: e.g. Switch 1 against Switch 2 native; a desync is still caught */
+                if (any && any[0] == '1') rt_log("[net] SR_NET_ANYBUILD: accepting a different game build (%.60s, the host has %.60s)", build, g_build_version);
+                else snprintf(why, sizeof why, "a different game build (%.60s, the host has %.60s)", build, g_build_version);
+            }
             if (why[0]) {
                 char ip[64];
                 inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);

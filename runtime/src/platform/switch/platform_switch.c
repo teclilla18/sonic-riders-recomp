@@ -97,7 +97,12 @@ void platform_init(void) {
     setvbuf(stderr, logbuf, _IOFBF, sizeof logbuf);  /* flushed by rt_log at most once a second */
     rt_log("[switch] Sonic Riders native port; log started");
     /* debugging switches (SR_WATCHDOG, ...) as KEY=VALUE lines in env.txt, there being no environment */
-    FILE* f = fopen(BASE_DIR "/env.txt", "r");
+    /* a copy of the NRO with "online" in its name (sonicriders-online.nro) reads env.online.txt instead, so one
+     * SD card holds an offline and an online launcher of the same build */
+    const char* slash = strrchr(g_launch_path, '/');
+    int online_nro = strstr(slash ? slash : g_launch_path, "online") != NULL;
+    rt_log("[switch] launched as \"%s\"; settings from %s", g_launch_path, online_nro ? "env.online.txt" : "env.txt");
+    FILE* f = fopen(online_nro ? BASE_DIR "/env.online.txt" : BASE_DIR "/env.txt", "r");
     if (f) {
         static char line[8192];  /* SR_INPUT scripts get long */
         while (fgets(line, sizeof line, f)) {
