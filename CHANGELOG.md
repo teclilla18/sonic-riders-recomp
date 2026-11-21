@@ -7,7 +7,14 @@
 - Compatible platform builds can play together; incompatible online versions are refused before racing.
 - A read-ahead worker reduces synchronous disc access without changing deterministic DVD completion timing.
 - A dedicated Online Beta issue form asks for both devices' logs; failed joins and desyncs request those logs.
-- LAN only, two players. Music packs are unavailable; texture-pack first-use stutter and #35 remain known issues.
+- Internet races: Online > Internet > Host gives an invite code (10 digits, 15 if your router changed the port);
+  the friend types it on the number pad. The host lets each player in; ping and an automatic input delay are shown
+  (- / + to change it). If a friend can't get in, the host adds the friend's own code. A code contains your
+  internet address: share it only with the friend you race.
+- A player still racing keeps control after the other player finishes (before, player 2 lost control).
+- Super Sonic flight works online, using the host's setting.
+- Two players, LAN or internet. Music packs are unavailable; texture-pack first-use stutter (it slows both players
+  online) and #35 remain known issues; some mobile networks cannot connect without a relay.
 
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 

@@ -2138,3 +2138,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   equal] Not yet replayed on the devices.
 - Plan only: docs/notes/online-roadmap.md (3-4 players, Super Sonic online rules, quick chat, stage voting,
   rematches).
+- Later the same evening: **flight online** (it was off in every deterministic run): now the host's setting, sent
+  in WELCOME and stored in recordings, NET_COMPAT 2 (794a9f8) [PC: joiner with flight off logged "on", checksums
+  equal; not played online]. **LAN regression** S23 host / OLED join: two races equal through 29,741, the OLED kept
+  control after the S23 finished [confirmed, user-played]. **Slow countdown online** = the OLED's texture-pack
+  lookups at the race start (682 / 592 / 174 ms frames, handheld 1785/614.4/2133) holding the lockstep [confirmed by
+  log]. **Missing CPU/1P markers** = GXSRTE's `Misc/tex1_256x256_d8d7b29f19324bf2_843adf87433cfe86_9.png` is fully
+  transparent on purpose (alpha 0 everywhere), blanking the game's marker sheet (1P-4P, COM, faces, target ring);
+  renamed to `.png.off` on the OLED, the son's Switch and the PC copies [likely fixed; not yet seen in a race].

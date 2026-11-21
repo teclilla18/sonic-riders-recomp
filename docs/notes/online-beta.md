@@ -58,6 +58,12 @@ failure and exit paths, or the lobby when leaving). LAN mode is unchanged (ports
 - Test hooks: `SR_LOBBY_TEST=inet-host` (lets the first asker in, starts after 12 pings) and
   `inet-join:<code>`; `SR_INET_TEST_IP=127.0.0.1` makes codes loopback for two copies on one PC.
 
+- **Flight**: Super Sonic flight follows the host (WELCOME byte 6 bit 3; recording header flag 64; NET_COMPAT 2).
+- **Texture packs online**: a pack's first-use lookups run on the game thread, so a slow device stalls both
+  players (slow-motion countdown). Advice until loading moves to a worker: packs off for online races.
+- GXSRTE blanks the game's racer-marker sheet (`tex1_256x256_d8d7b29f19324bf2_843adf87433cfe86_9`, fully
+  transparent): no 1P-4P / COM tags. Renaming that one file to `.png.off` brings them back (only .png/.dds load).
+
 ## Disc cache
 
 `disc_cache.c` serves deterministic DI reads through two 256 KiB windows. One worker reads a separate, read-only
