@@ -853,9 +853,10 @@ void quick_settings(float w) {
  * release zips (or SR_INSTALLER=switch|android), is a window in front of setup\setup.ps1 for that target: it asks
  * the questions the console setup asks (disc image, SD card, own icon, HOME-screen icon, Android licence and
  * install), then runs the setup unattended (-Yes plus the answers) with its steps as a progress bar. */
-enum Mode { M_LAUNCHER, M_SWITCH, M_ANDROID };
+enum Mode { M_LAUNCHER, M_SWITCH, M_ANDROID, M_SWITCH2 };
 int g_mode = M_LAUNCHER;
 bool installer() { return g_mode != M_LAUNCHER; }
+bool switch_installer() { return g_mode == M_SWITCH || g_mode == M_SWITCH2; }
 
 struct InstallerChoices {
     std::vector<std::wstring> sd_found;  /* drives with a "switch" or "atmosphere" folder */
@@ -928,7 +929,7 @@ std::string installer_blocker() {
     if (g_disc_choice.empty()) return "Select your disc image.";
     if (g_ic.own_icon && g_ic.icon.empty()) return "Pick your icon picture (or untick \"Use my own picture\").";
     if (g_mode == M_SWITCH && g_ic.home_icon && g_ic.keys.empty()) return "Pick your prod.keys (or untick the HOME-screen icon).";
-    if (g_mode == M_ANDROID && !g_ic.license) return "Accept the Android SDK License to continue.";
+    if ((g_mode == M_ANDROID || g_mode == M_SWITCH2) && !g_ic.license) return "Accept the Android SDK License to continue.";
     return "";
 }
 
@@ -979,17 +980,17 @@ void start_installer() {
     g_step = 0;
     std::wstring cmd = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" + path(L"setup\\setup.ps1") +
                        L"\" -Yes -Iso " + qpath(g_disc_choice);
-    if (g_mode == M_SWITCH) {
-        cmd += L" -Target switch";
+    if (switch_installer()) {
+        cmd += g_mode == M_SWITCH2 ? L" -Target switch2 -AcceptAndroidSdkLicense" : L" -Target switch";
         if (g_ic.sd.empty()) cmd += L" -NoSd";
         else cmd += L" -Sd " + qpath(g_ic.sd) + L" -CopyIso " + (g_ic.copy_iso ? L"yes" : L"no");
-        if (g_ic.home_icon) cmd += L" -HomeIcon yes -Keys " + qpath(g_ic.keys);
+        if (g_mode == M_SWITCH && g_ic.home_icon) cmd += L" -HomeIcon yes -Keys " + qpath(g_ic.keys);
         else cmd += L" -HomeIcon no";
     } else {
         cmd += L" -Target android -AcceptAndroidSdkLicense";
         if (!g_ic.phone_install) cmd += L" -Install no";
     }
-    if (g_ic.own_icon && !g_ic.icon.empty()) cmd += L" -Icon " + qpath(g_ic.icon);
+    if (g_mode != M_SWITCH2 && g_ic.own_icon && !g_ic.icon.empty()) cmd += L" -Icon " + qpath(g_ic.icon);
     if (start_child(g_setup, cmd, {{L"SR_NOPAUSE", L"1"}}, true, true, setup_sink)) {
         g_install = INST_RUNNING;
         g_status = "Building...";
@@ -1013,7 +1014,7 @@ void auto_build_after_update() {
         return;
     }
     if (!installer_blocker().empty()) { g_after_update = false; return; }  /* the page says what is missing */
-    if (g_mode == M_SWITCH && g_had_sd_choice && g_ic.sd.empty()) {
+    if (switch_installer() && g_had_sd_choice && g_ic.sd.empty()) {
         static DWORD last;
         if (GetTickCount() - last > 1500) {
             last = GetTickCount();
@@ -1130,9 +1131,19 @@ void output_folder_details() {
 }
 
 void installer_next_steps() {
+    if (g_mode == M_SWITCH2) {
+        section("NEXT");
+        if (g_ic.sd.empty())
+            ImGui::TextWrapped("Kept on this PC: copy the folder build\\switch2\\sd\\switch\\sonicriders-switch2\\ and your disc image to /switch/sonicriders-switch2/ on the SD card.");
+        else
+            ImGui::TextWrapped("Done. Put the SD card back in your Switch 2.");
+        eject_button();
+        note("Start it from the homebrew menu: hold R while starting any game, then pick Sonic Riders. In the game, hold Minus for the settings menu (Quit Game returns to the homebrew menu).");
+        return;
+    }
     output_folder_details();
     section("NEXT");
-    if (g_mode == M_SWITCH) {
+    if (switch_installer()) {
         if (g_ic.sd.empty())
             ImGui::TextWrapped("Copy build\\switch\\sonicriders.nro and your disc image to /switch/sonicriders/ on the "
                                "SD card.");
@@ -1184,9 +1195,9 @@ void page_installer(float w) {
         }
         ImGui::TextWrapped("%s", g_disc_choice.empty() ? "No disc image selected" : narrow(g_disc_choice).c_str());
         ImGui::Spacing();
-        if (g_mode == M_SWITCH) {
+        if (switch_installer()) {
             section("2. SD CARD");
-            ImGui::TextWrapped("Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
+            ImGui::TextWrapped(g_mode == M_SWITCH2 ? "Put your Switch 2 SD card in this PC. The game goes to /switch/sonicriders-switch2/." : "Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
             std::string cur = g_ic.sd.empty() ? "Keep build on this PC" : narrow(g_ic.sd);
             const ImGuiStyle& st = ImGui::GetStyle();
             float btns = ImGui::CalcTextSize("Refresh").x + ImGui::CalcTextSize("Other...").x + 4 * st.FramePadding.x +
@@ -1242,6 +1253,14 @@ void page_installer(float w) {
         section("BUILD IN PROGRESS");
         note("You can resize this window while the build runs. The full build log is also saved in setup.log.");
     } else {
+        if (g_mode == M_SWITCH2) {
+            section("3. SHADER COMPILER LICENSE");
+            ImGui::Checkbox("I accept the Android SDK License", &g_ic.license);
+            if (ImGui::SmallButton("Read shader compiler license"))
+                ShellExecuteW(nullptr, L"open", L"https://developer.android.com/studio/terms", nullptr, nullptr, SW_SHOWNORMAL);
+            note("Needed once to build the Switch 2 graphics (Android NDK shader compiler, about 1 GB). Defaults: 60 fps, 2x resolution. Your saves and settings are kept on updates. Existing choices retained.");
+        }
+        if (g_mode != M_SWITCH2) {
         section("3. ICON (OPTIONAL)");
         ImGui::BeginDisabled(!idle);
         ImGui::Checkbox("Use my own picture", &g_ic.own_icon);
@@ -1272,7 +1291,8 @@ void page_installer(float w) {
             }
         }
         ImGui::EndDisabled();
-        if (g_mode == M_SWITCH && idle) {
+        }
+        if (switch_installer() && idle) {
             ImGui::Spacing();
             section("4. TEXTURE PACKS (OPTIONAL)");
             texpack_ui(true);
@@ -1868,7 +1888,7 @@ std::string update_tag() {
     std::lock_guard<std::mutex> lk(g_update_mx);
     return g_update_tag;
 }
-const char* zip_flavour() { return g_mode == M_SWITCH ? "Switch" : g_mode == M_ANDROID ? "Android" : "PC"; }
+const char* zip_flavour() { return g_mode == M_SWITCH2 ? "Switch2" : switch_installer() ? "Switch" : g_mode == M_ANDROID ? "Android" : "PC"; }
 void start_update_check() {
     /* off with update_check=0 in saves\settings.ini (the game's F1 > About), and for builds without a release tag;
      * SR_LAUNCHER_FAKE_VERSION (testing) pretends to be that version */
@@ -2296,7 +2316,7 @@ void page_update(float w) {
         if (st == UPD_FAILED) ImGui::TextColored(kRed, "%s", g_upd_error.c_str());
         else if (busy) note("Close the game (or wait for the build) first.");
         else if (url.empty()) note("This release has no download for this version; use the release page.");
-        else note(g_mode == M_SWITCH
+        else note(switch_installer()
                       ? "One press: downloads the new version (a few MB), restarts and rebuilds the game (usually under a "
                         "minute), then copies it to your SD card. Connect the SD card (card reader, or hekate: Tools > USB "
                         "Tools > SD Card) now or when asked. Your saves, settings and disc image stay."
@@ -2565,7 +2585,7 @@ void draw_ui(float W, float H) {
     ImGui::PushFont(g_font_bold, kSize * g_dpi);
     ImGui::PushTextWrapPos(side - 18 * s);
     ImGui::TextColored(ImVec4(0.55f, 0.68f, 0.95f, 1), "%s",
-                       g_mode == M_SWITCH ? "Switch installer" : g_mode == M_ANDROID ? "Android installer" : "PC recompilation");
+                       g_mode == M_SWITCH2 ? "Switch 2 installer" : switch_installer() ? "Switch installer" : g_mode == M_ANDROID ? "Android installer" : "PC recompilation");
     ImGui::PopTextWrapPos();
     ImGui::PopFont();
     float y = 140 * s;
@@ -2635,7 +2655,7 @@ void draw_ui(float W, float H) {
     ImGui::PopFont();
     ImGui::SetCursorPos(ImVec2(bx + 30 * s, banner - 46 * s));
     ImGui::PushFont(g_font_small, kSizeSmall * g_dpi);
-    ImGui::TextColored(kGoldV, "%s", g_mode == M_SWITCH ? "Static recompilation for Nintendo Switch  \xC2\xB7  GXEE8P"
+    ImGui::TextColored(kGoldV, "%s", g_mode == M_SWITCH2 ? "Static recompilation for Nintendo Switch 2  \xC2\xB7  GXEE8P" : switch_installer() ? "Static recompilation for Nintendo Switch  \xC2\xB7  GXEE8P"
                                      : g_mode == M_ANDROID ? "Static recompilation for Android  \xC2\xB7  GXEE8P"
                                                            : "Static recompilation for PC  \xC2\xB7  GXEE8P");
     ImGui::PopFont();
@@ -2970,10 +2990,11 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         name = name.substr(name.find_last_of("\\/") + 1);
         if (const char* e = getenv("SR_INSTALLER")) name = e;
         std::transform(name.begin(), name.end(), name.begin(), [](unsigned char ch) { return (char)tolower(ch); });
-        if (name.find("switch") != std::string::npos) g_mode = M_SWITCH;
+        if (name.find("switch 2") != std::string::npos || name.find("switch2") != std::string::npos) g_mode = M_SWITCH2;
+        else if (name.find("switch") != std::string::npos) g_mode = M_SWITCH;
         else if (name.find("android") != std::string::npos) g_mode = M_ANDROID;
         if (installer()) load_install_choices();
-        if (g_mode == M_SWITCH) find_sd_cards();
+        if (switch_installer()) find_sd_cards();
         if (wcsstr(GetCommandLineW(), L"--after-update")) g_after_update = true;
     }
     if (!(getenv("SR_LAUNCHER_UI_TEST") && getenv("SR_LAUNCHER_SHOT"))) start_update_check();
@@ -2991,7 +3012,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         ww = std::min(ww, (int)(work.right - work.left));
         wh = std::min(wh, (int)(work.bottom - work.top));
     }
-    const wchar_t* title = g_mode == M_SWITCH ? L"Sonic Riders - Switch installer"
+    const wchar_t* title = g_mode == M_SWITCH2 ? L"Sonic Riders - Switch 2 installer" : switch_installer() ? L"Sonic Riders - Switch installer"
                            : g_mode == M_ANDROID ? L"Sonic Riders - Android installer" : L"Sonic Riders";
     HWND hwnd = CreateWindowW(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ww, wh,
                               nullptr, nullptr, inst, nullptr);

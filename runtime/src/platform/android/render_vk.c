@@ -15,8 +15,14 @@
  *     and the touch controls (touch_android.c) over it;
  *   - the swapchain is made again when the surface is lost (the app went to the background).
  * Not yet: specialized shaders (the ubershader runs every draw), GPU timestamps, pre-rotation. */
+#ifdef __SWITCH2__
+#include <switch.h>
+#include "platform/switch2/switch2_platform.h"
+#define VK_USE_PLATFORM_VI_NN 1
+#else
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#endif
 #ifdef __ANDROID__
 #include <SDL_syswm.h>
 #endif
@@ -25,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdatomic.h>
 #include <threads.h>
 
 #include "gx.h"
@@ -35,8 +42,10 @@
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
+#ifndef __SWITCH2__
 #include "touch_android.h"
 #include "touch_icons.h"     /* generated: tools/embed_icons.py (android/touch_icons) */
+#endif
 
 void input_init(void);
 void input_pump(void);
@@ -74,7 +83,9 @@ static const uint8_t k_xf_image_chunks[XF_IMAGE_CHUNKS] = {0, 1, 2, 3, 16, 17, 2
 #define VKC(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) rt_fatal("[vk] %s failed: %d", #x, (int)r_); } while (0)
 
 /* ---- device ---- */
+#ifndef __SWITCH2__
 static SDL_Window* g_win;
+#endif
 static VkInstance g_inst;
 static VkPhysicalDevice g_pd;
 static VkPhysicalDeviceProperties g_props;
@@ -93,6 +104,28 @@ static VkDeviceSize g_max_alloc;
 
 /* ---- swapchain ---- */
 static VkSurfaceKHR g_surf;
+
+static void drawable_size(int* w, int* h) {
+#ifdef __SWITCH2__
+    u32 width = 0, height = 0;
+    nwindowGetDimensions(nwindowGetDefault(), &width, &height);
+    *w = (int)width; *h = (int)height;
+#else
+    SDL_Vulkan_GetDrawableSize(g_win, w, h);
+#endif
+}
+
+static int surface_create(void) {
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_VULKAN_NATIVE_SURFACE");
+    VkViSurfaceCreateInfoNN info = {.sType = VK_STRUCTURE_TYPE_VI_SURFACE_CREATE_INFO_NN, .window = nwindowGetDefault()};
+    VkResult rc = vkCreateViSurfaceNN(g_inst, &info, NULL, &g_surf);
+    rt_log("[switch2] native surface rc=%d", rc);
+    return rc == VK_SUCCESS;
+#else
+    return SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf);
+#endif
+}
 static VkSwapchainKHR g_swap;
 static VkFormat g_swap_fmt = VK_FORMAT_UNDEFINED;
 static VkExtent2D g_ext;      /* the screen as the game sees it (landscape) */
@@ -104,6 +137,20 @@ static VkImageView g_sview[8];
 static VkImageLayout g_slayout[8];
 static VkSemaphore g_sdone[8];
 static int g_swap_can_read;
+#ifdef __SWITCH2__
+static VkPresentModeKHR g_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+#include "platform/switch2/render_present.h"
+
+static void native_display_rate(int target) {
+    /* Request only rates the OS/display support. Zero means every refresh;
+     * default/30 mode retains the accepted 60 Hz window interval. */
+    unsigned fps = target > 0 ? (unsigned)target : 0;
+    Result rc = target ? nwindowSetFrameRates(nwindowGetDefault(), fps, fps, true)
+                       : nwindowSetSwapInterval(nwindowGetDefault(), 1);
+    rt_log("[vk2-rate] window request=%d (0=default, -1=every refresh) rc=%08X", target, rc);
+}
+
+#endif
 static int g_swap_bad;  /* needs making again before the next present */
 /* VK_ERROR_DEVICE_LOST seen (the GPU was reset): the frame is dropped and execute() rebuilds the device first.
  * Seen on Adreno while the screen is recorded (docs/notes/android.md "Open: device lost"). */
@@ -114,6 +161,9 @@ static unsigned g_draw_lo, g_draw_hi = ~0u;
 static int g_one_pipe;
 static unsigned g_fr_binds, g_binds_sum;  /* GX pipeline switches this frame, and summed for the report */
 static uint64_t g_last_gpu_ns;  /* the last measured frame's GPU time (for the [hitch] line) */
+#ifdef __SWITCH2__
+double platform_gpu_frame_ms(void) { return g_last_gpu_ns ? (double)g_last_gpu_ns / 1e6 : -1.0; }
+#endif
 
 /* a call's result where the device can be lost: 1 if it worked, 0 if lost (noted), else a fatal error */
 static int vk_ok(VkResult r, const char* what) {
@@ -633,7 +683,9 @@ static PipeEntry* g_pw_done;
 static uint32_t g_pw_ndone, g_pw_cap;
 static _Atomic int g_pw_running;  /* the render thread waits for all pass/pipeline users before teardown */
 static _Atomic int g_pw_cancel;
+#ifndef __SWITCH2__
 static SDL_Thread* g_pw_thread;
+#endif
 
 static VkPipeline pipe_make(uint64_t key) { return (key >> 63) ? quad_pipe_make(key) : gx_pipe_make(key); }
 
@@ -671,10 +723,14 @@ static void pipe_drain(void) {  /* render thread: take the helper's finished pip
  * then discard incompatible pipelines. Disk keys describe states, not handles, and remain useful. */
 static void prewarm_stop(void) {
     g_pw_cancel = 1;
+#ifdef __SWITCH2__
+    while (g_pw_running) platform_sleep_ns(1000000);  /* the helper clears it as its last step */
+#else
     if (g_pw_thread) {
         SDL_WaitThread(g_pw_thread, NULL);  /* includes SDL/JNI TLS cleanup, not only the last Vulkan call */
         g_pw_thread = NULL;
     }
+#endif
     pipe_drain();
 }
 
@@ -696,6 +752,9 @@ static int prewarm_thread(void* arg) {
     uint32_t n = 0;
     for (uint32_t i = 0; i < g_pw_nkeys; i++) {
         if (g_pw_cancel) break;  /* finish the current driver call, never destroy its device underneath it */
+#ifdef __SWITCH2__
+        if (switch2_stopping()) break;
+#endif
         uint64_t key = g_pw_keys[i];
         if ((key >> 63) && ((key >> 4) & 15) == TGT_SWAP && g_swap_fmt == VK_FORMAT_UNDEFINED) continue;
         VkPipeline p = pipe_make(key);
@@ -718,8 +777,12 @@ static int prewarm_thread(void* arg) {
 static void prewarm_launch(void) {
     g_pw_cancel = 0;
     g_pw_running = 1;
+#ifdef __SWITCH2__
+    rt_thread_start(prewarm_thread, NULL);  /* the platform's helper thread (off the game's core) */
+#else
     g_pw_thread = SDL_CreateThreadWithStackSize(prewarm_thread, "vk-prewarm", 8u << 20, NULL);
     if (!g_pw_thread) rt_fatal("[vk] cannot create prewarm thread: %s", SDL_GetError());
+#endif
 }
 
 static void prewarm_start(void) {
@@ -761,25 +824,100 @@ static VkPipeline quad_pipe(int kind, int target, VkColorComponentFlags mask) {
     return pipe_get((1ull << 63) | (uint64_t)kind | (uint64_t)target << 4 | (uint64_t)mask << 8);
 }
 
+/* Saving the pipeline cache (Switch 2 log 2026-11-20: a 2.8 MB save on the render thread took 7.6 s while the SD card
+ * was busy, and the whole file was rewritten on every launch because every pipeline made at start-up counts as new even
+ * when the cache already had it). Now the data is compared with what is on the card (size + hash) and only a real
+ * change is written, by a short-lived writer thread, to a temporary file renamed into place. A save at exit (force)
+ * still writes on the calling thread so it finishes before the process ends. */
+static size_t g_pcache_disk_len;
+static uint64_t g_pcache_disk_hash;
+static atomic_int g_pcache_writing;
+
+static uint64_t pcache_hash(const void* d, size_t n) {
+    const uint8_t* b = (const uint8_t*)d;
+    uint64_t h = 1469598103934665603ull;
+    for (size_t i = 0; i < n; i++) h = (h ^ b[i]) * 1099511628211ull;
+    return h;
+}
+
+typedef struct { void* data; size_t n; uint64_t hash; } PcacheJob;
+
+static int pcache_write(PcacheJob* j) {
+    uint64_t t0 = platform_now_ns();
+    char tmp[512];
+    snprintf(tmp, sizeof tmp, "%s.tmp", PIPE_CACHE_FILE);
+    int ok = 0;
+    FILE* f = fopen(tmp, "wb");
+    if (f) {
+        ok = fwrite(j->data, 1, j->n, f) == j->n;
+        ok = fclose(f) == 0 && ok;
+        if (ok) {
+            remove(PIPE_CACHE_FILE);
+            ok = rename(tmp, PIPE_CACHE_FILE) == 0;
+        }
+    }
+    if (ok) {
+        g_pcache_disk_len = j->n;
+        g_pcache_disk_hash = j->hash;
+    }
+    rt_log("[vk] pipeline cache %s: %zu KB in %.0f ms", ok ? "written" : "write FAILED", j->n >> 10,
+           (double)(platform_now_ns() - t0) / 1e6);
+    free(j->data);
+    free(j);
+    return ok;
+}
+
+static int pcache_writer(void* arg) {
+    rt_thread_pin(2);  /* off the game's core */
+    pcache_write((PcacheJob*)arg);
+    atomic_store(&g_pcache_writing, 0);
+    return 0;
+}
+
 static void pcache_save(int force) {
     uint64_t now = platform_now_ns();
     if (!force && now - g_pcache_saved_ns < 10000000000ull) return;
     keys_save();
     if (!g_pipes_new) return;
+    if (!force && atomic_load(&g_pcache_writing)) return;  /* the last write is still going: try again later */
     size_t n = 0;
     if (vkGetPipelineCacheData(g_dev, g_pcache, &n, NULL) != VK_SUCCESS || !n) return;
     void* d = malloc(n);
-    if (vkGetPipelineCacheData(g_dev, g_pcache, &n, d) == VK_SUCCESS) {
-        FILE* f = fopen(PIPE_CACHE_FILE, "wb");
-        if (f) {
-            fwrite(d, 1, n, f);
-            fclose(f);
-        }
-        rt_log("[vk] pipeline cache saved: %u pipelines, %zu KB (%u new)", g_pipes_total, n >> 10, g_pipes_new);
+    if (!d) return;
+    if (vkGetPipelineCacheData(g_dev, g_pcache, &n, d) != VK_SUCCESS) {
+        free(d);
+        return;
     }
-    free(d);
+    uint64_t h = pcache_hash(d, n);
+    unsigned fresh = g_pipes_new;
     g_pipes_new = 0;
     g_pcache_saved_ns = now;
+    if (n == g_pcache_disk_len && h == g_pcache_disk_hash) {
+        rt_log("[vk] pipeline cache unchanged (%u pipelines, %zu KB): not rewritten", g_pipes_total, n >> 10);
+        free(d);
+        return;
+    }
+    rt_log("[vk] pipeline cache saving: %u pipelines, %zu KB (%u made since the last save)", g_pipes_total, n >> 10, fresh);
+    PcacheJob* j = malloc(sizeof *j);
+    if (!j) {
+        free(d);
+        return;
+    }
+    j->data = d;
+    j->n = n;
+    j->hash = h;
+    if (force) {
+        pcache_write(j);
+        return;
+    }
+    thrd_t t;
+    atomic_store(&g_pcache_writing, 1);
+    if (thrd_create(&t, pcache_writer, j) == thrd_success) {
+        thrd_detach(t);
+    } else {
+        atomic_store(&g_pcache_writing, 0);
+        pcache_write(j);
+    }
 }
 
 /* ---------------------------------------------------------------- setup */
@@ -818,7 +956,7 @@ static int swap_create(void) {
     VkExtent2D ext = caps.currentExtent;
     if (ext.width == UINT32_MAX || !ext.width) {
         int w, h;
-        SDL_Vulkan_GetDrawableSize(g_win, &w, &h);
+        drawable_size(&w, &h);
         ext.width = (uint32_t)w;
         ext.height = (uint32_t)h;
     }
@@ -849,9 +987,34 @@ static int swap_create(void) {
     const char* si_env = getenv("SR_VK_SWAPIMAGES");  /* test: swapchain length */
     if (si_env && atoi(si_env) >= (int)caps.minImageCount && atoi(si_env) <= 8) n = (uint32_t)atoi(si_env);
     g_swap_can_read = (caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0;
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+#ifdef __SWITCH2__
+    /* Preserve default VSync. Other PC render presets remove the software
+     * presentation lock where the surface supports it; never assume a refresh
+     * rate or request an unsupported mode. MAILBOX still displays at refresh.
+     * FIFO fallback can back-pressure rendering even with Unlimited selected. */
+    uint32_t nmodes = 0;
+    VKC(vkGetPhysicalDeviceSurfacePresentModesKHR(g_pd, g_surf, &nmodes, NULL));
+    VkPresentModeKHR* modes = malloc(nmodes * sizeof *modes);
+    if (!modes && nmodes) rt_fatal("[vk2] present modes allocation failed");
+    VKC(vkGetPhysicalDeviceSurfacePresentModesKHR(g_pd, g_surf, &nmodes, modes));
+    u16 interval_n = 0, interval_d = 0;
+    Result interval_rc = nwindowGetPresentInterval(nwindowGetDefault(), &interval_n, &interval_d);
+    int target = g_settings.framerate == FR_30 ? 0 : g_settings.pc_fps;
+    present_mode = native_present_mode(modes, nmodes, target,
+                                     R_SUCCEEDED(interval_rc) ? interval_n : 0, interval_d);
+    rt_log("[vk2-rate] effective presentation interval=%u/%u s rc=%08X", interval_n, interval_d, interval_rc);
+    for (uint32_t i = 0; i < nmodes; i++) rt_log("[vk2-rate] supported presentation mode=%d", (int)modes[i]);
+    free(modes);
+    g_present_mode = present_mode;
+    rt_log("[vk2-rate] presentation=%s; render limit=%d; display refresh remains system-controlled",
+           present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR ? "IMMEDIATE (tearing possible)" :
+           present_mode == VK_PRESENT_MODE_MAILBOX_KHR ? "MAILBOX (refresh-limited display)" :
+           "FIFO (VSync, acquire may limit render rate)", g_settings.pc_fps);
+#endif
     VkSwapchainCreateInfoKHR ci = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, NULL, 0, g_surf, n, fmt.format, fmt.colorSpace, iext, 1,
                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (g_swap_can_read ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
-                                   VK_SHARING_MODE_EXCLUSIVE, 0, NULL, tf, ca, VK_PRESENT_MODE_FIFO_KHR, VK_TRUE, VK_NULL_HANDLE};
+                                   VK_SHARING_MODE_EXCLUSIVE, 0, NULL, tf, ca, present_mode, VK_TRUE, VK_NULL_HANDLE};
     if (vkCreateSwapchainKHR(g_dev, &ci, NULL, &g_swap) != VK_SUCCESS) return 0;
     g_ext = ext;
     g_img_ext = iext;
@@ -884,7 +1047,7 @@ static int swap_recreate(void) {
         SDL_VERSION(&wm.version);
         if (!SDL_GetWindowWMInfo(g_win, &wm) || !wm.info.android.window) return 0;
 #endif
-        if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) {
+        if (!surface_create()) {
             g_surf = VK_NULL_HANDLE;
             return 0;
         }
@@ -907,11 +1070,17 @@ static int g_portability;
 #endif
 
 static void vk_setup(void) {
+#ifdef __SWITCH2__
+    unsigned n = 2;
+    const char* ie[16] = {VK_KHR_SURFACE_EXTENSION_NAME, VK_NN_VI_SURFACE_EXTENSION_NAME};
+    switch2_checkpoint("BEGIN_VULKAN_INSTANCE");
+#else
     unsigned n = 0;
     SDL_Vulkan_GetInstanceExtensions(g_win, &n, NULL);
     const char* ie[16];
     if (n > 16) n = 16;
     SDL_Vulkan_GetInstanceExtensions(g_win, &n, ie);
+#endif
     uint32_t iv = VK_API_VERSION_1_1;
     vkEnumerateInstanceVersion(&iv);
     if (iv < VK_API_VERSION_1_1) rt_fatal("[vk] Vulkan 1.1 or newer is required");
@@ -975,7 +1144,13 @@ static void vk_setup(void) {
         sscanf(getenv("SR_VK_DRAWS"), "%u-%u", &g_draw_lo, &g_draw_hi);
         rt_log("[vk] SR_VK_DRAWS: only draws %u-%u of each frame", g_draw_lo, g_draw_hi);
     }
-    if (!SDL_Vulkan_CreateSurface(g_win, g_inst, &g_surf)) rt_fatal("[vk] surface: %s", SDL_GetError());
+    if (!surface_create()) {
+#ifdef __SWITCH2__
+        rt_fatal("[vk] cannot create native presentation surface");
+#else
+        rt_fatal("[vk] surface: %s", SDL_GetError());
+#endif
+    }
     uint32_t nq = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(g_pd, &nq, NULL);
     VkQueueFamilyProperties qf[16];
@@ -996,6 +1171,9 @@ static void vk_setup(void) {
 
 /* everything that belongs to the VkDevice: made at start-up and again after a device loss (device_recover) */
 static void device_setup(void) {
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_VULKAN_DEVICE_SETUP");
+#endif
     int core13 = g_core13;
     float prio = 1.0f;
     VkDeviceQueueCreateInfo qci = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, NULL, 0, g_qfi, 1, &prio};
@@ -1018,6 +1196,9 @@ static void device_setup(void) {
     want.dualSrcBlend = g_dual_src;
     VkDeviceCreateInfo dci = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, g_dynamic ? &drf : NULL, 0, 1, &qci, 0, NULL, ndx, dext, &want};
     VKC(vkCreateDevice(g_pd, &dci, NULL, &g_dev));
+#ifdef __SWITCH2__
+    switch2_checkpoint("VULKAN_DEVICE_CREATED; allocating frame resources and shader modules");
+#endif
     vkGetDeviceQueue(g_dev, g_qfi, 0, &g_q);
     p_begin_rendering = g_dynamic ? (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdBeginRendering" : "vkCmdBeginRenderingKHR") : NULL;
     p_end_rendering = g_dynamic ? (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(g_dev, core13 ? "vkCmdEndRendering" : "vkCmdEndRenderingKHR") : NULL;
@@ -1116,6 +1297,10 @@ static void device_setup(void) {
             len = 0;
         }
         rt_log("[vk] pipeline cache: %zu KB from the last run", len >> 10);
+        if (len) {  /* what is on the card: a save of the same data is skipped (pcache_save) */
+            g_pcache_disk_len = len;
+            g_pcache_disk_hash = pcache_hash(data, len);
+        }
         free(data);
         g_pcache_saved_ns = platform_now_ns();
     }
@@ -1227,7 +1412,9 @@ static void device_setup(void) {
                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_ov, OVERLAY_W, OVERLAY_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
     image_make(&g_dummy, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+#ifndef __SWITCH2__
     image_make(&g_icons, TOUCH_ATLAS_W, TOUCH_ATLAS_H, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+#endif
 
     /* first commands: the dummy white, a transparent overlay, the EFB black with depth at the far plane */
     g_cmd = g_cb[0];
@@ -1239,11 +1426,13 @@ static void device_setup(void) {
     vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_dummy.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &r);
     to_layout(&g_dummy, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     /* the touch controls' pictures, once */
+#ifndef __SWITCH2__
     memcpy(g_smap[0] + OFF_STAGE, k_touch_atlas, sizeof k_touch_atlas);
     to_layout(&g_icons, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkBufferImageCopy ir = {OFF_STAGE, 0, 0, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, {0, 0, 0}, {TOUCH_ATLAS_W, TOUCH_ATLAS_H, 1}};
     vkCmdCopyBufferToImage(g_cmd, g_sbuf[0], g_icons.img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ir);
     to_layout(&g_icons, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+#endif
     VkImageSubresourceRange cr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     to_layout(&g_ov, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkClearColorValue clear0 = {{0, 0, 0, 0}};
@@ -1755,13 +1944,18 @@ static void draw_overlay_and_touch(void) {
     float W = (float)g_ext.width, H = (float)g_ext.height;
     float ov[4];
     picture_rect(16.0f / 9.0f, ov);  /* the menu keeps its own 16:9 shape */
+#ifndef __SWITCH2__
     touch_set_overlay_rect(ov[0], ov[1], ov[2], ov[3]);
     TouchShape ts[16];
     int nt = touch_shapes(ts, 16, (int)W, (int)H);
+#else
+    int nt = 0;
+#endif
     if (!(img && g_ov_box[0] < g_ov_box[2]) && !nt) return;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 0);
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
+#ifndef __SWITCH2__
     for (int i = 0; i < nt; i++) {
         float px[4] = {ts[i].cx - ts[i].r, ts[i].cy - ts[i].r, ts[i].cx + ts[i].r, ts[i].cy + ts[i].r};
         if (ts[i].image >= 0 && ts[i].image < TOUCH_ICONS) {  /* a picture: premultiplied, faded by its opacity */
@@ -1775,6 +1969,7 @@ static void draw_overlay_and_touch(void) {
         float shape[4] = {(float)ts[i].kind, (float)ts[i].icon, (float)ts[i].pressed, 1.0f};
         quad(Q_TOUCH, TGT_SWAP, 15, NULL, NULL, W, H, px, NULL, col, shape);
     }
+#endif
     rendering_end();
 }
 
@@ -2096,6 +2291,10 @@ static void device_recover(void) {
            (platform_now_ns() - t_dev) / 1e6, g_pw_running ? " (prewarm still running)" : "");
 }
 
+#ifdef __SWITCH2__
+#include "platform/switch2/frame_interpolation.h"
+#endif
+
 static void execute(GxFrame* f) {
     uint64_t t_start = platform_now_ns();
     g_fr_pipe_ns = g_fr_wait_ns = g_fr_img_ns = g_fr_acq_ns = 0;
@@ -2135,11 +2334,15 @@ static void execute(GxFrame* f) {
     memcpy(cpu + ioff, f->idx, (size_t)ncopy * 4);
     /* XF memory images, one per chunk table (as render_deko.c) */
     uint32_t nximg = f->nxtabs < SLOT_XFI / XF_IMAGE_BYTES ? f->nxtabs : SLOT_XFI / XF_IMAGE_BYTES;
+    const uint32_t* chunks = f->xchunks;
+#ifdef __SWITCH2__
+    if (g_ip_on) chunks = ip_chunks(f);
+#endif
     for (uint32_t t = 0; t < nximg; t++) {
         uint8_t* dst = cpu + OFF_XFI + (size_t)t * XF_IMAGE_BYTES;
         for (int k = 0; k < XF_IMAGE_CHUNKS; k++) {
             uint32_t pc = f->xtabs[t].xtab[k_xf_image_chunks[k]];
-            if (pc < f->nxchunks) memcpy(dst + k * GX_XFM_CHUNK * 4, f->xchunks + (size_t)pc * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
+            if (pc < f->nxchunks) memcpy(dst + k * GX_XFM_CHUNK * 4, chunks + (size_t)pc * GX_XFM_CHUNK, GX_XFM_CHUNK * 4);
             else memset(dst + k * GX_XFM_CHUNK * 4, 0, GX_XFM_CHUNK * 4);
         }
     }
@@ -2150,6 +2353,10 @@ static void execute(GxFrame* f) {
     int ubo_ok = f->nunis * ustride <= SLOT_UBO;
     if (ubo_ok)
         for (uint32_t i = 0; i < f->nunis; i++) memcpy(cpu + OFF_UBO + i * ustride, &f->unis[i], sizeof(GxUniforms));
+
+#ifdef __SWITCH2__
+    if (ubo_ok && g_ip_on) ip_states(cpu + OFF_UBO, ustride);
+#endif
 
     /* textures this frame uses, before any rendering */
     for (uint32_t i = 0; i < f->ncmds; i++)
@@ -2316,6 +2523,9 @@ static void execute(GxFrame* f) {
         g_slayout[idx] = VK_IMAGE_LAYOUT_UNDEFINED;  /* contents not kept between frames */
         g_swap_idx = -1;
     }
+#ifdef __SWITCH2__
+    uint64_t native_present_end = platform_now_ns();
+#endif
     if (fake_lost_due()) vk_ok(VK_ERROR_DEVICE_LOST, "SR_VK_FAKELOST");  /* test: everything below as after a real loss */
     if (g_shot_pending && (g_lost || !g_fenced[g_slot] ||
                            vkWaitForFences(g_dev, 1, &g_fence[g_slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS))
@@ -2331,11 +2541,23 @@ static void execute(GxFrame* f) {
         g_shot_pending = 0;
         rt_thread_start(shot_thread, sh);
     }
+#ifndef __SWITCH2__
     g_retired[g_slot] = realloc(g_retired[g_slot], (f->nretired ? f->nretired : 1) * sizeof(int));
     memcpy(g_retired[g_slot], f->retired, f->nretired * sizeof(int));
     g_nretired[g_slot] = f->nretired;
+#endif
     g_slot ^= 1;
+#ifdef __SWITCH2__
+    uint64_t native_cache_start = platform_now_ns();
+#endif
     pcache_save(0);
+#ifdef __SWITCH2__
+    uint64_t native_cache_end = platform_now_ns();
+    if (native_cache_end - t_start > 50000000ULL)
+        rt_log("[vk2] frame=%u pipelines=%u pipeline_ms=%.2f present_call_ms=%.2f post_present_ms=%.2f cache_save_ms=%.2f",
+               g_frames_done, g_fr_pipe_n, g_fr_pipe_ns / 1e6, (native_present_end - t_pres) / 1e6,
+               (native_cache_start - native_present_end) / 1e6, (native_cache_end - native_cache_start) / 1e6);
+#endif
     uint64_t t_end = platform_now_ns(), busy = t_end - t_start;
     g_ph_in += t_rec - t_start;
     g_ph_rec += t_sub - t_rec - g_fr_acq_ns;
@@ -2376,14 +2598,28 @@ static void execute(GxFrame* f) {
 /* ---------------------------------------------------------------- frame queue, events, thread */
 static mtx_t g_lock;
 static cnd_t g_cv;
-static GxFrame g_frames[2];
-static GxFrame* g_free[2];
+#ifdef __SWITCH2__
+#define CPU_FRAMES 4
+#else
+#define CPU_FRAMES 2
+#endif
+static GxFrame g_frames[CPU_FRAMES];
+static GxFrame* g_free[CPU_FRAMES];
 static int g_nfree;
 static GxFrame* g_pending;
 static volatile int g_quit;
 static int g_stopping;  /* protected by g_lock; producers park before GPU/SDL teardown */
 
-void render_dump(void) {}
+void render_dump(void) {
+#ifdef __SWITCH2__
+    /* Try only: dumping must not wait on a lock implicated in the stall. */
+    if (mtx_trylock(&g_lock) == thrd_success) {
+        rt_log("[stall2-render] pending=%p free=%d quit=%d done=%u presented=%u slot=%u lost=%d swap_bad=%d",
+               (void*)g_pending, g_nfree, g_quit, g_frames_done, g_presented, g_slot, g_lost, g_swap_bad);
+        mtx_unlock(&g_lock);
+    } else rt_log("[stall2-render] frame queue lock busy");
+#endif
+}
 
 GxFrame* render_take_free_frame(void) {
     mtx_lock(&g_lock);
@@ -2411,6 +2647,7 @@ static void shutdown_note(const char* phase) {
 /* The render thread owns Vulkan object lifetimes and the SDL window. Stop its producers before
  * releasing anything; guest workers remain parked through the application save/network handlers.
  * Never return SDL_main while detached guest threads still execute libmain. */
+#ifndef __SWITCH2__  /* Switch 2 shuts down at the end of render_thread */
 static void renderer_shutdown(void) {
     mtx_lock(&g_lock);
     if (g_stopping) { mtx_unlock(&g_lock); return; }
@@ -2440,6 +2677,7 @@ static void renderer_shutdown(void) {
     SDL_Quit();
     shutdown_note("SDL stopped; shutdown complete");
 }
+#endif
 
 #ifdef SR_IOS
 /* iOS refuses GPU work from an app in the background: MoltenVK then reports a lost device, and rebuilding it
@@ -2466,9 +2704,29 @@ static void ios_wait_in_background(int w, int h) {
 #endif
 
 static void pump(void) {
+#ifdef __SWITCH2__
+    uint64_t pump_t0 = platform_now_ns();
+    if (!appletMainLoop()) g_quit = 1;
+    uint64_t applet_end = platform_now_ns();
+    int w = 0, h = 0;
+    drawable_size(&w, &h);
+    if (g_ext.width && ((uint32_t)w != g_ext.width || (uint32_t)h != g_ext.height)) g_swap_bad = 1;
+    uint64_t input_start = platform_now_ns();
+    input_pump();
+    uint64_t input_end = platform_now_ns();
+    if (input_end - pump_t0 > 50000000ULL)
+        rt_log("[pump2] ns=%llu applet_ms=%.2f drawable_ms=%.2f input_ms=%.2f",
+               (unsigned long long)input_end, (applet_end-pump_t0)/1e6,
+               (input_start-applet_end)/1e6, (input_end-input_start)/1e6);
+    const char* limit = getenv("SR_SWITCH2_FRAMES");
+    if (limit && (unsigned)strtoul(limit, NULL, 10) > 0 && g_frames_done >= (unsigned)strtoul(limit, NULL, 10)) g_quit = 1;
+    if (overlay_take_quit_request()) g_quit = 1;
+    if (platform_now_ns()-pump_t0 > 50000000ULL)
+        rt_log("[vk2-loop] input/event pump %.2f ms", (platform_now_ns()-pump_t0)/1e6);
+#else
     SDL_Event e;
     int w = (int)g_ext.width, h = (int)g_ext.height;
-    if (!w) SDL_Vulkan_GetDrawableSize(g_win, &w, &h);
+    if (!w) drawable_size(&w, &h);
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT: g_quit = 1; break;
@@ -2496,15 +2754,23 @@ static void pump(void) {
         touch_event(&e, w, h);
     }
     input_pump();
+#endif
 }
 
 #ifdef SR_IOS
 void ios_attach_window(SDL_Window* win);
 #endif
 
+#ifdef __SWITCH2__
+#include "platform/switch2/render_rate.h"
+#endif
+
 static int render_thread(void* arg) {
     (void)arg;
     rt_thread_pin(1);
+#ifdef __SWITCH2__
+    switch2_checkpoint("BEGIN_NATIVE_VULKAN_RENDERER");
+#else
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #ifdef SR_IOS
@@ -2523,7 +2789,15 @@ static int render_thread(void* arg) {
     ios_attach_window(g_win);  /* platform/ios/ios_scene.m: iOS 27 needs the window on a scene */
 #endif
     SDL_DisableScreenSaver();  /* the screen stays on while the game runs */
+#endif
     vk_setup();
+#ifdef __SWITCH2__
+    switch2_checkpoint("VULKAN_RENDERER_READY; waiting for recompiled-core frames");
+#endif
+#ifdef __SWITCH2__
+    while (!g_quit) ip_round(ip_target());
+    ip_release();
+#else
     for (;;) {
         mtx_lock(&g_lock);
         while (!g_pending && !g_quit) {
@@ -2555,17 +2829,32 @@ static int render_thread(void* arg) {
     renderer_shutdown();
     fflush(stderr);
     rt_exit(0);  /* flush our save/netplay handlers; avoid Android-wide finalizers racing RenderThread */
+#endif
+#ifdef __SWITCH2__
+    /* Stop producers and pipeline helpers before destroying their GPU/memory. */
+    switch2_stop_workers();
+    pipe_drain();
+    keys_save();
+    pcache_save(1);
+    switch2_checkpoint("BEGIN_VULKAN_SHUTDOWN");
+    device_teardown();
+    if (g_surf) { vkDestroySurfaceKHR(g_inst, g_surf, NULL); g_surf = VK_NULL_HANDLE; }
+    if (g_inst) { vkDestroyInstance(g_inst, NULL); g_inst = VK_NULL_HANDLE; }
+    switch2_checkpoint("VULKAN_SHUTDOWN_COMPLETE");
+#endif
+    return 0;
 }
 
 void render_start(void) {
     mtx_init(&g_lock, mtx_plain);
     cnd_init(&g_cv);
-    g_free[0] = &g_frames[0];
-    g_free[1] = &g_frames[1];
-    g_nfree = 2;
+    for (int i = 0; i < CPU_FRAMES; i++) g_free[i] = &g_frames[i];
+    g_nfree = CPU_FRAMES;
+#ifndef __SWITCH2__
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) rt_fatal("SDL_Init: %s", SDL_GetError());
+#endif
     input_init();
-#ifdef SR_IOS
+#if defined(SR_IOS) || defined(__SWITCH2__)
     /* iOS: UIKit wants the window and the event pump on the main thread; main() runs render_main_loop()
      * there after starting the game thread */
 #else
@@ -2573,6 +2862,6 @@ void render_start(void) {
 #endif
 }
 
-#ifdef SR_IOS
+#if defined(SR_IOS) || defined(__SWITCH2__)
 void render_main_loop(void) { render_thread(NULL); }
 #endif

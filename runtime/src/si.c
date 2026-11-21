@@ -110,6 +110,28 @@ static void transfer(void) {
 static void poll_response(int ch, uint32_t* hi, uint32_t* lo) {
     GcPad p;
     get_pad(ch, &p);
+#ifdef __SWITCH2__
+    if (ch == 0) {
+        static unsigned last;
+        static uint64_t reported;
+        uint64_t now = platform_now_ns();
+        if (last != p.buttons || now - reported > 2000000000ULL) {
+            rt_log("[si2] INBUF guest delivery buttons=%04X stick=%u,%u", p.buttons, p.stick_x, p.stick_y);
+            last = p.buttons; reported = now;
+        }
+    }
+#endif
+#ifdef __SWITCH2__
+    if (ch == 0) {
+        static unsigned last_buttons;
+        static uint64_t last_log;
+        uint64_t now = platform_now_ns();
+        if (p.buttons != last_buttons || now - last_log > 2000000000ULL) {
+            rt_log("[si2] guest poll buttons=%04X stick=%u,%u triggers=%u,%u", p.buttons, p.stick_x, p.stick_y, p.trig_l, p.trig_r);
+            last_buttons = p.buttons; last_log = now;
+        }
+    }
+#endif
     uint16_t b = p.buttons | 0x0080;
     *hi = (uint32_t)b << 16 | (uint32_t)p.stick_x << 8 | p.stick_y;
     *lo = (uint32_t)p.c_x << 24 | (uint32_t)p.c_y << 16 | (uint32_t)p.trig_l << 8 | p.trig_r;

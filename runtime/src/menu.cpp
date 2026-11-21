@@ -399,6 +399,9 @@ void tab_display() {
     }
 #ifdef PIC_RES_RADIO
     heading("Resolution");
+#ifdef __SWITCH2__
+    ImGui::BeginDisabled();
+#endif
     for (int i = 0; i < RES_MODES; i++) {
         static const int order[RES_MODES] = {RES_1X, RES_1_25X, RES_1_5X, RES_2X};  /* smallest first */
         const int r = order[i];
@@ -423,6 +426,10 @@ void tab_display() {
             settings_apply();
         }
     }
+ #ifdef __SWITCH2__
+    ImGui::EndDisabled();
+    note("Switch 2 Alpha: live resolution changes are disabled. Fresh default: 2x. Close the game, edit resolution in settings.ini (0=1x, 2=2x), then restart. Existing saved choices are retained.");
+#endif
     note("Higher resolutions make the picture sharper but can lower the frame rate in races.");
 #endif
 #ifdef PIC_SCALE_SLIDER
@@ -569,15 +576,50 @@ void tab_performance() {
         int m = order[k];
         if (radio(settings_framerate_name(m), g_settings.framerate == m, tips[m])) {
             g_settings.framerate = m;
+#ifdef __SWITCH2__
+            if (m == FR_30) g_settings.pc_fps = 0;
+#endif
             settings_apply();
         }
     }
     note("All three keep the game at its real speed. If Auto looks uneven, 60 fps or 30 fps is steadier.");
+#ifdef __SWITCH2__
+    heading("Smoother pictures");
+    {
+        static const int rates[] = {60, 90, 120};
+        int cur = g_settings.pc_fps == 0 ? 60 : g_settings.pc_fps;
+        for (int i = 0; i < 3; i++) {
+            char label[24];
+            snprintf(label, sizeof label, rates[i] == 60 ? "60 fps (game)" : "%d fps", rates[i]);
+            if (i) ImGui::SameLine(0, 18);
+            if (radio(label, cur == rates[i],
+                      rates[i] == 60 ? "The game's own frame rate. The default."
+                                     : "The game still runs at 60 steps a second; the console draws extra pictures in "
+                                       "between for smoother motion. Best on a 120 Hz screen.")) {
+                g_settings.pc_fps = rates[i] == 60 ? 0 : rates[i];
+                if (rates[i] != 60 && g_settings.framerate == FR_30) g_settings.framerate = FR_AUTO;
+                settings_apply();
+            }
+        }
+        note("90 and 120 fps add in-between pictures; the game's speed and timing do not change. Not used in the 30 fps mode.");
+    }
+#if 0  /* the old Unlimited switch (removed 2026-11-20) */
+    heading("Personal rendering option");
+    int unlimited = g_settings.pc_fps == PC_FPS_UNLIMITED;
+    if (check("Unlimited rendering (experimental)", &unlimited,
+              "Removes the software render cap using in-between pictures. Game timing remains unchanged. Display refresh, presentation mode and GPU speed can still limit output.")) {
+        g_settings.pc_fps = unlimited ? PC_FPS_UNLIMITED : 0;
+        if (unlimited) g_settings.framerate = FR_AUTO;
+        settings_apply();
+    }
+    note("Off keeps the normal game frame rate (default 60). This personal feature is unvalidated on hardware; immediate presentation may tear.");
+#endif  /* old Unlimited switch */
+#endif
 #endif
     heading("Frame counter");
     if (check("Show the frame rate in the corner", &g_settings.show_fps, "Frames drawn per second, top left."))
         settings_apply();
-#ifdef __SWITCH__
+#if defined(__SWITCH__) && !defined(__SWITCH2__)
     heading("Handheld graphics");
     if (check("Nintendo's 384 MHz graphics setting in handheld", &g_settings.handheld_gpu,
               "One of the clock settings Nintendo offers its own games (the system's default is 307 MHz). "
@@ -816,7 +858,7 @@ void quit_row() {
     ImGui::TextUnformatted("L / R: tabs    A: choose    B: back");
 #endif
     ImGui::PopStyleColor();
-#ifdef __SWITCH__
+#if defined(__SWITCH__) && !defined(__SWITCH2__)
     /* no Quit Game: games on the Switch are closed from the HOME menu */
     ImGui::SameLine(ImGui::GetContentRegionMax().x - w_close);
     if (g_wrap == WRAP_BOTTOM) ImGui::SetKeyboardFocusHere();

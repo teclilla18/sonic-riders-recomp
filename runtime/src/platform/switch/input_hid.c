@@ -46,10 +46,17 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 void input_init(void) {
     padConfigureInput(PLAYERS, HidNpadStyleSet_NpadStandard);
     /* single Joy-Cons are held sideways (only matters once the user splits a pair) */
+#ifndef __SWITCH2__
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
+#endif
     /* player 1's controller and handheld mode are read separately: one combined PadState reported
      * a sideways single Joy-Con on No1 as "handheld", and it got the two-handed mapping */
+#ifdef __SWITCH2__
+    /* Match SR2Diag: a connected neutral No1 must not mask handheld input. */
+    padInitializeDefault(&g_pad[0]);
+#else
     padInitialize(&g_pad[0], HidNpadIdType_No1);
+#endif
     padInitialize(&g_handheld, HidNpadIdType_Handheld);
     padInitialize(&g_pad[1], HidNpadIdType_No2);
     padInitialize(&g_pad[2], HidNpadIdType_No3);
@@ -176,6 +183,9 @@ static GcPad read_player(int i, unsigned* ov) {
 }
 
 void input_pump(void) {
+#ifdef __SWITCH2__
+    uint64_t input_t0 = platform_now_ns();
+#endif
     if (overlay_take_controllers_request()) show_controller_applet();
     GcPad p[PLAYERS];
     unsigned ov = 0;
@@ -187,6 +197,9 @@ void input_pump(void) {
         if (i == 0) ov = o;
         if (i > 0) atomic_store(&g_connected[i], padIsConnected(&g_pad[i]) ? 1 : 0);
     }
+#ifdef __SWITCH2__
+    uint64_t pads_end = platform_now_ns();
+#endif
     /* after the console wakes (or the game gets focus back): the first button press goes to the log,
      * which tells a dead controller apart from a frozen picture (platform_switch.c sets the flag) */
     extern _Atomic int g_switch_log_input;
@@ -200,7 +213,25 @@ void input_pump(void) {
     /* the settings menu (overlay.h) is driven by player 1; while it is open every port is neutral */
     ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
+#ifdef __SWITCH2__
+    uint64_t overlay_end = platform_now_ns();
+    static uint64_t last_log, last_buttons;
+    uint64_t now = platform_now_ns(), raw = padGetButtons(&g_pad[0]);
+    if (raw != last_buttons || now - last_log > 2000000000ULL) {
+        HidAnalogStickState s = padGetStickPos(&g_pad[0], 0);
+        rt_log("[input2] raw=%llX ids=%X handheld=%d stick=%d,%d mapped=%04X menu=%d focus=%d", (unsigned long long)raw,
+               g_pad[0].active_id_mask, g_pad[0].active_handheld, s.x, s.y, p[0].buttons, menu, appletGetFocusState());
+        last_buttons = raw; last_log = now;
+    }
+#endif
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));
+#ifdef __SWITCH2__
+    uint64_t input_end = platform_now_ns();
+    if (input_end-input_t0 > 50000000ULL)
+        rt_log("[input2-time] ns=%llu pads_ms=%.2f overlay_ms=%.2f heartbeat_publish_ms=%.2f",
+               (unsigned long long)input_end, (pads_end-input_t0)/1e6,
+               (overlay_end-pads_end)/1e6, (input_end-overlay_end)/1e6);
+#endif
 }
 
 int input_connected(int chan) {
