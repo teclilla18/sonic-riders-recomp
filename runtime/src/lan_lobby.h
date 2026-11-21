@@ -16,6 +16,10 @@ typedef struct {
     int state, me, players, count, ready;
     char names[2][LAN_NAME], host_ip[48], my_ip[48], error[192]; /* my_ip: empty when unknown */
     LanFound found[LAN_MAX_FOUND];
+    /* internet mode (inet.c): one UDP socket on 7777 for the lobby and the game */
+    int inet, inet_ready, waiting, pending, punching;
+    char my_code[20], note[200], pending_name[LAN_NAME];
+    int rtt_ms, jitter_ms, samples, delay, delay_auto, delay_manual;
 } LanLobby;
 int lan_network_init(void);  /* once per process, also used by netplay */
 int lan_lobby_open(void);
@@ -26,6 +30,13 @@ void lan_lobby_leave(void);
 void lan_lobby_start(void);
 void lan_lobby_close(void);
 void lan_clean_name(char out[LAN_NAME], const char* name);
+/* Internet: host/join by invite code; the host approves each player; both may add the other's code. */
+void lan_lobby_host_inet(const char* name);
+void lan_lobby_join_inet(const char* code, const char* name);
+void lan_lobby_add_code(const char* code); /* host: punch toward the friend's own code */
+void lan_lobby_answer(int accept);         /* host: the waiting player */
+void lan_lobby_set_delay(int frames);      /* host: 0 = automatic from the measured ping */
+void lan_lobby_handoff(void);              /* when ready: the internet socket goes to netplay (call before close) */
 #ifdef __cplusplus
 }
 #endif

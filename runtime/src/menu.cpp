@@ -24,6 +24,7 @@
 #include "runtime.h"
 #include "settings.h"
 #include "lan_lobby.h"
+#include "inet.h"
 #include "online_boot.h"
 #include "net_compat.h"
 #ifdef __SWITCH__
@@ -864,7 +865,7 @@ void quit_row() {
 
 void tab_online() {
     heading("Online Beta 1");
-    ImGui::TextWrapped("Race with one other player on the same home network. Each device needs its own copy of the game.");
+    ImGui::TextWrapped("Race with one other player, at home or over the internet. Each device needs its own copy of the game.");
     ImGui::Spacing();
     if (getenv("SR_NET")) ImGui::TextWrapped("You are in an online run. Close the game to start a new race lobby.");
     else {
@@ -877,7 +878,104 @@ void tab_online() {
         }
 #endif
     }
-    ImGui::TextWrapped("LAN only, 2 players. The host chooses the menus; both players choose their character. Music packs are off online.");
+    ImGui::TextWrapped("2 players, at home or over the internet. The host chooses the menus; both players choose their character. Music packs are off online.");
+}
+
+/* Internet races: a number pad for invite codes (10 or 15 digits), the code screen, approval and input delay. */
+static bool code_pad(const char* title,char* typed,size_t cap) {
+    bool ok=false;
+    if (ImGui::BeginPopupModal(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+        char pretty[40]; inet_code_pretty(typed,pretty,sizeof pretty);
+        ImGui::TextWrapped("Type the 10 or 15 numbers your friend sees.");
+        ImGui::Text("%s_",pretty);
+        const char* keys="1234567890";
+        for (int i=0;keys[i];i++) {
+            ImGui::PushID(2000+i); char label[2]={keys[i],0};
+            if (ImGui::Button(label,ImVec2(64,48))) { size_t n=strlen(typed); if (n<15 && n+1<cap) { typed[n]=keys[i]; typed[n+1]=0; } }
+            if (i%3!=2 && i!=9) ImGui::SameLine();
+            ImGui::PopID();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete",ImVec2(100,48))) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+#ifndef __SWITCH__
+        ImGui::SameLine();
+        if (ImGui::Button("Paste",ImVec2(100,48))) {
+            const char* c=ImGui::GetClipboardText(); size_t n=0;
+            for (; c && *c && n<15 && n+1<cap; c++) if (*c>='0' && *c<='9') typed[n++]=*c;
+            typed[n]=0;
+        }
+#endif
+        size_t n=strlen(typed);
+        ImGui::BeginDisabled(n!=10 && n!=15);
+        if (ImGui::Button("OK",ImVec2(100,48))) { ok=true; ImGui::CloseCurrentPopup(); }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel",ImVec2(100,48))) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    return ok;
+}
+static void show_code(const char* label,const char* code) {
+    char pretty[40]; inet_code_pretty(code,pretty,sizeof pretty);
+    ImGui::Text("%s",label);
+    ImGui::SetWindowFontScale(2.0f); ImGui::Text("%s",pretty); ImGui::SetWindowFontScale(1.0f);
+#ifndef __SWITCH__
+    ImGui::SameLine();
+    ImGui::PushID(label);
+    if (ImGui::Button("Copy")) ImGui::SetClipboardText(code);
+    ImGui::PopID();
+#endif
+}
+static void internet_lobby(const LanLobby* v,bool focus_start) {
+    static char typed[24];
+    if (v->state==LAN_IDLE) {
+        ImGui::TextWrapped("Race a friend anywhere. One of you hosts and sends the invite code; the other types it.");
+        ImGui::BeginDisabled(!g_settings.online_name[0]);
+        if (ImGui::Button("Host an internet race")) { settings_apply(); lan_lobby_host_inet(g_settings.online_name); }
+        ImGui::SameLine();
+        if (ImGui::Button("Join with a code")) { typed[0]=0; ImGui::OpenPopup("Friend's code"); }
+        if (code_pad("Friend's code",typed,sizeof typed)) { settings_apply(); lan_lobby_join_inet(typed,g_settings.online_name); }
+        ImGui::EndDisabled();
+        ImGui::Spacing();
+        ImGui::TextWrapped("A code contains your internet address. Share it only with the friend you race.");
+        return;
+    }
+    for (int i=0;i<v->players;i++) ImGui::Text("Player %d: %s",i+1,v->names[i]);
+    if (v->state==LAN_HOSTING) {
+        if (!v->inet_ready) ImGui::TextWrapped("Getting your invite code...");
+        else if (v->players<2) {
+            show_code("Your invite code:",v->my_code);
+            if (v->note[0]) ImGui::TextWrapped("%s",v->note);
+            if (v->pending) {
+                ImGui::Separator();
+                ImGui::TextWrapped("%s wants to join.",v->pending_name);
+                if (ImGui::Button("Let them in")) lan_lobby_answer(1);
+                ImGui::SameLine();
+                if (ImGui::Button("Say no")) lan_lobby_answer(0);
+            } else ImGui::TextWrapped(v->punching?"Opening a path to your friend...":"Waiting for your friend to type the code...");
+            if (ImGui::Button("Add friend's code")) { typed[0]=0; ImGui::OpenPopup("Your friend's own code"); }
+            if (code_pad("Your friend's own code",typed,sizeof typed)) lan_lobby_add_code(typed);
+            ImGui::TextWrapped("Only if they can't get in: ask for the code on their screen and add it here.");
+        } else {
+            ImGui::Text("Ping %d ms, jitter %d ms",v->rtt_ms,v->jitter_ms);
+            ImGui::Text("Input delay: %d frames (%s)",v->delay,v->delay_manual?"chosen by hand":"automatic");
+            ImGui::SameLine();
+            if (ImGui::Button("-")) lan_lobby_set_delay((v->delay_manual?v->delay_manual:v->delay)-1<1?1:(v->delay_manual?v->delay_manual:v->delay)-1);
+            ImGui::SameLine();
+            if (ImGui::Button("+")) lan_lobby_set_delay((v->delay_manual?v->delay_manual:v->delay)+1);
+            ImGui::SameLine();
+            if (ImGui::Button("Auto")) lan_lobby_set_delay(0);
+            if (focus_start) ImGui::SetKeyboardFocusHere();
+            if (ImGui::Button("Start race")) lan_lobby_start();
+        }
+    } else if (v->state==LAN_JOINING) {
+        ImGui::TextWrapped(v->waiting?"Connected. Waiting for the host to let you in...":"Connecting to your friend's race...");
+        if (v->inet_ready && v->my_code[0]) show_code("Your own code (only if the host asks for it):",v->my_code);
+    } else if (v->state==LAN_JOINED) {
+        ImGui::TextWrapped("Waiting for the host to start...");
+        ImGui::Text("Ping %d ms",v->rtt_ms);
+    } else ImGui::TextWrapped("Starting...");
+    if (v->state!=LAN_STARTING && ImGui::Button("Leave race")) lan_lobby_leave();
 }
 
 void lobby_window() {
@@ -899,6 +997,12 @@ void lobby_window() {
                     rt_log("[lobby] test joined discovered race: %s",v->found[i].name);
                     lan_lobby_join(v->found[i].ip,"Test joiner"); break;
                 }
+            } else if (!strcmp(test,"inet-host")) {  /* lets the first asker in, starts after 3 s of ping samples */
+                if (v->state==LAN_IDLE) lan_lobby_host_inet("Test host");
+                else if (v->state==LAN_HOSTING && v->pending) lan_lobby_answer(1);
+                else if (v->state==LAN_HOSTING && v->players==2 && v->samples>=12) lan_lobby_start();
+            } else if (!strncmp(test,"inet-join:",10) && v->state==LAN_IDLE && !v->error[0]) {
+                lan_lobby_join_inet(test+10,"Test joiner");
             } else if (!strcmp(test,"offline")) {
                 lan_lobby_leave(); lan_lobby_close(); online_lobby_finish(nullptr,nullptr,nullptr);
             }
@@ -908,7 +1012,7 @@ void lobby_window() {
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W/2,OVERLAY_H/2),ImGuiCond_Always,ImVec2(.5f,.5f));
     ImGui::SetNextWindowSize(ImVec2(960,600),ImGuiCond_Always);
     ImGui::Begin("Riders Plus Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextWrapped("2 players on the same home network. The host starts when both players have joined.");
+    ImGui::TextWrapped("2 players, at home (same network) or over the internet. The host starts when both players are in.");
     ImGui::Separator();
     ImGui::BeginDisabled(v->state!=LAN_IDLE);
 #ifdef __SWITCH2__
@@ -954,7 +1058,15 @@ void lobby_window() {
     ImGui::EndDisabled();
     if (v->error[0]) ImGui::TextWrapped("%s",v->error);
     ImGui::Spacing();
-    if (v->state==LAN_IDLE) {
+    static int internet;
+    if (v->inet && v->state!=LAN_IDLE) internet=1;
+    ImGui::BeginDisabled(v->state!=LAN_IDLE);
+    if (ImGui::RadioButton("Home network",!internet)) internet=0;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Internet",internet)) internet=1;
+    ImGui::EndDisabled();
+    if (internet) internet_lobby(v,focus_start);
+    else if (v->state==LAN_IDLE) {
         ImGui::BeginDisabled(!g_settings.online_name[0]);
         if (ImGui::Button("Host a race")) { settings_apply(); lan_lobby_host(g_settings.online_name); }
         heading("Races on your network");
@@ -1011,7 +1123,9 @@ void lobby_window() {
     }
     if (v->ready) {
         rt_log("[lobby] both players ready: %s / %s",v->names[0],v->names[1]);
-        char spec[96]; snprintf(spec,sizeof spec,v->me==0?"host:7777":"join:%s:7777",v->host_ip);
+        char spec[96];
+        if (v->inet) { snprintf(spec,sizeof spec,v->me==0?"inet:host:%d":"inet:join",v->delay); lan_lobby_handoff(); }
+        else snprintf(spec,sizeof spec,v->me==0?"host:7777":"join:%s:7777",v->host_ip);
         char name[LAN_NAME],peer[LAN_NAME];
         snprintf(name,sizeof name,"%s",v->names[v->me]); snprintf(peer,sizeof peer,"%s",v->names[1-v->me]);
         lan_lobby_close(); online_loading_set(1); online_lobby_finish(spec,name,peer);

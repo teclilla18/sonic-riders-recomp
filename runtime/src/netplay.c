@@ -31,6 +31,7 @@
 #include "settings.h"
 #include "runtime.h"
 #include "lan_lobby.h"
+#include "inet.h"
 #include "net_compat.h"
 #include "online_boot.h"
 
@@ -198,6 +199,7 @@ static int g_net;                 /* 1: a session is on */
 static int g_net_ended;           /* the session ended (desync, left, lost): the game goes on alone */
 static int g_me, g_players = 2, g_delay = 4;
 static int g_is_host;
+static int g_inet;  /* internet session: the socket came from the lobby (inet.c owns closing it) */
 static uint8_t g_in[MAXP][RING][8];
 static uint32_t g_in_f[MAXP][RING];   /* which frame each slot holds (0: none) */
 static uint32_t g_recv_upto;          /* the peer's inputs are here for every frame up to this */
@@ -412,13 +414,15 @@ static int net_fail(const char* why) {
     snprintf(report,sizeof report,"Online could not start: %.120s\nPlease report it with sonicriders.log from both machines.",why);
     overlay_set_banner(report);
     online_loading_set(0);
-    if (g_sock != SOCK_BAD) closesocket(g_sock);
+    if (g_inet) inet_close();  /* exactly once, by inet.c */
+    else if (g_sock != SOCK_BAD) closesocket(g_sock);
     g_sock=SOCK_BAD;
     return 0;
 }
 
 static void net_bye_at_exit(void) {  /* the game closed: the other machine need not wait for the timeout */
     if (g_net && !g_net_ended) net_end(BYE_LEFT, g_frame, "this player left (the game closed)", NULL);
+    if (g_inet) { inet_close(); g_sock = SOCK_BAD; }  /* also removes the UPnP mapping */
 }
 
 /* connects to the other machine before the game starts (main thread) */
@@ -428,7 +432,27 @@ static int net_connect(const char* spec) {
     char host[128] = "";
     int port = 0;
     uint32_t bind_ip = INADDR_ANY;
-    if (!strncmp(spec, "host:", 5)) {  /* host:<port>, or host:<address>:<port> to listen on one address only */
+    if (!strncmp(spec, "inet:", 5)) {  /* inet:host:<delay> or inet:join: the lobby's socket, peer already reached */
+        long long s;
+        if (!inet_take(&s, &g_peer)) return net_fail("the internet connection was not handed over by the lobby");
+        g_sock = (sock_t)s;
+        g_inet = 1;
+        g_is_host = !strncmp(spec + 5, "host:", 5);
+        port = ntohs(g_peer.sin_port);
+        inet_mask(ntohl(g_peer.sin_addr.s_addr), host, sizeof host);  /* only for the log */
+        if (g_is_host) {
+            int d = atoi(spec + 10);
+            if (d >= 1 && d <= 60 && !getenv("SR_NET_DELAY")) {
+                char t[8]; snprintf(t, sizeof t, "%d", d);
+#ifdef _WIN32
+                _putenv_s("SR_NET_DELAY", t);
+#else
+                setenv("SR_NET_DELAY", t, 1);
+#endif
+            }
+        }
+        rt_log("[net] internet session as %s, the other player at %s:%d", g_is_host ? "host" : "joiner", host, port);
+    } else if (!strncmp(spec, "host:", 5)) {  /* host:<port>, or host:<address>:<port> to listen on one address only */
         g_is_host = 1;
         const char* c = strrchr(spec + 5, ':');
         port = atoi(c ? c + 1 : spec + 5);
@@ -443,6 +467,7 @@ static int net_connect(const char* spec) {
         if (c) { snprintf(host, sizeof host, "%.*s", (int)(c - spec - 5), spec + 5); port = atoi(c + 1); }
     }
     if (port <= 0 || port > 65535 || (!g_is_host && !host[0])) return net_fail("SR_NET must be host:<port> or join:<address>:<port>");
+    if (!g_inet) {
     if (!g_is_host) {
         if (!net_resolve(host, port, &g_peer)) return net_fail("cannot find the host's address");
         if ((ntohl(g_peer.sin_addr.s_addr) >> 24) == 127) bind_ip = INADDR_LOOPBACK;  /* two copies on one machine */
@@ -462,20 +487,23 @@ static int net_connect(const char* spec) {
     }
 #endif
     if (bind(g_sock, (struct sockaddr*)&me, sizeof me)) return net_fail("cannot use that network port (another program has it?)");
+    }
     if (g_is_host) {
         g_me = 0;
         g_delay = getenv("SR_NET_DELAY") ? atoi(getenv("SR_NET_DELAY")) : 4;
         if (g_delay < 1) g_delay = 1;
         if (g_delay > 60) g_delay = 60;
-        rt_log("[net] hosting on UDP port %d (input delay %d frames): waiting for a player to join", port, g_delay);
+        rt_log("[net] hosting on UDP port %d (input delay %d frames): waiting for a player to join", g_inet ? 0 : port, g_delay);
         {
             char wb[96];
             snprintf(wb, sizeof wb, "Online: waiting for %s to join...",
                      getenv("SR_NET_PEER") ? peer_name() : "a player");
             overlay_set_banner(wb);
         }
+        uint64_t wait0 = platform_now_ns();
         for (;;) {
             online_present_blank();
+            if (g_inet && platform_now_ns() - wait0 > 60000000000ull) return net_fail("the other player's game did not answer within 60 s");
             fd_set rs; FD_ZERO(&rs); FD_SET(g_sock,&rs);
             struct timeval tv={0,50000};
             if (select((int)g_sock+1,&rs,NULL,NULL,&tv)<=0) continue;
@@ -484,6 +512,7 @@ static int net_connect(const char* spec) {
             socklen_t fl = sizeof from;
             int n = (int)recvfrom(g_sock, (char*)m, sizeof m, 0, (struct sockaddr*)&from, &fl);
             if (n < 72 || m[0] != 'S' || m[1] != 'R' || m[2] != M_HELLO) continue;
+            if (g_inet && (from.sin_addr.s_addr != g_peer.sin_addr.s_addr || from.sin_port != g_peer.sin_port)) continue;  /* only the player the lobby let in */
             char why[160] = "";
             char build[65];
             memcpy(build, m + 8, 64);
@@ -515,7 +544,8 @@ static int net_connect(const char* spec) {
         }
         net_send_welcome();
         char ip[64];
-        inet_ntop(AF_INET, &g_peer.sin_addr, ip, sizeof ip);
+        if (g_inet) inet_mask(ntohl(g_peer.sin_addr.s_addr), ip, sizeof ip);
+        else inet_ntop(AF_INET, &g_peer.sin_addr, ip, sizeof ip);
         rt_log("[net] player 2 joined from %s:%u", ip, ntohs(g_peer.sin_port));
     } else {
         rt_log("[net] joining %s:%d", host, port);
