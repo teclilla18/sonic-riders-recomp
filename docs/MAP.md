@@ -28,6 +28,7 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Menu software rasterizer | menu_raster.cpp | |
 | Mods | mods.c, mods_data.c, game_mods.c | |
 | Texture packs (Dolphin names, PNG/DDS, Switch 512 cap) | texpack.c, called from gx_texture.c on a cache miss | `texpack_load`, `load_dds`, `texpack_name` |
+| Music packs (own songs per stage, shuffle, d-pad pick, MP3/OGG/FLAC/WAV -> ADX) | music.c, music_convert.c, mods.c (music slots), menu.cpp `tab_music` | `music_pick`, `music_scan`, `music_vfile`, `music_convert` |
 | Add texture pack (launcher + Switch installer) | launcher/launcher.cpp | `texpack_install`, `texpack_ui` |
 | Gear Lv. 4 / 5 (999 rings, Super Sonic) | game_levels.c, config/GXEE8P/patches.txt, frame_pacing.c | `lv_racer_update`, `lv_racer_reset`, `lv_race_reset`, `lv_super_air_cap`, `lv_super_player_update`, `lv_racers_frame`, `lv_hud_cell`, `lv_texture_decoded` |
 | Local split-screen edge HUD | gx_render.c `local_hud_frame` (`hud_viewport`, `hud_owner`, `hud_join`) | `SR_LOCALHUDLOG`; tests/test_gameplay_hud.py |

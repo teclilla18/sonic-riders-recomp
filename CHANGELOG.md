@@ -1,5 +1,12 @@
 # Changelog
 
+### Unreleased (branch claude/music-loader)
+
+- Music packs: put your own songs in `mods/<pack>/music/<stage>/` (MP3, OGG, FLAC, WAV or ADX). Each of the 16
+  stages gets its own list; every race shuffles one (never the same twice in a row), or hold a D-pad direction
+  while the race loads to choose song 1 to 4. New Music tab in the settings menu: shuffle, how often each song
+  plays (Off / Rare / Normal / Often), the original song too. No songs come with the game.
+
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
 - Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to
