@@ -617,11 +617,12 @@ if ($sdDir) {
     if ($doSwitch2) {
         Run "install native Switch 2 (preserve saves/settings/caches)" $python @("-I", "tools\switch2_install.py", "--nro", $builtNro, "--manifest", $buildInfo, "--destination", $sdDir)
     }
-    $nroName = if ($doSwitch2) { "sonicriders-switch2.nro" } else { "sonicriders.nro" }
-    $nroDest = Join-Path $sdDir $nroName
-    Copy-Item $builtNro $nroDest -Force
+    # native Switch 2 Online Beta: switch2_install.py put the app in its own folder (one app per folder in hbmenu)
+    $nroName = if ($doSwitch2) { "sonicriders-switch2-online.nro" } else { "sonicriders.nro" }
+    $nroDest = if ($doSwitch2) { Join-Path (Join-Path (Split-Path $sdDir -Parent) "sonicriders-switch2-online") $nroName } else { Join-Path $sdDir $nroName }
+    if (-not $doSwitch2) { Copy-Item $builtNro $nroDest -Force }
     if ((Get-FileHash $nroDest -Algorithm SHA256).Hash -ne (Get-FileHash $builtNro -Algorithm SHA256).Hash) { Fail "The copy on the SD card does not match the build (card full or failing?)." }
-    Log "Copied $nroName to $sdDir (verified)."
+    Log "Copied $nroName to $(Split-Path $nroDest -Parent) (verified)."
     $modsSrc = Join-Path $Root "mods"
     if (Test-Path -LiteralPath $modsSrc -PathType Container) {
         # mods\ (texture packs added in the installer) -> /switch/sonicriders/mods/; only new or changed files are copied

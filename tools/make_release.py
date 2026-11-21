@@ -86,7 +86,7 @@ def readme_first(flavor, version):
                 "Pick your disc and SD card (or keep local files for manual FTP). Accept the shader compiler license.\r\n"
                 "Command-line fallback: Install Sonic Riders (Switch2) - command line.bat -Iso <image> -NoSd -Yes -AcceptAndroidSdkLicense\r\n"
                 "Add -Sd <SD root> -CopyIso yes instead of -NoSd to install to SD.\r\n"
-                "Output: build/switch2/sd/switch/sonicriders-switch2/. Copy to /switch/sonicriders-switch2/ with your own image.\r\n"
+                "Output: build/switch2/sd/switch/ (sonicriders-switch2-online/ = the Online app with its own homebrew menu entry; sonicriders-switch2/ = data). Copy both to /switch/, your own image into /switch/sonicriders-switch2/. Your normal app is not replaced.\r\n"
                 "Existing saves/settings/caches/env are retained. Original Switch folders are separate.\r\n"
                 "Fresh default: 60 fps, no automatic exit. Hold Minus ~0.5s for menu; Quit Game and confirm returns to hbmenu.\r\n"
                 "Accepted baseline: Switch 2 Alpha 3 (build bc9dd55883f6, source 67710d8) plus the Online Beta files only.\r\n"

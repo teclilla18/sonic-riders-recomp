@@ -1081,7 +1081,7 @@ void eject_button() {
 void installer_next_steps() {
     if (g_mode == M_SWITCH2) {
         section("NEXT - SWITCH 2 ALPHA");
-        ImGui::TextWrapped("SD-ready files: build\\switch2\\sd\\switch\\sonicriders-switch2\\. Copy this folder and your own disc image to /switch/sonicriders-switch2/ for manual transfer.");
+        ImGui::TextWrapped("SD-ready files: build\\switch2\\sd\\switch\\. Copy both folders to /switch/ (the Online app has its own folder, sonicriders-switch2-online) and your own disc image to /switch/sonicriders-switch2/.");
         eject_button();
         note("Native homebrew only: hold R while starting a native Switch 2 game. In game hold Minus, Quit Game, confirm to return to hbmenu.");
         return;
@@ -1127,7 +1127,7 @@ void page_installer(float w) {
         ImGui::Spacing();
         if (switch_installer()) {
             section("2. SD CARD");
-            ImGui::TextWrapped(g_mode == M_SWITCH2 ? "Put your Switch 2 SD card in this PC. Alpha installs separately to /switch/sonicriders-switch2/." : "Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
+            ImGui::TextWrapped(g_mode == M_SWITCH2 ? "Put your Switch 2 SD card in this PC. The Online Beta goes to its own folder, /switch/sonicriders-switch2-online/; your normal app stays." : "Put your Switch's SD card in this PC. The game goes to /switch/sonicriders/.");
             const char* no_copy = g_mode == M_SWITCH2 ? "Don't copy (keep SD-ready files in build/switch2/sd)" : "Don't copy (keep it in build\\switch\\)";
             std::string cur = g_ic.sd.empty() ? no_copy : narrow(g_ic.sd);
             const ImGuiStyle& st = ImGui::GetStyle();

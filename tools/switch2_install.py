@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Install only native Switch 2 build products; retain existing user data."""
+"""Install only native Switch 2 build products; retain existing user data.
+
+This branch builds the separate Online Beta app. The homebrew menu shows one app per folder, so the app goes to
+its own sibling folder sonicriders-switch2-online/ (the game still reads its disc, env.txt, settings, saves and
+caches from sonicriders-switch2/, fixed in platform_switch2.c). The normal app and its build-info stay untouched.
+"""
+APP_FOLDER = 'sonicriders-switch2-online'
 import argparse
 import hashlib
 import json
@@ -17,10 +23,12 @@ def install(nro, manifest, destination):
     if info.get('format') != 'sonicriders-switch2-phase2-v1' or info['build_id'].encode() not in data:
         raise ValueError('Native NRO and manifest do not match')
     destination.mkdir(parents=True, exist_ok=True)
-    for source, name in [(nro, 'sonicriders-switch2.nro'), (manifest, 'build-info.json')]:
-        target = destination/name
+    app = destination.parent/APP_FOLDER
+    app.mkdir(parents=True, exist_ok=True)
+    for source, name in [(nro, APP_FOLDER+'.nro'), (manifest, 'build-info.json')]:
+        target = app/name
         if source.resolve() != target.resolve():
-            temporary = destination/(name+'.installing')
+            temporary = app/(name+'.installing')
             shutil.copyfile(source, temporary)
             if hashlib.sha256(temporary.read_bytes()).digest() != hashlib.sha256(source.read_bytes()).digest():
                 raise OSError('Installation copy checksum mismatch: '+name)
@@ -31,7 +39,7 @@ def install(nro, manifest, destination):
     settings = destination/'settings.ini'
     if not settings.exists():
         settings.write_text('screen=3\nresolution=2\npc_scale=2\nframerate=0\npc_fps=0\n', encoding='utf-8')
-    print('Native Switch 2 SD-ready layout verified; existing env/settings/saves/caches retained.')
+    print('Native Switch 2 Online Beta installed to '+APP_FOLDER+'/; the normal app and env/settings/saves/caches retained.')
 
 if __name__ == '__main__':
     ap=argparse.ArgumentParser(description=__doc__)

@@ -66,6 +66,9 @@ try {
     if ($cfg.flavor -eq "switch2") {
         New-Item -ItemType Directory -Force C:\SR-Switch2TestSD\switch\sonicriders | Out-Null
         Set-Content C:\SR-Switch2TestSD\switch\sonicriders\original-switch-sentinel.txt "original Switch untouched"
+        New-Item -ItemType Directory -Force C:\SR-Switch2TestSD\switch\sonicriders-switch2 | Out-Null
+        Set-Content C:\SR-Switch2TestSD\switch\sonicriders-switch2\sonicriders-switch2.nro "normal Switch 2 app sentinel"
+        Set-Content C:\SR-Switch2TestSD\switch\sonicriders-switch2\build-info.json "normal Switch 2 build-info sentinel"
     }
     $i = 0
     foreach ($dest in $cfg.dests) {
@@ -133,11 +136,14 @@ try {
                     $info = Get-Content (Join-Path $top "build\switch2\build-info.json") -Raw | ConvertFrom-Json
                     if ($info.base_commit -ne (Get-Content (Join-Path $top "SOURCE_COMMIT") -Raw).Trim()) { throw "Source commit mismatch" }
                     $sd = "C:\SR-Switch2TestSD\switch\sonicriders-switch2"
-                    foreach ($file in @("sonicriders-switch2.nro","build-info.json","env.txt")) {
-                        if (-not (Test-Path (Join-Path $sd $file))) { throw "SD layout missing $file" }
+                    $app = "C:\SR-Switch2TestSD\switch\sonicriders-switch2-online"
+                    foreach ($file in @("$app\sonicriders-switch2-online.nro","$app\build-info.json","$sd\env.txt")) {
+                        if (-not (Test-Path $file)) { throw "SD layout missing $file" }
                     }
+                    if ((Get-Content (Join-Path $sd "sonicriders-switch2.nro") -Raw).Trim() -ne "normal Switch 2 app sentinel") { throw "Normal Switch 2 app replaced" }
+                    if ((Get-Content (Join-Path $sd "build-info.json") -Raw).Trim() -ne "normal Switch 2 build-info sentinel") { throw "Normal Switch 2 build-info replaced" }
                     if ((Get-Content (Join-Path $sd "env.txt") -Raw) -notmatch '(?m)^SR_SWITCH2_FRAMES=0\s*$') { throw "Default frame cap is not zero" }
-                    if ((Get-FileHash (Join-Path $sd "sonicriders-switch2.nro")).Hash -ne (Get-FileHash (Join-Path $top "build\switch2\sonicriders-switch2.nro")).Hash) { throw "SD NRO differs" }
+                    if ((Get-FileHash (Join-Path $app "sonicriders-switch2-online.nro")).Hash -ne (Get-FileHash (Join-Path $top "build\switch2\sonicriders-switch2.nro")).Hash) { throw "SD NRO differs" }
                     if ((Get-Content C:\SR-Switch2TestSD\switch\sonicriders\original-switch-sentinel.txt -Raw).Trim() -ne "original Switch untouched") { throw "Original Switch data changed" }
                     if ($i -eq 1) {
                         New-Item -ItemType Directory -Force "$sd\saves" | Out-Null
