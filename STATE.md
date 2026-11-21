@@ -24,7 +24,10 @@
    through 17,400 equal (mode/clocks not captured, so no hardware speed claim). S23 restart into lobby tested;
    PC/Android race segment through 6,600 equal on both. Final affinity/clocks menu/cache check passed.
    Separate native candidate: `codex/online-beta-switch2` from public Alpha 3, builds; hardware pending.
-   **Next:** guarded candidate source/packages, cold Sandbox only with permission, native hardware, user acceptance.
+   2026-11-21: Windows relaunch keeps an explicit ISO (a5fc6a2, PC-tested); Back to offline PASS on PC; cold Sandbox
+   PASS for PC and Android zips (a5fc6a2). Native Switch 2: GPU device loss at game frame 712 blocks it (see
+   `codex/online-beta-switch2` STATE.md).
+   **Next:** fix the native frame-712 crash, rebuild all four zips from the final commits, user acceptance, release only with OK.
    Every release, issue post or Discussions thread requires explicit OK. Notes: docs/notes/online-beta.md.
 
 
