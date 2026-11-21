@@ -2067,3 +2067,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Source-only native candidate ZIP passes archive content/source checks; its existing stable-runtime audit
   rejects the changed runtime because it pins an older accepted baseline. That audit was not weakened or
   repointed. Native test/acceptance and cold Sandbox validation are still required before a release.
+
+### 2026-11-21 (night): native Online Beta on the user's Switch 2
+
+- Online NRO hidden in the homebrew menu (one app per folder) and the package's setup would have replaced the normal
+  app: own folder `sonicriders-switch2-online/` (7cc264a); cold Sandbox PASS [confirmed]. Installed by FTP on the
+  user's Switch 2 with the user's Online logo as icon (icon swapped in the NRO asset section only).
+- Black screen: the lobby waited on the main thread before the render loop (Switch 2/iOS run it on the main
+  thread). Boot steps now run on a helper thread when the lobby is requested (8fc5e3e) [confirmed: lobby shown].
+- Cross-play PC joiner vs Switch 2 host (handheld): discovery, join, 708 checksums equal, then GPU device loss at game
+  frame 712 in all 3 runs (frame 662 loads a 1 MB texture first) [confirmed]. Ruled out: swapchain clear, 120 fps
+  projection mode, disc read-ahead. Cause unknown [uncertain]; the 2026-11-20 direct-SR_NET race passed this point.
+- Audit baseline moved to released Alpha 3 + listed Online Beta files (user's choice), PASS (b6654d2).
