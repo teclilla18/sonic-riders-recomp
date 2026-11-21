@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <time.h>
 
 #include "runtime.h"
@@ -289,9 +290,12 @@ int platform_restart_online(void) {
     (*env)->DeleteLocalRef(env,cls); (*env)->DeleteLocalRef(env,activity);
     return ok;
 #elif defined(_WIN32)
-    wchar_t exe[32768], cmd[32780];
+    wchar_t exe[32768], cmd[32768];
     if (!GetModuleFileNameW(NULL,exe,32768)) return 0;
-    swprintf(cmd,32780,L"\"%ls\" --online",exe);
+    /* Keep an explicit disc path and its original quoting when relaunching. */
+    const wchar_t* original=GetCommandLineW();
+    if (wcslen(original)+16>=32768) return 0;
+    swprintf(cmd,32768,L"%ls --online",original);
     STARTUPINFOW si={.cb=sizeof si}; PROCESS_INFORMATION pi;
     if (!CreateProcessW(exe,cmd,NULL,NULL,FALSE,0,NULL,NULL,&si,&pi)) return 0;
     CloseHandle(pi.hThread); CloseHandle(pi.hProcess); exit(0);
