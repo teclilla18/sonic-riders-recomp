@@ -688,7 +688,7 @@ void tab_gameplay() {
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight,
                   "Off by default (experimental). Super Sonic rides off his board in a flying pose, except on "
                   "rails, in tricks, in the spin scenes and while charging a jump. Known issue: after an air trick "
-                  "he can stay on his board until your next move; a fix is coming. Not used in online races."))
+                  "he can stay on his board until your next move; a fix is coming. Online, the host's setting is used."))
             settings_apply();
         ImGui::EndDisabled();
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");

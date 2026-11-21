@@ -86,7 +86,9 @@ double boost_hold_audio(void);  /* boost_hold.c: the same effect's strength 0..1
 int settings_auto_spin(void);   /* in effect (needs Riders Plus): 1 = on */
 void settings_fix_ring_replenish(int on);
 int settings_ring_replenish(void);
-int settings_super_flight(void);  /* on, Riders Plus, and not online / recording / replaying */
+int settings_super_flight(void);  /* on, Riders Plus; online / recordings: the host's / recorded value */
+int settings_super_flight_setting(void);  /* this machine's own choice (what a host offers its room) */
+void settings_fix_super_flight(int on);
 int settings_no_ring_drain(void);  /* the cheat in effect: on, and not online / recording / replaying */  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);

@@ -16,6 +16,7 @@ static int g_boost_hold;        /* Hold to boost in effect */
 static int g_fixed_boost_hold = -1;  /* settings_fix_boost_hold, -1 = the setting's */
 static int g_ring_replenish;    /* Ring Replenish in effect */
 static int g_fixed_ring_replenish = -1;  /* settings_fix_ring_replenish, -1 = the setting's */
+static int g_fixed_super_flight = -1;    /* settings_fix_super_flight: an online room's (the host's) or a recording's */
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -229,7 +230,15 @@ int settings_ring_replenish(void) { return g_ring_replenish; }
 /* a cheat: never in online play, a recording or a replay (they all run on the game-driven clock) */
 int settings_super_flight(void) {
     int ppc_detclock(void);
+    if (g_fixed_super_flight >= 0) return g_fixed_super_flight && g_ring_cap != 100;
     return g_settings.super_flight && g_ring_cap != 100 && !ppc_detclock();
+}
+/* Flight only changes which animation Super Sonic plays, from game state every machine has, so a room can use it
+ * as long as every machine uses the same value: the host's (WELCOME) or a recording's. */
+int settings_super_flight_setting(void) { return g_settings.super_flight && g_ring_cap != 100; }
+void settings_fix_super_flight(int on) {
+    g_fixed_super_flight = on != 0;
+    rt_log("[settings] Super Sonic flight fixed for this run: %s", on ? "on" : "off");
 }
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
 int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */

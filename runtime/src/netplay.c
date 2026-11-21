@@ -107,7 +107,7 @@ static void rec_open(const char* path, int flags) {
     put32(h + 12, (uint32_t)g_ports);
     put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u) |
           (settings_boost_hold() ? 16u : 0u) |
-          (settings_ring_replenish() ? 32u : 0u));
+          (settings_ring_replenish() ? 32u : 0u) | (settings_super_flight() ? 64u : 0u));
     float k = settings_game_k();  /* the game's camera aspect (an online session's: the room's) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -142,6 +142,7 @@ static int rep_open(const char* path) {
     settings_fix_ring_cap(get32(h + 16) & 4 ? 999 : 100);  /* the recorded ring cap: game state */
     settings_fix_boost_hold(get32(h + 16) & 16 ? 1 : 0);   /* and Hold to boost (older recordings: off) */
     settings_fix_ring_replenish(get32(h + 16) & 32 ? 1 : 0);  /* and Ring Replenish (older: off) */
+    settings_fix_super_flight(get32(h + 16) & 64 ? 1 : 0);    /* and Super Sonic flight (older: off) */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
@@ -271,7 +272,7 @@ static void net_send_input(void) {
 static void net_send_welcome(void) {
     uint8_t m[80] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players,
                      (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0) |
-                               (settings_ring_replenish() ? 4 : 0)), 0};
+                               (settings_ring_replenish() ? 4 : 0) | (settings_super_flight() ? 8 : 0)), 0};
     float k = settings_game_k();  /* the room's camera aspect (the wider of the two screens) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -603,6 +604,7 @@ static int net_connect(const char* spec) {
                 settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
                 settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
                 settings_fix_ring_replenish(m[6] & 4 ? 1 : 0);  /* and Ring Replenish */
+                settings_fix_super_flight(m[6] & 8 ? 1 : 0);    /* and Super Sonic flight */
                 break;
             }
         }
@@ -648,6 +650,8 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
     if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
     if (g_active) settings_fix_boost_hold(settings_boost_hold());  /* and Hold to boost */
+    if (net && (!strncmp(net, "host:", 5) || !strncmp(net, "inet:host:", 10)))
+        settings_fix_super_flight(settings_super_flight_setting());  /* a host offers its own choice (sent in WELCOME) */
     if (net && !net_connect(net)) { g_online_rules=0; g_ports=1; }
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
