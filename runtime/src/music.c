@@ -12,13 +12,17 @@
  *   - otherwise, with shuffle on (the default), a weighted random pick that never repeats the last song;
  *   - shuffle off: the first song (or the one music.ini marks `often`).
  * The stage is the race setup's stage number (REL bss +0x17928, 1-16). No songs are shipped: people add their own.
- * SR_MUSIC=0 turns it off. Supported now: ADX (the game's own format). */
+ * SR_MUSIC=0 turns it off. Formats: ADX (the game's own) and MP3, OGG, FLAC, WAV (music_convert.c, converted once
+ * into <stage folder>/.converted/ the first time they are picked). */
 #include <ctype.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#endif
 
 #include "recomp_table.h"
 #include "runtime.h"
@@ -35,7 +39,11 @@ static const char* const STAGE_NAMES[STAGES] = {
     "Babylon Guardian", "Sega Illusion"};
 
 /* weight 0 off, 1 rare, 2 normal, 3 often; key "<mod>/<file>" names it in the player's music.ini */
-typedef struct { char path[512]; char key[192]; uint64_t size; int weight; } Song;
+/* path: the ADX served (for MP3/OGG/FLAC/WAV, its converted copy in <stage folder>/.converted/); src: the
+ * song as added; conv 1 = not converted yet (done the first time it is picked), -1 = cannot be converted */
+typedef struct { char path[512]; char src[512]; char name[160]; char key[192]; uint64_t size; int weight, conv; } Song;
+#define PENDING_SIZE (48u << 20)  /* room kept on the virtual disc for a song not converted yet (~8 min) */
+int music_convert(const char* src, const char* dst);
 typedef struct {
     Song* songs;
     int n, cap;
@@ -151,20 +159,34 @@ void music_scan(const char* music_dir, const char* mod_name) {
         if (!sd) continue;
         struct dirent* f;
         while ((f = readdir(sd))) {
-            if (f->d_name[0] == '.' || !has_ext(f->d_name, ".adx")) continue;
+            if (f->d_name[0] == '.') continue;
+            int adx = has_ext(f->d_name, ".adx");
+            if (!adx && !has_ext(f->d_name, ".mp3") && !has_ext(f->d_name, ".ogg") && !has_ext(f->d_name, ".flac") &&
+                !has_ext(f->d_name, ".wav"))
+                continue;
             char p[600];
             snprintf(p, sizeof p, "%s/%s", sub, f->d_name);
             if (stat(p, &st) != 0 || !S_ISREG(st.st_mode) || st.st_size < 0x40) continue;
+            uint64_t src_size = (uint64_t)st.st_size;
             if (c->n == c->cap) {
                 c->cap = c->cap * 2 + 8;
                 c->songs = realloc(c->songs, (size_t)c->cap * sizeof *c->songs);
                 if (!c->songs) rt_fatal("out of memory (music)");
             }
             Song* s = &c->songs[c->n++];
-            snprintf(s->path, sizeof s->path, "%s", p);
+            memset(s, 0, sizeof *s);
+            snprintf(s->name, sizeof s->name, "%s", f->d_name);
             snprintf(s->key, sizeof s->key, "%s/%s", mod_name, f->d_name);
-            s->size = (uint64_t)st.st_size;
             s->weight = 2;
+            if (adx) {
+                snprintf(s->path, sizeof s->path, "%s", p);
+                s->size = src_size;
+            } else {  /* converted once; the copy's name holds the source's size, so a changed song is redone */
+                snprintf(s->src, sizeof s->src, "%s", p);
+                snprintf(s->path, sizeof s->path, "%s/.converted/%s.%llu.adx", sub, f->d_name, (unsigned long long)src_size);
+                if (stat(s->path, &st) == 0 && st.st_size > 0x400) s->size = (uint64_t)st.st_size;
+                else { s->conv = 1; s->size = PENDING_SIZE; }
+            }
         }
         closedir(sd);
         qsort(c->songs + first, (size_t)(c->n - first), sizeof *c->songs, cmp_song);
@@ -255,10 +277,7 @@ static void user_save(void) {
 
 /* for the Music page (menu.cpp); stage 1-16, song 0..n-1 */
 int music_songs(int stage) { user_load(); return stage >= 1 && stage <= STAGES ? g_cat[stage - 1].n : 0; }
-const char* music_song_file(int stage, int i) {
-    const char* b = strrchr(g_cat[stage - 1].songs[i].path, '/');
-    return b ? b + 1 : g_cat[stage - 1].songs[i].path;
-}
+const char* music_song_file(int stage, int i) { return g_cat[stage - 1].songs[i].name; }
 const char* music_song_pack(int stage, int i) { return g_cat[stage - 1].songs[i].key; }
 int music_song_weight(int stage, int i) { return g_cat[stage - 1].songs[i].weight; }
 void music_set_song_weight(int stage, int i, int w) { g_cat[stage - 1].songs[i].weight = w & 3; user_save(); }
@@ -326,14 +345,41 @@ const char* music_pick(int k, uint64_t* size) {
         if (pick == -3) pick = 0;
         how = "shuffle";
     }
+    if (pick >= 0 && c->songs[pick].conv == 1) {  /* first time: convert it now (during the race's loading) */
+        Song* s = &c->songs[pick];
+        char dir[600];
+        snprintf(dir, sizeof dir, "%s", s->path);
+        char* sl = strrchr(dir, '/');
+        if (sl) *sl = 0;
+#ifdef _WIN32
+        _mkdir(dir);
+#else
+        mkdir(dir, 0777);
+#endif
+        struct stat st;
+        if (music_convert(s->src, s->path) && stat(s->path, &st) == 0) {
+            s->conv = 0;
+            s->size = (uint64_t)st.st_size;
+            if (s->size > PENDING_SIZE) {
+                rt_log("[music] %s is too long (over ~8 minutes); skipped", s->name);
+                s->conv = -1;
+            }
+        } else
+            s->conv = -1;
+        if (s->conv < 0) {
+            s->weight = 0;
+            pick = -2;
+            how = "the song could not be converted";
+        }
+    }
     c->last = pick;
     if (pick == -2) {
         rt_log("[music] %s (stage %u): original song (%s; buttons %04x)", STAGE_NAMES[stage - 1], st, how, held & 0xFFFFu);
         return NULL;
     }
-    const char* name = strrchr(c->songs[pick].path, '/');
+    const char* name = c->songs[pick].name;
     rt_log("[music] %s (stage %u): song %d of %d, %s (%s; buttons %04x)", STAGE_NAMES[stage - 1], st, pick + 1, c->n,
-           name ? name + 1 : c->songs[pick].path, how, held & 0xFFFFu);
+           name, how, held & 0xFFFFu);
     *size = c->songs[pick].size;
     return c->songs[pick].path;
 }

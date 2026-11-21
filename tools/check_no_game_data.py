@@ -20,7 +20,7 @@ import re
 import subprocess
 import sys
 
-MAX_BYTES = 512 * 1024
+MAX_BYTES = 1024 * 1024  # 1 MB (user, 2026-11-20: was 512 KB; raised for the dr_flac.h decoder)
 DIRS = ("baserom/", "orig/", "game/", "build/", "asm/", "gen/", "extracted/", "saves/", "assets_out/",
         ".gradle/", "android/app/build/")
 EXTS = (".iso", ".gcm", ".rvz", ".ciso", ".gcz", ".wbfs", ".tgc", ".dol", ".rel", ".str", ".plf", ".elf",

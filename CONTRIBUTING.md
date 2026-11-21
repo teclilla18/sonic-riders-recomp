@@ -53,7 +53,7 @@ Two checks enforce this, both running `tools/check_no_game_data.py`:
 - **GitHub Actions** (`.github/workflows/guard.yml`) on every push and pull request, over the tree
   and the new commits.
 
-The check refuses game-data folders and file types, files over 512 KB, binary files, the game's
+The check refuses game-data folders and file types, files over 1 MB, binary files, the game's
 files by hash, disassembly and recompiled-code lines, `key = <hex>` secrets, and personal home-folder
 paths (write `<home>` or `C:\Users\<you>` in docs instead). If it refuses something you believe is
 fine, say so in the pull request rather than working around it.
