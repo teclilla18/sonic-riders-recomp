@@ -93,6 +93,7 @@ def configure(args, root):
     runtime += [version]
     generated = sorted(gen.glob("code_*.c")) + [gen / "table.c"]
     relative = lambda p: Path(p).relative_to(root).as_posix()
+    flags.append("-DSR_ONLINE_DEFAULT=1")  # this branch builds the dedicated Online Beta application
     config = {"root": str(root), "sdk": str(sdk), "devkitpro": str(dkp), "cc": str(cc), "cxx": str(cxx),
               "icon_source": "setup/icon_256.jpg",
               "glslc": str(glslc.resolve()), "cpu": cpu, "flags": flags, "dependency_lock": lock,

@@ -41,6 +41,7 @@ typedef struct Settings {
     int ring_replenish; /* races: Super Sonic gains rings where others gain air (game_levels.c) */
     int super_flight;   /* experimental: Super Sonic flies off his board (super_flight.c); off by default, off online */
     int no_ring_drain;  /* cheat: a player's Super Sonic never loses rings (game_levels.c); off online */
+    char online_name[21]; /* chosen by the player; never a device/account name */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };

@@ -6,6 +6,7 @@
 #include <threads.h>
 
 #include "runtime.h"
+#include "online_boot.h"
 
 static SDL_AudioDeviceID g_dev;
 static int g_tried;
@@ -27,6 +28,7 @@ void platform_audio_shutdown(void) {
 }
 
 void platform_audio_push(const int16_t* lr, unsigned frames) {
+    if (online_loading()) return; /* startup steps behind the loading screen stay quiet */
     call_once(&g_lock_once, audio_lock_init);
     mtx_lock(&g_audio_lock);
     if (g_closed) { mtx_unlock(&g_audio_lock); return; }

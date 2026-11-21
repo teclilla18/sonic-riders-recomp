@@ -55,7 +55,9 @@ static void dma_from_disc(uint64_t offset, uint32_t addr, uint32_t len) {
     uint32_t pa = addr & 0x03FFFFFF;
     if (pa + len > GUEST_RAM_SIZE) rt_fatal("DVD read of %u bytes to %08X goes past MEM1", len, addr);
     uint64_t t = rt_ticks();
-    size_t got = disc_read(offset, mem_phys(pa), len);
+    int ppc_detclock(void);
+    size_t disc_read_cached(uint64_t,void*,size_t);
+    size_t got = ppc_detclock() ? disc_read_cached(offset,mem_phys(pa),len) : disc_read(offset, mem_phys(pa), len);
     g_read_ticks += rt_ticks() - t;
     if (got != len) memset(mem_phys(pa) + got, 0, len - got);
     g_read_bytes += len;

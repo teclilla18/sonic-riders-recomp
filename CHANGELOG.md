@@ -1,5 +1,11 @@
 # Changelog
 
+### Native Online Beta 1 candidate (not released)
+
+- Dedicated LAN Online application, compatible with the main-based beta on PC, Switch and Android.
+- Controller name keyboard, automatic discovery, loading screen, compatibility check and disc read-ahead.
+- Native build tested by compilation only; hardware and cold setup validation remain pending.
+
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
 - Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to

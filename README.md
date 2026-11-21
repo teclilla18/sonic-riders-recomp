@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 77% done"></a>
+  <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 78% done"></a>
 </p>
 
 <h3 align="center">Sonic Riders, running natively. No emulator.<br>One of the first homebrew games playable on Nintendo Switch 2.</h3>
@@ -169,7 +169,7 @@ Details and making your own: [docs/MODDING.md](docs/MODDING.md#texture-packs).
 
 ## Status
 
-<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 77% done"></p>
+<p align="center"><img src="docs/images/progress.svg" width="720" alt="Road to v1.0: 78% done"></p>
 
 <details>
 <summary><b>What v1.0 means, what each bar still needs, and performance per platform</b></summary>
@@ -184,7 +184,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Android #32 resolved: Vulkan 1.1 race/clean quit confirmed on Mali; MoltenVK pending. Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
-| Online play | 55 % | PC-PC, PC-Switch and Switch-Switch races stay in sync (tested over home networks); each player keeps their own screen shape; still to do: internet play (lobby server with room codes), a room-wide 30 fps switch for slow consoles, phones, 3-4 players, ping and delay settings |
+| Online play | 60 % | LAN lobby, loading screen and compatible platform builds in the unreleased Online Beta 1 candidate; native Switch 2 hardware and cold packages pending; internet rooms/relay and 3-4 players remain |
 | Features and polish | 73 % | Auto spin option (#23) in, played on PC; responsive installers, DPI/completion and output-folder action tested. Remaining: custom music, right-stick camera, code mods/new characters and background texture-pack loading on Switch. |
 
 Playable from boot to races, story mode and 4-player Free Race, with sound.

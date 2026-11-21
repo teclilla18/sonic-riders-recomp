@@ -7,11 +7,12 @@
  *   PING      player -> host, every second (the host drops a player not heard from for 6 s)
  *   LEAVE     either way
  *   START     host -> every player (sent several times): the race starts, every launcher starts the game
- * The fingerprint is a hash of the game's exe: the game itself refuses another build, and the lobby says so first.
+ * The fingerprint is NET_COMPAT (runtime/src/net_compat.h), shared across platforms.
  * A join code is the host's local IPv4 address in 7 letters/digits (no 0 O 1 I): it works on the same network;
  * over the internet only with UDP 7777-7778 forwarded to the host (the code names its local address, so for now the
  * lobby is a LAN lobby; a lobby server with real codes is planned, docs/notes/online-research.md). */
 #include "lobby.h"
+#include "../runtime/src/net_compat.h"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -48,19 +49,6 @@ std::string g_req_name, g_req_ip;
 double now_s() {
     using namespace std::chrono;
     return duration<double>(steady_clock::now().time_since_epoch()).count();
-}
-
-uint64_t fingerprint(const std::wstring& p) {
-    HANDLE h = CreateFileW(p.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
-    if (h == INVALID_HANDLE_VALUE) return 0;
-    uint64_t x = 1469598103934665603ull;
-    std::vector<uint8_t> buf(1 << 20);
-    DWORD got = 0;
-    while (ReadFile(h, buf.data(), (DWORD)buf.size(), &got, nullptr) && got) {
-        for (DWORD i = 0; i < got; i++) x = (x ^ buf[i]) * 1099511628211ull;
-    }
-    CloseHandle(h);
-    return x;
 }
 
 const char kAlpha[] = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";  /* 32 symbols: no 0 O 1 I */
@@ -158,7 +146,7 @@ bool same_addr(const sockaddr_in& a, const sockaddr_in& b) { return a.sin_addr.s
 void thread_main() {
     WSADATA wd;
     WSAStartup(MAKEWORD(2, 2), &wd);
-    uint64_t fp = fingerprint(g_exe);
+    uint64_t fp = NET_COMPAT;
     {
         std::lock_guard<std::mutex> l(g_mu);
         g_fp = fp;
@@ -300,6 +288,9 @@ void thread_main() {
                     for (auto& x : seen)
                         if (x.f.ip == f.ip) { x.f = f; x.at = t; upd = true; }
                     if (!upd) seen.push_back({f, t});
+                } else if (st == HOSTING && s == sock && type == 8 /* FIND: direct discovery reply */) {
+                    Msg a(T_ANNOUNCE); a.u64(g_fp); a.u8((uint8_t)(members.size()+1));
+                    a.u8(kMaxPlayers); a.u8(members.empty()); a.str(my_name); a.send(sock,from);
                 } else if (st == HOSTING && s == sock && type == T_JOIN) {
                     uint64_t gfp = r.u64();
                     std::string name = clean_name(r.str());

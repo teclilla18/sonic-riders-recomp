@@ -9,6 +9,9 @@
 
 #include "runtime.h"
 #include <SDL.h>
+#ifdef __ANDROID__
+#include <jni.h>
+#endif
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -272,6 +275,36 @@ int platform_android_args(int argc, char** argv) {
     return n;
 }
 #endif
+
+int platform_restart_online(void) {
+#ifdef __ANDROID__
+    JNIEnv* env=(JNIEnv*)SDL_AndroidGetJNIEnv();
+    jobject activity=(jobject)SDL_AndroidGetActivity();
+    if (!env || !activity) return 0;
+    jclass cls=(*env)->GetObjectClass(env,activity);
+    jmethodID method=(*env)->GetMethodID(env,cls,"restartOnline","()V");
+    if (method) (*env)->CallVoidMethod(env,activity,method);
+    int ok=method && !(*env)->ExceptionCheck(env);
+    if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+    (*env)->DeleteLocalRef(env,cls); (*env)->DeleteLocalRef(env,activity);
+    return ok;
+#elif defined(_WIN32)
+    wchar_t exe[32768], cmd[32780];
+    if (!GetModuleFileNameW(NULL,exe,32768)) return 0;
+    swprintf(cmd,32780,L"\"%ls\" --online",exe);
+    STARTUPINFOW si={.cb=sizeof si}; PROCESS_INFORMATION pi;
+    if (!CreateProcessW(exe,cmd,NULL,NULL,FALSE,0,NULL,NULL,&si,&pi)) return 0;
+    CloseHandle(pi.hThread); CloseHandle(pi.hProcess); exit(0);
+    return 1;
+#elif defined(SR_IOS)
+    return 0; /* Beta 1 targets PC, Switch and Android. */
+#else
+    extern const char* g_launch_path;
+    if (!g_launch_path || !*g_launch_path) return 0;
+    execlp(g_launch_path,g_launch_path,"--online",(char*)NULL);
+    return 0;
+#endif
+}
 
 void platform_init(void) {
 #if defined(__ANDROID__) || defined(SR_IOS)

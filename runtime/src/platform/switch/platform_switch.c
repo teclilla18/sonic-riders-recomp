@@ -85,6 +85,16 @@ void platform_set_handheld_gpu(int on) {
     rt_log("[switch] handheld performance configuration -> 0x%08X (%s): rc 0x%X", want, on ? "GPU 384 MHz" : "system default", rc);
 }
 
+int platform_restart_online(void) {
+    extern const char* g_launch_path;
+    if (!g_launch_path || !*g_launch_path) return 0;
+    char args[1024];
+    snprintf(args,sizeof args,"%s online",g_launch_path);
+    envSetNextLoad(g_launch_path,args);
+    exit(0);
+    return 1;
+}
+
 void platform_init(void) {
     appletHook(&g_hook, applet_hook, NULL);  /* before the render thread runs appletMainLoop */
     mkdir(BASE_DIR, 0777);

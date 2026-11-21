@@ -2051,3 +2051,10 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Versions bumped to v0.9.0 / Switch 2 Alpha 3 in README, both easy-read guides, the booklets and progress; the
   Switch 2 Race Select audio warning dropped (the user reported it gone on the hold-boost test builds). iOS stays
   on v0.8.7 until the Mac session builds v0.9.0.
+
+## 2026-11-20: separate native Online Beta 1 candidate (not released)
+
+- Ported shared beta lobby/compatibility/loading/read-ahead source onto public Alpha 3. Dedicated online
+  startup and an ImGui name keyboard avoid assuming native loader argv/relaunch or swkbd support.
+- Built with the pinned SDK [confirmed]; latest recorded build 2446e5e042d6. Hardware and cold package
+  tests remain unproven. Existing native gameplay/platform changes were kept. No private music code copied.

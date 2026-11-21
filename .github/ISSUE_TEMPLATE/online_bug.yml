@@ -1,0 +1,74 @@
+name: Online Beta problem
+description: Report a problem racing with another player on your home network.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Online Beta 1 is for **2 players on the same home network (LAN)**.
+        Please attach **sonicriders.log from both devices**. Copy them before starting the game again.
+        Never attach a disc image, game build (.exe/.nro/.apk), save, extracted game file, or keys.
+  - type: input
+    id: versions
+    attributes:
+      label: Version on each device
+      description: The first lines of each sonicriders.log show the build.
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Device hosting the race
+      options: [Windows PC, Switch, Android, Switch 2]
+    validations:
+      required: true
+  - type: dropdown
+    id: joiner
+    attributes:
+      label: Device joining the race
+      options: [Windows PC, Switch, Android, Switch 2]
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Connection
+      options: [Both wired, Both Wi-Fi, One wired and one Wi-Fi]
+    validations:
+      required: true
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What happened?
+      options: [Desync, Could not find the other player, Could not join or start, Stutter, Crash, Other]
+    validations:
+      required: true
+  - type: input
+    id: frame
+    attributes:
+      label: Desync frame (if shown)
+      description: Copy the frame number from the message on screen.
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened and how to reproduce it
+      description: Include the stage, characters, texture packs, and what each player was doing.
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Device details
+      description: Phone model or PC OS/GPU. For consoles, include docked/handheld mode and CPU/GPU/memory clocks if known.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs from both devices
+      description: |
+        Attach both sonicriders.log files (rename them host.log and joiner.log).
+        PC: game folder. Switch: /switch/sonicriders/ on the SD card.
+        Switch 2: /switch/sonicriders-switch2/ on the SD card.
+        Android: Android/data/net.srnative.sonicriders/files/ (the app folder).
+        If you already restarted, attach sonicriders.prev.log too. Review private paths before sharing.
+    validations:
+      required: true

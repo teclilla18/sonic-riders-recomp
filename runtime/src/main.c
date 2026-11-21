@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
     argc = platform_android_args(argc, argv);  /* launch arguments KEY=VALUE -> environment */
 #endif
     platform_init();
+    { int online_boot_args(int, char**); argc = online_boot_args(argc, argv); }
     rt_log("[build] %s", g_build_version);
     const char* disc = argc > 1 ? argv[1] : platform_disc_path();
     mem_init();
@@ -125,7 +126,6 @@ int main(int argc, char** argv) {
         platform_bug_report(name, sizeof name);
     }
 #endif
-    { void netplay_init(void); netplay_init(); }
     { void update_check_start(void); update_check_start(); }  /* newer release on GitHub? (banner) */  /* SR_RECORD / SR_REPLAY / SR_NET (they turn SR_DETCLOCK on) */
 #ifdef SR_IOS
     if (argc <= 1) {  /* no image yet (a Sideloadly install starts empty): say where it goes, not just close */
@@ -172,11 +172,13 @@ int main(int argc, char** argv) {
     }
 #endif
     if (!disc_open(disc)) rt_fatal("cannot open the disc image %s", disc);
+    gx_init();
+    render_start();
+    { void online_boot_wait(void); online_boot_wait(); }
+    { void netplay_init(void); netplay_init(); }
     load_game();
     cpu_init(&g_main_cpu);
     sched_init();
-    gx_init();
-    render_start();
     dsp_init();
     di_init();
     {

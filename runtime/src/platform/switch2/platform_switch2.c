@@ -91,6 +91,8 @@ int timespec_get(struct timespec* ts, int base) {
     return base == TIME_UTC && clock_gettime(CLOCK_REALTIME, ts) == 0 ? base : 0;
 }
 
+int platform_restart_online(void) { return 0; } /* use the dedicated Online NRO */
+
 void platform_init(void) {
     remove(BASE_DIR "/sonicriders.prev.log");
     rename(BASE_DIR "/sonicriders.log", BASE_DIR "/sonicriders.prev.log");

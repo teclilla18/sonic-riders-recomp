@@ -1348,6 +1348,7 @@ static void execute(GxFrame* f) {
                                                                 : DkPrimitive_Points,
                                 c->b, 1, c->a, 0, 0);
             break;
+        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
         case GXC_COPY:
             if (cur) {
                 efb_copy(c, cur);
