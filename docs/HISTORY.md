@@ -2057,3 +2057,28 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   Alpha 2. Easy-read guides republished; website rebuilt. iOS v0.9.0 not built (needs the Mac).
 - Installed for the user to play: Switch OLED v0.9.0 NRO 4d120ba5..., Switch 2 Alpha 3 bc9dd55883f6 (over FTP;
   NRO 9188dd15...); both readback verified. Not played yet: flight toggle, final packages [uncertain].
+
+## 2026-11-20 (late night): texture guide, music packs, Switch 2 into main (work in progress)
+
+- **Texture-pack guide** (docs/TEXTURE-PACKS.md, on main): every device, nine drawn SVG pictures. First draft said the
+  Switch 2 installer had an "Add texture pack" button; checked against the Alpha 3 launcher (the TEXTURE PACKS
+  section is M_SWITCH only) and corrected the same evening [confirmed]. Capital `.DDS` files are read on every
+  released version (texpack.c lowercases names) [confirmed].
+- **Music packs** (branch claude/music-loader, not merged, not released): own songs per stage in
+  `mods/<pack>/music/<stage>/`, shuffled each race, D-pad hold picks song 1-4, Music
+  tab in the settings menu, MP3/OGG/FLAC/WAV converted once to ADX. How it was found: the game's song-picking code (0x80438AF0, name
+  lookup 0x80511B68) and the game's 8 stage song files shared by stages k and k+8; the current
+  stage is at REL bss +0x17928 (a first try at the original-layout address 0x806129A8 read garbage: the port's bss
+  is elsewhere). Tested: PC demo + Free Race routes; Switch 1 played by the user: shuffle on Metal City / Night
+  Chase and all four D-pad picks work [confirmed]. Format conversion: PC only (ffmpeg decode check, a WAV played in
+  game) [likely on consoles]. The user's own songs are a local pack on both Switches.
+- The user's music "slowing/speeding" on Switch 1 was the 4K texture pack: 113 of 126 stalls were texture decodes
+  (18.8 s in total); a copy shrunk to 512 max (952 -> 215 MB, the Switch shows 512 anyway) is on both consoles.
+  Not re-played yet [uncertain].
+- **Switch 2 into main** (branch claude/switch2-mainline, pushed, WIP): Alpha 3 had silently lost main fixes in
+  render_vk.c (#32 legacy Vulkan), launcher.cpp (installer_layout, unpacked-not-installed) and sandbox_test.py, so a
+  plain merge would regress PC/Android. Rebuilt from main + Switch 2-only files + a three-way merge at fork point
+  1235bc4; installer streamlined (UPDATE NOW, texture-pack button, no "Alpha"). PC, Android, Switch, Switch 2 build;
+  nothing run on a device yet [uncertain].
+- Rules from the user: never delete a GitHub release again (download totals reset); the game-data guard's per-file
+  limit is 1 MB (was 512 KB) on the music branch, for dr_flac.h.
