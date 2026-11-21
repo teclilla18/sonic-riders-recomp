@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 VERSION = "Online Beta 1 candidate"
-UPDATED = "2026-11-20"
+UPDATED = "2026-11-21"
 
 # (label, weight, percent done); labels must match the README table's first column
 AREAS = [

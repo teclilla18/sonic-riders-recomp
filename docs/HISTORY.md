@@ -2099,3 +2099,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Switch lobby rendered in Eden v0.1.1 [confirmed]. Separate native Switch 2 candidate builds from public Alpha 3;
   not hardware-tested. Music loader is absent from main, so no replacements online. Slow-SD improvement, cold
   packages, user acceptance and release remain unproven. No issue, Discussion, release or tag was posted.
+
+### 2026-11-21: final candidate checks
+
+- Final cache-enabled PC pair: finish capture confirmed, all compared checksums equal through 25,200; both
+  caches served 950/1200 reads from memory [confirmed]. Both PC/Android logs agree through 6,600 racing frames.
+- Final OLED core-2 menu/cache check: handheld CPU 1785 / GPU 614.4 / MEM 2133 MHz logged, no affinity failure.
+  This short check did not repeat the race. Native Switch 2 online-only package/deployment prepared separately;
+  hardware gameplay and cold setup candidates still pending. No public release or post.

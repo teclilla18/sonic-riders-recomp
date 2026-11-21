@@ -1,4 +1,4 @@
-# State (2026-11-20): Online Beta 1 candidate
+# State (2026-11-21): Online Beta 1 candidate
 
 ## Released
 
@@ -20,7 +20,7 @@
 
 0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
    black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
-   PC-PC finish: all checksums equal through 24,600 frames. Cache-on PC pair through 6,600; PC/OLED racing
+   PC-PC finish: all checksums equal through 25,200 frames with cache enabled. Earlier cache-on PC pair through 6,600; PC/OLED racing
    through 17,400 equal (mode/clocks not captured, so no hardware speed claim). S23 restart into lobby tested;
    PC/Android race segment through 6,600 equal on both. Final affinity/clocks menu/cache check passed.
    Separate native candidate: `codex/online-beta-switch2` from public Alpha 3, builds; hardware pending.

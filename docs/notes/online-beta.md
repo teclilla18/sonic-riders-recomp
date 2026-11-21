@@ -47,7 +47,8 @@ zero means unavailable. An emulator or PC run cannot prove a Switch CPU gain.
 ## Tests and remaining checks
 
 - **Tested, PC**: two copies joined through the discovered list, raced to a finish capture, and kept all compared
-  checksums equal through frame 24,600. With cache enabled, a separate run stayed equal through frame 6,600.
+  checksums equal through frame 25,200 with cache enabled (finish confirmed in the port capture). Both cache
+  counters reached 950/1200 reads served from memory. An earlier short run stayed equal through frame 6,600.
 - **Tested, PC/OLED**: keyboard/name entry, hosting, discovery/join, loading overlay, Mode Select at frame 780,
   and racing. All reported checksums matched through frame 17,400; the bounded PC test then closed. Both served
   457/600 disc reads from memory. Mode/clocks were not recorded in that first run: no hardware speed claim.
