@@ -24,12 +24,30 @@
 #define MODS_BASE 0x60000000ull  /* past the 1.46 GB image; FST offsets are 32-bit */
 #define MAX_MODS 64
 
-typedef struct { uint64_t off, size; char path[512]; int logged; } VFile;
+/* a mod file on the virtual disc; music slots (S1-S8.ADX with music packs, music.c) change their file per race */
+typedef struct {
+    uint64_t off, size;  /* place and FST size (a music slot: its largest song) */
+    char path[512];
+    int logged;
+    int slot;            /* music slot 1-8, 0 none */
+    uint64_t cur_size;   /* size of the file served now */
+    int base_disc;       /* music slot serving the slot's own file: 1 from the disc image at base_off, 0 from base_path */
+    uint64_t base_off, base_size, last_ns;
+    char base_path[512];
+    int using_base;
+} VFile;
 static VFile* g_vf;
 static size_t g_nvf, g_capvf;
 static uint64_t g_vend = MODS_BASE;
 static FILE* g_open;
 static size_t g_open_i = (size_t)-1;
+static size_t g_music_last = (size_t)-1;
+
+void music_scan(const char* music_dir, const char* mod_name);
+int music_slot_used(int k);
+uint64_t music_slot_max(int k);
+const char* music_pick(int k, uint64_t* size);
+size_t disc_read(uint64_t offset, void* dst, size_t n);
 
 static uint32_t be32(const uint8_t* p) { return (uint32_t)p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3]; }
 static void wbe32(uint8_t* p, uint32_t v) { p[0] = (uint8_t)(v >> 24); p[1] = (uint8_t)(v >> 16); p[2] = (uint8_t)(v >> 8); p[3] = (uint8_t)v; }
@@ -214,12 +232,41 @@ static uint64_t vfile(const Repl* r) {
         if (!g_vf) rt_fatal("out of memory (mods)");
     }
     VFile* v = &g_vf[g_nvf++];
+    memset(v, 0, sizeof *v);
     v->off = g_vend;
-    v->size = r->size;
-    v->logged = 0;
+    v->size = v->cur_size = r->size;
     snprintf(v->path, sizeof v->path, "%s", r->host);
     g_vend = (g_vend + r->size + 0x7FFF) & ~0x7FFFull;  /* 32 KB aligned, as disc files are */
     return v->off;
+}
+
+/* S<k>.ADX with music packs: a slot as large as its largest song; it serves the file music_pick() chooses, or its
+ * own file (`rep` a mod's replacement, else the disc's at disc_off) */
+static int music_slot_of(const char* name) {
+    if ((name[0] != 'S' && name[0] != 's') || name[1] < '1' || name[1] > '8') return 0;
+    const char* x = name + 2;
+    if (x[0] != '.' || (x[1] | 32) != 'a' || (x[2] | 32) != 'd' || (x[3] | 32) != 'x' || x[4]) return 0;
+    return name[1] - '0';
+}
+static uint32_t g_music_slots;
+static uint64_t music_vfile(int k, const Repl* rep, uint32_t disc_off, uint32_t disc_size) {
+    Repl tmp = {{0}, {0}, 0, 0};
+    uint64_t own = rep ? rep->size : disc_size, big = music_slot_max(k);
+    tmp.size = big > own ? big : own;
+    uint64_t off = vfile(&tmp);
+    VFile* v = &g_vf[g_nvf - 1];
+    v->slot = k;
+    v->using_base = 1;
+    v->base_size = v->cur_size = own;
+    v->base_disc = !rep;
+    v->base_off = disc_off;
+    if (rep) {
+        snprintf(v->base_path, sizeof v->base_path, "%s", rep->host);
+        snprintf(v->path, sizeof v->path, "%s", rep->host);
+    } else
+        snprintf(v->path, sizeof v->path, "S%d.ADX on the disc", k);
+    g_music_slots++;
+    return off;
 }
 
 /* copy the directory `dir` (FST index) of the original table into g_nodes, applying replacements; new
@@ -241,6 +288,9 @@ static void copy_dir(const uint8_t* fst, const char* names, uint32_t first, uint
             continue;
         }
         Node n = {nm, 0, 0, 0, be32(e + 4), be32(e + 8)};
+        int slot = music_slot_of(nm);
+        if (slot && !music_slot_used(slot)) slot = 0;
+        const Repl* slot_rep = NULL;
         for (size_t r = 0; r < g_nrepl; r++) {
             if (used[r] || !ieq(g_repl[r].disc, path)) continue;
             used[r] = 1;
@@ -249,10 +299,20 @@ static void copy_dir(const uint8_t* fst, const char* names, uint32_t first, uint
                        g_names[g_repl[r].mod]);
                 break;
             }
+            if (slot) {
+                slot_rep = &g_repl[r];
+                g_replaced++;
+                break;
+            }
             n.off = (uint32_t)vfile(&g_repl[r]);
             n.size = (uint32_t)g_repl[r].size;
             g_replaced++;
             break;
+        }
+        if (slot) {
+            uint64_t vo = music_vfile(slot, slot_rep, be32(e + 4), be32(e + 8));
+            n.off = (uint32_t)vo;
+            n.size = (uint32_t)g_vf[g_nvf - 1].size;
         }
         push_node(n);
         i++;
@@ -300,11 +360,15 @@ void mods_build_fst(uint8_t** fst_io, uint32_t* size_io) {
         if (g_on[m]) {
             snprintf(p, sizeof p, "%s/%s/files", base, g_names[m]);
             scan_files(p, "", m);
+            snprintf(p, sizeof p, "%s/%s/music", base, g_names[m]);
+            music_scan(p, g_names[m]);
         }
         rt_log("[mods] %s %s: \"%s\"%s%s%s%s, %zu files", g_on[m] ? "on " : "off", g_names[m], *name ? name : g_names[m],
                *version ? " v" : "", version, *author ? " by " : "", author, g_nrepl - before);
     }
-    if (!g_nrepl) return;
+    int music = 0;
+    for (int k = 1; k <= 8; k++) music |= music_slot_used(k);
+    if (!g_nrepl && !music) return;
     const uint8_t* fst = *fst_io;
     uint32_t n = be32(fst + 8);
     const char* names = (const char*)fst + n * 12;
@@ -338,8 +402,8 @@ void mods_build_fst(uint8_t** fst_io, uint32_t* size_io) {
     }
     *fst_io = out;
     *size_io = size;
-    rt_log("[mods] virtual disc: %u files replaced, %u added (%llu MB from mods)", g_replaced, g_added,
-           (unsigned long long)((g_vend - MODS_BASE) >> 20));
+    rt_log("[mods] virtual disc: %u files replaced, %u added, %u music slots (%llu MB from mods)", g_replaced, g_added,
+           g_music_slots, (unsigned long long)((g_vend - MODS_BASE) >> 20));
 }
 
 uint64_t mods_base(void) { return g_nvf ? MODS_BASE : ~0ull; }
@@ -349,10 +413,41 @@ size_t mods_read(uint64_t off, void* dst, size_t n) {
     uint8_t* out = dst;
     memset(out, 0, n);
     for (size_t i = 0; i < g_nvf; i++) {
-        const VFile* v = &g_vf[i];
+        VFile* v = &g_vf[i];
         if (off + n <= v->off || off >= v->off + v->size) continue;
         uint64_t from = off > v->off ? off - v->off : 0;
         uint64_t to = off + n < v->off + v->size ? off + n - v->off : v->size;
+        if (v->slot) {
+            /* the game starts a stage song (its first sector, after another song or a pause): pick the file. A loop
+             * back to the start while it streams (reads less than 2 s apart) keeps the song. */
+            uint64_t now = platform_now_ns();
+            if (from == 0 && (g_music_last != i || now - v->last_ns > 2000000000ull)) {
+                uint64_t sz = 0;
+                const char* p = music_pick(v->slot, &sz);
+                if (p) {
+                    snprintf(v->path, sizeof v->path, "%s", p);
+                    v->cur_size = sz;
+                    v->using_base = 0;
+                } else {
+                    v->using_base = 1;
+                    v->cur_size = v->base_size;
+                    if (!v->base_disc) snprintf(v->path, sizeof v->path, "%s", v->base_path);
+                }
+                if (g_open_i == i) {
+                    if (g_open) fclose(g_open);
+                    g_open = NULL;
+                    g_open_i = (size_t)-1;
+                }
+            }
+            g_music_last = i;
+            v->last_ns = now;
+            if (from >= v->cur_size) continue;  /* past the song: zeros */
+            if (to > v->cur_size) to = v->cur_size;
+            if (v->using_base && v->base_disc) {
+                disc_read(v->base_off + from, out + (v->off + from - off), (size_t)(to - from));
+                continue;
+            }
+        }
         if (!g_vf[i].logged) {  /* the first read of each mod file goes to the log (a mod's files really used?) */
             g_vf[i].logged = 1;
             rt_log("[mods] the game reads %s", v->path);

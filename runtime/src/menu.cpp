@@ -33,6 +33,15 @@ int mods_count(void);
 const char* mods_title(int i);
 int mods_enabled(int i);
 void mods_set_enabled(int i, int on);
+int music_songs(int stage);
+const char* music_song_file(int stage, int i);
+int music_song_weight(int stage, int i);
+void music_set_song_weight(int stage, int i, int w);
+int music_shuffle(int stage);
+void music_set_shuffle(int stage, int on);
+int music_original(int stage);
+void music_set_original(int stage, int w);
+const char* music_stage_name(int stage);
 #ifdef SR_IOS
 const char* ios_bundle_id(void); /* ios_scene.m */
 #endif
@@ -720,6 +729,52 @@ void tab_mods() {
     else if (n) note("Mods load in this order (mods/mods.ini).");
 }
 
+/* Music (music.c): the songs of each stage from the music packs, how often each plays, shuffle. Changes are
+ * saved at once (music.ini next to settings.ini) and apply from the next race. */
+static bool how_often(const char* label, int w, int* out) {
+    static const char* const words[4] = {"Off", "Rare", "Normal", "Often"};
+    int v = w & 3;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+    bool changed = ImGui::SliderInt(label, &v, 0, 3, words[v], ImGuiSliderFlags_NoInput);
+    *out = v;
+    return changed && v != w;
+}
+
+void tab_music() {
+    heading("Music");
+    int stages = 0;
+    for (int s = 1; s <= 16; s++) stages += music_songs(s) > 0;
+    if (!stages) {
+        note("No songs added yet. Put your own songs (.adx) in mods/<pack name>/music/<stage>/ (for example "
+             "mods/My Music/music/01 Metal City/) and restart the game. No songs come with the game.");
+        return;
+    }
+    note("Each race picks a song for its stage. Hold a direction on the D-pad while the race loads to choose "
+         "song 1 to 4 yourself. Changes apply from the next race.");
+    for (int s = 1; s <= 16; s++) {
+        int n = music_songs(s);
+        if (!n) continue;
+        char label[160];
+        snprintf(label, sizeof label, "%s  (%d song%s%s)##stage%d", music_stage_name(s), n, n == 1 ? "" : "s",
+                 music_shuffle(s) ? ", shuffle" : "", s);
+        if (!ImGui::TreeNode(label)) continue;
+        int sh = music_shuffle(s);
+        if (check("Shuffle every race", &sh,
+                  "On: a new song each race, each played as often as you set below, never the same one twice in a "
+                  "row. Off: always the first song set to Often (or song 1)."))
+            music_set_shuffle(s, sh);
+        int w;
+        snprintf(label, sizeof label, "Original game song##orig%d", s);
+        if (how_often(label, music_original(s), &w)) music_set_original(s, w);
+        for (int i = 0; i < n; i++) {
+            char name[200];
+            snprintf(name, sizeof name, "%d. %s##song%d_%d", i + 1, music_song_file(s, i), s, i);
+            if (how_often(name, music_song_weight(s, i), &w)) music_set_song_weight(s, i, w);
+        }
+        ImGui::TreePop();
+    }
+}
+
 void tab_about() {
     heading("Sonic Riders native port");
     ImGui::Text("Version: %s", g_build_version);
@@ -805,7 +860,7 @@ void tab_about() {
  * picked whatever page item was on screen and left the page where it was. */
 enum { WRAP_NONE, WRAP_BOTTOM, WRAP_TOP };
 static int g_wrap;
-static ImGuiID g_close_id, g_quit_id, g_tab_ids[8];
+static ImGuiID g_close_id, g_quit_id, g_tab_ids[9];
 
 void quit_row() {
     const float w_close = ImGui::CalcTextSize("Close").x + 2 * ImGui::GetStyle().FramePadding.x;
@@ -886,14 +941,14 @@ void settings_window() {
         }
         static const Tab tabs[] = {{"Display", tab_display}, {"Performance", tab_performance}, {"Controls", tab_controls},
                                    {"Gameplay", tab_gameplay}, {"Cheats", tab_cheats},     {"Mods", tab_mods},
-                                   {"About", tab_about}};
+                                   {"Music", tab_music},       {"About", tab_about}};
         const int ntabs = (int)(sizeof tabs / sizeof tabs[0]);
         if (ImGui::BeginTabBar("tabs", ImGuiTabBarFlags_FittingPolicyShrink)) {
             for (int i = 0; i < ntabs; i++) {
                 ImGuiTabItemFlags f = g_select_tab == i ? ImGuiTabItemFlags_SetSelected : 0;
                 if (g_wrap == WRAP_TOP && i == g_tab) ImGui::SetKeyboardFocusHere();
                 bool open = ImGui::BeginTabItem(tabs[i].name, nullptr, f);
-                if (i < 8) g_tab_ids[i] = ImGui::GetItemID();
+                if (i < 9) g_tab_ids[i] = ImGui::GetItemID();
                 if (open) {
                     g_tab = i;
                     /* the page ends one row above the window's bottom: the Close / Quit row */
@@ -1201,8 +1256,8 @@ int overlay_input(unsigned held) {
         }
     }
     if (!g_quit_popup) {
-        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 6) % 7;
-        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 7;
+        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 7) % 8;
+        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 8;
     }
     feed(ImGuiKey_GamepadDpadUp, held, changed, OV_UP);
     feed(ImGuiKey_GamepadDpadDown, held, changed, OV_DOWN);
