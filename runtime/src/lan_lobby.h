@@ -14,7 +14,7 @@ typedef struct {
 } LanFound;
 typedef struct {
     int state, me, players, count, ready;
-    char names[2][LAN_NAME], host_ip[48], error[192];
+    char names[2][LAN_NAME], host_ip[48], my_ip[48], error[192]; /* my_ip: empty when unknown */
     LanFound found[LAN_MAX_FOUND];
 } LanLobby;
 int lan_network_init(void);  /* once per process, also used by netplay */

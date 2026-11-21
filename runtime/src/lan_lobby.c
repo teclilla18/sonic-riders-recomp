@@ -5,6 +5,7 @@
 #include "runtime.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdatomic.h>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -29,6 +30,9 @@ static struct sockaddr_in host, peer;
 static uint64_t tick, heard, joining, starting, search;
 static char my_name[LAN_NAME];
 static int networking;
+static uint32_t subnet_broadcast; /* host order; 0 = unknown */
+static _Atomic uint32_t found_ip; /* written once by the lookup thread */
+static _Atomic int lookup_started;
 int lan_network_init(void) {
     if (networking) return 1;
 #ifdef _WIN32
@@ -70,6 +74,40 @@ static Sock udp(int port, int reuse) {
     if (bind(s,(struct sockaddr*)&a,sizeof a)) { closesocket(s); return BAD; }
     return s;
 }
+/* This device's IPv4 address: a connected UDP socket sends nothing; getsockname gives the chosen interface.
+ * Consoles may not send 255.255.255.255 at all, so rooms also go to the /24 network's own broadcast address. */
+/* Runs on its own thread: a socket call that hangs on some console network layers must never freeze the lobby. */
+static int find_local_address(void* unused) {
+    (void)unused;
+    uint32_t local_ip=0;
+    Sock s=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+    if (s==BAD) return 0;
+    struct sockaddr_in to=address(0xC0A80001u,9), me; socklen_t ml=sizeof me; /* any private address works */
+    if (!connect(s,(struct sockaddr*)&to,sizeof to) && !getsockname(s,(struct sockaddr*)&me,&ml))
+        local_ip=ntohl(me.sin_addr.s_addr);
+    closesocket(s);
+#if defined(__SWITCH__) && !defined(__SWITCH2__)
+    if (!local_ip) local_ip=ntohl((uint32_t)gethostid());
+#endif
+    if (local_ip && (local_ip>>24)!=127) atomic_store(&found_ip,local_ip);
+    return 0;
+}
+static void use_local_address(void) { /* poll thread: adopt the lookup's result once */
+    uint32_t ip=atomic_load(&found_ip);
+    if (!ip || v.my_ip[0]) return;
+#ifndef __SWITCH2__
+    subnet_broadcast=ip|0xFFu; /* Switch 2: sending to it blocks for ~200 ms per packet on hardware */
+#endif
+    struct in_addr a; a.s_addr=htonl(ip); inet_ntop(AF_INET,&a,v.my_ip,sizeof v.my_ip);
+    rt_log("[lobby] this device: %s%s",v.my_ip,subnet_broadcast?", rooms also sent to x.x.x.255":"");
+}
+static void send_everywhere(Sock s,const void* data,int n,int port) {
+    uint32_t to[3]={INADDR_BROADCAST,subnet_broadcast,INADDR_LOOPBACK};
+    for (int i=0;i<3;i++) if (to[i]) {
+        struct sockaddr_in a=address(to[i],port);
+        if (s!=BAD) sendto(s,(const char*)data,n,0,(const struct sockaddr*)&a,sizeof a);
+    }
+}
 typedef struct { unsigned char b[256]; int n; } Packet;
 static Packet packet(int type) { Packet p={{'S','R','L','B',1,0},6}; p.b[5]=(unsigned char)type; return p; }
 static void string(Packet* p,const char* s) {
@@ -105,11 +143,16 @@ static void list(void) {
 static void announce(const struct sockaddr_in* to) {
     Packet p=packet(ANNOUNCE); compat(&p);
     p.b[p.n++]=(unsigned char)v.players; p.b[p.n++]=2; p.b[p.n++]=(unsigned char)(v.state==LAN_HOSTING && v.players<2);
-    string(&p,my_name); send_packet(p,session,to);
+    string(&p,my_name);
+    if (to) send_packet(p,session,to); else send_everywhere(session,p.b,p.n,7779);
 }
 int lan_lobby_open(void) {
     memset(&v,0,sizeof v); tick=heard=joining=starting=search=0;
     if (!lan_network_init()) { fail("Could not start networking. Connect both devices to the same home network."); return 0; }
+    subnet_broadcast=0;
+#ifndef __SWITCH2__
+    if (!atomic_exchange(&lookup_started,1)) rt_thread_start(find_local_address,NULL);
+#endif
     discovery=udp(7779,1);
     if (discovery==BAD) { fail("Could not search for races (UDP 7779). Close another online lobby and try again."); return 0; }
     return 1;
@@ -119,14 +162,15 @@ void lan_lobby_host(const char* name) {
     lan_clean_name(my_name,name); if (!my_name[0]) return;
     session=udp(7778,0);
     if (session==BAD) { fail("Could not host a race (UDP 7778). Close another hosted lobby and try again."); return; }
-    v.error[0]=0; v.state=LAN_HOSTING; v.me=0; v.players=1; tick=0;
+    v.error[0]=0; v.state=LAN_HOSTING; rt_log("[lobby] hosting as \"%s\" at %s",my_name,v.my_ip[0]?v.my_ip:"(address unknown)"); v.me=0; v.players=1; tick=0;
     snprintf(v.names[0],LAN_NAME,"%s",my_name);
 }
 void lan_lobby_join(const char* ip,const char* name) {
     if (v.state!=LAN_IDLE) return;
     lan_clean_name(my_name,name); if (!my_name[0]) return;
     host=address(0,7778);
-    if (inet_pton(AF_INET,ip,&host.sin_addr)!=1) return;
+    if (inet_pton(AF_INET,ip,&host.sin_addr)!=1) { fail("That address is not valid. It looks like 10.0.0.114."); return; }
+    rt_log("[lobby] joining %s",ip);
     session=udp(0,0); if (session==BAD) { fail("Could not join. Please report it with sonicriders.log from both machines."); return; }
     snprintf(v.host_ip,sizeof v.host_ip,"%s",ip); v.error[0]=0;
     v.state=LAN_JOINING; v.me=1; joining=platform_now_ns(); tick=0;
@@ -146,6 +190,7 @@ void lan_lobby_start(void) {
 }
 const LanLobby* lan_lobby_poll(void) {
     uint64_t now=platform_now_ns();
+    use_local_address();
     Sock sockets[2]={discovery,session};
     for (int s=0;s<2;s++) if (sockets[s]!=BAD) for (int budget=0;budget<32;budget++) {
         unsigned char b[512]; struct sockaddr_in from; socklen_t fl=sizeof from;
@@ -156,9 +201,11 @@ const LanLobby* lan_lobby_poll(void) {
         if (b[5]==ANNOUNCE && s==0 && n>=18) {
             char name[LAN_NAME]; pos=17; if (!read_string(b,n,&pos,name,sizeof name)) continue;
             char ip[48]; inet_ntop(AF_INET,&from.sin_addr,ip,sizeof ip);
+            if (v.state==LAN_HOSTING && !strcmp(name,my_name) && ntohs(from.sin_port)==7778 && (ntohl(from.sin_addr.s_addr)>>24)!=127)
+                atomic_store(&found_ip,ntohl(from.sin_addr.s_addr)); /* our own room, heard back */
             int k; for (k=0;k<v.count;k++) if (!strcmp(ip,v.found[k].ip)) break;
             if (k==v.count && v.count==LAN_MAX_FOUND) continue;
-            if (k==v.count) v.count++;
+            if (k==v.count) { v.count++; rt_log("[lobby] found %s's race at %s",name,ip); }
             LanFound* f=&v.found[k]; snprintf(f->name,sizeof f->name,"%s",name); snprintf(f->ip,sizeof f->ip,"%s",ip);
             uint64_t c=0; for (int i=0;i<8;i++) c|=(uint64_t)b[6+i]<<(8*i);
             f->compatible=c==NET_COMPAT; f->players=b[14]; f->max_players=b[15]; f->open=b[16]!=0; f->seen=now;
@@ -170,6 +217,7 @@ const LanLobby* lan_lobby_poll(void) {
                 if (c!=NET_COMPAT || (v.players==2 && !same(&peer,&from))) {
                     Packet p=packet(REFUSE); string(&p,c!=NET_COMPAT?"Different online version. Install the same Online Beta on both devices.":"This race is full."); send_packet(p,session,&from);
                 } else {
+                    if (v.players!=2) { char ip[48]; inet_ntop(AF_INET,&from.sin_addr,ip,sizeof ip); rt_log("[lobby] %s joined from %s",name,ip); }
                     peer=from; heard=now; v.players=2; snprintf(v.names[1],LAN_NAME,"%s",name); list();
                 }
             } else if (v.players==2 && same(&peer,&from)) {
@@ -191,15 +239,12 @@ const LanLobby* lan_lobby_poll(void) {
         if (now-v.found[k].seen>4000000000ull) { v.found[k]=v.found[--v.count]; } else k++;
     }
     if (v.state==LAN_IDLE && now-search>1000000000ull) {
-        search=now; Packet p=packet(FIND);
-        struct sockaddr_in a=address(INADDR_BROADCAST,7778); send_packet(p,discovery,&a);
-        a=address(INADDR_LOOPBACK,7778); send_packet(p,discovery,&a);
+        search=now; Packet p=packet(FIND); send_everywhere(discovery,p.b,p.n,7778);
     }
     if (v.state==LAN_HOSTING) {
         if (v.players==2 && now-heard>6000000000ull) v.players=1;
         if (now-tick>1000000000ull) {
-            tick=now; struct sockaddr_in a=address(INADDR_BROADCAST,7779); announce(&a);
-            a=address(INADDR_LOOPBACK,7779); announce(&a); list();
+            tick=now; announce(NULL); list();
         }
     } else if (v.state==LAN_JOINING && now-joining>6000000000ull)
         fail("No race answered. Check both devices are on the same home network. Please report it with sonicriders.log from both machines.");
