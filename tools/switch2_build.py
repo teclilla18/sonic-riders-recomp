@@ -224,7 +224,7 @@ def pack():
     romfs.mkdir(exist_ok=True)
     shutil.copyfile(OUT / "build-info.json", romfs / "build-info.json")
     nacp = OUT / "sonicriders-switch2.nacp"
-    subprocess.run([str(executable(dkp / "tools/bin/nacptool")), "--create", "Sonic Riders - Switch 2 Experimental",
+    subprocess.run([str(executable(dkp / "tools/bin/nacptool")), "--create", "Riders Plus Online Beta 1",
                     "native port (own disc image required)", "0.1.0", str(nacp)], check=True)
     nro = OUT / "sonicriders-switch2.nro"
     subprocess.run([str(executable(dkp / "tools/bin/elf2nro")), str(elf), str(nro), "--nacp=" + str(nacp),

@@ -2058,3 +2058,12 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   startup and an ImGui name keyboard avoid assuming native loader argv/relaunch or swkbd support.
 - Built with the pinned SDK [confirmed]; latest recorded build 2446e5e042d6. Hardware and cold package
   tests remain unproven. Existing native gameplay/platform changes were kept. No private music code copied.
+
+### 2026-11-21: native beta deployment
+
+- Native beta b909ac94a9dc has a distinct Online Beta 1 menu title. Installed only as the separate online NRO;
+  staged/installed NRO and sidecar SHA-256 readbacks verified, prior online pair retained, normal NRO/manifest
+  and settings/environment files unchanged [confirmed]. Hardware gameplay remains pending.
+- Source-only native candidate ZIP passes archive content/source checks; its existing stable-runtime audit
+  rejects the changed runtime because it pins an older accepted baseline. That audit was not weakened or
+  repointed. Native test/acceptance and cold Sandbox validation are still required before a release.

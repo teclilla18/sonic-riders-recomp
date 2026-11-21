@@ -5,6 +5,7 @@
 - Dedicated LAN Online application, compatible with the main-based beta on PC, Switch and Android.
 - Controller name keyboard, automatic discovery, loading screen, compatibility check and disc read-ahead.
 - Native build tested by compilation only; hardware and cold setup validation remain pending.
+- The homebrew menu names the dedicated application "Riders Plus Online Beta 1".
 
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 

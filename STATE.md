@@ -1,4 +1,4 @@
-# State (2026-11-20): native Online Beta 1 candidate
+# State (2026-11-21): native Online Beta 1 candidate
 
 This branch is the separate native Switch 2 candidate, based on the public Alpha 3 tag 67710d8.
 It is not merged to main and has not been released.
@@ -10,13 +10,14 @@ It is not merged to main and has not been released.
 - Dedicated online startup (SR_ONLINE_DEFAULT), including loaders that do not pass argv.
 - Controller keyboard for names; open this dedicated NRO rather than relying on native relaunch support.
 - Deterministic read-ahead, two 256 KiB windows, helper core 2; tester bug form.
-- Native build passes with the pinned 20261117 SDK. Latest recorded build 2446e5e042d6.
+- Native build passes with the pinned 20261117 SDK. Online app title is Riders Plus Online Beta 1. Latest recorded build b909ac94a9dc.
 
 ## Tested and limits
 
 Shared code on PC: discovered-lobby race finish, all compared checksums equal through 24,600.
 PC/OLED and PC/Android race segments and Android process restart tested on the main-based candidate.
-Those tests do not validate this native binary. No native hardware test or cold package test yet.
+Those tests do not validate this native binary. Online NRO/sidecar staged and installed via FTP with readback verification; normal pair/configuration preserved.
+No native gameplay or cold package test yet.
 Music loader is absent. Texture-pack first-use stutter and #35 remain known issues.
 
 ## Next
