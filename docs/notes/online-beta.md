@@ -61,6 +61,12 @@ zero means unavailable. An emulator or PC run cannot prove a Switch CPU gain.
   returned the expected bytes while the actual cache worker ran.
 - **Tested, actual PC host protocol**: malformed packets, discovery, incompatible lobby/game rejection, and
   acceptance of a different build string with the same compatibility number.
+- **Tested, PC (2026-11-21)**: Windows restart to Online keeps the original command line, so an explicit disc
+  path outside the game folder (and spaced paths) survives; harness from a spaced folder + game with an outside ISO
+  and `--online` reached the lobby (capture checked). Back to offline (`SR_LOBBY_TEST=offline`, the button's own
+  calls): the game continued offline to the intro, no `[net]` lines, card copy and original byte-identical.
+- **Native package audit**: baseline is released Switch 2 Alpha 3 (67710d8, build bc9dd55883f6; user's choice
+  2026-11-21); only the listed Online Beta runtime files may differ (`tools/audit_switch2_release.py`).
 - **Still needed**: native Switch 2 hardware, slow-SD stutter comparison, cold package tests (ask before Sandbox),
   user acceptance and explicit permission before a release, issue post or Discussions thread.
 

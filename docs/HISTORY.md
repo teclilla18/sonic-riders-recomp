@@ -2107,3 +2107,17 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Final OLED core-2 menu/cache check: handheld CPU 1785 / GPU 614.4 / MEM 2133 MHz logged, no affinity failure.
   This short check did not repeat the race. Native Switch 2 online-only package/deployment prepared separately;
   hardware gameplay and cold setup candidates still pending. No public release or post.
+
+### 2026-11-21 (later): desktop relaunch, Back to offline, native audit baseline
+
+- Windows restart to Online rebuilt only `exe --online`, dropping an explicit disc path (found by review). Fix: reuse
+  the original command line and append `--online` (a5fc6a2). Tested on PC with a spaced folder and an outside ISO
+  [confirmed]; the menu button itself was not clicked (the restart code was run by a harness). Linux still drops it.
+- Back to offline on PC: game went on to the intro, no net session, memory card unchanged [confirmed].
+- Native package audit rebased on released Alpha 3 plus the Online Beta files (user's choice); audit PASS for
+  bd12a07. PC/Switch/Android candidates rebuilt from a5fc6a2; all four archive reviews PASS. Switch 2 cross-play
+  still not played.
+- Cold Windows Sandbox (from the a5fc6a2 zips, normal + spaced path): PC PASS, Android PASS [confirmed].
+- Switch 2 package: the homebrew menu shows one app per folder, so the online NRO next to the normal one was hidden on
+  the user's Switch 2, and its setup would have replaced the normal app. Fixed on `codex/online-beta-switch2` (7cc264a):
+  own folder `/switch/sonicriders-switch2-online/`; data stays in `/switch/sonicriders-switch2/`.
