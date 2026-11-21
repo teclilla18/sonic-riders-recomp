@@ -24,8 +24,8 @@ Branch `claude/music-loader` (2026-11-20), not released. Players add their own s
 - **Current stage**: u32 at **REL bss + 0x17928** (= `0x806129A8` in the original game, where bss follows the module;
   in the port the REL runs at 0x81800000, bss at `g_rel_bss`). 1-16 in Grand Prix stages [confirmed: Metal City 1,
   Night Chase 9, Babylon Garden 6 on Switch 1].
-- **D-pad**: player 1 controller struct `0x801AF9F0` + 0x8 (held). Sonic Riders DX's song pick (codes.akn insert at
-  `0x80438AF0`) uses the highest of bits 0x80/0x40/0x20/0x10 for song 1-4 and 0x01 for the original; we copy it.
+- **D-pad**: player 1 controller struct `0x801AF9F0` + 0x8 (held). The highest of bits 0x80/0x40/0x20/0x10 picks song 1-4,
+  0x01 the original (the game reads its stage song at `0x80438AF0`).
   All four bits seen on Switch 1 (0080, 0040, 0020, 0010); which physical direction is which: still to note.
 
 ## Conversion (music_convert.c)

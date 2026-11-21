@@ -7,8 +7,8 @@
  * The game has 8 stage song files (S1.ADX-S8.ADX); stages 9-16 reuse those of stages 1-8. mods.c makes each of
  * them a "music slot" on the virtual disc (as large as its largest song) and asks music_pick() which file to
  * serve when the game starts reading it, so every one of the 16 stages gets its own list:
- *   - player 1 holds a direction on the d-pad while the race loads: that song of the list (as Sonic Riders DX does:
- *     the same 4 buttons of the game's controller struct, first to fourth song; A held: the original song);
+ *   - player 1 holds a direction on the d-pad while the race loads: that song of the list (bits 0x80/0x40/0x20/
+ *     0x10 of the game's controller struct: first to fourth song; 0x01 held: the original song);
  *   - otherwise, with shuffle on (the default), a weighted random pick that never repeats the last song;
  *   - shuffle off: the first song (or the one music.ini marks `often`).
  * The stage is the race setup's stage number (REL bss +0x17928, 1-16). No songs are shipped: people add their own.
@@ -221,7 +221,7 @@ static uint32_t rnd(void) {
  *   [Metal City]
  *   shuffle = on
  *   original = off            (the game's own song: off | rare | normal | often)
- *   dx-music/1 (DX 00).adx = often
+ *   my-pack/song 1.ogg = often
  * They are read after the packs (so they win over a pack's music.ini) and written on every change. */
 const char* platform_settings_path(void);
 static int g_user_loaded;
@@ -305,7 +305,7 @@ const char* music_pick(int k, uint64_t* size) {
     uint32_t held = mem_r32(PAD1_HELD);
     int pick = -3;
     const char* how = "";
-    /* DX's buttons: the highest of 0x80/0x40/0x20/0x10 picks the first to fourth song, 0x01 the original */
+    /* the highest of 0x80/0x40/0x20/0x10 picks the first to fourth song, 0x01 the original */
     uint32_t b = held & 0xF1u;
     if (b) {
         int bit = 31 - __builtin_clz(b);  /* 7..4 or 0 */
