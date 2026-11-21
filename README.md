@@ -1,3 +1,5 @@
+<p align="center"><b>New: Riders Plus has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
+
 <p align="center">
   <img src="docs/images/switch2-poster.jpg" width="100%" alt="Sonic Riders Recomp: now on Nintendo Switch 2! Sonic on his Extreme Gear in the sky. Original artwork by Lanmana.">
 </p>
