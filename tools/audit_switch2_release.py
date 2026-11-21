@@ -47,9 +47,18 @@ def audit(path):
             if n=='release-metadata.json':
                 meta=json.loads(data); assert meta['source_commit']==commit and meta['higher_fps_included'] and meta['default_fps']==60 and meta['unlimited_experimental']
         assert actual==expected, ('Unexpected/missing entries',actual^expected)
-    # Runtime/config/shaders must exactly match the user-selected tested alpha baseline.
-    baseline = '80304cace54ad3c138ddf3af288f27578cd6994c'
-    assert not git('diff',baseline,'HEAD','--','runtime','config').strip(), 'Runtime/config differs from accepted 0d995f3def88 source'
+    # Runtime/config must match the user-selected accepted baseline (released Switch 2 Alpha 3, user 2026-11-21),
+    # except for the Online Beta's own files listed here; any other runtime/config change fails.
+    baseline = '67710d8'
+    online_beta = {'runtime/src/' + n for n in (
+        'di.c', 'disc.c', 'disc_cache.c', 'lan_lobby.c', 'lan_lobby.h', 'main.c', 'menu.cpp', 'net_compat.h',
+        'netplay.c', 'online_boot.c', 'online_boot.h', 'overlay.h', 'platform/android/render_vk.c',
+        'platform/host/audio_sdl.c', 'platform/host/platform_host.c', 'platform/host/render_gl.c',
+        'platform/switch/audio_switch.c', 'platform/switch/platform_switch.c', 'platform/switch/render_deko.c',
+        'platform/switch2/platform_switch2.c', 'settings.c', 'settings.h')}
+    changed = set(git('diff', '--name-only', baseline, 'HEAD', '--', 'runtime', 'config').decode().split())
+    extra = sorted(changed - online_beta)
+    assert not extra, ('Runtime/config differs from accepted Alpha 3 (bc9dd55883f6) outside the Online Beta files', extra)
     checksum=hashlib.sha256(Path(path).read_bytes()).hexdigest()
     assert (Path(str(path)+'.sha256')).read_text().split()[0]==checksum
     report={'source_commit':commit,'zip':Path(path).name,'bytes':Path(path).stat().st_size,'sha256':checksum,

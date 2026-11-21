@@ -89,7 +89,7 @@ def readme_first(flavor, version):
                 "Output: build/switch2/sd/switch/sonicriders-switch2/. Copy to /switch/sonicriders-switch2/ with your own image.\r\n"
                 "Existing saves/settings/caches/env are retained. Original Switch folders are separate.\r\n"
                 "Fresh default: 60 fps, no automatic exit. Hold Minus ~0.5s for menu; Quit Game and confirm returns to hbmenu.\r\n"
-                "Hardware-tested baseline: build0d995f3def88/80304ca; firmware23.0.1, kaiHEN20261117.1 via Seedsow.\r\n"
+                "Accepted baseline: Switch 2 Alpha 3 (build bc9dd55883f6, source 67710d8) plus the Online Beta files only.\r\n"
                 "Launch via hold-R on a native Switch 2 game; this is native homebrew, not Switch 1 compatibility mode.\r\n"
                 "Known: severe persistent Race Select audio distortion, sometimes preceded by a freeze; normal60 and leaving the menu may not recover it; music or announcer dropout and startup/cache-save hitches. Playable experimental alpha; not bug-free. Switch2 default2x; live resolution changes disabled. Close game, edit settings.ini resolution=0 (1x) or2 (2x), restart. Existing choices retained. Extended play, other firmware/loaders, docking/sleep/multiplayer need testing.\r\n"
                 "Unlimited rendering is opt-in and experimental; fresh installs use60FPS. No universal performance guarantee.\r\n"
@@ -368,8 +368,8 @@ def main():
         files.append(("SOURCE_COMMIT", (full_commit + "\n").encode()))
         deps = json.loads(git("show", args.ref + ":setup/toolchain.json"))
         metadata = {"version": args.version, "source_commit": full_commit,
-                    "runtime_baseline_commit": "80304cace54ad3c138ddf3af288f27578cd6994c",
-                    "accepted_baseline_build": "0d995f3def88", "higher_fps_included": True, "default_fps": 60, "unlimited_experimental": True,
+                    "runtime_baseline_commit": "67710d8",
+                    "accepted_baseline_build": "bc9dd55883f6", "higher_fps_included": True, "default_fps": 60, "unlimited_experimental": True,
                     "sdk": deps["switch2"]["sdk"], "shader_compiler_ndk": deps["android"]["ndk"],
                     "imgui": deps["imgui"], "devkitpro_packages": [p for p in deps["devkitpro"]["packages"] if "devkita64-" in p["url"] or "switch-tools-" in p["url"]]}
         files.append(("release-metadata.json", (json.dumps(metadata, indent=2)+"\n").encode()))
