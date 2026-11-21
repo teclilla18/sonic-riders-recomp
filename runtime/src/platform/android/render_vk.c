@@ -2578,5 +2578,7 @@ void render_start(void) {
 }
 
 #if defined(SR_IOS) || defined(__SWITCH2__)
-void render_main_loop(void) { render_thread(NULL); }
+_Atomic int g_render_loop_running; /* online_boot.c: blank frames need the loop (Switch 2/iOS) */
+void render_main_loop(void) {
+    g_render_loop_running = 1; render_thread(NULL); }
 #endif

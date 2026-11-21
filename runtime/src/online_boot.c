@@ -31,9 +31,18 @@ void online_lobby_finish(const char* spec,const char* name,const char* peer) {
     snprintf(other,sizeof other,"%s",peer?peer:"");
     atomic_store(&lobby,spec?2:3);
 }
-void online_loading_set(int on) { atomic_store(&loading,on); }
+void online_loading_set(int on) {
+    static int allowed=-1; /* SR_ONLINE_LOADING=0: no black loading screen (Switch 2 device-loss test) */
+    if (allowed<0) { const char* e=getenv("SR_ONLINE_LOADING"); allowed=!(e && !strcmp(e,"0")); }
+    atomic_store(&loading,on && allowed);
+}
 int online_loading(void) { return atomic_load(&loading); }
 void online_present_blank(void) {
+#if defined(__SWITCH2__) || defined(SR_IOS)
+    /* direct SR_NET: netplay waits on the main thread before render_main_loop starts; no frame can be shown */
+    extern _Atomic int g_render_loop_running;
+    if (!atomic_load(&g_render_loop_running)) { platform_sleep_ns(16000000); return; }
+#endif
     GxFrame* f=render_take_free_frame();
     f->nverts=f->nidx=f->nunis=f->nretired=f->nxchunks=f->nxtabs=0;
     f->wide_k=1.0f; f->in_race=0;

@@ -101,6 +101,9 @@ static GcPad read_player(int i, unsigned* ov) {
      * half connected; either way it is held sideways */
     int single_left = (style & HidNpadStyleTag_NpadJoyLeft) && !(style & HidNpadStyleTag_NpadJoyDual);
     int single_right = (style & HidNpadStyleTag_NpadJoyRight) && !(style & HidNpadStyleTag_NpadJoyDual);
+    /* Switch 2 with both Joy-Cons attached reports Handheld|JoyDual with only the left half marked connected
+     * (style 6, attributes 7): that is handheld play, never a sideways Joy-Con (d-pad down had become A) */
+    if (style & HidNpadStyleTag_NpadHandheld) handheld = 1;
     if (style & HidNpadStyleTag_NpadJoyDual) {
         int l = (attr & HidNpadAttribute_IsLeftConnected) != 0, r = (attr & HidNpadAttribute_IsRightConnected) != 0;
         if (l && !r) single_left = 1;
@@ -217,7 +220,10 @@ void input_pump(void) {
     uint64_t overlay_end = platform_now_ns();
     static uint64_t last_log, last_buttons;
     uint64_t now = platform_now_ns(), raw = padGetButtons(&g_pad[0]);
-    if (raw != last_buttons || now - last_log > 2000000000ULL) {
+    /* SR_INPUTLOG=1 only: each line is a slow SD write on Switch 2 (0.2-1.8 s seen) and froze the controls */
+    static int input_log = -1;
+    if (input_log < 0) { const char* e = getenv("SR_INPUTLOG"); input_log = e && atoi(e) > 0; }
+    if (input_log && (raw != last_buttons || now - last_log > 2000000000ULL)) {
         HidAnalogStickState s = padGetStickPos(&g_pad[0], 0);
         rt_log("[input2] raw=%llX ids=%X handheld=%d stick=%d,%d mapped=%04X menu=%d focus=%d", (unsigned long long)raw,
                g_pad[0].active_id_mask, g_pad[0].active_handheld, s.x, s.y, p[0].buttons, menu, appletGetFocusState());

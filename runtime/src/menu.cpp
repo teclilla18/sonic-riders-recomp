@@ -1010,11 +1010,36 @@ void lobby_window() {
             if (!f.compatible) ImGui::TextWrapped("Install the same Online Beta on both devices.");
             ImGui::PopID();
         }
+        /* Fallback when the network hides rooms (some routers drop console broadcasts): type the host's address. */
+        static char typed[48];
+        if (ImGui::Button("Join by address")) {
+            const char* dot=v->my_ip[0]?strrchr(v->my_ip,'.'):nullptr; /* start with this network's first three numbers */
+            if (dot) snprintf(typed,sizeof typed,"%.*s",(int)(dot-v->my_ip+1),v->my_ip); else typed[0]=0;
+            ImGui::OpenPopup("Host's address");
+        }
+        if (ImGui::BeginPopupModal("Host's address",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextWrapped("Type the address shown on the host's screen.");
+            ImGui::Text("%s_",typed);
+            const char* keys="123456789.0";
+            for (int i=0;keys[i];i++) {
+                ImGui::PushID(1000+i); char label[2]={keys[i],0};
+                if (ImGui::Button(label,ImVec2(64,48))) { size_t n=strlen(typed); if (n<15) { typed[n]=keys[i]; typed[n+1]=0; } }
+                if (i%3!=2 && keys[i+1]) ImGui::SameLine();
+                ImGui::PopID();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Delete",ImVec2(100,48))) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+            if (ImGui::Button("Join",ImVec2(100,48))) { settings_apply(); lan_lobby_join(typed,g_settings.online_name); ImGui::CloseCurrentPopup(); }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel",ImVec2(100,48))) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
         ImGui::EndDisabled();
     } else {
         for (int i=0;i<v->players;i++) ImGui::Text("Player %d: %s",i+1,v->names[i]);
         if (v->state==LAN_HOSTING) {
             if (v->players<2) ImGui::TextWrapped("Waiting for a player to join...");
+            if (v->players<2 && v->my_ip[0]) ImGui::TextWrapped("If they can't see your race, they can choose Join by address and type: %s",v->my_ip);
             ImGui::BeginDisabled(v->players!=2);
             if (focus_start) ImGui::SetKeyboardFocusHere();
             if (ImGui::Button("Start race")) lan_lobby_start();
@@ -1038,7 +1063,11 @@ void lobby_window() {
 
 void loading_screen() {
     ImDrawList* dl=ImGui::GetForegroundDrawList();
+#ifndef __SWITCH2__
     dl->AddRectFilled(ImVec2(0,0),ImVec2(OVERLAY_W,OVERLAY_H),IM_COL32(0,0,0,255));
+#endif
+    /* Switch 2: render_vk paints the black itself; a full-screen overlay layer uploaded every frame during the
+     * game's own loading lost the GPU at frame ~700 (4 of 4 runs), so only the two text lines go in the layer */
     const char* title="Loading online multiplayer";
     ImVec2 size=ImGui::CalcTextSize(title);
     dl->AddText(ImVec2((OVERLAY_W-size.x)/2,320),IM_COL32(255,255,255,255),title);
