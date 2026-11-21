@@ -90,7 +90,9 @@ Text that is still written by hand and may need a touch after big changes: the R
 - Keep artist credits: Switch 2 poster by Lanmana (signature must stay visible: don't crop its right side),
   game icon by cedry2kio. Keep the unofficial fan-project disclaimer in the footer and on `community.html#legal`.
 - Experimental builds are always orange and labelled "experimental alpha"; stable ones green "Stable".
-- No paid services, trackers, analytics or cookies. External loads: Google Fonts and GitHub's public API only.
+- External loads include Google Fonts and GitHub's public API. Google Analytics loads only after visitors opt in.
+  Its measurement ID and consent handling live in `assets/js/analytics.js`. The privacy details and preference
+  control are at `community.html#privacy`.
 - Accessibility: keep alt text on every picture, real buttons for controls, visible focus, reduced-motion support.
 
 ## Testing in Chrome

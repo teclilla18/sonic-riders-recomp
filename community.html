@@ -20,6 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Saira+Condensed:wght@600;700;800&family=Saira:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/site.css">
 <script>document.documentElement.classList.add("js")</script>
+<script src="assets/js/analytics.js" defer></script>
 
 </head>
 <body class="page-community">
@@ -105,9 +106,20 @@
       <li>Game screenshots on this site were captured by the project from its own builds, to show what the port does.</li>
       <li>The project's code is licensed under the <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/LICENSE">Mozilla Public License 2.0</a>,
         like the ZeldaWWHDRecomp translator it forks.</li>
-      <li>This site is static and hosted free on GitHub Pages. It sets no cookies; it remembers your guide tabs and ticked checkpoints only in your own browser,
-        and loads fonts from Google Fonts and release data from GitHub.</li>
     </ul>
+  </div>
+</section>
+
+<section class="section" id="privacy">
+  <div class="sec-head"><span class="lap">03 <i>/</i> PRIVACY</span><h2 class="slant">Website privacy</h2></div>
+  <div class="panel">
+    <p>This site is hosted by GitHub Pages and loads fonts from Google Fonts and release data from GitHub.
+      Your guide tabs, ticked checkpoints and analytics preference are remembered in your browser.</p>
+    <p>If you allow analytics, Google Analytics uses cookies to distinguish browsers and helps us measure
+      visits and page views. Google receives information such as the page visited, approximate location
+      and browser type. We use this to understand site traffic.
+      Read <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from sites that use its services</a>.</p>
+    <button class="btn btn-sm btn-ghost" id="analytics-settings" type="button" aria-controls="analytics-choice" hidden><span class="btn-in">Change analytics preference</span></button>
   </div>
 </section>
 
@@ -121,12 +133,19 @@
     </div>
     <nav class="footer-links" aria-label="Footer">
       <div><p class="eyebrow">Play</p><a href="download.html">Download</a><a href="guides.html">Install guides</a><a href="update.html">Updating</a><a href="faq.html">FAQ &amp; help</a></div>
-      <div><p class="eyebrow">Project</p><a href="riders-plus.html">Riders Plus rules</a><a href="./#road-to-v1">Road to v1.0</a><a href="community.html#credits">Credits</a><a href="community.html#legal">Legal</a></div>
+      <div><p class="eyebrow">Project</p><a href="riders-plus.html">Riders Plus rules</a><a href="./#road-to-v1">Road to v1.0</a><a href="community.html#credits">Credits</a><a href="community.html#legal">Legal</a><a href="community.html#privacy">Privacy</a></div>
       <div><p class="eyebrow">Community</p><a href="https://github.com/teclilla18/sonic-riders-recomp">GitHub</a><a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">Report a bug</a><a href="https://github.com/teclilla18/sonic-riders-recomp/discussions">Discussions</a><a href="https://ko-fi.com/teclilla18">Support on Ko-fi</a><span data-socials="links"><a href="https://bsky.app/profile/ridersplus.bsky.social" rel="me">Bluesky</a><a href="https://www.instagram.com/ridersplusgame/" rel="me">Instagram</a><a href="https://www.facebook.com/ridersplusgame" rel="me">Facebook</a></span><a href="mailto:ridersplusgame@gmail.com">E-mail us</a></div>
     </nav>
   </div>
   <p class="footer-base muted">Code: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/LICENSE">MPL-2.0</a> · Switch 2 poster art by <a href="https://www.deviantart.com/lanmana">Lanmana</a> · Site source: <a href="https://github.com/teclilla18/sonic-riders-recomp/tree/gh-pages">gh-pages branch</a></p>
 </footer>
+<aside class="analytics-choice" id="analytics-choice" aria-label="Website analytics" hidden>
+  <p>Allow Google Analytics to measure visits? It uses cookies. <a href="community.html#privacy">Privacy details</a></p>
+  <div class="analytics-actions">
+    <button class="btn btn-sm btn-ghost" type="button" data-analytics-choice="allow"><span class="btn-in">Allow analytics</span></button>
+    <button class="btn btn-sm btn-ghost" type="button" data-analytics-choice="decline"><span class="btn-in">Decline</span></button>
+  </div>
+</aside>
 
 <script src="assets/js/site.js" defer></script>
 </body>
