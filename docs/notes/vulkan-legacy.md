@@ -51,6 +51,9 @@ do not claim universal pixel equivalence from this route.
 Diagnostics (not persisted in settings):
 
 - `SR_VK_FORCE_LEGACY=1`: force traditional render passes; startup logs the path.
+- PowerVR (vendor 0x1010; #33 Redmi A3 GE8320 showed only a small top-left corner of the race): EFB passes over the
+  whole image and colour clears drawn as quads by default (`SR_VK_FULLAREA`, `SR_VK_QUADCLEAR` = 0/1 override); startup logs
+  `[vk] vendor ... device ...`. Not reproducible on the S23 (Adreno) even with legacy + no dual-source + no push descriptors.
 - `SR_VK_NODUALSRC=1`: select single-source shaders/separate alpha writes.
 - `SR_VK_NOPUSH=1`: exercise the existing descriptor-pool fallback.
 - `SR_VK_FAKELOST=<frame>`: existing simulated device-loss recovery test.
