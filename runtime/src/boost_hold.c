@@ -20,7 +20,7 @@
  * Speed while held: the game sets the boost speed once at the start, and after a turn or a bump its normal
  * acceleration climbs back very slowly. A held boost pulls the speed (+0xAAC) back up to the boost speed (level
  * block +0x34) quickly instead. Super Sonic (Riders Plus): the longer it is held, the higher his boost speed and
- * the harder the pull, rising exponentially to SUPER_CAP_KMH (super_tuning.h) after SUPER_RAMP frames (top speed +0xAB4 raised with
+ * the harder the pull, rising exponentially to his tier's cap (super_tuning.h: 270 / 290 / 325 km/h) after SUPER_RAMP frames (top speed +0xAB4 raised with
  * it; the game puts its own back when the boost ends, fn 81896C9C). Integer curve, no libm: the same on every
  * machine in an online race.
  *
@@ -50,7 +50,11 @@
 #define KMH            (1.0 / 216.0)
 #define PULL           0.10      /* of the gap to the boost speed, per frame */
 #define PULL_MIN       (1.5 * KMH)
-#define SUPER_CAP      (SUPER_CAP_KMH * KMH)
+int lv_tier(uint32_t racer);  /* game_levels.c: 0 base, 1 Lv. 4, 2 Lv. 5 */
+static double super_cap(uint32_t racer) {
+    int t = lv_tier(racer);
+    return (t == 2 ? SUPER_CAP_LV5_KMH : t == 1 ? SUPER_CAP_LV4_KMH : SUPER_CAP_BASE_KMH) * KMH;
+}
 
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
 static uint32_t g_extra[8];      /* frames added to the current boost (log) */
@@ -77,9 +81,10 @@ static void hold_speed(int i, uint32_t racer, uint32_t blk) {
     float boost = ldf(blk + 0x34u);
     if (!(boost > 0.0f) || boost > 5.0f) return;  /* not a speed */
     double target = boost, pull = PULL;
-    if (super_racer(racer) && boost < SUPER_CAP) {
+    double cap = super_racer(racer) ? super_cap(racer) : 0.0;
+    if (super_racer(racer) && boost < cap) {
         uint32_t f = ramp(g_held[i]);
-        double extra = SUPER_CAP - boost;
+        double extra = cap - boost;
         extra = extra * (double)f;
         extra = extra / 4096.0;
         target = boost + extra;

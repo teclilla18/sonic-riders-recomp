@@ -48,4 +48,30 @@ SR_INPUT=$(py -3 tools/balance_route.py super|sonic|knuckles) build/host-mingw/s
 - He is still clearly the fastest racer on this route [confirmed on PC]. Whether the cut feels right in play is
   for the user to judge on a Switch [uncertain until played].
 
+## Second and third pass (same day, user's direction)
+
+- User: "his top boost speed isn't the problem, his base stats are". Base stats (game_levels.c k_super, now
+  SUPER_TOP/DRIFT/BOOST_* in super_tuning.h) near vanilla 182/100/250: top 186/190/195, drift 102/105/108, boost
+  255/260/265 (was 195/220/240, 110/125/140, 270/300/330).
+- After playing: held-boost top per tier 270 / 290 / 325 km/h (was 350 for all); Super's tiers at 175 / 250 rings
+  (others keep 200 / 300); flying through air dash rings (site 8187AC90) 45 % -> 15 %.
+
+| Super Sonic build (same route) | Finish |
+|---|---|
+| Original Riders Plus | 155.90 s |
+| First pass (cap 300, ring cuts) | 167.33 s |
+| Near-vanilla stats, cap 350, ring cuts | 159.38 s |
+| Same with Hold to boost off | 177.62 s |
+| **Third pass (tier caps 270/290/325, tiers 175/250, flying 15 %)** | **171.97 s** |
+| Normal Sonic (Blue Star) | 206.82 s |
+| Vanilla Super Sonic (Riders Plus off) | lap 1 57.65 s, out of rings at ~69 s, never finished |
+
+- On this route the held boost was worth ~18 s and the base stats ~3.5 s; vanilla Super is already the fastest racer
+  until his rings run out, so the ring economy is what removes his drawback [confirmed on this route; no steering or
+  tricks, so not a player's race].
+- Third pass: max rings 173 (never reached the 175 tier here), held boosts ended at 259-262 km/h, flying paid 0
+  rings on this route (it does not take the flight paths), so the flying cut is unmeasured here [uncertain].
+- Possible double pay to check: site 818D2528 pays 5000 x 1/3 per event in spin sections (60 events, 91 rings) on
+  top of SPIN_FUEL [uncertain].
+
 Logs (local, not in git): `.local/super-balance/build/bal/{before,after}-{super,sonic,knuckles}.log`.

@@ -44,10 +44,10 @@ static const float k_boost[3] = {1.0f, 1.10f, 1.20f};
 static const float k_drift[3] = {1.0f, 1.10f, 1.25f};
 /* Super only, Riders Plus on: target top/drift/boost from the unmodified 182/100/250 live baseline.
  * Ratios preserve stat mods; always multiply the captured unscaled field, including the Base tier. */
-static const float k_super[3][3] = {
-    {195.0f / 182.0f, 220.0f / 182.0f, 240.0f / 182.0f},
-    {110.0f / 100.0f, 125.0f / 100.0f, 140.0f / 100.0f},
-    {270.0f / 250.0f, 300.0f / 250.0f, 330.0f / 250.0f},
+static const float k_super[3][3] = {  /* super_tuning.h */
+    {SUPER_TOP_BASE / 182.0f, SUPER_TOP_LV4 / 182.0f, SUPER_TOP_LV5 / 182.0f},
+    {SUPER_DRIFT_BASE / 100.0f, SUPER_DRIFT_LV4 / 100.0f, SUPER_DRIFT_LV5 / 100.0f},
+    {SUPER_BOOST_BASE / 250.0f, SUPER_BOOST_LV4 / 250.0f, SUPER_BOOST_LV5 / 250.0f},
 };
 
 #define BLK3 0x94Cu  /* the third (Lv. 3) stat block */
@@ -65,6 +65,12 @@ typedef struct {
     int applied;                 /* owned writes, including Super's balanced Base tier (ext == 0) */
 } LvRacer;
 static LvRacer g_lv[8];
+/* boost_hold.c: a racer's Riders Plus tier, 0 = base, 1 = Lv. 4, 2 = Lv. 5 */
+int lv_tier(uint32_t racer) {
+    uint32_t d = racer - GAME_PLAYERS;
+    if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE) return 0;
+    return g_lv[d / GAME_PLAYER_SIZE].ext;
+}
 static const uint32_t k_off[3] = {OFF_TOP, OFF_DRIFT, OFF_BOOST};
 
 static int racer_index(uint32_t racer) {
@@ -361,7 +367,8 @@ void lv_racer_update(uint32_t racer) {
     int want = 0;
     if (g_ring_cap != 100 && (super || ld8(racer + 0x102E) == 2)) {
         uint32_t rings = ld32(racer + 0xB98);
-        want = rings >= LV5_RINGS ? 2 : rings >= LV4_RINGS ? 1 : 0;
+        uint32_t lv4 = super ? SUPER_LV4_RINGS : LV4_RINGS, lv5 = super ? SUPER_LV5_RINGS : LV5_RINGS;
+        want = rings >= lv5 ? 2 : rings >= lv4 ? 1 : 0;
     }
     int apply = want || (super && g_ring_cap != 100);
     if (want != r->ext || changed || apply != r->applied) write_level(racer, r, want);
