@@ -216,6 +216,13 @@ decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);
 8193E0A0 after c->r[0] = 0;
 8193EA10 after c->r[0] = 0;
 
+# ---- Online races have no CPU racers (user, 2026-11-22; netplay.c netplay_no_cpus = the online rules, the same on
+# every machine and in recordings made with them). Player Entry (fn_1_13D2F0) sets the racer count 8021B8C0 when the
+# race starts: 8 with 1-2 players, else 4 (li r0 8 / li r0 4, r17 = the human players). Online it becomes r17, so the
+# game creates only the players' racers. Offline it is unchanged. The runtime reads 8021B8C0 through GAME_MODE().
+decl int netplay_no_cpus(void);
+8193F6DC before { if (netplay_no_cpus()) c->r[0] = c->r[17]; }
+
 
 # ---- Super Sonic's invisible ring magnet (game_levels.c lv_magnet_*): the Magnetic Barrier item's task kept on for him,
 # its 600-step timer held, its drawing skipped. 81815EF0: his fuel step (racer r29, stack r1); 818F0D38: the task's

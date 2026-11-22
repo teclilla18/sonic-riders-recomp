@@ -36,6 +36,10 @@
 #define GAME_TOP_MODE_MENUS  1u
 #define GAME_TOP_MODE_RACE   8u   /* demo and Free Race seen (notes/game-addresses.md) */
 #define GAME_TOP_MODE_MULTIPLAYER 4u /* local 3P/4P Free Race, confirmed in PC RAM */
+/* 8021B8C0 is in fact the race's racer count: Player Entry stores 8 (1-2 players) or 4 (3-4 players) at 8193F6DC
+ * (2026-11-22), the menus 1. Online races have no CPU racers (patches.txt: the count = the human players, 2-4), so
+ * the runtime reads it through GAME_MODE(): 2 counts as 8 (the 1-2 player race), 3 as 4. */
+#define GAME_MODE() (ld32(GAME_TOP_MODE) == 2u ? GAME_TOP_MODE_RACE : ld32(GAME_TOP_MODE) == 3u ? GAME_TOP_MODE_MULTIPLAYER : ld32(GAME_TOP_MODE))
 /* mode 8 is not "racing": it can stay on in menus (Player Entry seen; the user's Extras/Theater after
  * story mode). This .sdata word is 1 in every menu dumped and 0 in races, paused or not (2026-11-07,
  * RAM dumps: Free Race, pause, quit dialog vs title, Player Entry, Normal Race, Extras) [likely]. */

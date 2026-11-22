@@ -76,6 +76,17 @@ The original Switch worker uses core 2: attempting core 3 failed its allowed-cor
 Switch logs operation mode and read-only CPU/GPU/memory rates at startup and periodically during a session;
 zero means unavailable. An emulator or PC run cannot prove a Switch CPU gain.
 
+## No CPU racers online (2026-11-22, NET_COMPAT 3)
+
+User's rule: online races never have CPU racers. Player Entry sets the racer count 8021B8C0 (8 with 1-2 players,
+else 4) at 8193F6DC; with the online rules (`netplay_no_cpus`, the same on every machine and in recordings made with
+them, also `SR_ONLINE_RULES=1`) it stores r17, the human players, so only their racers are created. The runtime's
+race-mode checks read the word through `GAME_MODE()` (2 counts as 8, 3 as 4). Only Player Entry's store is changed:
+modes that set their own count elsewhere (World Grand Prix at 8194B4F8 [likely], Tag, Survival, story) are not
+covered yet [uncertain]. Tested [confirmed, PC]: two copies over localhost (`tools/net_route_2p.py` online-p1 /
+online-p2local): Metal City with only the two players (1st/2nd, two map markers), both crossed the finish (frames
+19,118 / 20,322), 28,200 frames with every checksum equal on both; offline (empty card, p1 route) still 8 racers.
+
 ## Tests and remaining checks
 
 - **Tested, PC**: two copies joined through the discovered list, raced to a finish capture, and kept all compared

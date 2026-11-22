@@ -70,13 +70,13 @@ static GxFrame* frame(void) {
         static unsigned menu_frames;
         /* after the finish line (results screen: menu flag 0) the rank/name/time rows must stay together */
         menu_frames = ld32(GAME_MENU_FLAG) || ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED ? menu_frames + 1 : 0;
-        int racing = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && menu_frames < 8;
+        int racing = GAME_MODE() == GAME_TOP_MODE_RACE && menu_frames < 8;
         /* bloom: races only. Mode 8 alone stays on in menus (character select / Player Entry after a race,
          * notes/game-addresses.md), so also the menu flag, 8 frames in a row to leave (it blips in races);
          * the results screen (menu flag 0) keeps it */
         static unsigned bloom_menu_frames;
         bloom_menu_frames = ld32(GAME_MENU_FLAG) ? bloom_menu_frames + 1 : 0;
-        g_frame->in_race = ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && bloom_menu_frames < 8;
+        g_frame->in_race = GAME_MODE() == GAME_TOP_MODE_RACE && bloom_menu_frames < 8;
         /* the HUD goes to the edges whenever the picture is wide: Fit to screen, or an online session or recording
          * whose (host's) camera is wide on a machine set to 4:3 (the joiner's HUD stayed in the middle, 2026-11-14) */
         int fit = g_settings.screen == SCREEN_FIT || (settings_wide_k_fixed() && k > 1.0f);
@@ -86,7 +86,7 @@ static GxFrame* frame(void) {
             static uint32_t last_fl = ~0u;
             if (g_gx.xf_reg[GX_XR_WIDE_FLAGS] != last_fl && k > 1.0f)
                 rt_log("[wide] frame %llu: game mode %u, menu flag %u, race phase %X, HUD flags %u", g_frames,
-                       ld32(GAME_TOP_MODE), ld32(GAME_MENU_FLAG), ld32(GAME_RACE_PHASE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
+                       GAME_MODE(), ld32(GAME_MENU_FLAG), ld32(GAME_RACE_PHASE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
             last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
         }
         float fov = (float)g_fov_scale * boost_hold_fov();  /* Super Sonic's held boost widens the view */
@@ -992,7 +992,7 @@ static int hud_join(const float a[4], const float b[4], int quad) {
 }
 static void local_hud_frame(GxFrame* f) {
     if (!(f->wide_k > 1.0f)) return;
-    uint32_t mode = ld32(GAME_TOP_MODE);
+    uint32_t mode = GAME_MODE();
     if ((mode != GAME_TOP_MODE_RACE && mode != GAME_TOP_MODE_MULTIPLAYER) ||
         ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED) return;
     /* Respect original 4:3, menus/results, and the online picture-aspect policy. */

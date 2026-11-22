@@ -2,6 +2,7 @@
 
 ### Online Beta 1 candidate (not released)
 
+- Online races have no CPU racers: only the players race (offline races keep them).
 - Online settings tab and a controller-driven LAN lobby: choose a name, host a race or join a discovered race.
 - A black, silent "Loading online multiplayer" screen covers startup until Mode Select.
 - Compatible platform builds can play together; incompatible online versions are refused before racing.

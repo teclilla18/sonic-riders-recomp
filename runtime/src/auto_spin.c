@@ -30,7 +30,7 @@ static const int8_t k_dx[4] = {0, 100, 0, -100}, k_dy[4] = {100, 0, -100, 0};
 
 static int in_race(void) {
     static int s_was;
-    uint32_t mode = ld32(GAME_TOP_MODE);
+    uint32_t mode = GAME_MODE();
     int now = (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) &&
               ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
     if (now && !s_was) {  /* which controller drives which racer (0 = not a controller: a CPU) */

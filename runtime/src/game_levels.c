@@ -78,7 +78,7 @@ static int super_racer(uint32_t racer) {
 }
 
 static int active_race(void) {
-    uint32_t mode = ld32(GAME_TOP_MODE);
+    uint32_t mode = GAME_MODE();
     return (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) &&
            ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
 }

@@ -659,6 +659,9 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
 
 int netplay_ports(void) { return g_ports; }
 int netplay_online_save(void) { return g_online_save; }  /* main(): a fresh card in memory */
+/* patches.txt (Player Entry's racer count): online races have only the players, no CPU racers (user, 2026-11-22).
+ * The same on every machine of a session, and in a recording made with the online rules */
+int netplay_no_cpus(void) { return g_online_rules; }
 /* an online session is under way (not ended): the host-clock backstops (sched.c alarm, vi.c retrace)
  * must not decide anything then, since the other machine's clock differs; a stall only slows the game */
 int netplay_in_session(void) { return g_net && !g_net_ended; }
@@ -759,7 +762,7 @@ static void online_rules(GcPad* pads) {
         online_loading_set(0);
         rt_log("[net] frame %u: main menu reached, the host has the menus", g_frame + 1);
     }
-    if (!g_reached_tracks && ld32(GAME_TOP_MODE) != GAME_TOP_MODE_RACE) {
+    if (!g_reached_tracks && GAME_MODE() != GAME_TOP_MODE_RACE) {
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p] = neutral;
         if ((g_frame + 1) % 20 < 2) pads[0].buttons = screen >= 0 ? 0x0100u /* A */ : 0x1000u /* START */;
         return;
@@ -780,9 +783,9 @@ static void online_rules(GcPad* pads) {
         }
         return;
     }
-    if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
+    if (GAME_MODE() == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
-    else if (ld32(GAME_TOP_MODE) == GAME_TOP_MODE_RACE)
+    else if (GAME_MODE() == GAME_TOP_MODE_RACE)
         /* The phase turns "finished" when the FIRST player crosses the line, while the others still race (2026-11-21:
          * the OLED finished first and the S23's player 2 lost control). Each player's racer is handed to the CPU at
          * its own finish (racer +0xBC = 1, found by a per-racer probe of a two-copy race): a player is silenced for
