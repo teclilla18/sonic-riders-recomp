@@ -2124,3 +2124,14 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   hotspot vs PC and vs OLED raced with equal checksums; LAN regression passed.
 - GXSRTE texture pack: its blank `tex1_256x256_d8d7b29f...` hides the 1P-4P / COM markers [likely, file found
   fully transparent]; renamed to .png.off on the user's devices.
+
+## 2026-11-22: README website line; #33 PowerVR test build
+- README: one line at the very top announcing the website (b35298f).
+- #33 (Redmi A3, PowerVR GE8320, 32-bit, legacy render passes): the reporter's screenshot shows races as a blue
+  screen with only a small top-left corner of the scene; menus fine, some freezes. [confirmed] Not reproduced on the
+  S23 with the 32-bit APK, legacy path forced, no dual-source, no push descriptors and the reporter's settings
+  (4:3, 1x, sharpness 0): races draw normally.
+- Test 2 on `claude/android-armv7` (a06bdc5, not merged): on Imagination GPUs (vendor 0x1010) EFB passes cover the
+  whole image and colour clears are drawn as quads instead of vkCmdClearAttachments; SR_VK_FULLAREA / SR_VK_QUADCLEAR
+  = 0/1 override; startup logs `[vk] vendor ...`. Both forced on the S23: pictures unchanged. Setup zip posted on #33.
+- [uncertain] Whether either change fixes the PowerVR picture; the reporter's log decides.

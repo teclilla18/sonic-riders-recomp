@@ -1,4 +1,4 @@
-# State (2026-11-21, night)
+# State (2026-11-22)
 
 ## Released
 
@@ -12,6 +12,8 @@
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
 ## On main since v0.9.0 (docs only)
+
+- README: website announcement line at the very top (b35298f).
 
 - docs/TEXTURE-PACKS.md: texture packs on every device with nine drawn pictures; linked from the README (Get it
   line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
@@ -62,8 +64,10 @@
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
 4. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
    f0a106b8) to split build vs console, then bisect c572d99..be04843.
-5. **#33 32-bit Android**: branch `claude/android-armv7`; the reporter's APK ran but found no disc image; plain
-   copy-the-iso steps posted 2026-11-20, waiting. Code fix idea: on-screen message, accept an .iso in files/.
+5. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
+   (menus fine), but races show only a small top-left corner of the scene; not reproduced on the S23 (32-bit,
+   legacy path forced, reporter's settings). Test 2 posted 2026-11-22: on PowerVR, EFB passes over the whole image
+   + colour clears as quads (SR_VK_FULLAREA / SR_VK_QUADCLEAR). Waiting for the reporter's race log. [uncertain]
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 7. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
