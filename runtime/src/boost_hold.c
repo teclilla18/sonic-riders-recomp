@@ -20,7 +20,7 @@
  * Speed while held: the game sets the boost speed once at the start, and after a turn or a bump its normal
  * acceleration climbs back very slowly. A held boost pulls the speed (+0xAAC) back up to the boost speed (level
  * block +0x34) quickly instead. Super Sonic (Riders Plus): the longer it is held, the higher his boost speed and
- * the harder the pull, rising exponentially to 350 km/h after SUPER_RAMP frames (top speed +0xAB4 raised with
+ * the harder the pull, rising exponentially to SUPER_CAP_KMH (super_tuning.h) after SUPER_RAMP frames (top speed +0xAB4 raised with
  * it; the game puts its own back when the boost ends, fn 81896C9C). Integer curve, no libm: the same on every
  * machine in an online race.
  *
@@ -31,6 +31,7 @@
 #include "game_addrs.h"
 #include "runtime.h"
 #include "settings.h"
+#include "super_tuning.h"
 
 #define PAD_STRUCTS    0x801AF9F0u
 #define PAD_STRUCT_SZ  0x30u
@@ -49,12 +50,7 @@
 #define KMH            (1.0 / 216.0)
 #define PULL           0.10      /* of the gap to the boost speed, per frame */
 #define PULL_MIN       (1.5 * KMH)
-#define SUPER_CAP      (350.0 * KMH)
-#define SUPER_RAMP     240       /* frames held to reach SUPER_CAP: 4 s */
-/* Super Sonic's held boost costs this much more than the gear's rate (the user, 2026-11-20, after 3 laps on Switch 2:
- * "ring consumption should be nerfed ... almost twice as much"; 1.9x, then 2.3x after the ring magnet, then 2.9x; Switch 1) */
-#define SUPER_HOLD_COST_NUM 29
-#define SUPER_HOLD_COST_DEN 10
+#define SUPER_CAP      (SUPER_CAP_KMH * KMH)
 
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
 static uint32_t g_extra[8];      /* frames added to the current boost (log) */

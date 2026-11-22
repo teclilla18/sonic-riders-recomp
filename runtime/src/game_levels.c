@@ -30,6 +30,7 @@
 #include "gx_render.h"
 #include "runtime.h"
 #include "settings.h"
+#include "super_tuning.h"
 
 extern volatile int g_ring_cap;
 
@@ -85,17 +86,60 @@ static int active_race(void) {
 
 /* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
  * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
-#define REPLENISH_NUM 1
-#define REPLENISH_DEN 2   /* 50 % (fourth tuning, 2026-11-20: 30 % felt "too nerfed ... pointless") */
 /* the second tuning (the user, 2026-11-20: "still too broken", chains of hoops / grinds / objects grew the
  * game's reward each time): one step's air rewards count up to this many rings before the share above, and a
  * counted spin turn gives SPIN_FUEL (the game's 5000 x 0.1, about 0.45 rings; the third tuning) */
-#define REWARD_MAX_RINGS 8u   /* fourth tuning: was 4 */
-#define SPIN_FUEL 1600u        /* fifth tuning (user: more in spin sections): was 1000, now about 1.45 rings a turn */
 static uint32_t g_gain_racer, g_gain_start;  /* the racer the fuel step is on, and its fuel before the step */
 
 /* The fuel step fn 81815xxx (racer r29): just before it adds the step's air rewards (+0x988) to the fuel. */
+/* SR_BALLOG=1 (balance measurements, docs/notes/super-balance.md): player 1's racer once a second from the race
+ * start: time, speed, top, rings (+0xB98), fuel (+0x984), level, distance (sum of speed), boost frames; each lap
+ * (laps done = racer +0x102B); a summary at the finish (fuel gained / spent: sums of the fuel's rises and falls).
+ * Counts detclock steps (SR_DETCLOCK / SR_ONLINE_SAVE runs); log only, changes nothing. */
+static void bal_log(uint32_t racer) {
+    static int on = -1;
+    static uint32_t last, t, top_kmh, ringmax, boostf, lap, lap_t, fuel_prev;
+    static double gained, spent;
+    static double dist;
+    static int phase_prev;
+    uint32_t ppc_detclock_steps(void);
+    if (on < 0) { const char* e = getenv("SR_BALLOG"); on = e && *e && *e != '0'; }
+    if (!on || racer != GAME_PLAYERS) return;
+    uint32_t step = ppc_detclock_steps();
+    if (step == last) return;
+    last = step;
+    int phase = (int)ld32(GAME_RACE_PHASE);
+    if (phase == 0x10) { t = 0; dist = 0; top_kmh = 0; ringmax = 0; boostf = 0; lap = 0; lap_t = 0; gained = spent = 0; fuel_prev = ld32(racer + 0x984u); }
+    if (phase != 0xE && phase != GAME_RACE_FINISHED) { phase_prev = phase; return; }
+    double kmh = (double)u32_as_f32(ld32(racer + 0xAACu)) * 216.0;
+    uint32_t rings = ld32(racer + 0xB98u);
+    if (phase == 0xE) {
+        t++;
+        dist += kmh / 3.6 / 60.0;  /* metres if one game unit x 216 is km/h */
+        if ((uint32_t)kmh > top_kmh) top_kmh = (uint32_t)kmh;
+        if (rings > ringmax && rings < 100000u) ringmax = rings;
+        if (ld32(racer + 0xA28u) & 0x400u) boostf++;
+        int32_t fuel = (int32_t)ld32(racer + 0x984u), df = fuel - (int32_t)fuel_prev;
+        if (df > 0) gained += df; else spent -= df;
+        fuel_prev = (uint32_t)fuel;
+        if (ld8(racer + 0x102Bu) != lap) {  /* laps done (found 2026-11-22 by a byte scan over a whole race) */
+            lap = ld8(racer + 0x102Bu);
+            rt_log("[bal] LAP %u done at %.2f s (lap %.2f s), rings %u", lap, t / 60.0, (t - lap_t) / 60.0, rings);
+            lap_t = t;
+        }
+        if (t % 60 == 0)
+            rt_log("[bal] t %u s: speed %.0f top %.0f rings %u fuel %d lv %u dist %.0f boost %u char %u gear %u", t / 60,
+                   kmh, (double)u32_as_f32(ld32(racer + 0xAB4u)) * 216.0, rings, (int)(int32_t)ld32(racer + 0x984u),
+                   ld8(racer + 0x102Eu) + 1, dist, boostf, ld8(racer + GAME_RACER_CHARACTER), ld8(racer + GAME_RACER_GEAR));
+    } else if (phase_prev == 0xE) {
+        rt_log("[bal] FINISH at %.2f s: top %u km/h, max rings %u, dist %.0f, boost frames %u, fuel gained %.0f spent %.0f",
+               t / 60.0, top_kmh, ringmax, dist, boostf, gained, spent);
+    }
+    phase_prev = phase;
+}
+
 void lv_super_gain_start(uint32_t racer, uint32_t air) {
+    bal_log(racer);
     g_gain_racer = racer;
     g_gain_start = air;
 }
@@ -129,15 +173,6 @@ static void no_drain(uint32_t racer) {
  *   81879C20 / 818970D4 smashed objects and the like (10 000 / 15 000 / 20 000 / 30 000): as before, at most
  *            REWARD_MAX_RINGS rings, then REPLENISH_NUM/DEN ("at a good rate, no change")
  * Whatever reaches the fuel step that no site paid is the trick landing (lv_super_rewards). */
-#define RW_GRIND_NUM 7u
-#define RW_GRIND_DEN 10u
-#define FLY_KNEE     260u
-#define FLY_GROWTH_NUM 3u   /* 75 % of the growth above the knee */
-#define FLY_GROWTH_DEN 4u
-#define RW_FLY_NUM   9u     /* then 45 % of that */
-#define RW_FLY_DEN   20u
-#define TRICK_X_REWARD 100000u  /* the game's landing reward for an X rank */
-#define TRICK_X_RINGS  75u
 static uint32_t g_site_paid[8];  /* this step's rewards paid through the sites (after tuning), per racer */
 
 static int super_player(uint32_t racer) {

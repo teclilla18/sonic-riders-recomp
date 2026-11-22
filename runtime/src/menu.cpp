@@ -673,7 +673,7 @@ void tab_gameplay() {
                   "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
                   "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
                   "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
-                  "350 km/h. Online, the host's setting is used."))
+                  "300 km/h. Online, the host's setting is used."))
             settings_apply();
         if (check("Ring Replenish", &g_settings.ring_replenish,
                   "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "

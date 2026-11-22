@@ -19,6 +19,7 @@ where code lives: [MAP.md](MAP.md). Open only the note you need, and grep inside
 | [notes/gear-stats.md](notes/gear-stats.md) | Reference | vanilla top speed / boost per gear and level (GameFAQs guide numbers) |
 | [notes/riders-plus-local-hud.md](notes/riders-plus-local-hud.md) | Reference | Super Sonic's fuel ceiling, live-stat ownership, split HUD placement, separate #29 digit path and local validation |
 | [notes/switch2-mtp.md](notes/switch2-mtp.md) | Local workflow | OunceMTP/WPD detection, verified backups, temporary probes, explicit deployment, SHA-256 readback and FTP fallback |
+| [notes/super-balance.md](notes/super-balance.md) | Reference | Super Sonic tuning numbers (super_tuning.h), the PC balance route and before/after lap times |
 | [notes/roster.md](notes/roster.md) | Research | expanded character roster: character tables and ids, how TE did it, injection tests, load tracer, proposed design |
 | [notes/architecture.md](notes/architecture.md) | Reference | project goal, GLSL (uam) rules, device/HLE boundary, shader cache plan, architecture decisions, SDK map, naming |
 | [ONLINE.md](ONLINE.md), [PERF.md](PERF.md), [MODDING.md](MODDING.md), [ANDROID_PLAN.md](ANDROID_PLAN.md) | Reference | online play, perf test, mods, Android plan |

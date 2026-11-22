@@ -1,5 +1,11 @@
 # Changelog
 
+### Unreleased
+
+- Super Sonic balance (Riders Plus; players found him far too strong): his held boost now climbs to 300 km/h
+  (was 350) over 5 s (was 4 s), Ring Replenish gives a third of the air a move earns (was half), and each
+  stick-spin turn gives about 1 ring (was 1.5). The ring magnet and the held boost's ring cost are unchanged.
+
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
 - Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to

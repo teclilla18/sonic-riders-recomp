@@ -40,6 +40,7 @@ to 8 KB). "PC" = desktop build only. Details: grep the variable in this file and
 - `SR_LOCALHUDLOG=<frame>`: final local split HUD ownership, source bounds, projection moves and whole-view
   effects. `SR_ANCHORLOG` precedes this completed-frame pass. No output at original 4:3 or online own-view.
 - `SR_BOOSTLOG=1`: Hold to boost: a line per held boost (button, level, cost, air) and why it ended (released, out of air, boost over) with frames added; Super Sonic spin-turn fuel lines (`[boost]`, `[spin]`).
+- `SR_BALLOG=1`: player 1 each second (speed, top, rings, fuel, distance, boost frames), each lap (laps done = racer +0x102B) and a finish summary; detclock runs only (SR_ONLINE_SAVE / SR_DETCLOCK). Route: tools/balance_route.py, notes/super-balance.md.
 - `SR_LEVELLOG=1`: bounded per-racer/style/extended-level HUD cell diagnostics and Super's feedback consume
   event (native level, fuel, refill). Intended for checking #29 separately from renderer positioning.
 - `SR_SHOTS=1` or `SR_SHOTS=a,b,c` (Switch): `shot_<frame>.png` at 300 … 7200, or those frames. Off by default.
