@@ -52,6 +52,11 @@ static uint32_t g_feat_copy_fmts;                                   /* their tar
 
 volatile int g_render_counts_fps;
 static uint32_t g_nanch;  /* 2D draws of this frame remembered for wide_anchor */
+/* Player Entry's 3D models in a wide mode (#35, pe_models_frame): this frame's perspective draws and where they are */
+static int g_pe_models;
+typedef struct { uint32_t cmd, n; float x, y; } PeDraw;
+static PeDraw* g_pe;
+static uint32_t g_npe, g_cap_pe;
 static GxFrame* frame(void) {
     if (!g_frame) {
         uint64_t t = rt_ticks();
@@ -88,6 +93,12 @@ static GxFrame* frame(void) {
                 rt_log("[wide] frame %llu: game mode %u, menu flag %u, race phase %X, HUD flags %u", g_frames,
                        ld32(GAME_TOP_MODE), ld32(GAME_MENU_FLAG), ld32(GAME_RACE_PHASE), g_gx.xf_reg[GX_XR_WIDE_FLAGS]);
             last_fl = g_gx.xf_reg[GX_XR_WIDE_FLAGS];
+        }
+        {
+            int game_menu_screen(void);  /* netplay.c: the menu task's screen, 0x18 = Player Entry */
+            g_pe_models = k > 1.0f && (g_gx.xf_reg[GX_XR_WIDE_FLAGS] & GX_WIDE_HUD_43) && !racing &&
+                          game_menu_screen() == 0x18;
+            g_npe = 0;
         }
         float fov = (float)g_fov_scale * boost_hold_fov();  /* Super Sonic's held boost widens the view */
         memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
@@ -723,6 +734,25 @@ static void wide_anchor(GxFrame* f, uint32_t v0, uint32_t count) {
             }
 }
 
+/* #35: Player Entry's 3D models (each player's character on their board) in a wide mode. The game places them
+ * from its projection, which the aspect patches widened, so each model kept its 4:3 fraction of the screen width
+ * (2P's model at 0.73 of the half-width: half outside its panel, while the panels stay 4:3 in the middle). Each
+ * perspective draw's place on screen (its position matrix's origin, projected) is recorded here; at the frame's
+ * end pe_models_frame moves every model by one amount so that it sits where 4:3 shows it. */
+static void pe_record(uint32_t cmd, const GxVertex* v, uint32_t count) {
+    uint32_t pm = ((uint32_t)v->pos[3] * 4) & 0xFFC;
+    float r0[4], r1[4], r2[4], P[4], xs;
+    memcpy(r0, &g_gx.xf_mem[pm], sizeof r0);
+    memcpy(r1, &g_gx.xf_mem[pm + 4], sizeof r1);
+    memcpy(r2, &g_gx.xf_mem[pm + 8], sizeof r2);
+    memcpy(P, &g_gx.xf_reg[0x20], sizeof P);
+    memcpy(&xs, &g_gx.xf_reg[0x1A], 4);
+    if (!(r2[3] < 0.0f)) return;  /* not in front of the camera */
+    float x = -(P[0] * r0[3] + P[1] * r2[3]) / r2[3], y = -(P[2] * r1[3] + P[3] * r2[3]) / r2[3];
+    if (xs < 0.0f) x = -x;  /* a mirrored viewport */
+    g_pe = grow(g_pe, &g_cap_pe, g_npe + 1, sizeof *g_pe);
+    g_pe[g_npe++] = (PeDraw){cmd, count, x, y};
+}
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
     if (!count) return;
     if (g_state_dirty) {
@@ -755,8 +785,9 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     uint64_t td = rt_ticks();
     /* 2D in a wide mode: decoded here, the anchor needs the positions (wide_anchor) */
     int anchor = g_gx.xf_reg[0x26] != 0 && (g_gx.xf_reg[GX_XR_WIDE_FLAGS] & GX_WIDE_HUD_43) && f->wide_k > 1.0f;
+    int pe = g_pe_models && g_gx.xf_reg[0x26] == 0 && count;  /* Player Entry's models: pe_record reads a position */
     if (!check) {
-        if (anchor || !dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
+        if (anchor || pe || !dj_queue(&fplan, &f->verts[f->nverts], count, vertices, count * vertex_size))
             for (uint32_t i = 0; i < count; i++) decode_fast(&p, &fplan, &f->verts[f->nverts + i]);
     } else {  /* SR_DECODECHECK: the reference decoder too, compared bit for bit */
         static unsigned long long checked, bad;
@@ -840,6 +871,7 @@ static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices
     c->a = f->nidx;
     c->b = k;
     memcpy(c->tex, tc.tex, sizeof c->tex);
+    if (pe) pe_record((uint32_t)(c - f->cmds), &f->verts[f->nverts], count);
     f->nverts += count;
     f->nidx += k;
     g_verts_total += count;
@@ -989,6 +1021,60 @@ static int hud_join(const float a[4], const float b[4], int quad) {
            /* The halves boost backing is shallow and has a small gap from its ring panel.
             * Join that complete panel even when their heights differ; retain quarter tolerances. */
            (xo >= (quad ? -0.006f : -0.0125f) || fminf(ha, hb) >= 0.5f * fmaxf(ha, hb));
+}
+static void pe_models_frame(GxFrame* f) {
+    if (!g_pe_models || !g_npe || !(f->wide_k > 1.0f)) return;
+    /* one model per panel: left/right of the middle, top/bottom row (3 or 4 players); its middle is the
+     * vertex-weighted average of its draws */
+    double sx[4] = {0}, sn[4] = {0};
+    for (uint32_t i = 0; i < g_npe; i++) {
+        int g = (g_pe[i].x > 0.0f) | (g_pe[i].y < 0.0f) << 1;
+        sx[g] += (double)g_pe[i].x * g_pe[i].n;
+        sn[g] += g_pe[i].n;
+    }
+    float move[4];
+    for (int g = 0; g < 4; g++) {
+        float c = sn[g] > 0 ? (float)(sx[g] / sn[g]) : 0.0f;
+        move[g] = c / f->wide_k - c;  /* from its 4:3 fraction of the wide screen to 4:3 in the middle */
+    }
+    GxCmd* out = malloc(sizeof *out * ((size_t)f->ncmds + 2 * (size_t)g_npe + 1));
+    if (!out) return;
+    struct { uint32_t src; int g; uint32_t dst; } cache[16];
+    unsigned nc = 0;
+    uint32_t no = 0, di = 0;
+    int cu = -1, ct = -1, emitted = -1;
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        GxCmd c = f->cmds[i];
+        if (c.type == GXC_STATE) { cu = (int)c.a; ct = (int)c.b; emitted = cu; out[no++] = c; continue; }
+        if (c.type != GXC_DRAW) { out[no++] = c; continue; }
+        int want = cu;
+        while (di < g_npe && g_pe[di].cmd < i) di++;
+        if (di < g_npe && g_pe[di].cmd == i && cu >= 0) {
+            int g = (g_pe[di].x > 0.0f) | (g_pe[di].y < 0.0f) << 1;
+            unsigned j = 0;
+            while (j < nc && !(cache[j].src == (uint32_t)cu && cache[j].g == g)) j++;
+            if (j < nc) want = (int)cache[j].dst;
+            else {
+                GxUniforms u = f->unis[cu];
+                /* perspective: x / w = -P0 x / z - P1, so the picture moves by minus P1's change (mirrored: plus) */
+                float sign = fbits(u.xfr[0x1A]) < 0 ? -1.0f : 1.0f;
+                u.xfr[0x21] = ubits(fbits(u.xfr[0x21]) - sign * move[g]);
+                want = (int)f->nunis;
+                f->unis = grow(f->unis, &f->cap_unis, f->nunis + 1, sizeof *f->unis);
+                f->unis[f->nunis++] = u;
+                if (nc < 16) { cache[nc].src = (uint32_t)cu; cache[nc].g = g; cache[nc++].dst = (uint32_t)want; }
+            }
+        }
+        if (want != emitted && want >= 0 && ct >= 0) {
+            GxCmd state = {.type = GXC_STATE, .a = (uint32_t)want, .b = (uint32_t)ct};
+            out[no++] = state; emitted = want;
+        }
+        out[no++] = c;
+    }
+    f->cmds = grow(f->cmds, &f->cap_cmds, no, sizeof *f->cmds);
+    memcpy(f->cmds, out, no * sizeof *out);
+    f->ncmds = no;
+    free(out);
 }
 static void local_hud_frame(GxFrame* f) {
     if (!(f->wide_k > 1.0f)) return;
@@ -1419,6 +1505,7 @@ static void efb_copy(uint32_t v) {
         game_mods_frame();
         push_cmd(GXC_PRESENT);
         gx_decode_sync();
+        pe_models_frame(g_frame);
         if (p < 0) local_hud_frame(g_frame);
         if (own) ownview_frame(g_frame, p);
         uint32_t ndraws = 0;

@@ -14,6 +14,17 @@ shader/backend, camera, scissor and EFB-copy paths are unchanged. `SR_LOCALHUDLO
 and moves; `SR_ANCHORLOG` shows the earlier anchor pass. Full PC 1P-4P x five-aspect capture matrix and an Eden
 3P smoke test performed; physical hardware remains untested. [Detailed evidence/limits](riders-plus-local-hud.md).
 
+## Player Entry 3D models (#35, 2026-11-22, branch claude/super-balance)
+
+The game places Player Entry's character models from its (aspect-patched) projection: their view-space X grows
+with k (3.42 vs 2.56 for the 2P model at 16:9), so each kept its 4:3 fraction of the wide screen while the panels
+stay 4:3 in the middle (2P half outside its panel). gx_render.c `pe_record` / `pe_models_frame`: only on the Player
+Entry screen (menu task screen 0x18, `game_menu_screen` in netplay.c) with k > 1 and 4:3 menus, each perspective
+draw's matrix origin is projected; draws are grouped per panel (left/right, top/bottom), and each group is moved
+by c/k - c (c = its vertex-weighted middle) through a copy of the draw's uniforms with P1 changed (projection-only,
+shape unchanged). PC tested: 2P and 4P Fit 16:9 match 4:3 placement, 21:9 2P fixed (only the model pixels
+changed), a Fit race pixel-identical at four frames. Not seen on a Switch yet.
+
 ## Settings (settings.c, menu.cpp Display tab)
 
 - Screen modes: 4:3, 16:9 widescreen, **Fit window** (`SCREEN_FIT` = 3, the window's or screen's aspect, clamped

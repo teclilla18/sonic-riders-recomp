@@ -673,6 +673,7 @@ static int menu_screen(uint32_t* work) {
     }
     return -1;
 }
+int game_menu_screen(void) { return menu_screen(NULL); }  /* gx_render.c: Player Entry's models (#35) */
 #define SCREEN_MAIN_MENU 0x0F  /* Normal Race, Story, Tag, Survival, ... (0x0E is the step between it and the title) */
 static int g_reached_tracks;  /* the session's start has reached the main menu (the start-up presses stop) */
 static void online_rules(GcPad* pads) {
