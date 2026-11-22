@@ -86,6 +86,10 @@ static SDL_Window* g_win;
 static VkInstance g_inst;
 static VkPhysicalDevice g_pd;
 static VkPhysicalDeviceProperties g_props;
+/* PowerVR (#33, Redmi A3 GE8320: races showed only a small top-left corner of the scene). Safer choices, on by
+ * default on Imagination GPUs: EFB passes over the whole image, colour clears drawn as quads instead of
+ * vkCmdClearAttachments. SR_VK_FULLAREA=0/1 and SR_VK_QUADCLEAR=0/1 override either on any GPU. */
+static int g_full_area, g_quad_clear;
 static VkPhysicalDeviceMemoryProperties g_mem;
 static VkDevice g_dev;
 static VkQueue g_q;
@@ -984,6 +988,15 @@ static void vk_setup(void) {
            g_dynamic ? "dynamic" : "legacy render passes", forced ? " (SR_VK_FORCE_LEGACY=1)" : "",
            drf.dynamicRendering, has_dr, has_resolve, has_rp2);
     if (getenv("SR_VK_NOPUSH")) g_push_desc = 0;
+    {
+        int pvr = g_props.vendorID == 0x1010;
+        const char* fa = getenv("SR_VK_FULLAREA");
+        const char* qc = getenv("SR_VK_QUADCLEAR");
+        g_full_area = fa ? atoi(fa) != 0 : pvr;
+        g_quad_clear = qc ? atoi(qc) != 0 : pvr;
+        rt_log("[vk] vendor %04X device %04X: EFB passes over %s, colour clears %s", g_props.vendorID, g_props.deviceID,
+               g_full_area ? "the whole image" : "the used area", g_quad_clear ? "drawn as quads" : "by vkCmdClearAttachments");
+    }
     g_one_pipe = getenv("SR_VK_ONEPIPE") != NULL;
     if (getenv("SR_VK_DRAWS")) {
         sscanf(getenv("SR_VK_DRAWS"), "%u-%u", &g_draw_lo, &g_draw_hi);
@@ -1309,9 +1322,7 @@ static void efb_begin(void) {
     /* only the part the internal resolution uses: a tiled GPU loads and stores the whole render area each
      * time rendering starts again (after every EFB copy) */
     uint32_t aw = XSC(EFB_WIDTH), ah = SC(EFB_HEIGHT);
-    static int full = -1;  /* SR_VK_FULLAREA=1: the whole image (A/B test) */
-    if (full < 0) full = getenv("SR_VK_FULLAREA") != NULL;
-    if (full) aw = EFB_W, ah = EFB_H;
+    if (g_full_area) aw = EFB_W, ah = EFB_H;  /* PowerVR default; SR_VK_FULLAREA=0/1 */
     VkRenderingInfoKHR ri = {VK_STRUCTURE_TYPE_RENDERING_INFO_KHR, NULL, 0, {{0, 0}, {aw < EFB_W ? aw : EFB_W, ah < EFB_H ? ah : EFB_H}},
                              1, 0, 1, &ca, &da, NULL};
     if (g_dynamic) p_begin_rendering(g_cmd, &ri);
@@ -1957,7 +1968,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
         VkColorComponentFlags mask = ((cm >> 3) & 1 ? (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT) : 0) |
                                      ((cm >> 4) & 1 ? VK_COLOR_COMPONENT_A_BIT : 0);
         VkClearRect rect = {{{(int32_t)XSC(x), (int32_t)SC(y)}, {XSC(x + w) - XSC(x), SC(h)}}, 0, 1};
-        if (mask == 15) {
+        if (mask == 15 && !g_quad_clear) {
             VkClearAttachment ca = {VK_IMAGE_ASPECT_COLOR_BIT, 0, {{{col[0], col[1], col[2], col[3]}}}};
             vkCmdClearAttachments(g_cmd, 1, &ca, 1, &rect);
         } else if (mask) {  /* only some channels: a quad with that write mask */
