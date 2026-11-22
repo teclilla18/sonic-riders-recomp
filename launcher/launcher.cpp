@@ -758,8 +758,8 @@ bool big_button(const char* t, ImVec2 size, bool primary, bool enabled) {
 
 /* ---------------------------------------------------------------- pages */
 
-enum Page { P_PLAY, P_ONLINE, P_GRAPHICS, P_GAME, P_MODS, P_CONTROLS, P_ABOUT, P_UPDATE, P_COUNT };  /* Update: only with one */
-const char* kPages[P_COUNT] = {"Play", "Online", "Graphics", "Game", "Mods", "Controls", "About", "Update"};
+enum Page { P_PLAY, P_ONLINE, P_GRAPHICS, P_GAME, P_MODS, P_MUSIC, P_CONTROLS, P_ABOUT, P_UPDATE, P_COUNT };  /* Update: only with one */
+const char* kPages[P_COUNT] = {"Play", "Online", "Graphics", "Game", "Mods", "Music", "Controls", "About", "Update"};
 int g_page = P_PLAY;
 
 /* two screen options only (user, 2026-11-14): 4:3 and Fit to screen; the old 16:9 modes (1, 2) read as Fit */
@@ -1626,6 +1626,293 @@ void page_mods(float w) {
     }
     ImGui::SameLine();
     if (ImGui::Button("Look again")) mods_load();
+}
+
+/* ---------------------------------------------------------------- Music: mods\<pack>\music\<stage>\, saves\music.ini
+ * The same rules as the game (runtime/src/music.c): the songs of every mod that is on, in mods.ini order, each stage
+ * folder sorted by name; a pack's music.ini sets defaults, the player's saves\music.ini (written here and by the
+ * in-game Music tab) wins. Shuffle on: each song (and the game's own) plays as often as its weight; off: the first
+ * song set to "often", else the first song. Changes apply at the next race. */
+const char* const kStages[16] = {"Metal City", "Splash Canyon", "Egg Factory", "Green Cave", "Sand Ruins",
+    "Babylon Garden", "Digital Dimension", "Sega Carnival", "Night Chase", "Red Canyon", "Ice Factory", "White Cave",
+    "Dark Desert", "Sky Road", "Babylon Guardian", "Sega Illusion"};
+const char* const kWeights[4] = {"off", "rare", "normal", "often"};
+struct MusicSong { std::string pack, file, key; std::wstring full; int w; };
+struct MusicStage { std::vector<MusicSong> songs; bool shuffle = true; int orig = 0; };
+MusicStage g_mus[16];
+int g_mus_sel;
+bool g_mus_loaded;
+std::string g_mus_msg;
+std::vector<std::wstring> g_mus_dropped;  /* files dropped on the window (WM_DROPFILES) */
+
+int music_stage_of(const std::string& dir) {  /* "01 Metal City", "1", "metal-city" -> 1-16, else 0 */
+    size_t p = dir.find_first_of("0123456789");
+    if (p != std::string::npos) {
+        int v = atoi(dir.c_str() + p);
+        if (v >= 1 && v <= 16) return v;
+    }
+    std::string have;
+    for (char c : dir) if (isalpha((unsigned char)c)) have += (char)tolower((unsigned char)c);
+    for (int s = 0; s < 16; s++) {
+        std::string want;
+        for (const char* q = kStages[s]; *q; q++) if (isalpha((unsigned char)*q)) want += (char)tolower((unsigned char)*q);
+        if (!want.empty() && have.find(want) != std::string::npos) return s + 1;
+    }
+    return 0;
+}
+int music_weight_word(std::string v) {
+    for (char& c : v) c = (char)tolower((unsigned char)c);
+    if (!v.compare(0, 6, "normal") || !v.compare(0, 2, "on") || !v.compare(0, 3, "yes")) return 2;
+    if (!v.compare(0, 3, "off") || !v.compare(0, 2, "no") || (!v.empty() && v[0] == '0')) return 0;
+    if (!v.compare(0, 4, "rare") || (!v.empty() && v[0] == '1')) return 1;
+    if (!v.compare(0, 5, "often") || (!v.empty() && v[0] == '3')) return 3;
+    return 2;
+}
+bool music_ext_ok(const std::string& f) {
+    size_t dot = f.find_last_of('.');
+    if (dot == std::string::npos) return false;
+    std::string e = f.substr(dot);
+    for (char& c : e) c = (char)tolower((unsigned char)c);
+    return e == ".adx" || e == ".mp3" || e == ".ogg" || e == ".flac" || e == ".wav";
+}
+std::vector<std::pair<std::string, bool>> list_dir(const std::wstring& dir) {  /* (name, is a folder) */
+    std::vector<std::pair<std::string, bool>> v;
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((dir + L"\\*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return v;
+    do {
+        if (fd.cFileName[0] == L'.') continue;
+        bool d = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        if (!d && fd.nFileSizeHigh == 0 && fd.nFileSizeLow < 0x40) continue;
+        v.push_back({narrow(fd.cFileName), d});
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return v;
+}
+void music_load() {
+    for (MusicStage& m : g_mus) m = MusicStage();
+    for (const Mod& mod : g_mods) {
+        if (!mod.on) continue;
+        std::wstring base = path(L"mods\\") + widen(mod.folder) + L"\\music";
+        for (const auto& sub : list_dir(base)) {
+            int st = sub.second ? music_stage_of(sub.first) : 0;
+            if (!st) continue;
+            MusicStage& m = g_mus[st - 1];
+            std::wstring dir = base + L"\\" + widen(sub.first);
+            size_t first = m.songs.size();
+            for (const auto& f : list_dir(dir))
+                if (!f.second && music_ext_ok(f.first))
+                    m.songs.push_back({mod.folder, f.first, mod.folder + "/" + f.first, dir + L"\\" + widen(f.first), 2});
+            std::sort(m.songs.begin() + first, m.songs.end(),
+                      [](const MusicSong& a, const MusicSong& b) { return a.file < b.file; });
+            for (const std::string& l : split_lines(read_text(dir + L"\\music.ini"))) {  /* the pack's defaults */
+                size_t eq = l.find('=');
+                if (eq == std::string::npos || l[0] == '#' || l[0] == ';' || l[0] == '[') continue;
+                std::string k = l.substr(0, eq), v = l.substr(eq + 1);
+                while (!k.empty() && (k.back() == ' ' || k.back() == '\t')) k.pop_back();
+                while (!k.empty() && (k[0] == ' ' || k[0] == '\t')) k.erase(0, 1);
+                while (!v.empty() && (v[0] == ' ' || v[0] == '\t')) v.erase(0, 1);
+                if (k == "shuffle") m.shuffle = music_weight_word(v) != 0;
+                else if (k == "original") m.orig = music_weight_word(v);
+                else
+                    for (size_t i = first; i < m.songs.size(); i++)
+                        if (m.songs[i].file == k) m.songs[i].w = music_weight_word(v);
+            }
+        }
+    }
+    MusicStage* cur = nullptr;  /* the player's choices */
+    for (const std::string& l : split_lines(read_text(path(L"saves\\music.ini")))) {
+        if (!l.empty() && l[0] == '[') {
+            size_t e = l.find(']');
+            int st = music_stage_of(l.substr(1, e == std::string::npos ? std::string::npos : e - 1));
+            cur = st ? &g_mus[st - 1] : nullptr;
+            continue;
+        }
+        size_t eq = l.find(" = ");
+        if (!cur || eq == std::string::npos) continue;
+        std::string k = l.substr(0, eq), v = l.substr(eq + 3);
+        if (k == "shuffle") cur->shuffle = music_weight_word(v) != 0;
+        else if (k == "original") cur->orig = music_weight_word(v);
+        else
+            for (MusicSong& s : cur->songs)
+                if (s.key == k) s.w = music_weight_word(v);
+    }
+    g_mus_loaded = true;
+}
+void music_save() {  /* the format of music.c user_save */
+    std::string s = "# Your music choices (in-game settings menu > Music). Packs live in mods/<pack>/music/<stage>/.\n";
+    for (int i = 0; i < 16; i++) {
+        const MusicStage& m = g_mus[i];
+        if (m.songs.empty()) continue;
+        s += std::string("\n[") + kStages[i] + "]\nshuffle = " + (m.shuffle ? "on" : "off") + "\noriginal = " +
+             kWeights[m.orig & 3] + "\n";
+        for (const MusicSong& g : m.songs) s += g.key + " = " + kWeights[g.w & 3] + "\n";
+    }
+    CreateDirectoryW(path(L"saves").c_str(), nullptr);
+    if (!write_text(path(L"saves\\music.ini"), s)) g_mus_msg = "Could not write saves\\music.ini.";
+}
+void make_dirs(const std::wstring& d) {  /* every missing folder of d */
+    for (size_t i = d.find(L'\\', 3); i != std::wstring::npos; i = d.find(L'\\', i + 1))
+        CreateDirectoryW(d.substr(0, i).c_str(), nullptr);
+    CreateDirectoryW(d.c_str(), nullptr);
+}
+std::wstring music_my_dir(int stage) {  /* mods\My Music\music\01 Metal City */
+    char n[64];
+    snprintf(n, sizeof n, "%02d %s", stage + 1, kStages[stage]);
+    return path(L"mods\\My Music\\music\\") + widen(n);
+}
+void music_add(const std::vector<std::wstring>& files, int stage) {
+    std::wstring dir = music_my_dir(stage);
+    make_dirs(dir);
+    int added = 0, skipped = 0;
+    for (const std::wstring& f : files) {
+        std::wstring name = f.substr(f.find_last_of(L"\\/") + 1);
+        if (!music_ext_ok(narrow(name)) || !CopyFileW(f.c_str(), (dir + L"\\" + name).c_str(), TRUE)) { skipped++; continue; }
+        added++;
+    }
+    bool known = false;
+    for (const Mod& m : g_mods) known |= m.folder == "My Music";
+    if (!known) {  /* the new mod shows up, on, at the bottom */
+        if (g_mods_dirty) mods_save();
+        mods_load();
+        mods_save();
+    }
+    music_load();
+    char t[220];
+    snprintf(t, sizeof t, "%d song%s added to %s.%s", added, added == 1 ? "" : "s", kStages[stage],
+             skipped ? " Some files were skipped (not MP3, OGG, FLAC, WAV or ADX, or already there)." : "");
+    g_mus_msg = t;
+}
+std::vector<std::wstring> pick_songs(HWND owner) {
+    std::vector<wchar_t> buf(64 * 1024, 0);
+    OPENFILENAMEW ofn = {sizeof ofn};
+    ofn.hwndOwner = owner;
+    ofn.lpstrFilter = L"Songs (*.mp3;*.ogg;*.flac;*.wav;*.adx)\0*.mp3;*.ogg;*.flac;*.wav;*.adx\0All files (*.*)\0*.*\0";
+    ofn.lpstrFile = buf.data();
+    ofn.nMaxFile = (DWORD)buf.size();
+    ofn.lpstrTitle = L"Add songs";
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+    std::vector<std::wstring> out;
+    if (!GetOpenFileNameW(&ofn)) return out;
+    std::wstring dir = buf.data();
+    const wchar_t* p = buf.data() + dir.size() + 1;
+    if (!*p) { out.push_back(dir); return out; }  /* one file: its whole path */
+    for (; *p; p += wcslen(p) + 1) out.push_back(dir + L"\\" + p);
+    return out;
+}
+void page_music(float) {
+    if (!g_mus_loaded) music_load();
+    if (!g_mus_dropped.empty()) { music_add(g_mus_dropped, g_mus_sel); g_mus_dropped.clear(); }
+    section("MUSIC");
+    note("Your own songs for every stage. Add MP3, OGG, FLAC, WAV or ADX files: drag them onto this window, or use "
+         "Add songs. They are converted once, the first time they play. Changes apply at the next race. No songs "
+         "come with the game.");
+    ImGui::Spacing();
+    float s = g_dpi, left = 230 * s, h = std::max(200.0f, ImGui::GetContentRegionAvail().y - 4);
+    ImGui::BeginChild("stages", ImVec2(left, h), ImGuiChildFlags_Borders);
+    for (int i = 0; i < 16; i++) {
+        char t[80];
+        int n = (int)g_mus[i].songs.size();
+        snprintf(t, sizeof t, "%02d  %s", i + 1, kStages[i]);
+        ImGui::PushID(i);
+        if (ImGui::Selectable(t, g_mus_sel == i)) { g_mus_sel = i; g_mus_msg.clear(); }
+        if (n) {
+            ImGui::SameLine(left - 40 * s);
+            ImGui::TextColored(g_mus[i].shuffle ? ImVec4(0.31f, 0.76f, 0.97f, 1) : kGoldV, "%d", n);
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("songs", ImVec2(0, h), ImGuiChildFlags_None);
+    MusicStage& m = g_mus[g_mus_sel];
+    ImGui::PushFont(g_font_bold, kSize * g_dpi * 1.3f);
+    ImGui::Text("%02d  %s", g_mus_sel + 1, kStages[g_mus_sel]);
+    ImGui::PopFont();
+    if (m.songs.empty()) {
+        note("No songs added for this stage yet: the game's own music plays.");
+    } else {
+        if (ImGui::Checkbox("Shuffle every race", &m.shuffle)) music_save();
+        ImGui::SameLine();
+        label(m.shuffle ? "  Each song plays as often as you set it, never twice in a row."
+                        : "  The song you choose plays every time.");
+        int tot = m.orig;
+        for (const MusicSong& g : m.songs) tot += g.w;
+        int fixed = 0;
+        for (int i = 0; i < (int)m.songs.size(); i++)
+            if (m.songs[i].w == 3) { fixed = i; break; }
+        if (ImGui::BeginTable("list", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_PadOuterX)) {
+            ImGui::TableSetupColumn("Song", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("From", ImGuiTableColumnFlags_WidthFixed, 120 * s);
+            ImGui::TableSetupColumn("Chance", ImGuiTableColumnFlags_WidthFixed, 60 * s);
+            ImGui::TableSetupColumn("How often", ImGuiTableColumnFlags_WidthFixed, 240 * s);
+            ImGui::TableHeadersRow();
+            static const char* const kNames[4] = {"Off", "Rare", "Normal", "Often"};
+            for (int i = -1; i < (int)m.songs.size(); i++) {
+                ImGui::PushID(i + 1);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                int wv = i < 0 ? m.orig : m.songs[i].w;
+                ImGui::TextUnformatted(i < 0 ? "Original game song" : m.songs[i].file.c_str());
+                ImGui::TableNextColumn();
+                label(i < 0 ? "the disc" : m.songs[i].pack.c_str());
+                ImGui::TableNextColumn();
+                int pct = m.shuffle ? (tot ? (wv * 100 + tot / 2) / tot : 0) : (i == fixed ? 100 : 0);
+                ImGui::Text("%d%%", pct);
+                ImGui::TableNextColumn();
+                if (m.shuffle) {
+                    for (int k = 0; k < 4; k++) {
+                        if (k) ImGui::SameLine(0, 2 * s);
+                        bool on = wv == k;
+                        if (on) {
+                            ImGui::PushStyleColor(ImGuiCol_Button, k ? ImVec4(0.89f, 0.66f, 0.17f, 1) : ImVec4(0.35f, 0.38f, 0.48f, 1));
+                            ImGui::PushStyleColor(ImGuiCol_Text, k ? ImVec4(0.10f, 0.08f, 0.02f, 1) : ImVec4(1, 1, 1, 1));
+                        }
+                        if (ImGui::SmallButton(kNames[k])) {
+                            if (i < 0) m.orig = k;
+                            else m.songs[i].w = k;
+                            music_save();
+                        }
+                        if (on) ImGui::PopStyleColor(2);
+                    }
+                } else if (i < 0) {
+                    label("only with shuffle on");
+                } else if (i == fixed) {
+                    ImGui::TextColored(kGoldV, "Playing");
+                } else if (ImGui::SmallButton("Use this")) {
+                    for (MusicSong& g : m.songs)
+                        if (g.w == 3) g.w = 2;
+                    m.songs[i].w = 3;
+                    music_save();
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        note("While a race loads, hold the D-pad to pick song 1 to 4 for that race.");
+    }
+    ImGui::Spacing();
+    if (ImGui::Button("Add songs...")) {
+        std::vector<std::wstring> f = pick_songs(GetActiveWindow());
+        if (!f.empty()) music_add(f, g_mus_sel);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Open this stage's folder")) {
+        std::wstring d = music_my_dir(g_mus_sel);
+        make_dirs(d);
+        open_in_explorer(d);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Look again")) {
+        if (g_mods_dirty) mods_save();
+        mods_load();
+        music_load();
+        g_mus_msg.clear();
+    }
+    if (!g_mus_msg.empty()) note(g_mus_msg.c_str());
+    note("Songs live in mods\\<pack>\\music\\<stage>\\, so a music pack turns on and off on the Mods page like any "
+         "other mod. Add only music you own.");
+    ImGui::EndChild();
 }
 
 /* ---------------------------------------------------------------- saves\controls.ini (the game's button map) */
@@ -2651,6 +2938,7 @@ void draw_ui(float W, float H) {
     case P_GRAPHICS: page_graphics(pw); break;
     case P_GAME: page_game(pw); break;
     case P_MODS: page_mods(pw); break;
+    case P_MUSIC: page_music(pw); break;
     case P_CONTROLS: page_controls(pw); break;
     case P_ABOUT: page_about(pw); break;
     case P_UPDATE: page_update(pw); break;
@@ -2932,6 +3220,17 @@ LRESULT CALLBACK wndproc(HWND h, UINT m, WPARAM w, LPARAM l) {
         mm->ptMinTrackSize.y = std::min<LONG>(MulDiv(560, dpi, 96), mi.rcWork.bottom - mi.rcWork.top);
         return 0;
     }
+    case WM_DROPFILES: {  /* songs dropped on the Music page */
+        HDROP d = (HDROP)w;
+        UINT n = DragQueryFileW(d, 0xFFFFFFFF, nullptr, 0);
+        for (UINT i = 0; i < n; i++) {
+            wchar_t f[MAX_PATH];
+            if (DragQueryFileW(d, i, f, MAX_PATH)) g_mus_dropped.push_back(f);
+        }
+        DragFinish(d);
+        if (g_page != P_MUSIC) { g_mus_dropped.clear(); g_status = "Drop songs on the Music page."; }
+        return 0;
+    }
     case WM_DESTROY: PostQuitMessage(0); return 0;
     }
     return DefWindowProcW(h, m, w, l);
@@ -2995,6 +3294,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
                            : g_mode == M_ANDROID ? L"Sonic Riders - Android installer" : L"Sonic Riders";
     HWND hwnd = CreateWindowW(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ww, wh,
                               nullptr, nullptr, inst, nullptr);
+    DragAcceptFiles(hwnd, TRUE);  /* songs dropped on the Music page (WM_DROPFILES) */
     BOOL dark = TRUE;  /* dark title bar (Windows 10 2004+ / 11) */
     DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof dark);
     if (!create_device(hwnd)) {

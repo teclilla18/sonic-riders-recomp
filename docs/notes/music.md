@@ -37,9 +37,20 @@ Branch `claude/music-loader` (2026-11-20), not released. Players add their own s
 - Converted during the race's loading the first time a song is picked (PC: well under 1 s for 20 s of music);
   Switch conversion time not measured yet.
 
+## PC launcher Music page (launcher.cpp page_music, 2026-11-22)
+
+Mirrors music.c: songs of the mods that are on (mods.ini order), each stage folder sorted by name, a pack's
+music.ini as defaults, then saves\music.ini (same format as user_save; written on every change). Stage list with
+song counts (blue = shuffle, gold = fixed song); per stage: Shuffle every race, Off/Rare/Normal/Often per song and
+for the original, the chance of each (weight / total; shuffle off: the first "often", else song 1, set by "Use
+this"), Add songs (multi-select dialog) and drag and drop onto the window (WM_DROPFILES, only on this page): copied
+into mods\My Music\music\NN Stage\ (the mod is added to mods.ini, on). Not in this first version: preview playback,
+the mockup's "Try 5 races" panel and menu-music categories. Tested: builds; page drawn with a local pack
+(SR_LAUNCHER_PAGE=5 SR_LAUNCHER_SHOT); clicks, adding and dropping files not exercised by a script yet [uncertain].
+
 ## Open
 
-- PC launcher Music page (drag and drop, stage picker, preview), the player guide `docs/MUSIC.md`, menu music
+- Launcher: preview playback; the player guide `docs/MUSIC.md`, menu music
   categories (S20...), naming the d-pad directions, Switch timing for MP3 conversion.
 - Design mockup the user saw: https://claude.ai/artifact/Xd8GembqJmoXYtM55yVLER (categories, Off/Rare/Normal/Often,
   shuffle, "What plays next", drag and drop, in-game view).

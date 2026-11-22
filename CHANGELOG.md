@@ -6,6 +6,8 @@
   stages gets its own list; every race shuffles one (never the same twice in a row), or hold a D-pad direction
   while the race loads to choose song 1 to 4. New Music tab in the settings menu: shuffle, how often each song
   plays (Off / Rare / Normal / Often), the original song too. No songs come with the game.
+- PC launcher: a Music page with the same choices for every stage, the chance of each song, and "Add songs"
+  (or drag files onto the window): they are copied into `mods/My Music/music/<stage>/`.
 
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
