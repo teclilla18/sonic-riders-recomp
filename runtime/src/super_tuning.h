@@ -18,20 +18,25 @@
 #define SUPER_DRIFT_BASE     102.0f  /* was 110 */
 #define SUPER_DRIFT_LV4      105.0f  /* was 125 */
 #define SUPER_DRIFT_LV5      108.0f  /* was 140 */
-#define SUPER_BOOST_BASE     255.0f  /* was 270 */
-#define SUPER_BOOST_LV4      260.0f  /* was 300 */
-#define SUPER_BOOST_LV5      265.0f  /* was 330 */
+/* boost speed = where a boost starts (user 2026-11-22: Lv. 1 / Lv. 4 reach 270 / 290 at once and stay there;
+ * Lv. 5 starts at 300 and climbs while held, SUPER_CAP_LV5_KMH) */
+#define SUPER_BOOST_BASE     270.0f  /* was 270 (first Riders Plus), 255 in the second pass */
+#define SUPER_BOOST_LV4      290.0f  /* was 300 */
+#define SUPER_BOOST_LV5      300.0f  /* was 330 */
 
 /* rings for his Lv. 4 / Lv. 5 tiers (other racers: 200 / 300, game_levels.c LV4_RINGS / LV5_RINGS) */
 #define SUPER_LV4_RINGS      175u
 #define SUPER_LV5_RINGS      250u
 
-/* ---- held boost (boost_hold.c): the top of his held-boost climb per tier, km/h (was 350 for all) ---- */
+/* ---- held boost (boost_hold.c): the top of his held-boost climb per tier, km/h. A top equal to the boost speed
+ * means no climb. The tier when the boost starts decides its top (rings burnt while holding would otherwise drop
+ * him a tier and the top with it). ---- */
 #define SUPER_CAP_BASE_KMH   270.0
 #define SUPER_CAP_LV4_KMH    290.0
-#define SUPER_CAP_LV5_KMH    325.0
-#define SUPER_RAMP           240    /* frames held to reach the cap: 4 s (first pass tried 300) */
-#define SUPER_HOLD_COST_NUM  29     /* held boost costs 2.9x the gear's rate (unchanged; 1.9x -> 2.3x -> 2.9x) */
+#define SUPER_CAP_LV5_KMH    350.0
+#define SUPER_RAMP           90     /* frames held to reach the top: 1.5 s (was 240 = 4 s: "climb much faster") */
+#define SUPER_HOLD_COST_NUM  45     /* held boost costs 4.5x the gear's rate (user 2026-11-22: "punishing";
+                                       was 1.9x -> 2.3x -> 2.9x) */
 #define SUPER_HOLD_COST_DEN  10
 
 /* ---- Ring Replenish option (game_levels.c) ---- */

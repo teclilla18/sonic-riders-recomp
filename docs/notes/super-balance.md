@@ -74,4 +74,14 @@ SR_INPUT=$(py -3 tools/balance_route.py super|sonic|knuckles) build/host-mingw/s
 - Possible double pay to check: site 818D2528 pays 5000 x 1/3 per event in spin sections (60 events, 91 rings) on
   top of SPIN_FUEL [uncertain].
 
+## Fourth pass (user after playing, 2026-11-22 evening)
+
+- Boost: Lv. 1 270 and Lv. 4 290 km/h at once, no climb; Lv. 5 starts at 300 and climbs to 350 within 1.5 s
+  (SUPER_RAMP 90) while held. The top is fixed by the tier when the boost starts: before, the rings a held boost
+  burnt dropped him from Lv. 5 to Lv. 4 to base mid-boost, so the top fell with them (the user's "only 270 at Lv. 5").
+  The old 4 s exponential ramp also climbed only ~2 km/h per 20 frames at first [confirmed, SR_POKEAT 600-ring test].
+- Held boost costs 4.5x the gear's rate (was 2.9x; "punishing").
+- Test: rings poked to 600 (racer 0 fuel 81A0E0C4 = 0x000A1220 every 600 frames): boost top 350, speed 305 at the
+  start, 336 / 344 km/h one and two seconds in [confirmed on PC].
+
 Logs (local, not in git): `.local/super-balance/build/bal/{before,after}-{super,sonic,knuckles}.log`.

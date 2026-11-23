@@ -20,7 +20,7 @@
  * Speed while held: the game sets the boost speed once at the start, and after a turn or a bump its normal
  * acceleration climbs back very slowly. A held boost pulls the speed (+0xAAC) back up to the boost speed (level
  * block +0x34) quickly instead. Super Sonic (Riders Plus): the longer it is held, the higher his boost speed and
- * the harder the pull, rising exponentially to his tier's cap (super_tuning.h: 270 / 290 / 325 km/h) after SUPER_RAMP frames (top speed +0xAB4 raised with
+ * the harder the pull, rising exponentially to his tier's cap (super_tuning.h: Lv. 5 300 -> 350 km/h) after SUPER_RAMP frames (top speed +0xAB4 raised with
  * it; the game puts its own back when the boost ends, fn 81896C9C). Integer curve, no libm: the same on every
  * machine in an online race.
  *
@@ -59,6 +59,7 @@ static double super_cap(uint32_t racer) {
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
 static uint32_t g_extra[8];      /* frames added to the current boost (log) */
 static uint32_t g_held[8];       /* frames this boost has been held */
+static double g_cap[8];          /* Super: this boost's top, from his tier when it started (super_tuning.h) */
 
 static float ldf(uint32_t ea) { return u32_as_f32(ld32(ea)); }
 static void stf(uint32_t ea, float v) { st32(ea, f32_as_u32(v)); }
@@ -81,7 +82,7 @@ static void hold_speed(int i, uint32_t racer, uint32_t blk) {
     float boost = ldf(blk + 0x34u);
     if (!(boost > 0.0f) || boost > 5.0f) return;  /* not a speed */
     double target = boost, pull = PULL;
-    double cap = super_racer(racer) ? super_cap(racer) : 0.0;
+    double cap = super_racer(racer) ? (g_cap[i] > 0.0 ? g_cap[i] : super_cap(racer)) : 0.0;
     if (super_racer(racer) && boost < cap) {
         uint32_t f = ramp(g_held[i]);
         double extra = cap - boost;
@@ -190,9 +191,10 @@ void boost_hold_tick(uint32_t racer) {
     if (t == BOOST_FRAMES - 1) {  /* a new boost's first tick */
         g_extra[i] = 0;
         g_held[i] = 0;
+        g_cap[i] = super_racer(racer) ? super_cap(racer) : 0.0;
         g_armed[i] = settings_boost_hold() ? (uint16_t)(held_buttons(racer) & BOOST_BUTTONS) : 0;
         if (log_on() && g_armed[i])
-            rt_log("[boost] racer %d: boost with button %x held, level %u, cost %u, air %d", i, g_armed[i],
+            rt_log("[boost] racer %d: boost with button %x held, top %.0f km/h, level %u, cost %u, air %d", i, g_armed[i], g_cap[i] / KMH,
                    ld8(racer + R_LEVEL), ld32(racer + R_BLOCKS + 0x38u * (ld8(racer + R_LEVEL) > 2 ? 2u : ld8(racer + R_LEVEL)) + 0x28u),
                    (int)(int32_t)ld32(racer + R_AIR));
         return;
