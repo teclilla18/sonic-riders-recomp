@@ -2135,3 +2135,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   whole image and colour clears are drawn as quads instead of vkCmdClearAttachments; SR_VK_FULLAREA / SR_VK_QUADCLEAR
   = 0/1 override; startup logs `[vk] vendor ...`. Both forced on the S23: pictures unchanged. Setup zip posted on #33.
 - [uncertain] Whether either change fixes the PowerVR picture; the reporter's log decides.
+
+## 2026-11-23 (Mac): iOS v0.9.0 setup zip
+
+- v0.9.0 shipped without an iOS zip ("iOS stays on v0.8.7 for now"). Built with `make_release.py --flavor ios
+  --version v0.9.0 --ref v0.9.0` (331 files, commit bce3a5f9; guard refused nothing) and uploaded to v0.9.0; the
+  notes' iOS line, both easy-read guides (republished) now point to it.
+- Local build of main (code identical to v0.9.0): ninja + .ipa OK, binary shows "Hold to boost" and "Super Sonic
+  flight (experimental)" [confirmed]. Not installed on a device and no cold Mac test from the zip [uncertain].

@@ -6,7 +6,7 @@
   tag `bce3a5f`): Hold to boost, Auto spin (#23), same character for several players, Super Sonic ring magnet /
   Ring Replenish / 350 km/h held boost, Cheats tab, Switch sleep + start-up clock fixes, unpacked-not-installed
   check. Super Sonic flight is an experimental option, off by default. Zips: PC, Switch, Android, Linux. Cold
-  Sandbox PASS: PC (+ space path), Android. iOS v0.9.0 not built yet (needs the Mac); guides point iOS to v0.8.7.
+  Sandbox PASS: PC (+ space path), Android. iOS zip SonicRiders-iOS-Setup-v0.9.0.zip added to v0.9.0 2026-11-23 (no cold Mac test); guides point to it.
 - **[Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3)**
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
