@@ -3,9 +3,9 @@
 ### Unreleased
 
 - Super Sonic balance (Riders Plus; players found him far too strong):
-  - His speeds are back close to the original game, a little better: top speed 186 km/h, then 190 at 175 rings
-    and 195 at 250 rings (was 195 / 220 / 240 at 200 / 300 rings).
-  - His boost: 270 km/h, 290 at 175 rings; at 250 rings it starts at 300 and climbs to 350 within 1.5 s while
+  - His speeds are back close to the original game, a little better: top speed 186 km/h, then 190 at 200 rings
+    and 195 at 300 rings (was 195 / 220 / 240).
+  - His boost: 270 km/h, 290 at 200 rings; at 300 rings it starts at 300 and climbs to 350 within 1.5 s while
     held (was a slow climb to 350 at any level). Holding it burns rings 4.5 times as fast as other gears burn air.
   - Rings: Ring Replenish gives a third of the air a move earns (was half), flying through air dash rings gives
     much less (15 %, was 45 %), and each stick-spin turn about 1 ring (was 1.5). The ring magnet is unchanged.
