@@ -9,6 +9,8 @@
     350 at any level). Holding it burns rings 4.5 times as fast as other gears burn air.
   - Rings: Ring Replenish gives a third of the air a move earns (was half), flying through air dash rings gives
     much less (15 %, was 45 %), and each stick-spin turn about 1 ring (was 1.5). The ring magnet is unchanged.
+- Every character's boost (tapped or held) now widens the view at once, past your field-of-view setting, and
+  it glides back to your setting when the boost ends (one player on the screen; was Super Sonic's held boost only).
 - Character select with Fit to screen (#35): each player's character model now stands inside their own panel
   (2P's and 4P's were pushed to the right, half outside it).
 

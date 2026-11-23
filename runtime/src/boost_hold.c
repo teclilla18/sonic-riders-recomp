@@ -112,14 +112,14 @@ static uint32_t held_buttons(uint32_t racer) {  /* 0 for a CPU racer (no control
     return ld32(pad + 0x8u);
 }
 
-/* Speed view (the user, 2026-11-20, "like some Need for Speed games"): while Super Sonic holds a boost the field of
- * view widens with his climb towards SUPER_CAP, up to FOV_BOOST_MAX. When the held boost ends it goes straight back to
- * the player's own field of view on a smooth curve over FOV_OUT_FRAMES (the user: "smoothly and immediately"). The
- * camera is shared by every screen, so only with one local player (split screen: off). Picture only: safe online. */
+/* Speed view (the user, 2026-11-20, "like some Need for Speed games"; 2026-11-22: every character, tapped and held
+ * boosts): the moment a player's boost starts the field of view jumps FOV_BOOST_MAX past the player's own setting and
+ * stays there for the whole boost (tapped or held); when it ends it goes back to the player's setting on a smooth
+ * curve over FOV_OUT_FRAMES. The camera is shared by every screen, so only with one local player (split screen:
+ * off). Picture only: safe online. */
 #define FOV_BOOST_MAX  0.18      /* +18 %, reached within about 0.4 s of holding (the user, 2026-11-20: the 4 s
                                     * climb was "waaaaay too slow") */
 #define FOV_BOOST_PAST 0.04      /* a little more on top while his speed climbs past the boost speed to SUPER_CAP */
-#define FOV_EASE_IN    0.12      /* share of the gap closed per frame while widening */
 #define FOV_OUT_FRAMES 15        /* the way back: 0.25 s at 60 fps */
 static double g_fov_target;      /* in FOV_BOOST_MAX units: 1 plus the climb's share of FOV_BOOST_PAST */
 static double g_fov_climb;       /* 0..1: the climb towards SUPER_CAP */
@@ -135,8 +135,8 @@ static int human(uint32_t racer) {
            ld8(racer + 0xBCu) == 0;
 }
 
-static void fov_tick(int i, uint32_t racer) {
-    if (!super_racer(racer) || !human(racer)) return;
+static void fov_tick(int i, uint32_t racer) {  /* each step of any boost */
+    if (!human(racer)) return;
     for (int j = 0; j < 8; j++)
         if (j != i && human(GAME_PLAYERS + (uint32_t)j * GAME_PLAYER_SIZE)) return;  /* split screen */
     g_fov_owner = i;
@@ -153,7 +153,7 @@ float boost_hold_fov(void) {
     g_fov_frame++;
     if (g_fov_owner >= 0 && g_fov_frame - g_fov_tick > 4) g_fov_owner = -1;  /* no ticks (race over, paused) */
     if (g_fov_owner >= 0) {
-        g_fov_now += (g_fov_target - g_fov_now) * FOV_EASE_IN;
+        g_fov_now = g_fov_target;  /* at once (the user, 2026-11-22: "instantly") */
         g_fov_from = g_fov_now;
         g_fov_out = 0;
     } else if (g_fov_now > 0.0) {
@@ -188,6 +188,7 @@ void boost_hold_tick(uint32_t racer) {
     if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE) return;
     int i = (int)(d / GAME_PLAYER_SIZE);
     int32_t t = (int32_t)ld32(racer + R_BOOST_TIMER);  /* already counted down this step */
+    if (t >= 0 && (ld32(racer + R_STATE) & STATE_BOOST)) fov_tick(i, racer);  /* the speed view: every boost */
     if (t == BOOST_FRAMES - 1) {  /* a new boost's first tick */
         g_extra[i] = 0;
         g_held[i] = 0;
@@ -208,7 +209,6 @@ void boost_hold_tick(uint32_t racer) {
     uint32_t blk = racer + R_BLOCKS + 0x38u * lv;
     g_held[i]++;
     hold_speed(i, racer, blk);
-    fov_tick(i, racer);
     if (t >= HOLD_T) return;
     uint32_t cost = ld32(blk + 0x28u);
     if (cost == 0 || cost > 10000000u) { stop(i, racer, "no boost cost"); return; }
