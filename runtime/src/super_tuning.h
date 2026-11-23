@@ -25,8 +25,8 @@
 #define SUPER_BOOST_LV5      300.0f  /* was 330 */
 
 /* rings for his Lv. 4 / Lv. 5 tiers (other racers: 200 / 300, game_levels.c LV4_RINGS / LV5_RINGS) */
-#define SUPER_LV4_RINGS      175u
-#define SUPER_LV5_RINGS      250u
+#define SUPER_LV4_RINGS      200u  /* 175 for a while on 2026-11-22; back to 200 (user) */
+#define SUPER_LV5_RINGS      300u  /* 250 for a while on 2026-11-22; back to 300 (user) */
 
 /* ---- held boost (boost_hold.c): the top of his held-boost climb per tier, km/h. A top equal to the boost speed
  * means no climb. The tier when the boost starts decides its top (rings burnt while holding would otherwise drop
