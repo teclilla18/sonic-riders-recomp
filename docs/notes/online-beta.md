@@ -126,4 +126,13 @@ online-p2local): Metal City with only the two players (1st/2nd, two map markers)
 - **Still needed**: native Switch 2 hardware, slow-SD stutter comparison, cold package tests (ask before Sandbox),
   user acceptance and explicit permission before a release, issue post or Discussions thread.
 
+## To do (user requests)
+
+- **Number pad / keyboard digits for invite codes** (user, 2026-11-24): the code popup (`code_pad` in
+  runtime/src/menu.cpp) only takes its on-screen 0-9 buttons and Paste. On PC it should also take the keyboard's
+  number row and numpad (0-9, Backspace = Delete, Enter = OK); check the keys reach ImGui while the popup is open
+  (input_sdl.c turns some keys into menu buttons).
+- **Letter keys in text boxes** (ab358f6, 2026-11-23): W/A/S/D/J/K/Q/E type text while a menu text box is
+  active (overlay_text_typing). Built on PC, not yet tried by typing.
+
 Test helpers: `tools/test_online_protocol.py`, `tools/net_route_2p.py`, `tests/disc_cache_test.c`.
