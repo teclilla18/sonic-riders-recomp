@@ -2143,3 +2143,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   notes' iOS line, both easy-read guides (republished) now point to it.
 - Local build of main (code identical to v0.9.0): ninja + .ipa OK, binary shows "Hold to boost" and "Super Sonic
   flight (experimental)" [confirmed]. Not installed on a device and no cold Mac test from the zip [uncertain].
+
+## 2026-11-23/24: Online Beta, first race between two homes (PC vs PC)
+
+- A PC setup zip of `codex/online-beta` (beta.3, ab358f6) for the user and a relative in another city; each built
+  it from his own disc. Fixes on the way: in menu text boxes W/A/S/D/J/K/Q/E now type letters instead of moving the
+  menu (input_sdl.c, `overlay_text_typing`; built, not tried by typing) [uncertain]; the launcher's Online page now
+  says internet play is in the game (F1 > Online > Internet).
+- Race (user-played, internet invite codes): connected with no issues. Both logs (log-reader): same build, NET_COMPAT
+  3, ping ~55 ms, delay 5, two races, 54,639 frames, every checksum equal, network wait under 0.2 ms/frame, no audio
+  underruns [confirmed].
+- Seen by the players: glitchy rings/HUD and the other racer vanishing after a short distance; logs show the host
+  at 2.39 (ultrawide, Fit) and the joiner at 1.78, with the room camera following the host [likely cause]. Audio
+  stutter: game-code hitches up to ~300 ms on the same frames on both PCs [likely]. Auto spin stuck on after a grind
+  until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
+- Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.

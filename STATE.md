@@ -1,4 +1,4 @@
-# State (2026-11-22)
+# State (2026-11-24)
 
 ## Released
 
@@ -40,7 +40,7 @@
    build; nothing run on a device yet. Next: PC launcher check, Switch 2 hardware run (log `[vk] ... dynamic`),
    README/booklets/guides, then one release with the user's OK and Sandbox tests (PC, Android, Switch 2).
 
-3. **Online Beta: LAN + internet** (`codex/online-beta` 75d6b87, pushed, not merged; PC / Switch / Android;
+3. **Online Beta: LAN + internet** (`codex/online-beta` 6bef6d4, pushed, not merged; PC / Switch / Android;
    `codex/online-beta-switch2` be04843 for Switch 2, left out). Internet play **implemented and tested**: invite
    codes (public IPv4, 10 digits / 15 with the port), one UDP socket STUN + lobby + game, host approval, session id,
    ping-based delay, both-codes punching, best-effort UPnP (unproven: nothing answered at home), 10 s STUN keepalive.
@@ -50,12 +50,23 @@
    finish, racer +0xBC) [confirmed]; Super Sonic flight now follows the host online (NET_COMPAT 2) [PC only].
    Known: slow-motion countdown online when a device has texture packs (first-use lookups up to 682 ms on the OLED
    stall the lockstep); posted codes reveal the host's IP (share privately). Notes: docs/notes/online-beta.md.
+   Since: no CPU racers online (43110ca, NET_COMPAT 3, PC localhost tested); letter keys type text in menu text
+   boxes (ab358f6, built, not tried by typing); launcher Online page points to in-game internet play.
+   **First two-home race (2026-11-24, user-played, PC vs PC, beta.3 zip ab358f6)**: connected fine; 2 races, 54,639
+   frames, all checksums equal, ping ~55 ms, no network stalls [confirmed by both logs]. Bugs seen: glitchy rings/HUD
+   and the other racer vanishing after a short distance (likely: host 2.39 ultrawide vs joiner 1.78, the room camera
+   follows the host) [likely]; audio stutter (game-code hitches up to ~300 ms on both PCs) [likely]; Auto spin stuck
+   on after a grind until the next auto path ended (no frame numbers in [autospin] lines) [uncertain cause].
    Plan only (needs approval): docs/notes/online-roadmap.md (4P, Super Sonic online rules: no held boost + Ring
    Replenish at half, quick chat, stage voting, rematches).
 
 ## Open items (priority order)
 
-1. Online Beta: background texture-pack loading (time each part of a lookup on the OLED first; isolated branch),
+1. Online Beta bugs from the two-home race (above): screen-shape mismatch (each player's own shape, or the room
+   uses the narrower one), Auto spin after a grind (log frame numbers first, try offline), game-code hitches.
+   Also wanted: keyboard number row / numpad in the invite-code box. **#37** (2026-11-24): in-game volume settings;
+   the user promised them for the next release.
+   Then: background texture-pack loading (time each part of a lookup on the OLED first; isolated branch),
    then beta release prep: website third channel (site.js/build_site.py treat every pre-release as Switch 2),
    online_bug.yml (still LAN-only text), privacy line about codes, Online page; zips, Sandbox, user OK.
    Music packs: launcher page, then the guide (above).
@@ -91,6 +102,9 @@
   on a folder create by full path; cwd + MKD name worked.
 
 ## Next hardware test
+
+- Online PC vs PC (user + brother): both at the same screen shape (4:3 or 16:9): do rings/HUD and the other racer
+  look right? Grind with Auto spin on: does it stay stuck? Both send sonicriders.log.
 
 - Online (OLED + S23 or the son's Switch, LAN and internet): a race with Super Sonic flight on at the host; CPU / 1P
   markers visible with GXSRTE (marker file renamed); host waits 3+ min before the join (keepalive); state mode +
