@@ -147,7 +147,7 @@ static int rep_open(const char* path) {
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
         memcpy(&k, &kb, 4);
-        settings_fix_wide_k(k);
+        settings_fix_wide_k(k, 0);
     }
     rt_log("[replay] replaying %s (%d port%s%s%s, recorded with %s)", path, g_ports, g_ports > 1 ? "s" : "",
            get32(h + 16) & 1 ? ", an online session" : "", g_online_save ? ", the online save" : "", build);
@@ -193,7 +193,7 @@ static const char* peer_name(void) {
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
 #define PROTO 5  /* 5: NET_COMPAT in HELLO/WELCOME, platform build strings are diagnostic only.
                   * 2: no save check (everyone uses the generated online save); 3: the host's camera aspect;
-                  * 4: the joiner's screen shape in the hello, the room's camera = the wider shape */
+                  * 4: the joiner's screen shape in the hello */
 static sock_t g_sock = SOCK_BAD;
 static struct sockaddr_in g_peer;
 static int g_net;                 /* 1: a session is on */
@@ -268,12 +268,12 @@ static void net_send_input(void) {
 }
 
 /* welcome: player number, input delay, players, the host's ring cap (byte 6 bit 0: 999, else 100) and
- * camera aspect (EFB width factor k, f32 at byte 8): game state, so every machine in the session uses the host's */
+ * room aspect (EFB width factor k, f32 at byte 8): shared camera and rendered picture */
 static void net_send_welcome(void) {
     uint8_t m[80] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players,
                      (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0) |
                                (settings_ring_replenish() ? 4 : 0) | (settings_super_flight() ? 8 : 0)), 0};
-    float k = settings_game_k();  /* the room's camera aspect (the wider of the two screens) */
+    float k = settings_game_k();
     uint32_t kb;
     memcpy(&kb, &k, 4);
     put32(m + 8, kb);
@@ -531,14 +531,13 @@ static int net_connect(const char* spec) {
             }
             g_peer = from;
             rt_log("[net] compatible builds: host %s, joiner %s (NET_COMPAT %u)",g_build_version,build,NET_COMPAT);
-            {   /* protocol 4: the joiner's own screen shape (hello bytes 4-7); the room's camera is the wider of
-                 * the two, so each machine draws its own shape (settings.c apply_view) */
+            {   /* Use the narrower offer for the room's camera and rendered picture. */
                 uint32_t jb = get32(m + 4);
                 float jk;
                 memcpy(&jk, &jb, 4);
                 float hk = settings_wide_k();
-                if (jk >= 1.0f && jk <= 8.0f && jk > hk) settings_fix_wide_k(jk);
-                rt_log("[net] screen shapes: this host %.4f, the joiner %.4f; the room's camera %.4f", 4.0f / 3.0f * hk,
+                settings_fix_wide_k(jk >= 1.0f && jk < hk ? jk : hk, 1);
+                rt_log("[net] screen shapes: this host %.4f, the joiner %.4f; the room's picture %.4f", 4.0f / 3.0f * hk,
                        4.0f / 3.0f * jk, 4.0f / 3.0f * settings_game_k());
             }
             break;
@@ -600,7 +599,8 @@ static int net_connect(const char* spec) {
                 uint32_t kb = get32(m + 8);
                 float k;
                 memcpy(&k, &kb, 4);
-                settings_fix_wide_k(k);  /* the host's camera aspect */
+                if (!(k >= 1.0f && k <= 8.0f)) return net_fail("the room sent an invalid screen shape");
+                settings_fix_wide_k(k, 1);
                 settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
                 settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
                 settings_fix_ring_replenish(m[6] & 4 ? 1 : 0);  /* and Ring Replenish */
@@ -645,14 +645,13 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
 
 void netplay_connect(void) {  /* main(), after the memory card is loaded, before the game runs */
     const char* net = getenv("SR_NET");
-    /* the camera aspect is game state: fixed for the run (a replay already took the recorded one); the
-     * host and a recording use this machine's, a joiner the host's (net_connect) */
-    if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
     if (g_active) settings_fix_boost_hold(settings_boost_hold());  /* and Hold to boost */
     if (net && (!strncmp(net, "host:", 5) || !strncmp(net, "inet:host:", 10)))
         settings_fix_super_flight(settings_super_flight_setting());  /* a host offers its own choice (sent in WELCOME) */
     if (net && !net_connect(net)) { g_online_rules=0; g_ports=1; }
+    /* A connected room or a replay already fixed the camera. For a local run use this machine's shape. */
+    if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k(), 0);
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
 }
@@ -805,7 +804,7 @@ void netplay_latch(GcPad* pads) {
 #endif
     for (int ch = 0; ch < MAXP; ch++) pads[ch] = k_neutral;
     if (!g_active) {
-        for (int ch = 0; ch < MAXP; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], g_frame + 1); }
+        for (int ch = 0; ch < MAXP; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], ppc_detclock_steps()); }
         return;
     }
     uint32_t f = g_frame + 1, sum = g_sum_next;

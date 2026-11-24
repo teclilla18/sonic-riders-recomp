@@ -66,15 +66,15 @@ void settings_apply(void);  /* after a change: applies, saves and logs */
 float settings_display_aspect(void);  /* of the presented picture: 4/3, 16/9 or the window's */
 /* the wide modes draw a wider EFB instead of stretching: its width is 640 x this (1 = the original);
  * the backends scale viewports, scissors and copies by it (gx_render.c frame start) */
-float settings_wide_k(void);  /* this machine's EFB width factor (its own screen shape) */
+float settings_wide_k(void);  /* this machine's EFB width factor */
 float settings_game_k(void);  /* the game's camera aspect factor (game state; online: the room's) */
 /* backends: the window's or screen's aspect (width / height), for SCREEN_FIT; cheap when unchanged */
 void settings_set_window_aspect(float aspect);
 const char* settings_screen_name(int mode);
 /* online sessions, recordings and replays (netplay.c): the camera aspect is game state, so it is fixed
- * for the whole run, the same on every machine (EFB width factor k; 0 = not fixed). Screen settings
- * and window size changes then only change how the picture is shown. */
-void settings_fix_wide_k(float k);
+ * for the whole run (EFB width factor k; 0 = not fixed). Online also fixes the rendered picture to
+ * that aspect. Recordings and replays can still present a narrower picture. */
+void settings_fix_wide_k(float k, int lock_picture);
 /* the ring cap from a recording or the online host (999 or 100): game state, kept for this run */
 void settings_fix_ring_cap(int cap);
 int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
@@ -91,6 +91,7 @@ int settings_super_flight_setting(void);  /* this machine's own choice (what a h
 void settings_fix_super_flight(int on);
 int settings_no_ring_drain(void);  /* the cheat in effect: on, and not online / recording / replaying */  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
+int settings_picture_shape_fixed(void);  /* the room fixes both camera and picture */
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);
 float settings_internal_scale(void);  /* 1, 1.25, 1.5 or 2 */

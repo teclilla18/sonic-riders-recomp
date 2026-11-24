@@ -24,8 +24,9 @@ def main():
         return inet_test(args)
     out = Path('build/online-protocol-test').resolve()
     (out / 'saves').mkdir(parents=True, exist_ok=True)
-    (out / 'saves/settings.ini').write_text('update_check=0\npc_fps=0\npc_scale=1\n')
-    env = dict(os.environ, SR_ONLINE='1', SR_LOBBY_TEST='host', SR_MINIMIZED='1', SR_LOGSYNC='1')
+    (out / 'saves/settings.ini').write_text('update_check=0\npc_fps=0\npc_scale=1\nscreen=3\n')
+    env = dict(os.environ, SR_ONLINE='1', SR_LOBBY_TEST='host', SR_MINIMIZED='1', SR_LOGSYNC='1',
+               SR_SCREEN='3', SR_WINDOW='955x400')
     env.pop('SR_NET', None)
     with (out / 'sonicriders.log').open('wb') as log, socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         proc = subprocess.Popen([str(args.exe.resolve()), str(args.iso.resolve())], cwd=out, env=env, stdout=log, stderr=log)
@@ -69,7 +70,11 @@ def main():
             welcome = receive(lambda p: p.startswith(b'SR\x02'), hello, ('127.0.0.1', 7777))
             assert len(welcome) == 80 and struct.unpack_from('<I', welcome, 12)[0] == compat
             assert welcome[3] == 1 and welcome[5] == 2
-            print('PASS: malformed packets, discovery, incompatible lobby/game rejection, different-build acceptance')
+            assert struct.unpack_from('<f', welcome, 8)[0] == 1.0  # the joiner's 4:3 offer
+            with (out / 'sonicriders.log').open(errors='replace') as host_log:
+                assert any("this host 2.3875, the joiner 1.3333; the room's picture 1.3333" in line
+                           for line in host_log)
+            print('PASS: malformed packets, discovery, version checks, different-build acceptance, narrower room picture')
         finally:
             proc.terminate()
             proc.wait(timeout=10)

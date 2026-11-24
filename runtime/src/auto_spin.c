@@ -10,11 +10,13 @@
  * turn adds speed with no cap, which leaves the scene at about twice a fast human's speed. The user chose a
  * fast human's rate instead (2026-11-20): 5 turns a second felt like a fast hand spin (one measured 4.8), and
  * the user asked for a bit more: 7 turns a second (6 was tested; 7 picked by the user without a further test).
- * The spin scene itself sets racer +0x624 (halfword) to 1 while it runs (+0x626 counts its progress).
+ * The spin scene sets racer +0x624 (halfword) to 1 while it runs (+0x626 counts its progress).
+ * The movement state distinguishes spinning from other automatic paths and from a stale spin flag.
  *
  * Only the controller input is changed (never game memory), so the game's own refill and speed-up run as usual,
  * recordings hold the turned stick, and in online play the other side receives it as our input. */
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include "game_addrs.h"
 #include "runtime.h"
@@ -22,13 +24,19 @@
 
 #define PAD_STRUCTS   0x801AF9F0u  /* the game's controller structs, one per port */
 #define PAD_STRUCT_SZ 0x30u
-#define RACER_SPIN    0x624u       /* u16: 1 while the racer is in a spin scene */
+#define RACER_SPIN    0x624u       /* u16: spin flag */
+#define SPIN_SECTION  0x628u       /* s16: section number */
+#define RACER_STATE   0x1034u      /* u8: current movement state */
+#define STATE_AUTO_PATH 0u         /* observed in the Metal City stick-spin section */
+#define STATE_SPIN    17u
 #define QUARTERS 7                /* quarter turns per 15 frames: 7 turns a second at 60 frames */
 
 /* clockwise: up, right, down, left */
 static const int8_t k_dx[4] = {0, 100, 0, -100}, k_dy[4] = {100, 0, -100, 0};
 
-static int in_race(void) {
+uint32_t ppc_detclock_steps(void);
+
+static int in_race(uint64_t frame) {
     static int s_was;
     uint32_t mode = GAME_MODE();
     int now = (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) &&
@@ -40,28 +48,31 @@ static int in_race(void) {
             int port = pad >= PAD_STRUCTS && pad < PAD_STRUCTS + 4 * PAD_STRUCT_SZ ? (int)((pad - PAD_STRUCTS) / PAD_STRUCT_SZ) + 1 : 0;
             n += snprintf(line + n, sizeof line - (size_t)n, " %d", port);
         }
-        rt_log("[autospin] race: controller per racer%s", line);
+        rt_log("[autospin] frame %" PRIu64 ": race, controller per racer%s", frame, line);
     }
     s_was = now;
     return now;
 }
 
-/* the racer that controller port `port` drives, if it is in a spin scene; 0 otherwise. Logs each section once. */
-static uint32_t spinning_racer(int port) {
-    static uint32_t s_logged[4];  /* the racer + 1 being spun for, per port */
-    uint32_t want = PAD_STRUCTS + (uint32_t)port * PAD_STRUCT_SZ, found = 0;
-    int idx = -1;
-    for (int i = 0; i < 8 && !found; i++) {
+/* The racer driven by this controller, or 0. */
+static uint32_t port_racer(int port) {
+    uint32_t want = PAD_STRUCTS + (uint32_t)port * PAD_STRUCT_SZ;
+    for (int i = 0; i < 8; i++) {
         uint32_t r = GAME_PLAYERS + (uint32_t)i * GAME_PLAYER_SIZE;
-        if (ld32(r) == want) {
-            if (ld16(r + RACER_SPIN) == 1) { found = r; idx = i; }
-            break;
-        }
+        if (ld32(r) == want) return r;
     }
-    if (found && s_logged[port] != (uint32_t)idx + 1)
-        rt_log("[autospin] port %d: racer %d, spin section %d", port + 1, idx, (int)(int16_t)ld16(found + 0x628u));
-    s_logged[port] = found ? (uint32_t)idx + 1 : 0;
-    return found;
+    return 0;
+}
+
+static void log_section(uint64_t frame, int port, uint32_t racer, int section, const char* event) {
+    rt_log("[autospin] frame %" PRIu64 ": port %d racer %u %s section %d (state %u, spin flag %u)",
+           frame, port + 1, (racer - GAME_PLAYERS) / GAME_PLAYER_SIZE, event, section,
+           ld8(racer + RACER_STATE), ld16(racer + RACER_SPIN));
+}
+
+static int spinning(uint32_t racer) {
+    uint8_t state = ld8(racer + RACER_STATE);
+    return ld16(racer + RACER_SPIN) == 1 && (state == STATE_AUTO_PATH || state == STATE_SPIN);
 }
 
 /* `frame` >= 0: the game frame this input is for (latched input); frame < 0: input read live by the game's own
@@ -73,18 +84,29 @@ static uint32_t spinning_racer(int port) {
 void auto_spin_pad(int port, GcPad* p, int64_t frame) {
     static uint64_t s_moved[4];     /* tick when +0xA20 last changed */
     static uint16_t s_count[4];
-    static uint8_t s_active[4], s_given_back[4];
-    if (!settings_auto_spin() || port < 0 || port > 3 || !in_race()) { if (port >= 0 && port < 4) s_active[port] = 0; return; }
-    uint32_t r = spinning_racer(port);
+    static uint8_t s_given_back[4];
+    static uint32_t s_racer[4];
+    static int s_section[4];
+    if (port < 0 || port > 3) return;
+    uint64_t frame_no = frame >= 0 ? (uint64_t)frame : (uint64_t)ppc_detclock_steps() + 1;
+    uint32_t r = settings_auto_spin() && in_race(frame_no) ? port_racer(port) : 0;
+    if (r && !spinning(r)) r = 0;
+    int section = r ? (int)(int16_t)ld16(r + SPIN_SECTION) : 0;
     uint64_t t = frame >= 0 ? (uint64_t)frame : vi_field_count();
-    if (!r) { s_active[port] = 0; s_given_back[port] = 0; return; }
+    int changed = r != s_racer[port] || section != s_section[port];
+    if (changed) {
+        if (s_racer[port]) log_section(frame_no, port, s_racer[port], s_section[port], "leave");
+        if (r) log_section(frame_no, port, r, section, "enter");
+        s_racer[port] = r;
+        s_section[port] = section;
+        s_given_back[port] = 0;
+    }
+    if (!r || s_given_back[port]) return;
     uint16_t count = ld16(r + 0xA20u);
-    if (!s_active[port] || count != s_count[port]) { s_moved[port] = t; s_count[port] = count; }
-    s_active[port] = 1;
-    if (s_given_back[port]) return;
+    if (changed || count != s_count[port]) { s_moved[port] = t; s_count[port] = count; }
     if (t > s_moved[port] + STUCK_TICKS) {
         s_given_back[port] = 1;
-        rt_log("[autospin] port %d: the game counts no turns here, stick given back until the section ends", port + 1);
+        log_section(frame_no, port, r, section, "no turns counted, released stick in");
         return;
     }
     int next = (int)((t * QUARTERS / 15) & 3);  /* clockwise: at most a quarter per frame */

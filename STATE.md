@@ -1,4 +1,4 @@
-# State (2026-11-21): Online Beta 1 candidate
+# State (2026-11-24): Online Beta.4 PC test candidate
 
 ## Released
 
@@ -27,7 +27,13 @@
    2026-11-21: Windows relaunch keeps an explicit ISO (a5fc6a2, PC-tested); Back to offline PASS on PC; cold Sandbox
    PASS for PC and Android zips (a5fc6a2). Native Switch 2: GPU device loss at game frame 712 blocks it (see
    `codex/online-beta-switch2` STATE.md).
-   **Next:** fix the native frame-712 crash, rebuild all four zips from the final commits, user acceptance, release only with OK.
+   2026-11-24 beta.4 implemented: NET_COMPAT 4 uses the narrower aspect for both pictures and the game camera.
+   Auto spin logs frame and section transitions and checks the movement state before taking the stick.
+   PC-tested [confirmed]: Metal City on localhost with 1910×800 and 1424×800 windows, all checksums equal
+   through the frame-15,600 checkpoint. Captures show both nearby racers, HUD and rings. The offline
+   stale-flag injection preserves manual input, and natural spin sections still work offline and on both peers.
+   **Next:** two-home PC beta.4 retest with the ultrawide host and 16:9 joiner. Check HUD, rings, racer
+   visibility at distance and steering after a grind. The audio stutter report is still open.
    Every release, issue post or Discussions thread requires explicit OK. Notes: docs/notes/online-beta.md.
 
 
@@ -62,6 +68,7 @@
 8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
 9. Super Sonic overhaul (Riders Plus only; plan only). History-only CI failure: ask before changing `--history`.
+10. **#37** in-game volume controls, requested and acknowledged on GitHub. **Discussion #36** asks about more netplay players.
 
 ## Development device checks
 

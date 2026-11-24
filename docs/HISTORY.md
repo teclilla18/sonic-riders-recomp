@@ -2146,3 +2146,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   log]. **Missing CPU/1P markers** = GXSRTE's `Misc/tex1_256x256_d8d7b29f19324bf2_843adf87433cfe86_9.png` is fully
   transparent on purpose (alpha 0 everywhere), blanking the game's marker sheet (1P-4P, COM, faces, target ring);
   renamed to `.png.off` on the OLED, the son's Switch and the PC copies [likely fixed; not yet seen in a race].
+
+## 2026-11-24: Online Beta.4 PC retest candidate (branch codex/online-beta)
+
+- The two-home race had a 2.3875 host and 1.7792 joiner. Beta.4 negotiates the narrower camera and
+  picture together (NET_COMPAT 4). SDL supplies the window size before connecting. [confirmed, PC]
+  Metal City localhost with 1910×800 and 1424×800 windows picked 1.7792. All checksums agreed
+  through checkpoint 15,600. Captures show the nearby racers, HUD and track rings. The wider-camera
+  diagnostic also drew readable HUD and rings. Distant racer visibility and the reported two-home
+  visual and audio symptoms still need the user's retest [uncertain].
+- Auto spin now requires a spin flag and a compatible movement state. Enter, leave and watchdog
+  logs include the input frame. [confirmed, offline PC] Forcing a stale flag changed 215 of 225
+  samples before the fix and zero after it. Natural Auto spin still turned through frames 10987–11162,
+  then released. Both online racers also completed natural spin sections. The reported grind sequence
+  still needs a natural replay. See docs/notes/online-beta.md.
+- LAN and internet protocol tests passed, including the narrower-shape assertion at the LAN handshake.

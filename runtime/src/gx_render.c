@@ -91,7 +91,7 @@ static GxFrame* frame(void) {
         }
         float fov = (float)g_fov_scale * boost_hold_fov();  /* Super Sonic's held boost widens the view */
         memcpy(&g_gx.xf_reg[GX_XR_FOV], &fov, 4);
-        float asp = settings_game_k() / k;  /* online: the room's camera wider than this screen */
+        float asp = settings_game_k() / k;  /* a recording or replay can use a narrower picture than its camera */
         memcpy(&g_gx.xf_reg[GX_XR_ASPECT], &asp, 4);
         g_gx.regs_dirty = 1;
         g_gx.xfm_dirty = ~0u;  /* every chunk is copied into this frame's pool once */

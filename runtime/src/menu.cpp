@@ -388,9 +388,10 @@ void tab_display() {
             settings_apply();
         }
     }
-    if (settings_wide_k_fixed())
-        note("Online (or a recording): the picture's shape is fixed for this session so every player's game "
-             "matches; changes here apply to how it is shown, and fully after the session.");
+    if (settings_picture_shape_fixed())
+        note("The room uses the narrower screen shape for this race. Screen shape changes take effect in the next session.");
+    else if (settings_wide_k_fixed())
+        note("The camera shape is fixed for this recording or replay.");
     heading("Field of view");
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
     ImGui::SliderInt("##fov", &g_settings.fov, FOV_MIN, FOV_MAX, "%d%%");

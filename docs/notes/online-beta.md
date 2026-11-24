@@ -149,6 +149,29 @@ Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). N
 - Auto spin: `[autospin]` lines have no frame numbers, so the grind case can't be seen; add frame numbers and
   section enter/leave lines, then reproduce offline first.
 
+## Beta.4 PC test
+
+- Implemented: HELLO/WELCOME negotiate the narrower screen shape for both the camera and the rendered
+  picture (NET_COMPAT 4). The PC renderer reports the window size before the handshake. Online resizes
+  fit the shared picture with bars as needed.
+- Implemented: Auto spin checks the movement state as well as the section flag. States 0 (observed in
+  Metal City's spin section) and 17 can use Auto spin. Leaving a section resets its watchdog and returns
+  manual control. Logs include the input frame, port, racer, section, state, and spin flag.
+- Offline reproduction [confirmed]: a temporary `SR_POKEAT` test held the spin flag at 1 for 225 frames
+  during a jump and trick (frames 6200–6424). The old code changed 215 of 225 recorded stick samples
+  because the quarter-turn counter still moved. Beta.4 changed zero, including another 136-frame stale
+  flag test after the natural spin. During the real Metal City spin (frames 10987–11162), stick input
+  matched the original Auto spin exactly and the log showed when the section began and ended.
+  An actual grind matching the first two-home report is still needed.
+- Local screenshots [confirmed]: 1910×800 host and 1424×800 joiner both draw the 1.7792 picture.
+  Frame 4300 shows both models and the HUD on both peers. The joiner shows track rings at 5200.
+  Both racers completed normal spin sections. All checksums agreed through checkpoint 15,600
+  (host compared 15,600, joiner 15,598).
+  The old wider-camera diagnostic also drew readable HUD and rings on this route. Distant racer
+  visibility, the reported visual glitches, and audio stutter still need the two-home retest.
+- LAN and internet lobby protocol tests passed on PC, including version rejection and the game
+  handshake on the internet lobby's socket.
+
 ## To do (user requests)
 
 - **Number pad / keyboard digits for invite codes** (user, 2026-11-24): the code popup (`code_pad` in

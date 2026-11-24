@@ -101,6 +101,7 @@ static int g_gltex_cap;
 
 static mtx_t g_lock;
 static cnd_t g_cv;
+static int g_render_ready;
 static GxFrame g_frames[4];
 static GxFrame* g_free[4];
 static int g_nfree;
@@ -1519,6 +1520,9 @@ static int render_thread(void* arg) {
                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
         if (!SDL_GL_CreateContext(g_win)) rt_fatal("SDL_GL_CreateContext: %s", SDL_GetError());
+        sync_fullscreen();
+        SDL_GetWindowSize(g_win, &win_w, &win_h);
+        if (win_w > 0 && win_h > 0) settings_set_window_aspect((float)win_w / (float)win_h);
         /* vsync, so frames line up with the display (no tearing); test runs (minimized) and
          * SR_NOVSYNC=1 present at once */
         int vsync = !minimized && !getenv("SR_NOVSYNC");
@@ -1526,6 +1530,10 @@ static int render_thread(void* arg) {
         set_vsync(vsync);
         gl_setup();
     }
+    mtx_lock(&g_lock);
+    g_render_ready = 1;
+    cnd_broadcast(&g_cv);
+    mtx_unlock(&g_lock);
     for (;;) {
         int ip = ip_target();
         g_render_counts_fps = ip != 0;
@@ -1630,6 +1638,10 @@ void render_start(void) {
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();
     rt_thread_start(render_thread, NULL);
+    /* The online handshake can run before the first draw. Publish the initial window shape first. */
+    mtx_lock(&g_lock);
+    while (!g_render_ready) cnd_wait(&g_cv, &g_lock);
+    mtx_unlock(&g_lock);
 }
 
 /* ---- minimal PNG writer (stored deflate blocks), for screenshots ---- */
