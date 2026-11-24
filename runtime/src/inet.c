@@ -33,7 +33,6 @@ static int last_error(void) { return errno; }
 enum { OWNER_NONE, OWNER_LOBBY, OWNER_NETPLAY };
 static _Atomic intptr_t g_sock = (intptr_t)-1;
 static _Atomic int g_owner;
-static struct sockaddr_in g_peer;
 static InetInfo info;
 static uint64_t opened_ns;
 
@@ -378,6 +377,8 @@ static int stun_handle(const uint8_t* b, int n, const struct sockaddr_in* from) 
 
 /* ---------------------------------------------------------------- the socket */
 static Sock sock(void) { return (Sock)atomic_load(&g_sock); }
+static void finish_code(void);
+
 int inet_open(void) {
     if (sock() != BAD) return 1;
     memset(&info, 0, sizeof info);
@@ -386,8 +387,10 @@ int inet_open(void) {
         for (int i = 0; i < 40 && atomic_load(&upnp_live) > 0; i++) platform_sleep_ns(25000000ull);
     }
     Sock s = BAD;
-    static const int ports[2] = {INET_PORT, INET_PORT_ALT};
-    for (int i = 0; i < 2 && s == BAD; i++) {
+    const char* test = getenv("SR_INET_TEST_IP");
+    int loopback = test && !strcmp(test, "127.0.0.1");
+    static const int ports[] = {INET_PORT, INET_PORT_ALT, 0};
+    for (int i = 0; i < (loopback ? 3 : 2) && s == BAD; i++) {
         s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (s == BAD) return 0;
         nonblocking(s);
@@ -395,9 +398,11 @@ int inet_open(void) {
         BOOL off = FALSE; DWORD got; /* an ICMP "port unreachable" must not make recvfrom fail */
         WSAIoctl(s, (DWORD)_WSAIOW(IOC_VENDOR, 12), &off, sizeof off, NULL, 0, &got, NULL, NULL);
 #endif
-        struct sockaddr_in a = addr4(INADDR_ANY, ports[i]);
+        struct sockaddr_in a = addr4(loopback ? INADDR_LOOPBACK : INADDR_ANY, ports[i]);
         if (bind(s, (struct sockaddr*)&a, sizeof a)) { closesocket(s); s = BAD; continue; }
-        info.local_port = ports[i];
+        socklen_t len = sizeof a;
+        if (getsockname(s, (struct sockaddr*)&a, &len)) { closesocket(s); return 0; }
+        info.local_port = ntohs(a.sin_port);
     }
     if (s == BAD) return 0;
     atomic_store(&g_sock, (intptr_t)s);
@@ -405,7 +410,7 @@ int inet_open(void) {
     info.open = 1;
     opened_ns = platform_now_ns();
     for (int i = 0; i < 2; i++) for (int k = 0; k < 12; k++) stun_tid[i][k] = (uint8_t)rnd64();
-    Ctx* c = calloc(1, sizeof *c);
+    Ctx* c = loopback ? NULL : calloc(1, sizeof *c);
     if (c) {
         c->local_port = info.local_port;
         atomic_store(&c->refs, 3); /* this file, the DNS thread, the UPnP thread */
@@ -416,7 +421,10 @@ int inet_open(void) {
     }
     static int registered;
     if (!registered) { registered = 1; rt_atexit(inet_atexit); }
-    rt_log("[inet] internet socket on UDP %d; looking for this network's public address", info.local_port);
+    if (loopback) {
+        info.ready = 1;
+        finish_code();
+    } else rt_log("[inet] internet socket on UDP %d; looking for this network's public address", info.local_port);
     return 1;
 }
 static void finish_code(void) {
@@ -496,14 +504,12 @@ void inet_close(void) {
     if (cur) { atomic_store(&cur->cancel, 1); unref(cur); cur = NULL; }
     info.open = info.ready = 0;
 }
-void inet_handoff(const void* peer) {
-    memcpy(&g_peer, peer, sizeof g_peer);
+void inet_handoff(void) {
     atomic_store(&g_owner, OWNER_NETPLAY); /* published to the game thread by online_lobby_finish's atomic store */
 }
 int inet_handed(void) { return atomic_load(&g_owner) == OWNER_NETPLAY && sock() != BAD; }
-int inet_take(long long* s, void* peer) {
+int inet_take(long long* s) {
     if (!inet_handed()) return 0;
     *s = (long long)(intptr_t)atomic_load(&g_sock);
-    memcpy(peer, &g_peer, sizeof g_peer);
     return 1;
 }

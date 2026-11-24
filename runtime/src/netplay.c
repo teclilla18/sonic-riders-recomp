@@ -34,6 +34,7 @@
 #include "inet.h"
 #include "net_compat.h"
 #include "online_boot.h"
+#include <stdatomic.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -63,7 +64,7 @@ void ppc_detclock_force(void);
 uint32_t ppc_detclock_steps(void);
 
 #define NBLOCKS (GUEST_RAM_SIZE >> 20)
-#define MAXP 4
+#define MAXP LAN_MAX_PLAYERS
 #define RING 256  /* frames kept for inputs and checksums (more than twice the largest delay) */
 
 static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
@@ -147,7 +148,7 @@ static int rep_open(const char* path) {
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
         memcpy(&k, &kb, 4);
-        settings_fix_wide_k(k, 0);
+        settings_fix_wide_k(k);
     }
     rt_log("[replay] replaying %s (%d port%s%s%s, recorded with %s)", path, g_ports, g_ports > 1 ? "s" : "",
            get32(h + 16) & 1 ? ", an online session" : "", g_online_save ? ", the online save" : "", build);
@@ -191,26 +192,46 @@ static const char* peer_name(void) {
     return n;
 }
 enum { M_HELLO = 1, M_WELCOME = 2, M_REJECT = 3, M_INPUT = 4, M_BYE = 5 };
-#define PROTO 5  /* 5: NET_COMPAT in HELLO/WELCOME, platform build strings are diagnostic only.
-                  * 2: no save check (everyone uses the generated online save); 3: the host's camera aspect;
-                  * 4: the joiner's screen shape in the hello */
+#define PROTO 6  /* the host sends a complete set of player inputs per frame */
 static sock_t g_sock = SOCK_BAD;
-static struct sockaddr_in g_peer;
-static int g_net;                 /* 1: a session is on */
-static int g_net_ended;           /* the session ended (desync, left, lost): the game goes on alone */
+typedef struct {
+    struct sockaddr_in addr;
+    uint32_t recv_upto, ack;
+    uint32_t sums[RING], sum_frames[RING], compared[RING];
+    uint64_t last_recv_ns;
+    int hello;
+} NetPeer;
+static NetPeer g_peers[MAXP];
+static _Atomic int g_net;         /* 1: a session is on */
+static _Atomic int g_net_ended;   /* the session ended (desync, left, lost): the game goes on alone */
 static int g_me, g_players = 2, g_delay = 4;
 static int g_is_host;
 static int g_inet;  /* internet session: the socket came from the lobby (inet.c owns closing it) */
 static uint8_t g_in[MAXP][RING][8];
 static uint32_t g_in_f[MAXP][RING];   /* which frame each slot holds (0: none) */
-static uint32_t g_recv_upto;          /* the peer's inputs are here for every frame up to this */
-static uint32_t g_peer_ack;           /* the peer has all of ours up to this */
 static uint32_t g_local_upto;         /* our own inputs are decided up to this frame */
+static uint32_t g_sent_upto;          /* newest complete frame sent by the host */
 static uint32_t g_sum_upto;           /* our checksums are known up to this frame */
-static uint32_t g_sum_mine[RING], g_sum_mine_f[RING], g_sum_peer[RING], g_sum_peer_f[RING];
-static uint32_t g_sum_done_f[RING];  /* compared already (checksums are sent several times) */
+static uint32_t g_sum_mine[RING], g_sum_mine_f[RING];
 static unsigned g_sums_compared;
-static uint64_t g_last_send_ns, g_last_recv_ns;
+static uint64_t g_last_send_ns;
+
+static int same_peer(const struct sockaddr_in* a, const struct sockaddr_in* b) {
+    return a->sin_addr.s_addr == b->sin_addr.s_addr && a->sin_port == b->sin_port;
+}
+
+static void send_peer(int p, const uint8_t* msg, int len) {
+    const struct sockaddr_in* addr = &g_peers[p].addr;
+    sendto(g_sock, (const char*)msg, len, 0, (const struct sockaddr*)addr, sizeof *addr);
+}
+
+static uint32_t input_ready(void) {
+    if (!g_is_host) return g_peers[0].recv_upto;
+    uint32_t ready = g_local_upto;
+    for (int p = 1; p < g_players; p++)
+        if (g_peers[p].recv_upto < ready) ready = g_peers[p].recv_upto;
+    return ready;
+}
 
 enum { BYE_LEFT = 0, BYE_DESYNC = 1, BYE_LOST = 2 };
 static void net_end(int why, uint32_t frame, const char* log_text, const char* banner) {
@@ -218,43 +239,49 @@ static void net_end(int why, uint32_t frame, const char* log_text, const char* b
     g_net_ended = 1;
     online_loading_set(0);
     rt_log("[net] %s", log_text);
-    rt_log("[net] session ended at frame %u (%u checksums compared); the game goes on without the other player",
+    rt_log("[net] session ended at frame %u (%u checksums compared); the game goes on offline",
            g_frame, g_sums_compared);
     if (banner && why == BYE_DESYNC) {
         char report[256];
-        snprintf(report,sizeof report,"%s\nPlease report it with sonicriders.log from both machines.",banner);
+        snprintf(report,sizeof report,"%s\nPlease report it with sonicriders.log from each machine.",banner);
         overlay_set_banner(report);
     } else overlay_set_banner(banner);
     uint8_t b[12] = {'S', 'R', M_BYE, (uint8_t)g_me, (uint8_t)why};  /* tell the other machine why */
     put32(b + 8, frame);
-    for (int i = 0; i < 3 && g_sock != SOCK_BAD; i++) sendto(g_sock, (const char*)b, sizeof b, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
+    for (int i = 0; i < 3 && g_sock != SOCK_BAD; i++)
+        for (int p = g_is_host; p < (g_is_host ? g_players : 1); p++) send_peer(p, b, sizeof b);
 }
 
-static void sum_check(uint32_t f) {
+static void sum_check(int p, uint32_t f) {
+    NetPeer* peer = &g_peers[p];
     int s = (int)(f % RING);
-    if (g_sum_mine_f[s] != f || g_sum_peer_f[s] != f || g_sum_done_f[s] == f) return;
-    g_sum_done_f[s] = f;
+    if (g_sum_mine_f[s] != f || peer->sum_frames[s] != f || peer->compared[s] == f) return;
+    peer->compared[s] = f;
     g_sums_compared++;
-    if (g_sum_mine[s] == g_sum_peer[s]) return;
+    if (g_sum_mine[s] == peer->sums[s]) return;
     char t[200], b[200];
-    snprintf(t, sizeof t, "DESYNC at frame %u: memory block %u differs (this machine %08X, the other %08X)",
-             f, f % NBLOCKS, g_sum_mine[s], g_sum_peer[s]);
-    snprintf(b, sizeof b, "Desync: the two games no longer match (frame %u).\nThe online session has ended.", f);
+    snprintf(t, sizeof t, "DESYNC at frame %u: memory block %u differs from player %d (this machine %08X, peer %08X)",
+             f, f % NBLOCKS, p + 1, g_sum_mine[s], peer->sums[s]);
+    snprintf(b, sizeof b, "Desync with player %d at frame %u.\nThe online session has ended.", p + 1, f);
     net_end(BYE_DESYNC, f, t, b);
 }
 
-static void net_send_input(void) {
-    uint8_t m[16 + 64 * 8 + 8 * 8];
-    uint32_t from = g_peer_ack + 1;
+static void net_send_input_to(int p, uint32_t upto) {
+    enum { MAX_FRAMES = 32 };
+    uint8_t m[14 + MAX_FRAMES * MAXP * 8 + 8 * 8];
+    NetPeer* peer = &g_peers[p];
+    uint32_t from = peer->ack + 1;
     if (from < (uint32_t)g_delay + 1) from = (uint32_t)g_delay + 1;  /* the first D frames are neutral for all */
-    uint32_t n = g_local_upto >= from ? g_local_upto - from + 1 : 0;
-    if (n > 64) n = 64;
+    uint32_t n = upto >= from ? upto - from + 1 : 0;
+    if (n > MAX_FRAMES) n = MAX_FRAMES;
     m[0] = 'S'; m[1] = 'R'; m[2] = M_INPUT; m[3] = (uint8_t)g_me;
-    put32(m + 4, g_recv_upto);
+    put32(m + 4, peer->recv_upto);
     put32(m + 8, from);
     m[12] = (uint8_t)n;
     size_t len = 14;
-    for (uint32_t i = 0; i < n; i++, len += 8) memcpy(m + len, g_in[g_me][(from + i) % RING], 8);
+    for (uint32_t i = 0; i < n; i++)
+        for (int slot = g_me; slot < (g_is_host ? g_players : g_me + 1); slot++, len += 8)
+            memcpy(m + len, g_in[slot][(from + i) % RING], 8);
     int ns = 0;
     for (uint32_t f = g_sum_upto >= 8 ? g_sum_upto - 7 : 1; f <= g_sum_upto; f++) {  /* our last 8 checksums */
         int s = (int)(f % RING);
@@ -263,14 +290,20 @@ static void net_send_input(void) {
         len += 8; ns++;
     }
     m[13] = (uint8_t)ns;
-    sendto(g_sock, (const char*)m, (int)len, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
+    send_peer(p, m, (int)len);
+}
+
+static void net_send_input(void) {
+    uint32_t upto = g_is_host ? input_ready() : g_local_upto;
+    for (int p = g_is_host; p < (g_is_host ? g_players : 1); p++) net_send_input_to(p, upto);
+    g_sent_upto = upto;
     g_last_send_ns = platform_now_ns();
 }
 
 /* welcome: player number, input delay, players, the host's ring cap (byte 6 bit 0: 999, else 100) and
- * room aspect (EFB width factor k, f32 at byte 8): shared camera and rendered picture */
-static void net_send_welcome(void) {
-    uint8_t m[80] = {'S', 'R', M_WELCOME, 1, (uint8_t)g_delay, (uint8_t)g_players,
+ * room camera (EFB width factor k, f32 at byte 8): shared visibility, each display uses its own shape */
+static void net_send_welcome(int p) {
+    uint8_t m[80] = {'S', 'R', M_WELCOME, (uint8_t)p, (uint8_t)g_delay, (uint8_t)g_players,
                      (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0) |
                                (settings_ring_replenish() ? 4 : 0) | (settings_super_flight() ? 8 : 0)), 0};
     float k = settings_game_k();
@@ -279,19 +312,24 @@ static void net_send_welcome(void) {
     put32(m + 8, kb);
     put32(m + 12, NET_COMPAT);
     snprintf((char*)m + 16,64,"%s",g_build_version);
-    sendto(g_sock, (const char*)m, sizeof m, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
+    send_peer(p, m, sizeof m);
 }
 
 static void net_handle(const uint8_t* m, int len, const struct sockaddr_in* from) {
     if (len < 4 || m[0] != 'S' || m[1] != 'R') return;
-    if (from->sin_addr.s_addr != g_peer.sin_addr.s_addr || from->sin_port != g_peer.sin_port) return;  /* someone else */
-    g_last_recv_ns = platform_now_ns();
+    int p = g_is_host;
+    int end = g_is_host ? g_players : 1;
+    while (p < end && !same_peer(from, &g_peers[p].addr)) p++;
+    if (p == end) return;
+    NetPeer* peer = &g_peers[p];
     switch (m[2]) {
     case M_HELLO:  /* the joiner did not get our welcome yet */
-        if (g_is_host) net_send_welcome();
+        if (g_is_host && len >= 76 && m[3] == PROTO && get32(m + 72) == NET_COMPAT)
+            net_send_welcome(p);
         break;
     case M_BYE:
-        if (len >= 12 && m[4] == BYE_DESYNC) {
+        if (len < 12 || m[3] != p) return;
+        if (m[4] == BYE_DESYNC) {
             char t[160], b[200];
             snprintf(t, sizeof t, "DESYNC at frame %u (found by the other machine)", get32(m + 8));
             snprintf(b, sizeof b, "Desync: the two games no longer match (frame %u).\nThe online session has ended.", get32(m + 8));
@@ -301,26 +339,30 @@ static void net_handle(const uint8_t* m, int len, const struct sockaddr_in* from
         }
         break;
     case M_INPUT: {
-        if (len < 14) return;
-        int p = m[3];
-        if (p < 0 || p >= g_players || p == g_me) return;
+        if (len < 14 || m[3] != p) return;
         uint32_t ack = get32(m + 4), f0 = get32(m + 8), n = m[12], ns = m[13];
-        if (len < (int)(14 + n * 8 + ns * 8)) return;
-        if (ack > g_peer_ack) g_peer_ack = ack;
+        uint32_t stride = (g_is_host ? 1 : (uint32_t)g_players) * 8;
+        if (len != (int)(14 + n * stride + ns * 8)) return;
+        peer->last_recv_ns = platform_now_ns();
+        if (ack > peer->ack && ack <= (g_is_host ? input_ready() : g_local_upto)) peer->ack = ack;
         for (uint32_t i = 0; i < n; i++) {
             uint32_t f = f0 + i;
-            if (f <= g_recv_upto || f > g_recv_upto + RING / 2) continue;
-            memcpy(g_in[p][f % RING], m + 14 + i * 8, 8);
-            g_in_f[p][f % RING] = f;
+            if (f <= peer->recv_upto || f > peer->recv_upto + RING / 2) continue;
+            const uint8_t* data = m + 14 + i * stride;
+            for (int slot = p; slot < (g_is_host ? p + 1 : g_players); slot++, data += 8) {
+                if (slot == g_me) continue;
+                memcpy(g_in[slot][f % RING], data, 8);
+                g_in_f[slot][f % RING] = f;
+            }
         }
-        while (g_in_f[p][(g_recv_upto + 1) % RING] == g_recv_upto + 1) g_recv_upto++;
-        const uint8_t* q = m + 14 + n * 8;
+        while (g_in_f[p][(peer->recv_upto + 1) % RING] == peer->recv_upto + 1) peer->recv_upto++;
+        const uint8_t* q = m + 14 + n * stride;
         for (uint32_t i = 0; i < ns; i++, q += 8) {
             uint32_t f = get32(q);
             if (!f || f + RING / 2 < g_frame || f > g_frame + RING / 2) continue;
-            g_sum_peer[f % RING] = get32(q + 4);
-            g_sum_peer_f[f % RING] = f;
-            sum_check(f);
+            peer->sums[f % RING] = get32(q + 4);
+            peer->sum_frames[f % RING] = f;
+            sum_check(p, f);
         }
         break;
     }
@@ -330,7 +372,7 @@ static void net_handle(const uint8_t* m, int len, const struct sockaddr_in* from
 
 /* receives what is there, waiting up to `ms` for the first packet */
 static void net_poll(int ms) {
-    for (;;) {
+    for (int budget = 0; budget < 128; budget++) {
         fd_set rs;
         FD_ZERO(&rs);
         FD_SET(g_sock, &rs);
@@ -366,7 +408,7 @@ static void net_frame(GcPad* pads) {
     uint64_t t0 = platform_now_ns();
     int waited = 0;
     static uint64_t wait_total_ns, waits;
-    while (f > (uint32_t)g_delay && g_recv_upto < f && !g_net_ended) {
+    while (f > (uint32_t)g_delay && input_ready() < f && !g_net_ended) {
         net_poll(2);
         vi_det_keepalive();  /* the game is held on purpose: no backstops */
         uint64_t now = platform_now_ns();
@@ -378,15 +420,17 @@ static void net_frame(GcPad* pads) {
             snprintf(wb, sizeof wb, "Waiting for %s...", peer_name());
             overlay_set_banner(wb);
         }
-        if ((double)(now - g_last_recv_ns) > timeout_s * 1e9)
-            net_end(BYE_LOST, f, "connection lost: nothing from the other player for the timeout (SR_NET_TIMEOUT)",
-                    "Connection lost: the other player stopped answering.\nThe online session has ended.");
+        for (int p = g_is_host; p < (g_is_host ? g_players : 1); p++)
+            if ((double)(now - g_peers[p].last_recv_ns) > timeout_s * 1e9)
+                net_end(BYE_LOST, f, "connection lost: a player stopped answering",
+                        "Connection lost: a player stopped answering.\nThe online session has ended.");
     }
     net_poll(0);
+    if (g_is_host && !g_net_ended && input_ready() > g_sent_upto) net_send_input();
     if (waited && !g_net_ended) overlay_set_banner(NULL);
     wait_total_ns += platform_now_ns() - t0;
     if (++waits % 600 == 0 && !g_net_ended) {
-        rt_log("[net] frame %u: waited %.2f ms per frame for the other player (last 600 frames); %u checksums compared, all equal",
+        rt_log("[net] frame %u: waited %.2f ms per frame for remote inputs (last 600 frames); %u checksums compared, all equal",
                f, (double)wait_total_ns / 600 / 1e6, g_sums_compared);
         wait_total_ns = 0;
     }
@@ -424,6 +468,7 @@ static int net_fail(const char* why) {
 static void net_bye_at_exit(void) {  /* the game closed: the other machine need not wait for the timeout */
     if (g_net && !g_net_ended) net_end(BYE_LEFT, g_frame, "this player left (the game closed)", NULL);
     if (g_inet) { inet_close(); g_sock = SOCK_BAD; }  /* also removes the UPnP mapping */
+    else if (g_sock != SOCK_BAD) closesocket(g_sock);
 }
 
 /* connects to the other machine before the game starts (main thread) */
@@ -433,26 +478,24 @@ static int net_connect(const char* spec) {
     char host[128] = "";
     int port = 0;
     uint32_t bind_ip = INADDR_ANY;
-    if (!strncmp(spec, "inet:", 5)) {  /* inet:host:<delay> or inet:join: the lobby's socket, peer already reached */
+    g_inet = !strncmp(spec, "inet:", 5);
+    int from_lobby = g_inet || !strncmp(spec, "lan:", 4);
+    int lobby_delay = 4;
+    if (from_lobby) {
         long long s;
-        if (!inet_take(&s, &g_peer)) return net_fail("the internet connection was not handed over by the lobby");
+        struct sockaddr_in peers[MAXP];
+        int count = lan_lobby_take_game(&s, peers, &lobby_delay);
+        if (count < 2 || count > MAXP) return net_fail("the connection was not handed over by the lobby");
         g_sock = (sock_t)s;
-        g_inet = 1;
-        g_is_host = !strncmp(spec + 5, "host:", 5);
-        port = ntohs(g_peer.sin_port);
-        inet_mask(ntohl(g_peer.sin_addr.s_addr), host, sizeof host);  /* only for the log */
+        g_is_host = !strcmp(spec + (g_inet ? 5 : 4), "host");
         if (g_is_host) {
-            int d = atoi(spec + 10);
-            if (d >= 1 && d <= 60 && !getenv("SR_NET_DELAY")) {
-                char t[8]; snprintf(t, sizeof t, "%d", d);
-#ifdef _WIN32
-                _putenv_s("SR_NET_DELAY", t);
-#else
-                setenv("SR_NET_DELAY", t, 1);
-#endif
-            }
+            g_players = count;
+            for (int p = 1; p < g_players; p++) g_peers[p].addr = peers[p];
+        } else {
+            g_peers[0].addr = peers[0];
+            port = ntohs(peers[0].sin_port);
+            inet_mask(ntohl(peers[0].sin_addr.s_addr), host, sizeof host);
         }
-        rt_log("[net] internet session as %s, the other player at %s:%d", g_is_host ? "host" : "joiner", host, port);
     } else if (!strncmp(spec, "host:", 5)) {  /* host:<port>, or host:<address>:<port> to listen on one address only */
         g_is_host = 1;
         const char* c = strrchr(spec + 5, ':');
@@ -467,11 +510,12 @@ static int net_connect(const char* spec) {
         const char* c = strrchr(spec + 5, ':');
         if (c) { snprintf(host, sizeof host, "%.*s", (int)(c - spec - 5), spec + 5); port = atoi(c + 1); }
     }
-    if (port <= 0 || port > 65535 || (!g_is_host && !host[0])) return net_fail("SR_NET must be host:<port> or join:<address>:<port>");
-    if (!g_inet) {
+    if (!from_lobby && (port <= 0 || port > 65535 || (!g_is_host && !host[0])))
+        return net_fail("SR_NET must be host:<port> or join:<address>:<port>");
+    if (!from_lobby) {
     if (!g_is_host) {
-        if (!net_resolve(host, port, &g_peer)) return net_fail("cannot find the host's address");
-        if ((ntohl(g_peer.sin_addr.s_addr) >> 24) == 127) bind_ip = INADDR_LOOPBACK;  /* two copies on one machine */
+        if (!net_resolve(host, port, &g_peers[0].addr)) return net_fail("cannot find the host's address");
+        if ((ntohl(g_peers[0].addr.sin_addr.s_addr) >> 24) == 127) bind_ip = INADDR_LOOPBACK;
     }
     g_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (g_sock == SOCK_BAD) return net_fail("cannot open a network socket");
@@ -491,10 +535,14 @@ static int net_connect(const char* spec) {
     }
     if (g_is_host) {
         g_me = 0;
-        g_delay = getenv("SR_NET_DELAY") ? atoi(getenv("SR_NET_DELAY")) : 4;
+        if (!from_lobby && getenv("SR_NET_PLAYERS")) {
+            g_players = atoi(getenv("SR_NET_PLAYERS"));
+            if (g_players < 2 || g_players > MAXP) return net_fail("SR_NET_PLAYERS must be 2, 3 or 4");
+        }
+        g_delay = getenv("SR_NET_DELAY") ? atoi(getenv("SR_NET_DELAY")) : lobby_delay;
         if (g_delay < 1) g_delay = 1;
         if (g_delay > 60) g_delay = 60;
-        rt_log("[net] hosting on UDP port %d (input delay %d frames): waiting for a player to join", g_inet ? 0 : port, g_delay);
+        rt_log("[net] hosting for %d players (input delay %d frames)", g_players, g_delay);
         {
             char wb[96];
             snprintf(wb, sizeof wb, "Online: waiting for %s to join...",
@@ -502,9 +550,11 @@ static int net_connect(const char* spec) {
             overlay_set_banner(wb);
         }
         uint64_t wait0 = platform_now_ns();
-        for (;;) {
+        int joined = 1;
+        while (joined < g_players) {
             online_present_blank();
-            if (g_inet && platform_now_ns() - wait0 > 60000000000ull) return net_fail("the other player's game did not answer within 60 s");
+            if (from_lobby && platform_now_ns() - wait0 > 60000000000ull)
+                return net_fail("a player's game did not answer within 60 s");
             fd_set rs; FD_ZERO(&rs); FD_SET(g_sock,&rs);
             struct timeval tv={0,50000};
             if (select((int)g_sock+1,&rs,NULL,NULL,&tv)<=0) continue;
@@ -513,7 +563,10 @@ static int net_connect(const char* spec) {
             socklen_t fl = sizeof from;
             int n = (int)recvfrom(g_sock, (char*)m, sizeof m, 0, (struct sockaddr*)&from, &fl);
             if (n < 72 || m[0] != 'S' || m[1] != 'R' || m[2] != M_HELLO) continue;
-            if (g_inet && (from.sin_addr.s_addr != g_peer.sin_addr.s_addr || from.sin_port != g_peer.sin_port)) continue;  /* only the player the lobby let in */
+            int p = 1;
+            while (p < g_players && !same_peer(&from, &g_peers[p].addr)) p++;
+            if (p == g_players && !from_lobby) p = joined;
+            if (p == g_players || g_peers[p].hello) continue;
             char why[160] = "";
             char build[65];
             memcpy(build, m + 8, 64);
@@ -529,24 +582,20 @@ static int net_connect(const char* spec) {
                 sendto(g_sock, (const char*)r, sizeof r, 0, (struct sockaddr*)&from, fl);
                 continue;
             }
-            g_peer = from;
+            g_peers[p].addr = from;
+            g_peers[p].hello = 1;
+            joined++;
             rt_log("[net] compatible builds: host %s, joiner %s (NET_COMPAT %u)",g_build_version,build,NET_COMPAT);
-            {   /* Use the narrower offer for the room's camera and rendered picture. */
+            {   /* The local picture shape is diagnostic only. */
                 uint32_t jb = get32(m + 4);
                 float jk;
                 memcpy(&jk, &jb, 4);
-                float hk = settings_wide_k();
-                settings_fix_wide_k(jk >= 1.0f && jk < hk ? jk : hk, 1);
-                rt_log("[net] screen shapes: this host %.4f, the joiner %.4f; the room's picture %.4f", 4.0f / 3.0f * hk,
-                       4.0f / 3.0f * jk, 4.0f / 3.0f * settings_game_k());
+                rt_log("[net] player %d uses screen shape %.4f at startup", p + 1, 4.0f / 3.0f * jk);
             }
-            break;
         }
-        net_send_welcome();
-        char ip[64];
-        if (g_inet) inet_mask(ntohl(g_peer.sin_addr.s_addr), ip, sizeof ip);
-        else inet_ntop(AF_INET, &g_peer.sin_addr, ip, sizeof ip);
-        rt_log("[net] player 2 joined from %s:%u", ip, ntohs(g_peer.sin_port));
+        /* The widest supported aspect keeps game-side visibility deterministic, including after a resize. */
+        settings_fix_wide_k(8.0f / 3.0f);
+        for (int p = 1; p < g_players; p++) net_send_welcome(p);
     } else {
         rt_log("[net] joining %s:%d", host, port);
         {
@@ -568,7 +617,7 @@ static int net_connect(const char* spec) {
             online_present_blank();
             uint64_t now = platform_now_ns();
             if (now - last > 250000000ull) {
-                sendto(g_sock, (const char*)hello, sizeof hello, 0, (struct sockaddr*)&g_peer, sizeof g_peer);
+                send_peer(0, hello, sizeof hello);
                 last = now;
             }
             if (now - t0 > 60000000000ull) return net_fail("the host did not answer within 60 s");
@@ -581,7 +630,7 @@ static int net_connect(const char* spec) {
             struct sockaddr_in from;
             socklen_t fl = sizeof from;
             int n = (int)recvfrom(g_sock, (char*)m, sizeof m, 0, (struct sockaddr*)&from, &fl);
-            if (from.sin_addr.s_addr != g_peer.sin_addr.s_addr || from.sin_port != g_peer.sin_port) continue;
+            if (!same_peer(&from, &g_peers[0].addr)) continue;
             if (n < 4 || m[0] != 'S' || m[1] != 'R') continue;
             if (m[2] == M_REJECT) {
                 char why[200];
@@ -590,17 +639,18 @@ static int net_connect(const char* spec) {
             }
             if (m[2] == M_WELCOME && n >= 80) {
                 if (get32(m+12)!=NET_COMPAT) return net_fail("a different online version. Install the same Online Beta on both devices.");
-                if (m[3]!=1 || m[4]<1 || m[4]>60 || m[5]!=2) continue;
                 char build[65]; memcpy(build,m+16,64); build[64]=0;
                 rt_log("[net] compatible builds: host %s, joiner %s (NET_COMPAT %u)",build,g_build_version,NET_COMPAT);
                 g_me = m[3];
                 g_delay = m[4];
                 g_players = m[5];
+                if (g_players < 2 || g_players > MAXP || g_me < 1 || g_me >= g_players || g_delay < 1 || g_delay > 60)
+                    return net_fail("the room sent invalid player or delay settings");
                 uint32_t kb = get32(m + 8);
                 float k;
                 memcpy(&k, &kb, 4);
                 if (!(k >= 1.0f && k <= 8.0f)) return net_fail("the room sent an invalid screen shape");
-                settings_fix_wide_k(k, 1);
+                settings_fix_wide_k(k);
                 settings_fix_ring_cap(m[6] & 1 ? 999 : 100);  /* and ring cap */
                 settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
                 settings_fix_ring_replenish(m[6] & 4 ? 1 : 0);  /* and Ring Replenish */
@@ -614,11 +664,13 @@ static int net_connect(const char* spec) {
         const char* me = getenv("SR_NET_NAME");
         rt_log("[net] lobby names: this player \"%s\", the other \"%s\"", me ? me : "", peer_name());
     }
-    if (g_players != 2 || g_me >= g_players) return net_fail("only two-player sessions are supported so far");
     g_ports = g_players;
     g_net = 1;
-    g_recv_upto = g_peer_ack = (uint32_t)g_delay;  /* the first D frames: neutral for everyone, never sent */
-    g_last_recv_ns = platform_now_ns();
+    uint64_t now = platform_now_ns();
+    for (int p = g_is_host; p < (g_is_host ? g_players : 1); p++) {
+        g_peers[p].recv_upto = g_peers[p].ack = (uint32_t)g_delay;
+        g_peers[p].last_recv_ns = now;
+    }
     rt_atexit(net_bye_at_exit);
     overlay_set_banner(NULL);
     return 1;
@@ -647,11 +699,11 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
     const char* net = getenv("SR_NET");
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
     if (g_active) settings_fix_boost_hold(settings_boost_hold());  /* and Hold to boost */
-    if (net && (!strncmp(net, "host:", 5) || !strncmp(net, "inet:host:", 10)))
+    if (net && (!strncmp(net, "host:", 5) || !strcmp(net, "inet:host") || !strcmp(net, "lan:host")))
         settings_fix_super_flight(settings_super_flight_setting());  /* a host offers its own choice (sent in WELCOME) */
     if (net && !net_connect(net)) { g_online_rules=0; g_ports=1; }
     /* A connected room or a replay already fixed the camera. For a local run use this machine's shape. */
-    if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k(), 0);
+    if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
 }
@@ -666,7 +718,7 @@ int netplay_no_cpus(void) { return g_online_rules; }
 int netplay_in_session(void) { return g_net && !g_net_ended; }
 
 /* gx_render.c: whose view to show full screen in a split-screen race (0-based), or -1 for the whole
- * picture. Online: this machine's player. SR_VIEW=<1-2> forces one (testing, also offline). Presentation
+ * picture. Online: this machine's player. SR_VIEW=<1-4> forces one (testing, also offline). Presentation
  * only: the game still draws every view, so all machines keep computing the same game. */
 int netplay_view_player(void) {
     static int forced = -2;
@@ -782,9 +834,10 @@ static void online_rules(GcPad* pads) {
         }
         return;
     }
-    if (GAME_MODE() == GAME_TOP_MODE_RACE && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
+    uint32_t mode = GAME_MODE();
+    if ((mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
-    else if (GAME_MODE() == GAME_TOP_MODE_RACE)
+    else if (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER)
         /* The phase turns "finished" when the FIRST player crosses the line, while the others still race (2026-11-21:
          * the OLED finished first and the S23's player 2 lost control). Each player's racer is handed to the CPU at
          * its own finish (racer +0xBC = 1, found by a per-racer probe of a two-copy race): a player is silenced for
@@ -827,7 +880,7 @@ void netplay_latch(GcPad* pads) {
         g_sum_mine[f % RING] = sum;
         g_sum_mine_f[f % RING] = f;
         g_sum_upto = f;  /* net_frame sends it */
-        sum_check(f);
+        for (int p = g_is_host; p < (g_is_host ? g_players : 1); p++) sum_check(p, f);
         net_frame(pads);
     } else {
         for (int ch = 0; ch < g_ports; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], f); }

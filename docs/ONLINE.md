@@ -2,29 +2,28 @@
 
 Goal: race other players over the internet, PC and Switch together (cross-play).
 
-## Online Beta 1 candidate: races on a home network
+## Four-player test candidate
 
-Implemented on the beta branch; **not released yet**. Two players, one per device, on the same home network.
-PC, Switch and Android are built from main. A separate native Switch 2 candidate is built from Alpha 3;
-it still needs hardware validation. Room codes for internet play and a relay are for a later beta.
+The `codex/online-four` candidate supports two to four players, one per device, on a home network or by
+internet invite code. Tests so far used PC copies on localhost.
 
-1. Open **Online** in the Windows launcher, or the game's settings menu > **Online** > **Open Online**.
+1. Choose **Online > Open Online** in the Windows launcher or the game's settings.
    Opening Online restarts the game before any race begins. Switch can also use its separate ONLINE application.
 2. Choose your own name once. It is saved; the game never uses the device or account name.
-3. One player chooses **Host a race**. The other chooses that race from the list, then **Join**.
-   Both devices must be on the same home network; guest Wi-Fi can prevent devices from finding each other.
-4. The host chooses **Start race**. Both see **Loading online multiplayer** while the game walks to Mode Select.
-   The host chooses menus; both players choose their character. Each device shows its own racer's view.
+3. For LAN, one player chooses **Host a race** and each guest chooses **Join** in the list. For internet,
+   choose **Internet**, share the host's invite code privately, and let each guest into the room.
+4. The host chooses **Start race** when everyone is in. The host chooses menus and everyone chooses
+   their character. Each device shows its own racer at the local screen shape and presentation rate.
 
 No address, command or settings-file edit is needed. **Back to offline** leaves the lobby and starts normal
 offline play. Offline saves are preserved; online uses its generated, fully unlocked save.
 
-The same online compatibility version is required on both devices. Platform build strings may differ.
+Everyone needs the same online compatibility version. Platform build strings may differ.
 Music packs are unavailable in this candidate (the music loader has not merged); a later merge must keep
 replacements disabled online. First use of a texture pack can still stutter. The 2P character model can sit
-outside its panel with Fit to screen (#35). Internet play, 3-4 players and a shared 30 fps mode are not in Beta 1.
+outside its panel with Fit to screen (#35). The 3–4 player own view still uses split-screen racing art.
 
-After a problem, attach **sonicriders.log from both devices** using the **Online Beta problem** issue form.
+After a problem, attach **sonicriders.log from each device** using the **Online Beta problem** issue form.
 The form explains where each platform saves its log. Keep the desync frame shown on screen, if any.
 Never attach a disc image, build, save, extracted game files or keys.
 
@@ -182,7 +181,8 @@ code, which only the recompiled copy runs, so the game itself is unaffected), to
   heads hand over themselves, on the game thread (patches.txt -> vi.c `vi_det_loop_point`), after waiting for the
   GPU to finish its queued work. The rolling checksum would otherwise have reported false desyncs there.
 
-Not done yet: more than two players (the protocol carries a player number; the host would relay).
+The earlier two-player protocol ended here. The four-player candidate uses host input bundles. See
+[the four-player notes](notes/online-beta.md#four-player-pc-candidate).
 
 ## Phase 3 (in progress)
 
@@ -314,7 +314,7 @@ possible: a session-wide switch to the game's 30 fps mode at the same agreed fra
 host, carried in the lockstep stream), and every picture-only setting per player (resolution, FOV, HUD placement,
 bloom, colour, sharpness, PC in-between pictures).
 
-**Shared screen shape (Online Beta.4, NET_COMPAT 4).** The camera aspect is game state. The joiner offers
+**History of shared screen shape (Online Beta.4, NET_COMPAT 4).** The camera aspect is game state. The joiner offers
 its screen shape in HELLO (bytes 4–7), and the host sends the narrower of the two in WELCOME (bytes 8–11).
 The room uses that shape for both the game camera and the rendered picture. Each window fits the picture
 with bars as needed, including after a resize. Older recordings still use their stored camera aspect and

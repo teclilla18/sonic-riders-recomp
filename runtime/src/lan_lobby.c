@@ -28,7 +28,14 @@ typedef int Sock;
 enum { ANNOUNCE=1, JOIN, LIST, REFUSE, PING, LEAVE, START, FIND, PUNCH, PONG, WAIT }; /* 9-11: internet mode only */
 static LanLobby v;
 static Sock discovery=BAD, session=BAD;
-static struct sockaddr_in host, peer;
+typedef struct {
+    struct sockaddr_in addr;
+    uint64_t heard;
+    int rtt_us[16], rtt_n, rtt_i, median, jitter;
+} LobbyPeer;
+static struct sockaddr_in host;
+static LobbyPeer peers[LAN_MAX_PLAYERS];  /* guests are at 1..players-1 on host, host stats at 0 on guest */
+static Sock game_socket=BAD;
 static uint64_t tick, heard, joining, starting, search;
 static char my_name[LAN_NAME];
 static int networking;
@@ -132,15 +139,31 @@ static int read_string(const unsigned char* b,int n,int* pos,char* out,int cap) 
 static int same(const struct sockaddr_in* a,const struct sockaddr_in* b) {
     return a->sin_addr.s_addr==b->sin_addr.s_addr && a->sin_port==b->sin_port;
 }
+static int peer_slot(const struct sockaddr_in* addr) {
+    for (int p=1; p<v.players; p++)
+        if (same(&peers[p].addr,addr)) return p;
+    return 0;
+}
+static void add_peer(const struct sockaddr_in* addr,const char* name,uint64_t now) {
+    int p=v.players++;
+    peers[p]=(LobbyPeer){.addr=*addr,.heard=now};
+    snprintf(v.names[p],LAN_NAME,"%s",name);
+}
+static void remove_peer(int p) {
+    for (int i=p; i+1<v.players; i++) {
+        peers[i]=peers[i+1];
+        memcpy(v.names[i],v.names[i+1],LAN_NAME);
+    }
+    v.players--;
+}
 /* ---- internet mode: the same states, but packets go through inet.c's one socket (inet_send / inet_recv) ---- */
 static int inet_mode, handed;
 static uint64_t sid;                       /* random session id from the host, in every internet packet after JOIN */
 static struct sockaddr_in pend, punch_to;  /* host: the player waiting for approval; the friend's own code */
 static uint64_t pend_heard, punch_since, punch_last, join_window, ping_last, first_contact;
 static int join_count;
-static struct { uint32_t ip; uint64_t until; } refused[20];
+static struct { struct sockaddr_in addr; uint64_t until; } refused[20];
 static uint32_t code_ip; /* joiner: the host's address from the code (its port may be rewritten by a router) */
-static int rtt_us[16], rtt_n, rtt_i;
 static uint64_t rnd(void) {
     static uint64_t x;
     if (!x) x=platform_now_ns()^((uint64_t)(uintptr_t)&x<<21)^0xD1B54A32D192ED03ull;
@@ -170,12 +193,12 @@ static void list(void) {
     Packet p=packet(LIST); p.b[p.n++]=(unsigned char)v.players;
     for (int i=0;i<v.players;i++) string(&p,v.names[i]);
     if (inet_mode) put_sid(&p);
-    if (v.players==2) ssend(p,&peer);
+    for (int i=1; i<v.players; i++) ssend(p,&peers[i].addr);
 }
 static void announce(const struct sockaddr_in* to) {
     if (inet_mode) return; /* internet rooms are never broadcast */
     Packet p=packet(ANNOUNCE); compat(&p);
-    p.b[p.n++]=(unsigned char)v.players; p.b[p.n++]=2; p.b[p.n++]=(unsigned char)(v.state==LAN_HOSTING && v.players<2);
+    p.b[p.n++]=(unsigned char)v.players; p.b[p.n++]=LAN_MAX_PLAYERS; p.b[p.n++]=(unsigned char)(v.state==LAN_HOSTING && v.players<LAN_MAX_PLAYERS);
     string(&p,my_name);
     if (to) send_packet(p,session,to); else send_everywhere(session,p.b,p.n,7779);
 }
@@ -191,7 +214,8 @@ int lan_lobby_open(void) {
     return 1;
 }
 static void inet_reset(void) {
-    inet_mode=1; handed=0; sid=0; rtt_n=rtt_i=0; join_count=0; join_window=ping_last=first_contact=0;
+    inet_mode=1; handed=0; sid=0; join_count=0; join_window=ping_last=first_contact=0;
+    memset(peers,0,sizeof peers);
     v.inet=1; v.inet_ready=0; v.my_code[0]=v.note[0]=0; v.waiting=v.pending=v.punching=0;
     v.rtt_ms=v.jitter_ms=v.samples=0; v.delay_auto=v.delay=6; v.delay_manual=0;
 }
@@ -252,29 +276,49 @@ void lan_lobby_add_code(const char* code) {
 void lan_lobby_answer(int accept) {
     if (!inet_mode || !v.pending || v.state!=LAN_HOSTING) return;
     v.pending=0;
-    if (accept && v.players<2) {
-        peer=pend; sid=rnd(); heard=platform_now_ns(); v.players=2; v.punching=0;
-        snprintf(v.names[1],LAN_NAME,"%s",v.pending_name);
-        char ip[48]; inet_mask(ntohl(peer.sin_addr.s_addr),ip,sizeof ip);
-        rt_log("[lobby] host accepted %s from %s:%u",v.pending_name,ip,ntohs(peer.sin_port));
+    if (accept && v.players<LAN_MAX_PLAYERS) {
+        if (!sid) sid=rnd();
+        add_peer(&pend,v.pending_name,platform_now_ns());
+        if (same(&pend,&punch_to)) v.punching=0;
+        char ip[48]; inet_mask(ntohl(pend.sin_addr.s_addr),ip,sizeof ip);
+        rt_log("[lobby] host accepted %s from %s:%u",v.pending_name,ip,ntohs(pend.sin_port));
         list();
     } else {
         Packet p=packet(REFUSE); string(&p,"The host said no."); for (int i=0;i<3;i++) ssend(p,&pend);
         int k=0; for (int i=1;i<20;i++) if (refused[i].until<refused[k].until) k=i;
-        refused[k].ip=pend.sin_addr.s_addr; refused[k].until=platform_now_ns()+60000000000ull;
+        refused[k].addr=pend; refused[k].until=platform_now_ns()+60000000000ull;
         rt_log("[lobby] host refused %s",v.pending_name);
     }
 }
 void lan_lobby_set_delay(int frames) { v.delay_manual=frames<0?0:frames>15?15:frames; v.delay=v.delay_manual?v.delay_manual:v.delay_auto; }
+const char* lan_lobby_local_name(void) { return my_name; }
+
 void lan_lobby_handoff(void) {
-    if (!inet_mode || handed) return;
+    if (handed) return;
+    if (inet_mode) inet_handoff();
+    else { game_socket=session; session=BAD; }
     handed=1;
-    inet_handoff(v.me==0?&peer:&host);
+}
+int lan_lobby_take_game(long long* sock,void* peer_addrs,int* delay) {
+    if (!handed) return 0;
+    struct sockaddr_in* out=peer_addrs;
+    if (inet_mode) {
+        if (!inet_take(sock)) return 0;
+    } else {
+        if (game_socket==BAD) return 0;
+        *sock=(long long)game_socket; game_socket=BAD;
+    }
+    if (v.me==0) for (int p=1; p<v.players; p++) out[p]=peers[p].addr;
+    else out[0]=host;
+    *delay=inet_mode?v.delay:4;
+    return v.players;
 }
 void lan_lobby_leave(void) {
     Packet p=packet(LEAVE); if (inet_mode) put_sid(&p);
     for (int i=0;i<3;i++) {
-        if (v.state==LAN_HOSTING && v.players==2) ssend(p,&peer);
+        if (v.state==LAN_HOSTING) {
+            for (int j=1; j<v.players; j++) ssend(p,&peers[j].addr);
+        }
         else if (v.state==LAN_JOINING || v.state==LAN_JOINED) ssend(p,&host);
     }
     close_session(); v.state=LAN_IDLE; v.players=v.ready=0; v.error[0]=0; v.waiting=v.pending=v.punching=0;
@@ -282,48 +326,105 @@ void lan_lobby_leave(void) {
 }
 void lan_lobby_close(void) { close_session(); if (discovery!=BAD) closesocket(discovery); discovery=BAD; }
 void lan_lobby_start(void) {
-    if (v.state!=LAN_HOSTING || v.players!=2) return;
+    if (v.state!=LAN_HOSTING || v.players<2) return;
     v.state=LAN_STARTING; starting=platform_now_ns(); tick=0;
     if (inet_mode) rt_log("[lobby] starting: ping %d ms, jitter %d ms (%d samples), input delay %d frames%s",
                           v.rtt_ms,v.jitter_ms,v.samples,v.delay,v.delay_manual?" (chosen by hand)":" (automatic)");
 }
-static void rtt_add(int us) {
-    rtt_us[rtt_i]=us; rtt_i=(rtt_i+1)%16; if (rtt_n<16) rtt_n++;
-    int s[16]; memcpy(s,rtt_us,sizeof s);
-    for (int i=1;i<rtt_n;i++) for (int j=i;j>0 && s[j]<s[j-1];j--) { int t=s[j]; s[j]=s[j-1]; s[j-1]=t; }
-    int med=s[rtt_n/2]; long dev=0; for (int i=0;i<rtt_n;i++) dev+=labs((long)rtt_us[i]-med);
-    int jit=(int)(dev/rtt_n);
-    v.rtt_ms=(med+500)/1000; v.jitter_ms=(jit+500)/1000; v.samples=rtt_n;
-    /* frames the input must wait: half the round trip plus twice the jitter, rounded up, plus one */
-    int d=(int)((med/2+2*jit+16666)/16667)+1;
+static void update_delay(void) {
+    int longest=0, next_longest=0, rtt=0, jitter=0;
+    v.samples=v.me==0 && v.players<2?0:16;
+    for (int i=v.me==0; i<(v.me==0?v.players:1); i++) {
+        const LobbyPeer* p=&peers[i];
+        int leg=p->median/2+2*p->jitter;
+        if (leg>longest) { next_longest=longest; longest=leg; }
+        else if (leg>next_longest) next_longest=leg;
+        if (p->median>rtt) rtt=p->median;
+        if (p->jitter>jitter) jitter=p->jitter;
+        if (p->rtt_n<v.samples) v.samples=p->rtt_n;
+    }
+    v.rtt_ms=(rtt+500)/1000; v.jitter_ms=(jitter+500)/1000;
+    /* A guest's input travels up to the host and back down to another guest. */
+    int d=(longest+next_longest+16666)/16667+1;
     v.delay_auto=d<2?2:d>15?15:d;
     if (v.state!=LAN_STARTING) v.delay=v.delay_manual?v.delay_manual:v.delay_auto; /* fixed once Start is pressed */
 }
-static int refused_ip(uint32_t ip,uint64_t now) { for (int i=0;i<20;i++) if (refused[i].ip==ip && refused[i].until>now) return 1; return 0; }
+static void rtt_add(int slot,int us) {
+    LobbyPeer* p=&peers[slot];
+    p->rtt_us[p->rtt_i]=us; p->rtt_i=(p->rtt_i+1)%16; if (p->rtt_n<16) p->rtt_n++;
+    int s[16]; memcpy(s,p->rtt_us,sizeof s);
+    for (int i=1;i<p->rtt_n;i++) for (int j=i;j>0 && s[j]<s[j-1];j--) { int t=s[j]; s[j]=s[j-1]; s[j-1]=t; }
+    p->median=s[p->rtt_n/2];
+    long dev=0;
+    for (int i=0;i<p->rtt_n;i++) dev+=labs((long)p->rtt_us[i]-p->median);
+    p->jitter=(int)(dev/p->rtt_n);
+    update_delay();
+}
+
+static int read_members(const unsigned char* b,int n) {
+    int count=b[6], pos=7;
+    if (count<2 || count>LAN_MAX_PLAYERS) return 0;
+    char names[LAN_MAX_PLAYERS][LAN_NAME]={{0}};
+    for (int i=0; i<count; i++)
+        if (!read_string(b,n,&pos,names[i],LAN_NAME)) return 0;
+    if (inet_mode) {
+        if (pos+8!=n) return 0;
+        uint64_t s=0;
+        for (int i=0; i<8; i++) s|=(uint64_t)b[pos+i]<<(8*i);
+        if (!s || (sid && s!=sid)) return 0;
+        sid=s;
+    } else if (pos!=n) return 0;
+    memcpy(v.names,names,sizeof names);
+    v.players=count;
+    v.state=LAN_JOINED;
+    v.waiting=0;
+    return 1;
+}
+
+static void expire_peers(uint64_t now) {
+    for (int p=1; p<v.players;) {
+        if (now-peers[p].heard<=6000000000ull) { p++; continue; }
+        rt_log("[lobby] lost %s",v.names[p]);
+        remove_peer(p);
+        if (inet_mode) update_delay();
+    }
+}
+
+static void send_start(void) {
+    Packet p=packet(START);
+    if (inet_mode) { put_sid(&p); p.b[p.n++]=(unsigned char)v.delay; }
+    for (int i=1; i<v.players; i++) ssend(p,&peers[i].addr);
+}
+static int refused_peer(const struct sockaddr_in* addr,uint64_t now) {
+    for (int i=0;i<20;i++) if (refused[i].until>now && same(&refused[i].addr,addr)) return 1;
+    return 0;
+}
 static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* from,uint64_t now) {
     int t=b[5], pos=6;
+    int slot=v.me==0?peer_slot(from):0;
     if (!first_contact) first_contact=now;
     if ((t==PING || t==PONG) && n==22 && sid && sid_ok(b,n)) { /* timestamped keepalives (both directions) */
-        int ours=v.me==0 ? same(&peer,from) : same(&host,from);
-        if (!ours) return;
-        heard=now;
+        if (v.me==0 ? !slot : !same(&host,from)) return;
+        if (v.me==0) peers[slot].heard=now;
+        else heard=now;
         if (t==PING) { Packet p=packet(PONG); memcpy(p.b+6,b+6,16); p.n=22; ssend(p,from); }
         else { uint64_t sent=0; for (int i=0;i<8;i++) sent|=(uint64_t)b[14+i]<<(8*i);
-               if (sent<=now && now-sent<5000000000ull) rtt_add((int)((now-sent)/1000)); }
+               if (sent<=now && now-sent<5000000000ull) rtt_add(slot,(int)((now-sent)/1000)); }
         return;
     }
     if (v.state==LAN_HOSTING || (v.state==LAN_STARTING && v.me==0)) {
         if (t==JOIN && n>=15 && v.state==LAN_HOSTING) {
             if (now-join_window>1000000000ull) { join_window=now; join_count=0; }
-            if (++join_count>8) return; /* more than 8 join packets a second: ignore the rest */
+            if (++join_count>32) return;
             uint64_t c=0; for (int i=0;i<8;i++) c|=(uint64_t)b[6+i]<<(8*i);
             char name[LAN_NAME]; pos=14; if (!read_string(b,n,&pos,name,sizeof name) || !name[0]) return;
             const char* no=NULL;
             if (c!=NET_COMPAT) no="Different online version. Install the same Online Beta on both devices.";
-            else if (refused_ip(from->sin_addr.s_addr,now)) no="The host said no.";
-            else if (v.players==2) { if (same(&peer,from)) { list(); return; } no="This race is full."; }
-            else if (v.pending && !same(&pend,from)) no="The host is answering another player. Try again in a moment.";
+            else if (refused_peer(from,now)) no="The host said no.";
+            else if (slot) { peers[slot].heard=now; list(); return; }
+            else if (v.players==LAN_MAX_PLAYERS) no="This race is full.";
             if (no) { Packet p=packet(REFUSE); string(&p,no); ssend(p,from); return; }
+            if (v.pending && !same(&pend,from)) { ssend(packet(WAIT),from); return; }
             if (!v.pending) {
                 char ip[48]; inet_mask(ntohl(from->sin_addr.s_addr),ip,sizeof ip);
                 rt_log("[lobby] %s asks to join from %s:%u",name,ip,ntohs(from->sin_port));
@@ -331,7 +432,9 @@ static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* f
             }
             pend_heard=now;
             ssend(packet(WAIT),from);
-        } else if (v.players==2 && same(&peer,from) && t==LEAVE && sid_ok(b,n)) { v.players=1; sid=0; rt_log("[lobby] the other player left"); }
+        } else if (v.state==LAN_HOSTING && slot && t==LEAVE && sid_ok(b,n)) {
+            rt_log("[lobby] %s left",v.names[slot]); remove_peer(slot); update_delay(); list();
+        }
         return;
     }
     if (v.state!=LAN_JOINING && v.state!=LAN_JOINED) return;
@@ -345,13 +448,9 @@ static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* f
     heard=now;
     if (t==PUNCH && !sid) { tick=0; } /* the host opened its side: send JOIN right away */
     else if (t==WAIT && !v.waiting) { v.waiting=1; rt_log("[lobby] reached the host; waiting to be let in"); }
-    else if (t==LIST && n>=7 && b[6]==2) {
-        char names[2][LAN_NAME]; pos=7;
-        if (!read_string(b,n,&pos,names[0],LAN_NAME) || !read_string(b,n,&pos,names[1],LAN_NAME) || pos+8!=n) return;
-        uint64_t s=0; for (int i=0;i<8;i++) s|=(uint64_t)b[pos+i]<<(8*i);
-        if (sid && s!=sid) return;
-        if (!sid) rt_log("[lobby] the host let us in");
-        sid=s; memcpy(v.names,names,sizeof names); v.players=2; v.state=LAN_JOINED; v.waiting=0;
+    else if (t==LIST && n>=7) {
+        int first=v.state==LAN_JOINING;
+        if (read_members(b,n) && first) rt_log("[lobby] the host let us in");
     } else if (t==REFUSE) {
         char reason[160]; if (read_string(b,n,&pos,reason,sizeof reason)) fail(reason);
     } else if (t==LEAVE && sid_ok(b,n)) fail("The host closed the race.");
@@ -372,8 +471,9 @@ static void inet_timers(uint64_t now) {
     }
     if (v.state==LAN_HOSTING) {
         if (v.pending && now-pend_heard>6000000000ull) { v.pending=0; rt_log("[lobby] the waiting player stopped asking"); }
-        if (v.players==2 && now-heard>6000000000ull) { v.players=1; sid=0; rt_log("[lobby] lost the other player"); }
-        if (v.punching && v.players<2) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 60 s */
+        expire_peers(now);
+        if (now-tick>1000000000ull) { tick=now; list(); }
+        if (v.punching && v.players<LAN_MAX_PLAYERS) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 60 s */
             uint64_t age=now-punch_since, gap=age<3000000000ull?100000000ull:250000000ull;
             if (age>60000000000ull) { v.punching=0; snprintf(v.error,sizeof v.error,"Could not reach your friend's code. Check it, and ask them to try joining again."); }
             else if (now-punch_last>gap) { punch_last=now; Packet p=packet(PUNCH); compat(&p); ssend(p,&punch_to); }
@@ -387,14 +487,16 @@ static void inet_timers(uint64_t now) {
                  "or turn on UPnP on the router. Some mobile and work networks cannot connect directly without a relay server, which this beta doesn't have.");
     } else if (v.state==LAN_JOINED && now-heard>6000000000ull) fail("Lost the host. Please report it with sonicriders.log from both machines.");
     if (v.state==LAN_STARTING && v.me==0) {
-        if (now-tick>200000000ull) { tick=now; Packet p=packet(START); put_sid(&p); p.b[p.n++]=(unsigned char)v.delay; ssend(p,&peer); }
+        if (now-tick>200000000ull) { tick=now; list(); send_start(); }
         if (now-starting>1500000000ull) v.ready=1;
     }
-    int connected=(v.state==LAN_HOSTING && v.players==2) || v.state==LAN_JOINED || (v.state==LAN_STARTING && !v.ready);
+    int connected=(v.state==LAN_HOSTING && v.players>=2) || v.state==LAN_JOINED || (v.state==LAN_STARTING && !v.ready);
     if (connected && sid && now-ping_last>250000000ull) {
         ping_last=now; Packet p=packet(PING); put_sid(&p);
         for (int i=0;i<8;i++) p.b[p.n++]=(unsigned char)(now>>(8*i));
-        ssend(p,v.me==0?&peer:&host);
+        if (v.me==0) {
+            for (int i=1; i<v.players; i++) ssend(p,&peers[i].addr);
+        } else ssend(p,&host);
     }
 }
 
@@ -422,25 +524,25 @@ const LanLobby* lan_lobby_poll(void) {
             uint64_t c=0; for (int i=0;i<8;i++) c|=(uint64_t)b[6+i]<<(8*i);
             f->compatible=c==NET_COMPAT; f->players=b[14]; f->max_players=b[15]; f->open=b[16]!=0; f->seen=now;
         } else if (v.state==LAN_HOSTING && s==1) {
+            int slot=peer_slot(&from);
             if (b[5]==FIND) announce(&from);
             else if (b[5]==JOIN && n>=15) {
                 uint64_t c=0; for (int i=0;i<8;i++) c|=(uint64_t)b[6+i]<<(8*i);
                 char name[LAN_NAME]; pos=14; if (!read_string(b,n,&pos,name,sizeof name) || !name[0]) continue;
-                if (c!=NET_COMPAT || (v.players==2 && !same(&peer,&from))) {
+                if (c!=NET_COMPAT || (!slot && v.players==LAN_MAX_PLAYERS)) {
                     Packet p=packet(REFUSE); string(&p,c!=NET_COMPAT?"Different online version. Install the same Online Beta on both devices.":"This race is full."); send_packet(p,session,&from);
                 } else {
-                    if (v.players!=2) { char ip[48]; inet_ntop(AF_INET,&from.sin_addr,ip,sizeof ip); rt_log("[lobby] %s joined from %s",name,ip); }
-                    peer=from; heard=now; v.players=2; snprintf(v.names[1],LAN_NAME,"%s",name); list();
+                    if (!slot) { add_peer(&from,name,now); rt_log("[lobby] %s joined, %d players",name,v.players); }
+                    else peers[slot].heard=now;
+                    list();
                 }
-            } else if (v.players==2 && same(&peer,&from)) {
-                if (b[5]==PING) heard=now;
-                else if (b[5]==LEAVE) { v.players=1; list(); }
+            } else if (slot) {
+                if (b[5]==PING) peers[slot].heard=now;
+                else if (b[5]==LEAVE) { remove_peer(slot); list(); }
             }
         } else if ((v.state==LAN_JOINING || v.state==LAN_JOINED) && s==1 && same(&host,&from)) {
-            if (b[5]==LIST && n>=7 && b[6]==2) {
-                char names[2][LAN_NAME]; pos=7;
-                if (!read_string(b,n,&pos,names[0],LAN_NAME) || !read_string(b,n,&pos,names[1],LAN_NAME)) continue;
-                memcpy(v.names,names,sizeof names); v.players=2; v.state=LAN_JOINED; heard=now;
+            if (b[5]==LIST && n>=7) {
+                if (read_members(b,n)) heard=now;
             } else if (b[5]==REFUSE) {
                 char reason[160]; if (read_string(b,n,&pos,reason,sizeof reason)) fail(reason);
             } else if (b[5]==LEAVE) fail("The host closed the race.");
@@ -455,7 +557,7 @@ const LanLobby* lan_lobby_poll(void) {
     }
     if (inet_mode) { if (!handed) inet_timers(now); return &v; }
     if (v.state==LAN_HOSTING) {
-        if (v.players==2 && now-heard>6000000000ull) v.players=1;
+        expire_peers(now);
         if (now-tick>1000000000ull) {
             tick=now; announce(NULL); list();
         }
@@ -466,7 +568,7 @@ const LanLobby* lan_lobby_poll(void) {
         tick=now; Packet p=packet(JOIN); compat(&p); string(&p,my_name); send_packet(p,session,&host);
     } else if (v.state==LAN_JOINED && now-tick>1000000000ull) { tick=now; send_packet(packet(PING),session,&host); }
     else if (v.state==LAN_STARTING && v.me==0) {
-        if (now-tick>200000000ull) { tick=now; send_packet(packet(START),session,&peer); }
+        if (now-tick>200000000ull) { tick=now; list(); send_start(); }
         if (now-starting>1500000000ull) v.ready=1;
     }
     return &v;

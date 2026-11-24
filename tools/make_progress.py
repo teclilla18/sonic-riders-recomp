@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "Online Beta.4 PC test candidate"
+VERSION = "Four-player online PC candidate"
 UPDATED = "2026-11-24"
 
 # (label, weight, percent done); labels must match the README table's first column

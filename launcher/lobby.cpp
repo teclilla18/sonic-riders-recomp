@@ -1,7 +1,7 @@
 /* Online lobby for the Windows launcher: see lobby.h. Messages (UDP, little-endian):
  *   "SRLB" version type, then by type:
- *   ANNOUNCE  host -> broadcast :7779, every second: game fingerprint u64, players, max, open, host name
- *   JOIN      player -> host :7778 (resent until answered): fingerprint u64, name
+ *   ANNOUNCE  host -> broadcast :7789, every second: game fingerprint u64, players, max, open, host name
+ *   JOIN      player -> host :7788 (resent until answered): fingerprint u64, name
  *   LIST      host -> every player (answer to JOIN, then every second and on changes): count, names
  *   REFUSE    host -> player: the reason (full, another game version, already started)
  *   PING      player -> host, every second (the host drops a player not heard from for 6 s)
@@ -9,7 +9,7 @@
  *   START     host -> every player (sent several times): the race starts, every launcher starts the game
  * The fingerprint is NET_COMPAT (runtime/src/net_compat.h), shared across platforms.
  * A join code is the host's local IPv4 address in 7 letters/digits (no 0 O 1 I): it works on the same network;
- * over the internet only with UDP 7777-7778 forwarded to the host (the code names its local address, so for now the
+ * over the internet only with UDP 7777 and 7788 forwarded to the host (the code names its local address, so for now the
  * lobby is a LAN lobby; a lobby server with real codes is planned, docs/notes/online-research.md). */
 #include "lobby.h"
 #include "../runtime/src/net_compat.h"
@@ -209,7 +209,7 @@ void thread_main() {
         if (t - nets_at > 10) { nets = local_nets(); nets_at = t; }
         if (req == R_HOST && st == IDLE) {
             sock = open_udp(kLobbyPort, false);
-            if (sock == INVALID_SOCKET) fail("Could not open the lobby (UDP port 7778 is in use: another lobby open on this PC?).");
+            if (sock == INVALID_SOCKET) fail("Could not open the launcher lobby (UDP port 7788 is in use).");
             else {
                 st = HOSTING;
                 my_name = rname;

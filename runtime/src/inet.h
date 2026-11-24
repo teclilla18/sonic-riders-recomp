@@ -26,8 +26,8 @@ const InetInfo* inet_info(void);        /* lobby: call each poll; sends STUN req
 int inet_recv(unsigned char* b, int cap, void* from_sockaddr_in); /* lobby: one datagram (STUN consumed); <0 none */
 void inet_send(const void* b, int n, const void* to_sockaddr_in);
 void inet_close(void);                  /* closes the socket exactly once and removes the UPnP mapping */
-void inet_handoff(const void* peer_sockaddr_in); /* lobby -> netplay: the socket and the peer's learned address */
-int inet_take(long long* sock, void* peer_sockaddr_in); /* netplay: 1 when a handed-over socket exists */
+void inet_handoff(void); /* transfer socket ownership from lobby to netplay */
+int inet_take(long long* sock); /* netplay: 1 when a handed-over socket exists */
 int inet_handed(void);
 
 /* Codes: 10 digits = IPv4 as one number with port 7777; 15 digits = ip * 100000 + port. Spaces/dashes ignored. */

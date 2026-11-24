@@ -1,7 +1,7 @@
 # Online roadmap: 3-4 players, Super Sonic online rule, quick chat, stage voting, rematches
 
-Status: **plan only** (2026-11-21). Nothing here is implemented. Implementation starts only after the 2-player
-Online Beta (LAN + internet invite codes) is stable and the user approves each phase.
+Status: the transport and first own-view pass are in the [four-player PC candidate](online-beta.md#four-player-pc-candidate).
+The remaining sections preserve decisions from the 2026-11-21 plan and describe future work.
 
 ## Ground rules for every phase
 
@@ -70,6 +70,9 @@ Tests (PC pair online, `SR_BOOSTLOG=1`, scripted inputs, both machines' logs com
   climbs to 350 km/h (regression).
 
 ## 2. 3 and 4 players
+
+Plan Mario Kart-style eight-player rooms after the four-player beta is released (user, 2026-11-24).
+Carry forward the requirements for independent displays, presentation FPS, and the single-player HUD.
 
 What exists: `MAXP 4` input rings, INPUT packets carry the player number, online menu rules already loop over
 `g_ports`, `netplay_view_player()` shows the own half of a 2P split. Limits: one peer address, one

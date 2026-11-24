@@ -172,6 +172,27 @@ Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). N
 - LAN and internet lobby protocol tests passed on PC, including version rejection and the game
   handshake on the internet lobby's socket.
 
+## Four-player PC candidate
+
+- Protocol 6 / NET_COMPAT 5. The in-game LAN and invite-code lobbies admit up to four players. The host
+  starts with at least two. Guests send one pad stream each. The host bundles all inputs and compares
+  checksums against each guest. The lobby passes each connected socket and its peer addresses to the race.
+- The 32:9 game camera gives all copies the same visibility. Each device narrows its rendering to its
+  own aspect. Lower presentation rates skip display copies while executing the original GX work.
+  The PC in-between renderer still uses its local picture-rate setting.
+- The 3–4 player view expands its original 320×240 quadrant to the local display. Its timer is top
+  center and the minimap plus markers are upper right. Split-screen positions can still touch the
+  clock or map. The 1P HUD match still needs its original
+  ring/boost panel upper left, rank/lap/record lower left and tall speed gauge lower right.
+- PC Metal City [confirmed]: 5,400 equal input/checksum records per peer for 4P LAN, 4P invite-code
+  loopback and 3P direct. Mixed local choices included 30, 45, 60 and 120 FPS. The higher rate dipped
+  with four copies drawing on one computer. A 2P direct run passed 4,800. A fifth participant was
+  refused by the invite-code lobby. Disconnecting a guest ended the session for the three remaining
+  PCs. Cross-network and hardware groups are pending.
+- Run `py -3 tools/test_online_room.py --exe <exe> --iso <own-disc.iso> --players 4 --mode lan`
+  (Fit 1910×800 by default). Use `--mode inet` for invite-code loopback or `--mixed` for different windows
+  and FPS. Test captures and recordings stay under the ignored `build/online-room-test/`.
+
 ## To do (user requests)
 
 - **Number pad / keyboard digits for invite codes** (user, 2026-11-24): the code popup (`code_pad` in

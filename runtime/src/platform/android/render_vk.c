@@ -1708,6 +1708,11 @@ static void present_picture(const GxCmd* c) {
         sh = (float)SC(c->copy[11] & 0xFFFF);
         aspect *= (float)h / (float)(c->copy[11] & 0xFFFF);
     }
+    if (c->copy[12]) {
+        x += c->copy[12] >> 16;
+        aspect *= (float)(c->copy[12] & 0xFFFF) / (float)w;
+        w = c->copy[12] & 0xFFFF;
+    }
     float uv[4] = {(float)XSC(x) / EFB_W, sy / EFB_H, (float)XSC(x + w) / EFB_W, (sy + sh) / EFB_H};
     float px[4];
     picture_rect(aspect, px);
@@ -1906,7 +1911,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
     efb_end();
     if (c->copy[4]) {
-        present_picture(c);
+        int limit = gx_online_picture_limit(0);
+        g_render_counts_fps = limit != 0;
+        if (gx_take_display_copy(limit)) present_picture(c);
     } else if ((int)c->copy[8] >= 0) {
         VkImg* t = tex_prepare((int)c->copy[8]);
         if (t && t->live) {

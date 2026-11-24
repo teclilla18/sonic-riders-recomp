@@ -68,7 +68,7 @@ typedef struct GxCmd {
     uint16_t pad;
     uint32_t a, b;            /* DRAW: first index, index count. STATE: uniforms index, chunk table index */
     int32_t tex[8];           /* DRAW: texture ids per texmap (-1: none) */
-    uint32_t copy[12];        /* COPY: see gx_render.c efb_copy */
+    uint32_t copy[13];        /* COPY: see gx_render.c efb_copy */
 } GxCmd;
 
 /* a decoded texture, created on the guest side, uploaded by the backend */
@@ -93,7 +93,9 @@ typedef struct GxFrame {
 } GxFrame;
 
 /* backend (render_gl.c / render_deko.c) */
-extern volatile int g_render_counts_fps;      /* the backend shows the presented rate (PC in-between pictures) */
+extern volatile int g_render_counts_fps;      /* the backend reports the presented rate */
+int gx_online_picture_limit(int pc_cap);      /* local cap while the online game keeps its simulation clock */
+int gx_take_display_copy(int limit);          /* the render thread only; EFB work is never skipped */
 void render_start(void);                      /* creates the window and the render thread */
 void render_submit(GxFrame* f);               /* hands a finished frame over; blocks while the
                                                  previous one is still being drawn */

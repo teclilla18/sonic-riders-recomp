@@ -118,6 +118,10 @@ static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented fra
 static int g_same_at, g_same_step, g_same_first, g_same_k = -1;  /* ,FIRST: start at draw FIRST */
 static unsigned g_presented;
 
+static int online_picture_limit(void) {
+    return gx_online_picture_limit(g_settings.pc_fps == 45 ? 45 : 0);
+}
+
 static GLuint compile(GLenum type, const char* src) {
     const char* parts[2] = {"#version 330 core\n", src};
     GLuint s = p_glCreateShader(type);
@@ -461,7 +465,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fbo);
     glDisable(GL_SCISSOR_TEST);
     if (c->copy[4]) {  /* to the XFB: show it */
-        if (!g_headless) {
+        if (!g_headless && gx_take_display_copy(online_picture_limit())) {
             int ww, wh;
             SDL_GetWindowSize(g_win, &ww, &wh);
             if (ww <= 0 || wh <= 0) { ww = 1280; wh = 960; }
@@ -473,17 +477,21 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             /* the picture at the chosen aspect (settings.h), centred; the EFB is stored top row first:
              * flip while blitting to the window */
             float aspect = g_wide_k > 1.0f ? 4.0f / 3.0f * g_wide_k : settings_display_aspect();
-            int sy = y, sh = h;
+            int sx = x, sw = w, sy = y, sh = h;
             if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
                 sy = y + (int)(c->copy[11] >> 16), sh = (int)(c->copy[11] & 0xFFFF);
                 aspect *= (float)h / (float)sh;
+            }
+            if (c->copy[12]) {
+                sx = x + (int)(c->copy[12] >> 16); sw = (int)(c->copy[12] & 0xFFFF);
+                aspect *= (float)sw / (float)w;
             }
             int dw = ww, dh = wh;
             if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
             else dh = (int)((float)ww / aspect + 0.5f);
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
-            if (!fsr_present(wx(x), sy * EFB_SCALE, wx(x + w) - wx(x), sh * EFB_SCALE, dx, dy, dw, dh))
-                p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
+            if (!fsr_present(wx(sx), sy * EFB_SCALE, wx(sx + sw) - wx(sx), sh * EFB_SCALE, dx, dy, dw, dh))
+                p_glBlitFramebuffer(wx(sx), sy * EFB_SCALE, wx(sx + sw), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                     GL_COLOR_BUFFER_BIT, GL_LINEAR);
             /* the menu's "Save screenshot": the game's picture without the menu on top (read before the
              * overlay is drawn; the user's first shots showed the settings window over the game) */
@@ -1385,7 +1393,7 @@ static uint64_t g_ip_fps_t0;
 
 /* pictures per second wanted from in-between pictures: 0 = off (the game's own pacing) */
 static int ip_target(void) {
-    if (g_headless || g_settings.framerate == FR_30) return 0;
+    if (g_headless || g_settings.framerate == FR_30 || online_picture_limit()) return 0;
     return g_settings.pc_fps;
 }
 
@@ -1536,7 +1544,7 @@ static int render_thread(void* arg) {
     mtx_unlock(&g_lock);
     for (;;) {
         int ip = ip_target();
-        g_render_counts_fps = ip != 0;
+        g_render_counts_fps = ip != 0 || online_picture_limit() != 0;
         if (ip) {
             ip_round(ip);
             goto round_done;

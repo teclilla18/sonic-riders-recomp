@@ -62,7 +62,7 @@ static void timer_overlap(float k, int tall) {
     if (tall) rect(&f, -.863f, -.716f, .108f, .608f, 10);
     rect(&f, -.8656f, -.5437f, -.3458f, -.1708f, 10);
     rect(&f, -.5344f, -.3406f, -.2375f, -.1792f, 10);
-    local_hud_frame(&f);
+    local_hud_frame(&f, -1);
     int state = -1, draw = 0;
     for (uint32_t i = 0; i < f.ncmds; i++) {
         const GxCmd* c = &f.cmds[i];
@@ -115,7 +115,7 @@ static void check(float k, int players) {
     GxCmd copy = {.type = GXC_COPY}; copy.copy[0] = 3; copy.copy[1] = 240; copy.copy[4] = 1;
     command(&f, copy);
     uint32_t before = f.ncmds;
-    local_hud_frame(&f);
+    local_hud_frame(&f, -1);
     assert(!memcmp(&perspective, &f.unis[0], sizeof perspective));
     assert(!memcmp(&original, &f.unis[players], sizeof original));
     assert(!memcmp(&copy, &f.cmds[f.ncmds - 1], sizeof copy));
@@ -144,6 +144,28 @@ static void check(float k, int players) {
     }
     dispose(&f);
 }
+static void check_own_quad_hud(void) {
+    HudView full = {0, 0, 1, 1};
+    for (int p = 0; p < 4; p++) {
+        HudDraw draws[] = {
+            {.source = full, .owner = -1, .textured = 1, .b = {-0.08f, 0.08f, -0.65f, 0.52f}},
+            {.source = full, .owner = 0, .textured = 1, .b = {-0.04f, 0.01f, 0.28f, 0.34f}},
+            {.source = full, .owner = -1, .textured = 1, .b = {-0.29f, 0.29f, 0.82f, 0.93f}},
+            {.source = full, .owner = -1, .b = {-0.002f, 0.002f, -0.5f, 0.5f}},
+        };
+        float wide = 1.75f;
+        quad_shared_hud(draws, 4, p, wide);
+        HudView vp = hud_player_view(p, 1);
+        assert(draws[0].scale > 0 && draws[0].scale < 0.5f);
+        assert(fabsf(draws[0].move / wide - (vp.cx + 0.39f)) < .0001f);
+        assert(draws[0].move_y + draws[0].scale * draws[0].b[2] > vp.cy);
+        assert(draws[0].move_y + draws[0].scale * draws[0].b[3] < vp.cy + vp.hy);
+        assert(fabsf(draws[1].move - draws[0].move) < .0001f);
+        assert(fabsf(draws[1].move_y - draws[0].move_y) < .0001f);
+        assert(draws[2].scale == 0.5f && fabsf(draws[2].move / wide - vp.cx) < .0001f);
+        assert(draws[3].scale == 0 && draws[3].move == 0 && draws[3].move_y == 0);
+    }
+}
 int main(void) {
     ppc_mem_base_var = calloc(1, 32 * 1024 * 1024); assert(ppc_mem_base_var);
     st32(GAME_TOP_MODE, GAME_TOP_MODE_MULTIPLAYER); g_settings.screen = SCREEN_FIT;
@@ -152,6 +174,7 @@ int main(void) {
     for (unsigned k = 0; k < sizeof ratios/sizeof ratios[0]; k++) {
         timer_overlap(ratios[k], 0); timer_overlap(ratios[k], 1);
     }
+    check_own_quad_hud();
     puts("local_hud: complete frames, 2/3/4P x five aspects, shared timer/map, centred notification, silhouette, group spacing, clipping and state isolation PASS");
     free(ppc_mem_base_var);
 }

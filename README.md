@@ -187,7 +187,7 @@ rest 15 % each), judged by hand at each release; `tools/make_progress.py` draws 
 | Graphics match the GameCube | 80 % | Lens flare (#7), story cutscene monitor (#4), stronger speed blur (#3) |
 | Switch performance | 70 % | 60 fps at stock clocks (#1), 3-4 player races at 60 with an overclock (#2) (done on main: heavy 1P views hold 60 at 1.5x with picture options, overclocked) |
 | Platforms | 85 % | Android #32 resolved: Vulkan 1.1 race/clean quit confirmed on Mali; MoltenVK pending. Linux / Steam Deck out of test, Switch Lite / original / docked reports (#9) |
-| Online play | 60 % | LAN lobbies and internet invite codes in the Online Beta candidate. PC-PC finish, PC-Switch and PC-Android racing tested. Beta.4 sets a shared screen shape. Still to do: the two-home beta.4 retest, relay, shared 30 fps, and 3–4 players |
+| Online play | 60 % | LAN lobbies and invite codes. Four-player PC candidate tested on localhost with independent displays and FPS settings. Single-player HUD, cross-network and cross-platform four-player tests, and an internet relay service are still to do |
 | Features and polish | 73 % | Auto spin option (#23) in, played on PC; responsive installers, DPI/completion and output-folder action tested. Remaining: custom music, right-stick camera, code mods/new characters and background texture-pack loading on Switch. |
 
 Playable from boot to races, story mode and 4-player Free Race, with sound.

@@ -1,4 +1,4 @@
-# State (2026-11-24): Online Beta.4 PC test candidate
+# State (2026-11-24): Four-player online PC candidate
 
 ## Released
 
@@ -17,6 +17,23 @@
   line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
 
 ## Work in progress (branches, not on main)
+
+**Four-player online candidate** (`codex/online-four`, from beta.4). In-game LAN and invite-code rooms
+hold 2–4 players. PROTO 6 / NET_COMPAT 5 bundles all inputs through the host. A common visibility
+camera keeps game state in sync while each player chooses their screen shape and presentation rate.
+The PC test runner defaults to Fit at 1910×800 (2.39:1).
+
+- PC-tested [confirmed]: Metal City, four players on LAN and through the invite-code path on loopback,
+  5,400 matching input/checksum records per peer. Mixed local ratios and 30, 45, 60, 120 FPS choices.
+  Three-player direct race 5,400 and two-player regression 4,800. The invite-code lobby refused a fifth.
+  Disconnecting a guest ended lockstep on all three remaining copies.
+- HUD: each racer fills the picture from its quadrant. The timer is centered and the minimap is upper
+  right. The other gauges still use the split-screen artwork, and some gauges overlap the timer or
+  map. See the user's Fit ultrawide reference for the target.
+- **Next:** reuse the actual solo HUD drawing path for each peer. Match the ring/boost panel upper left,
+  rank/lap/record lower left and tall speed gauge lower right. Verify with offline Fit ultrawide captures
+  and equal online checksums. Then test across devices and real internet routes. Plan eight players
+  after the four-player beta is released.
 
 0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
    black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
@@ -61,7 +78,7 @@
 4. **Online Beta 1 validation** (60 %): finish candidate testing/packages; internet room codes and relay, a shared
    30 fps mode, 3-4 players and ping/delay controls remain later work.
 5. **#33 32-bit Android**: branch `claude/android-armv7`; the reporter's APK ran but found no disc image; plain
-   copy-the-iso steps posted 2026-11-20; latest reply: OK. Code fix idea: on-screen message, accept an .iso in files/.
+   copy-the-iso steps posted 2026-11-20. The reporter replied on 2026-11-24 and the race log is pending.
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 7. **Discussion #34**: user replied. #35: 2P character placement with Fit to screen remains a known issue.

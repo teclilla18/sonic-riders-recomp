@@ -388,9 +388,7 @@ void tab_display() {
             settings_apply();
         }
     }
-    if (settings_picture_shape_fixed())
-        note("The room uses the narrower screen shape for this race. Screen shape changes take effect in the next session.");
-    else if (settings_wide_k_fixed())
+    if (settings_wide_k_fixed() && !netplay_in_session())
         note("The camera shape is fixed for this recording or replay.");
     heading("Field of view");
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
@@ -541,6 +539,8 @@ static void pc_frame_rate() {
                               ? "As many pictures as the PC can draw, without vsync (the picture may tear)."
                               : "The game still runs at 60 steps a second; the PC draws extra pictures in between "
                                 "for smoother motion. Vsync is used when the display runs at this rate.";
+        if (netplay_in_session() && (v == 30 || v == 45))
+            tip = "Limit the pictures displayed on this PC. The race stays on the shared simulation clock.";
         if (i % 4) ImGui::SameLine(0, 18);
         if (radio(label, cur == v, tip)) {
             if (v == 30) {
@@ -866,7 +866,7 @@ void quit_row() {
 
 void tab_online() {
     heading("Online Beta 1");
-    ImGui::TextWrapped("Race with one other player, at home or over the internet. Each device needs its own copy of the game.");
+    ImGui::TextWrapped("Race with 2 to 4 players, at home or over the internet. Each device needs its own copy of the game.");
     ImGui::Spacing();
     if (getenv("SR_NET")) ImGui::TextWrapped("You are in an online run. Close the game to start a new race lobby.");
     else {
@@ -879,7 +879,7 @@ void tab_online() {
         }
 #endif
     }
-    ImGui::TextWrapped("2 players, at home or over the internet. The host chooses the menus; both players choose their character. Music packs are off online.");
+    ImGui::TextWrapped("The host chooses the menus. Everyone chooses their character. Music packs are off online.");
 }
 
 /* Internet races: a number pad for invite codes (10 or 15 digits), the code screen, approval and input delay. */
@@ -944,7 +944,7 @@ static void internet_lobby(const LanLobby* v,bool focus_start) {
     for (int i=0;i<v->players;i++) ImGui::Text("Player %d: %s",i+1,v->names[i]);
     if (v->state==LAN_HOSTING) {
         if (!v->inet_ready) ImGui::TextWrapped("Getting your invite code...");
-        else if (v->players<2) {
+        else if (v->players<LAN_MAX_PLAYERS) {
             show_code("Your invite code:",v->my_code);
             if (v->note[0]) ImGui::TextWrapped("%s",v->note);
             if (v->pending) {
@@ -953,11 +953,12 @@ static void internet_lobby(const LanLobby* v,bool focus_start) {
                 if (ImGui::Button("Let them in")) lan_lobby_answer(1);
                 ImGui::SameLine();
                 if (ImGui::Button("Say no")) lan_lobby_answer(0);
-            } else ImGui::TextWrapped(v->punching?"Opening a path to your friend...":"Waiting for your friend to type the code...");
+            } else ImGui::TextWrapped(v->punching?"Opening a path to your friend...":"Friends can join with this code.");
             if (ImGui::Button("Add friend's code")) { typed[0]=0; ImGui::OpenPopup("Your friend's own code"); }
             if (code_pad("Your friend's own code",typed,sizeof typed)) lan_lobby_add_code(typed);
             ImGui::TextWrapped("Only if they can't get in: ask for the code on their screen and add it here.");
-        } else {
+        }
+        if (v->players>=2) {
             ImGui::Text("Ping %d ms, jitter %d ms",v->rtt_ms,v->jitter_ms);
             ImGui::Text("Input delay: %d frames (%s)",v->delay,v->delay_manual?"chosen by hand":"automatic");
             ImGui::SameLine();
@@ -984,15 +985,18 @@ void lobby_window() {
     if (!initialized) { lan_lobby_open(); initialized=true; }
     const LanLobby* v=lan_lobby_poll();
     static int previous_players;
-    bool focus_start=v->state==LAN_HOSTING && v->players==2 && previous_players!=2;
+    bool focus_start=v->state==LAN_HOSTING && v->players>=2 && previous_players<2;
     previous_players=v->players;
     /* Repeatable two-copy lobby tests: the same actions as the buttons, never a direct SR_NET bypass. */
     if (const char* test=getenv("SR_LOBBY_TEST")) {
         static uint64_t since=platform_now_ns();
+        int target=getenv("SR_NET_PLAYERS")?atoi(getenv("SR_NET_PLAYERS")):2;
         if (platform_now_ns()-since>2000000000ull) {
             if (!strcmp(test,"host")) {
                 if (v->state==LAN_IDLE) lan_lobby_host("Test host");
-                else if (v->state==LAN_HOSTING && v->players==2) lan_lobby_start();
+                else if (v->state==LAN_HOSTING && v->players==target) lan_lobby_start();
+            } else if (!strncmp(test,"join:",5) && v->state==LAN_IDLE && !v->error[0]) {
+                lan_lobby_join(test+5,g_settings.online_name[0]?g_settings.online_name:"Test joiner");
             } else if (!strcmp(test,"join") && v->state==LAN_IDLE) {
                 for (int i=0;i<v->count;i++) if (v->found[i].open && v->found[i].compatible) {
                     rt_log("[lobby] test joined discovered race: %s",v->found[i].name);
@@ -1001,9 +1005,9 @@ void lobby_window() {
             } else if (!strcmp(test,"inet-host")) {  /* lets the first asker in, starts after 3 s of ping samples */
                 if (v->state==LAN_IDLE) lan_lobby_host_inet("Test host");
                 else if (v->state==LAN_HOSTING && v->pending) lan_lobby_answer(1);
-                else if (v->state==LAN_HOSTING && v->players==2 && v->samples>=12) lan_lobby_start();
+                else if (v->state==LAN_HOSTING && v->players==target && v->samples>=12) lan_lobby_start();
             } else if (!strncmp(test,"inet-join:",10) && v->state==LAN_IDLE && !v->error[0]) {
-                lan_lobby_join_inet(test+10,"Test joiner");
+                lan_lobby_join_inet(test+10,g_settings.online_name[0]?g_settings.online_name:"Test joiner");
             } else if (!strcmp(test,"offline")) {
                 lan_lobby_leave(); lan_lobby_close(); online_lobby_finish(nullptr,nullptr,nullptr);
             }
@@ -1013,7 +1017,7 @@ void lobby_window() {
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W/2,OVERLAY_H/2),ImGuiCond_Always,ImVec2(.5f,.5f));
     ImGui::SetNextWindowSize(ImVec2(960,600),ImGuiCond_Always);
     ImGui::Begin("Riders Plus Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextWrapped("2 players, at home (same network) or over the internet. The host starts when both players are in.");
+    ImGui::TextWrapped("2 to 4 players, at home or over the internet. The host starts when everyone is in.");
     ImGui::Separator();
     ImGui::BeginDisabled(v->state!=LAN_IDLE);
 #ifdef __SWITCH2__
@@ -1111,7 +1115,7 @@ void lobby_window() {
         if (v->state==LAN_HOSTING) {
             if (v->players<2) ImGui::TextWrapped("Waiting for a player to join...");
             if (v->players<2 && v->my_ip[0]) ImGui::TextWrapped("If they can't see your race, they can choose Join by address and type: %s",v->my_ip);
-            ImGui::BeginDisabled(v->players!=2);
+            ImGui::BeginDisabled(v->players<2);
             if (focus_start) ImGui::SetKeyboardFocusHere();
             if (ImGui::Button("Start race")) lan_lobby_start();
             ImGui::EndDisabled();
@@ -1123,12 +1127,11 @@ void lobby_window() {
         lan_lobby_leave(); lan_lobby_close(); online_lobby_finish(nullptr,nullptr,nullptr);
     }
     if (v->ready) {
-        rt_log("[lobby] both players ready: %s / %s",v->names[0],v->names[1]);
-        char spec[96];
-        if (v->inet) { snprintf(spec,sizeof spec,v->me==0?"inet:host:%d":"inet:join",v->delay); lan_lobby_handoff(); }
-        else snprintf(spec,sizeof spec,v->me==0?"host:7777":"join:%s:7777",v->host_ip);
-        char name[LAN_NAME],peer[LAN_NAME];
-        snprintf(name,sizeof name,"%s",v->names[v->me]); snprintf(peer,sizeof peer,"%s",v->names[1-v->me]);
+        rt_log("[lobby] starting with %d players",v->players);
+        const char* spec=v->inet?(v->me==0?"inet:host":"inet:join"):(v->me==0?"lan:host":"lan:join");
+        const char* name=lan_lobby_local_name();
+        const char* peer=v->me!=0?v->names[0]:v->players==2?v->names[1]:"the other players";
+        lan_lobby_handoff();
         lan_lobby_close(); online_loading_set(1); online_lobby_finish(spec,name,peer);
     }
     ImGui::End();

@@ -2161,3 +2161,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   then released. Both online racers also completed natural spin sections. The reported grind sequence
   still needs a natural replay. See docs/notes/online-beta.md.
 - LAN and internet protocol tests passed, including the narrower-shape assertion at the LAN handshake.
+
+## 2026-11-24: Four-player online PC candidate
+
+- Implemented on `codex/online-four`. Host-relayed inputs, per-peer checksums, LAN and invite-code
+  rooms for 2–4, each device's own rendered aspect and FPS. PROTO 6 and NET_COMPAT 5.
+- [confirmed, PC] 4P LAN and invite-code loopback Metal City reached 5,400 matching full input/checksum
+  records per peer. Mixed 30/45/60/120 FPS and aspect choices also agreed. 3P direct reached 5,400,
+  2P direct reached 4,800. The lobby refused a fifth and a guest disconnect ended all remaining peers.
+- [confirmed, PC captures] The test runner defaults to Fit 1910×800. Each view shows its local racer,
+  with the shared clock centered and its minimap upper right. The split-screen gauges still differ
+  from the user's single-player reference. Exact original solo HUD and 4P across devices/networks
+  remain open. The eight-player design follows the release of the four-player beta.

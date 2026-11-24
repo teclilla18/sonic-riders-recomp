@@ -72,9 +72,8 @@ float settings_game_k(void);  /* the game's camera aspect factor (game state; on
 void settings_set_window_aspect(float aspect);
 const char* settings_screen_name(int mode);
 /* online sessions, recordings and replays (netplay.c): the camera aspect is game state, so it is fixed
- * for the whole run (EFB width factor k; 0 = not fixed). Online also fixes the rendered picture to
- * that aspect. Recordings and replays can still present a narrower picture. */
-void settings_fix_wide_k(float k, int lock_picture);
+ * for the whole run (EFB width factor k; 0 = not fixed). Each display can present a narrower picture. */
+void settings_fix_wide_k(float k);
 /* the ring cap from a recording or the online host (999 or 100): game state, kept for this run */
 void settings_fix_ring_cap(int cap);
 int settings_ring_cap(void);  /* the cap in effect: 999 or 100 */
@@ -91,7 +90,6 @@ int settings_super_flight_setting(void);  /* this machine's own choice (what a h
 void settings_fix_super_flight(int on);
 int settings_no_ring_drain(void);  /* the cheat in effect: on, and not online / recording / replaying */  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
-int settings_picture_shape_fixed(void);  /* the room fixes both camera and picture */
 const char* settings_resolution_name(int res);
 const char* settings_framerate_name(int mode);
 float settings_internal_scale(void);  /* 1, 1.25, 1.5 or 2 */

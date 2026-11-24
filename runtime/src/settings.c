@@ -22,7 +22,6 @@ volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
 static volatile float g_wide_k = 1.0f;
 static float g_fixed_k;  /* settings_fix_wide_k */
-static int g_lock_picture;
 
 const char* settings_screen_name(int mode) {
     static const char* const names[SCREEN_MODES] = {"4:3 (original)", "16:9 widescreen", "16:9 stretched (removed)", "Fit to screen"};
@@ -70,7 +69,7 @@ static float own_display_aspect(void) {
     }
 }
 
-/* of the presented picture (online: the room's shared shape) */
+/* of the presented picture, limited by the camera used for game-side visibility */
 float settings_display_aspect(void) { return g_fixed_k >= 1.0f ? 4.0f / 3.0f * g_wide_k : own_display_aspect(); }
 float settings_wide_k(void) { return g_wide_k; }
 /* the camera aspect the game itself uses (game state: the room's in an online session, a recording's in a replay) */
@@ -90,11 +89,11 @@ static void settings_log(const char* when) {
 }
 
 static void apply_view(void) {
-    /* Online uses one camera and EFB shape, so the game and renderer agree about the edges of the view.
-     * A recording or replay keeps its camera but can still crop perspective draws for a narrower window. */
+    /* A fixed camera covers the whole supported view. The renderer narrows perspective projection
+     * to the local window shape while retaining the wider game-side visibility checks. */
     int wide = g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT;
     float own = wide ? own_display_aspect() / (4.0f / 3.0f) : 1.0f;
-    g_wide_k = g_fixed_k >= 1.0f ? (g_lock_picture ? g_fixed_k : fminf(own, g_fixed_k)) : own;
+    g_wide_k = g_fixed_k >= 1.0f ? fminf(own, g_fixed_k) : own;
     g_aspect_scale = g_fixed_k >= 1.0f ? g_fixed_k : own;
     g_fov_scale = g_settings.fov / 100.0;
 }
@@ -193,16 +192,14 @@ void settings_load(void) {
     settings_log("");
 }
 
-void settings_fix_wide_k(float k, int lock_picture) {
+void settings_fix_wide_k(float k) {
     g_fixed_k = k >= 1.0f && k <= 8.0f ? k : 0.0f;
-    g_lock_picture = lock_picture;
     apply_view();
     rt_log("[settings] camera aspect fixed for this run: %.4f (game k %.4f); this screen draws %.4f (EFB width x%.4f)",
            4.0f / 3.0f * (float)g_aspect_scale, (float)g_aspect_scale, 4.0f / 3.0f * g_wide_k, g_wide_k);
 }
 
 int settings_wide_k_fixed(void) { return g_fixed_k >= 1.0f; }
-int settings_picture_shape_fixed(void) { return settings_wide_k_fixed() && g_lock_picture; }
 
 void settings_fix_ring_cap(int cap) {
     g_fixed_ring_cap = cap == 100 || cap == 999 ? cap : 0;
