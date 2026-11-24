@@ -1449,6 +1449,10 @@ void overlay_shutdown(void) {
     g_ready = false;
 }
 
+int overlay_text_typing(void) {
+    return ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput;
+}
+
 int overlay_take_quit_request(void) {
     int r = g_quit_request;
     g_quit_request = 0;

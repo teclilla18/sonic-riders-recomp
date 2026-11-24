@@ -2479,7 +2479,8 @@ void page_online(float w) {
         if (ImGui::Button("Join with code")) { lobby::clear_error(); online_save(); lobby::join(ip, name); }
         ImGui::EndDisabled();
         ImGui::Spacing();
-        note("Both computers must be on the same network for now (playing over the internet comes later). The first "
+        note("This page finds races on your home network. To race over the internet, press PLAY, then F1 (or hold "
+             "Back on a controller) > Online > Internet, and swap invite codes privately (a code shows your IP). The first "
              "time, Windows may ask to let the launcher and the game through the firewall: allow it (Private networks). "
              "Online races are two players, one per computer, each on their own screen; everyone races with every "
              "character and board unlocked, and your own saves are not used or changed.");
