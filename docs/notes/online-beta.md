@@ -126,6 +126,20 @@ online-p2local): Metal City with only the two players (1st/2nd, two map markers)
 - **Still needed**: native Switch 2 hardware, slow-SD stutter comparison, cold package tests (ask before Sandbox),
   user acceptance and explicit permission before a release, issue post or Discussions thread.
 
+## First test between two homes (2026-11-24, user-played, PC vs PC)
+
+Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). No texture packs. Logs not collected.
+
+- **Connected with no issues** (internet invite codes) [confirmed].
+- **Rings and HUD very glitchy** in the race [confirmed, cause unknown].
+- **Racers vanish with distance**: after a short distance neither player could see the other's character, only
+  the 1P/2P markers [confirmed, cause unknown; check whether far racers are culled/hidden by the online rules
+  or the 2-racer count from NET_COMPAT 3].
+- **Audio stutter** without texture packs [confirmed; maybe lockstep waits on internet ping].
+- **Auto spin stuck on after a grind**: attempting a grind (an auto path) turned Auto spin on and it would not
+  stop until the next auto path was completed [confirmed; likely also offline, check the auto-path end check].
+- Next: ask for both `sonicriders.log` files from a short repeat race; try each on PC localhost first.
+
 ## To do (user requests)
 
 - **Number pad / keyboard digits for invite codes** (user, 2026-11-24): the code popup (`code_pad` in
