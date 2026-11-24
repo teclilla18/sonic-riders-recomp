@@ -138,7 +138,16 @@ Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). N
 - **Audio stutter** without texture packs [confirmed; maybe lockstep waits on internet ping].
 - **Auto spin stuck on after a grind**: attempting a grind (an auto path) turned Auto spin on and it would not
   stop until the next auto path was completed [confirmed; likely also offline, check the auto-path end check].
-- Next: ask for both `sonicriders.log` files from a short repeat race; try each on PC localhost first.
+- **Logs (both sides, read by log-reader):** same build, NET_COMPAT 3; user hosted. Ping ~55 ms, jitter 13 ms,
+  delay 5. Two races, 54,639 frames, **all checksums equal**, network wait under 0.2 ms/frame, no audio underruns,
+  60 fps. Hitches: 105 / 134, worst ~300 ms, on the same frames on both PCs and all 'game code' time [confirmed].
+- **Screen shapes differed** [confirmed]: host 2.3875 (ultrawide, Fit to screen, window resized often), joiner
+  1.7792; the room camera follows the host (2.3875) on both. Likely cause of the glitchy rings/HUD and the
+  vanishing racer on the joiner's side [likely]. Test: both at the same shape (4:3 or 16:9); fix idea: each player
+  draws with its own shape or the room uses the narrower one.
+- Audio stutter probably follows the game-code hitches (audio runs on the game thread) [likely].
+- Auto spin: `[autospin]` lines have no frame numbers, so the grind case can't be seen; add frame numbers and
+  section enter/leave lines, then reproduce offline first.
 
 ## To do (user requests)
 
