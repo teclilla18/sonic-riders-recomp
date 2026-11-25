@@ -1,7 +1,8 @@
 # Standalone Android installer
 
 Phase 1 feasibility, 2026-11-25. Source reviewed at `2f1d028`. The existing Android game runs on the S23 Ultra
-(see [Android notes](android.md)). The milestone 1 APK is ready for physical device testing.
+(see [Android notes](android.md)). The synthetic compiler and loader passed on the S23 Ultra. The full-game
+proof of concept uses Clang and needs a separate device test.
 
 ## What the Windows installer does today
 
@@ -114,4 +115,49 @@ if useful for isolating LLD, followed by phone compilation of the tiny C source.
 - [confirmed] APK signature, 16 KB ZIP alignment, ARM64 manifest with target SDK 35, and empty permission list
   verified on the build host. A host build of the pinned compiler produced the expected synthetic AArch64 ELF
   with the exported entry, indirect helper call and separate executable and writable segments.
-  [uncertain] Device policy, successful execution and cached reload, and the measured phone timings and RSS.
+
+### Confirmed Galaxy S23 Ultra results
+
+User-tested on SM-S918U, Android 17 (API 37), target SDK 35, 4,096-byte pages and USB debugging off.
+The APK was 1,577,638 bytes. The phone reported approximately 42.8 GB available.
+
+| Run | Result | Time | Peak process RSS | Module |
+| --- | --- | --- | --- | --- |
+| First launch, PID 18312 | PASS, returned 49 | 1.307 ms for compile, link and write | 94,184 → 94,828 KiB around compilation. Lifetime peak 95,912 KiB. | 1,971 bytes logical, 4,096 allocated |
+| Reopen, PID 18932 | PASS, returned 49 from the cached ELF | Compiler skipped | Lifetime peak 93,960 KiB | Same cached module |
+
+## Full-game proof of concept
+
+- **Compiler decision.** TinyCC rejected three representative generated C units. In a small isolation test it
+  rejected `musttail` when warnings were fatal and ignored it otherwise, emitting an ordinary AArch64 call
+  relocation where Clang emitted a tail branch. The inspected build had 5,428 mandatory tail-call sites
+  across 35 code chunks. An ordinary call changes generated control flow and grows the native stack on a
+  tail-dispatch chain. Use Android-hosted Clang and LLD for game code. Keep TinyCC for the synthetic probe.
+- **Proof-of-concept split.** `configure.py --android-app runtime-objects` builds a disc-free relocatable
+  runtime object with the normal Android sources, SDL, and the approved shader keys. The APK bundles it with
+  ARM64 Android versions of CPython, pinned dtk, Clang and LLD. The app copies and SHA-1 verifies the ISO
+  chosen via Android's document picker. The worker extracts executables, runs dtk and the existing recompiler,
+  compiles each C unit with the current recompilation flags, links the final read-only ELF locally, and removes
+  its intermediate files. SDL starts `SDL_main` from that local library. This links the prebuilt runtime into the
+  local module and avoids changing the runtime ABI for the first playable build.
+- **Test artifact.** `build/standalone/RidersPlus-Android-Standalone-PoC-arm64.apk`. The package
+  `net.srnative.sonicriders.standalone` keeps separate app data and has no Internet permission. Use a clean
+  full USA GXEE8P rev 0 ISO. Install, disconnect the network, select the ISO, and wait for the build report.
+  Capture the report before tapping **Play**. Reach the title, finish one race, and try touch, a controller,
+  settings and saving. Force-stop and reopen. Verify **Reused local module**, then **Play** again.
+- **Measurements.** The build reports the extract-through-link time and native compile/link time, the worker
+  and largest child high-water RSS, the internal workspace's allocated bytes before cleanup, the module size,
+  and the retained ISO size. ISO import time and the installed APK footprint are separate from the build
+  totals. The build is sequential, so the largest child peak is a per-process measurement.
+- **Host verification.** A fresh verified ISO extraction and analysis reproduced the generated test inputs.
+  NDK Clang compiled all 36 translation units, and LLD linked them against the planned runtime and libraries.
+  The resulting ARM64 ELF exported `SDL_main`. A representative chunk and the table also compiled using
+  only the packaged headers. The signed APK passed ZIP and nested asset checks, and contained no ISO,
+  generated code, game module or analysis output. On-phone tool startup, full compilation, play, module
+  reuse, timing, peak memory and storage remain pending.
+- **Rebuild inputs.** `tools/android/standalone/package_poc.py` pins the Termux Clang/LLD 21.1.8-3 package
+  payloads and Chaquopy CPython 3.13.9-0 ARM64 and stdlib zips under `build/standalone/deps`. Build dtk
+  v1.8.4 there with Rust 1.88.0, the `aarch64-linux-android` target and the NDK API 30 Clang linker.
+  Build `build/android-arm64-v8a/runtime.o` and the two SDL dependencies with the Android runtime-objects
+  Ninja graph, then run the packaging helper with `--tools <setup-tools>`. The dependency choices and notices
+  need release review before distributing a public installer.

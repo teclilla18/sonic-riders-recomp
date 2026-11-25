@@ -2172,3 +2172,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [confirmed] Standalone synthetic ARM64 probe APK built with a pinned TinyCC and verified for target SDK 35,
   signature, 16 KB ZIP alignment and absence of requested permissions. The host copy of TinyCC generated the
   expected ELF. [uncertain] On-device loading and reuse. Awaiting the user's offline Galaxy S23 Ultra test.
+
+### Standalone Android game proof of concept
+
+- [confirmed] User-tested on the S23 Ultra (Android 17, target SDK 35, 4 KB). The synthetic ELF compiled in
+  1.307 ms, returned 49 and ran again from cache in a new process. The roadmap records the resource readings.
+- [confirmed] TinyCC ignores the mandatory tail-call attribute and emitted a normal call in the isolation test.
+  The existing Android Clang/LLD compiled and linked all generated units on the host. The standalone PoC
+  bundles Android-hosted Clang/LLD and builds from a verified ISO. [uncertain] Full flow on the phone.

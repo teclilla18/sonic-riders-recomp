@@ -4,8 +4,12 @@
 
 - Phase 1 feasibility documented in [the Android installer roadmap](docs/notes/android-standalone-installer.md).
   Prebuild the disc-free runtime and compile the disc-derived module on the phone.
-- Milestone 1 probe implemented and APK verified on the build host. No device test yet. The user will install
-  the ARM64 APK from the local branch and check an offline compile, execution, and cached reload on the S23 Ultra.
+- Milestone 1 user-tested on the S23 Ultra (Android 17 API 37, target 35, 4 KB pages, USB debugging off).
+  Native compile/link/write 1.307 ms, expected result 49, cached reuse after process restart. The roadmap has
+  both reports. TinyCC failed the generated game's mandatory tail-call check.
+- Full-game PoC builds with packaged Clang, LLD, CPython and dtk. Host Clang compiled and linked all 36
+  generated units with the disc-free runtime. Next test is the separate-package APK on the S23 Ultra, from
+  verified ISO import through race and cached relaunch. Full-game device timings and memory are pending.
   Issue #38 tracks the feature.
 
 ## Released

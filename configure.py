@@ -58,7 +58,8 @@ ap.add_argument("--abi", choices=["arm64-v8a", "x86_64", "both"], default="arm64
 ap.add_argument("--keystore", default="", help="android: local signing key (made if missing; default next to the SDK)")
 ap.add_argument("--icon", default="", help="your own program icon (.ico; android and ios also .png) instead of the fan-made icon in "
                 "setup/icon.png. Keep it out of git unless it is your own art")
-ap.add_argument("--android-app", choices=["game", "probe"], default="game", help="android: the game, or the milestone 1 probe APK")
+ap.add_argument("--android-app", choices=["game", "probe", "runtime-objects"], default="game",
+                help="android: game APK, platform probe, or disc-free runtime objects for the standalone probe")
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -75,6 +76,7 @@ if args.target == "ios":
     import ios_build  # noqa: E402
     itools = ios_build.Tools(args, ROOT)
 GEN = "build/gen"
+android_runtime_only = args.target == "android" and args.android_app == "runtime-objects"
 OUT = "build/%s" % ("host-" + args.toolchain if args.target == "host" and args.toolchain in ("mingw", "linux") else
                     "android-" + args.abi if args.target == "android" else args.target)
 if args.trace_loads:
@@ -83,14 +85,16 @@ py = sys.executable.replace("\\", "/")
 if " " in py:
     py = '"%s"' % py  # a Python installed under a folder with spaces
 
-gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
-if not gen_c:
-    # the list of generated files is needed to write build.ninja: recompile once now
-    import subprocess
-    print("build/gen is empty: recompiling first", flush=True)
-    subprocess.check_call([sys.executable, "tools/recomp/gcrecomp.py", "config/GXEE8P", "baserom", GEN], cwd=ROOT)
+gen_c = []
+if not android_runtime_only:
     gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
-gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/table.c"]
+    if not gen_c:
+        # the list of generated files is needed to write build.ninja: recompile once now
+        import subprocess
+        print("build/gen is empty: recompiling first", flush=True)
+        subprocess.check_call([sys.executable, "tools/recomp/gcrecomp.py", "config/GXEE8P", "baserom", GEN], cwd=ROOT)
+        gen_c = sorted(glob.glob(os.path.join(ROOT, GEN, "code_*.c")))
+    gen_c = [os.path.relpath(p, ROOT).replace("\\", "/") for p in gen_c] + [GEN + "/table.c"]
 rt_c = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.c")))
 rt_cpp = sorted(os.path.relpath(p, ROOT).replace("\\", "/") for p in glob.glob(os.path.join(ROOT, "runtime/src/*.cpp")))
 plats = ["runtime/src/platform/%s" % args.target]
@@ -329,7 +333,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                      "tools/recomp/leaflocal.py", "tools/recomp/singleflow.py", "tools/gcbin.py", "config/GXEE8P/symbols.txt",
                      "config/GXEE8P/_Main/symbols.txt"] + [p for p in ("config/GXEE8P/hle.txt", "config/GXEE8P/patches.txt", "config/GXEE8P/hot_functions.txt")
                                                            if os.path.exists(os.path.join(ROOT, p))]
-    n.build(gen_c + [GEN + "/funcs.h"], "recomp", recomp_inputs)
+    generated_headers = [] if android_runtime_only else [GEN + "/funcs.h"]
+    if gen_c:
+        n.build(gen_c + generated_headers, "recomp", recomp_inputs)
 
     # shaders: GL strings (host) or uam-compiled deko3d binaries (Switch)
     shader_src = ["runtime/shaders/gx_common.glsl", "runtime/shaders/gx_light.glsl", "runtime/shaders/gx.vert", "runtime/shaders/gx.frag",
@@ -373,7 +379,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         shader_h = [shader_h, spec_h]
     elif args.target in ("android", "ios"):
         # the same specialized fragment shaders as SPIR-V (keys: config/GXEE8P/shader_keys.txt + build/shaderkeys/)
-        key_files = shader_key_files()
+        key_files = ["config/GXEE8P/shader_keys.txt"] if android_runtime_only else shader_key_files()
         spec_h = OUT + "/gen/gx_spec_spv.h"
         n.rule("specshaders", "%s tools/gen_shaders.py --vk $out %s %s/spec $in_keys" % (py, glslc, OUT),
                description="SPEC $out")
@@ -391,7 +397,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     for src in rt_c:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cc", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
+        n.build(o, "cc", src, implicit=generated_headers + shader_h, variables={"extra": "-O2 -Wall"})
         objs.append(o)
     for src in rt_m:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
@@ -399,7 +405,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         objs.append(o)
     for src in rt_cpp:
         o = "%s/obj/%s.o" % (OUT, src.replace("/", "_"))
-        n.build(o, "cxx", src, implicit=[GEN + "/funcs.h"] + shader_h, variables={"extra": "-O2 -Wall"})
+        n.build(o, "cxx", src, implicit=generated_headers + shader_h, variables={"extra": "-O2 -Wall"})
         objs.append(o)
     # Dear ImGui (MIT, --imgui): the settings menu (runtime/src/menu.cpp)
     for src in ("imgui.cpp", "imgui_draw.cpp", "imgui_tables.cpp", "imgui_widgets.cpp"):
@@ -418,7 +424,12 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.build(OUT + "/obj/icon.res.o", "rc", rc, implicit=[icon])
         objs.append(OUT + "/obj/icon.res.o")
     # Android: libSDL2.so comes from the SDL2 step; without the dependency a fresh build could link first
-    if args.target == "ios":
+    if android_runtime_only:
+        exe = OUT + "/runtime.o"
+        n.build(exe, "link", objs, variables={
+            "ldflags": "-nostdlib -no-pie -Wl,-r -Wl,--strip-debug",
+        })
+    elif args.target == "ios":
         exe = ios_build.add_build(n, itools, objs, OUT, py)  # libsonicriders.a, SDL2, the signed .app
     else:
         n.build(exe, "link", objs, implicit=[android_build.sdl_lib(args.abi)] if args.target == "android" else None)
@@ -438,6 +449,7 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.default(OUT + "/SDL2.dll")
     if args.target == "android":
         dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
+    if args.target == "android" and not android_runtime_only:
         apk = "build/android/sonicriders-%s.apk" % args.abi
         # the app icon: your own (--icon), else the fan-made icon in setup/icon.png
         app_icon = os.path.abspath(args.icon).replace("\\", "/") if args.icon else "setup/icon.png"
