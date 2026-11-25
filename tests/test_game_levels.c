@@ -4,9 +4,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../runtime/src/game_levels.c"
+#include "../runtime/src/auto_spin.c"
+#include "../runtime/src/super_flight.c"
 
 uint8_t* ppc_mem_base_var;
 volatile int g_ring_cap = 999;
+static int online;
+static int enable_flight;
+int settings_super_flight(void) { return enable_flight; }
+int settings_auto_spin(void) { return 1; }
+uint32_t ppc_detclock_steps(void) { return 0; }
+uint32_t vi_field_count(void) { return 0; }
+int netplay_no_cpus(void) { return online; }
 int settings_ring_replenish(void) { return 0; }
 int settings_no_ring_drain(void) { return 0; }
 uint64_t rt_ticks(void) { return 0; }
@@ -141,6 +150,44 @@ int main(void) {
     for (int i = 0; i < 8; i++) expect(player(i), BLK3, OFF_TOP, (float)(180 + i));
     assert(racer_index(GAME_PLAYERS + 1) == -1 && racer_index(GAME_PLAYERS + 8 * GAME_PLAYER_SIZE) == -1);
     finished_race(0); finished_race(1);
+    online = 1;
+    st32(GAME_TOP_MODE, 2);
+    st32(GAME_RACE_PHASE, GAME_RACE_FINISHED);
+    for (int i = 0; i < 2; i++) {
+        uint32_t p = player(i);
+        st32(p, GAME_PAD_BASE + GAME_PAD_SIZE * i);
+        st8(p + GAME_RACER_GEAR, 0);
+        st8(p + GAME_RACER_CHARACTER, i);
+        st8(p + 0xBC, i == 0);
+        st8(p + 0x102E, 2);
+        st32(p + 0xB98, 200);
+        stats(p, BLK3, 180, 100, 250);
+    }
+    lv_racers_frame();
+    assert(!g_lv[0].ext && g_lv[1].ext == 1);
+    st32(player(1) + 0xB98, 300);
+    lv_racers_frame();
+    assert(g_lv[1].ext == 2);
+    GcPad pad = { .stick_x = 128, .stick_y = 128 };
+    st16(player(1) + RACER_SPIN, 1);
+    st8(player(1) + RACER_STATE, STATE_SPIN);
+    auto_spin_pad(1, &pad, 150);
+    assert(pad.stick_x != 128 || pad.stick_y != 128);
+    pad.stick_x = pad.stick_y = 128;
+    auto_spin_pad(0, &pad, 150);
+    assert(pad.stick_x == 128 && pad.stick_y == 128);
+    st8(player(1) + GAME_RACER_CHARACTER, GAME_CHAR_SUPER_SONIC);
+    st8(player(1) + GAME_RACER_GEAR, GAME_GEAR_CHAOS_EMERALD);
+    st8(player(1) + RACER_STATE, 5);
+    assert(super_flight_anim(player(1), 1) == 1);
+    enable_flight = 1;
+    assert(super_flight_anim(player(1), 1) == 34);
+    st8(player(1) + RACER_STATE, 18);
+    assert(super_flight_anim(player(1), 27) == 27);
+    st8(player(1) + 0xBC, 1);
+    lv_racers_frame();
+    assert(!g_lv[1].ext && !g_lv[1].applied);
+    online = 0;
     puts("game_levels: thresholds, ownership/mods, resource isolation, finished-phase retirement, feedback, reset and eight racers PASS");
     free(ppc_mem_base_var);
 }

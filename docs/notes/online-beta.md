@@ -273,3 +273,20 @@ Test helpers: `tools/test_online_protocol.py`, `tools/net_route_2p.py`, `tests/d
   at step 19400 and shared standings at 20000 agreed. Independent FPS settings were
   60/30/120/45 on one PC, with the 120 target varying under load. Final offline solo and
   local 2P/4P routes and the normal HUD fixture suite passed. Separate-device testing is pending.
+
+## Compatibility 8 gameplay and final results
+
+The compatibility-7 PC host recorded 103,340 matching checksums across three races with a Switch guest. It negotiated the 999-ring cap, held boost on and experimental flight off. The first race left the second player racing for more than 25,000 steps after the first finish. Before the first finish, a two-peer Windows control reached level 4 at 200 rings and level 5 at 300 for both seats.
+
+The shared race-phase word becomes finished when the first player crosses. Online progression now updates each racer on the simulation clock and uses that racer's native finish flag (+0xBC) to retire extended stats and pending feedback. Auto Spin uses the same finish eligibility and still acts on the local controller's input in native spin sections. Windows, Android and Switch build the same gameplay sources and generated guest patches. The host sets ring cap, replenishment and experimental flight before starting the room. Guests adopt those rules. Held boost is off for everyone online. Auto Spin is a local input preference. Replays use their recorded rules.
+
+The original shared standings task (819291E4) draws the rows, backgrounds and glyphs. The separate personal results task (81931174) is per racer. Two Windows peers showed different row layouts even with identical recorded simulations. The renderer now identifies shared draws before applying its local HUD transformations. The finish log records the native rank byte (+0x102C) for each seat when everyone finishes.
+
+The compatibility-8 Windows controls matched 23,000 steps in two- and four-player rooms and 21,100 steps in the three-player room. Each native standings row agreed across peers, including with different local presentation rates. In the late-progression test P1 finished at 18,877, P2 reached the thresholds at 18,900 and 19,000, then finished at 19,260. A Windows/Eden Switch pair also matched 5,442 early-race records with a 999-ring cap, flight on and held boost off. A second Windows/Eden room matched all 20,202 complete shared records through both finishes. The Switch guest reached both thresholds after the Windows host crossed. The four-player replay matched its last 20,400-checksum checkpoint, and offline solo and local four-player control captures matched their recovery images byte for byte. Android arm64 passed APK signature and archive verification. Physical play on the new candidate remains pending.
+
+### Subsequent beta updates
+
+- The three-player results screen can retain the unused fourth panel behind the shared standings. All three rows and times remained complete in the captures.
+
+- Investigate visually rubberbanding rings and the air tank glitch during DANGER!! against the original HUD. Both are player reports. A change in collected rings or air expenditure has yet to be demonstrated.
+- Future Super Sonic balance only: remove ring rewards from grinding, flying and breaking objects. Keep always-on magnetism and heavily reduced trick-rank rewards as his only replenishment sources. Reduce stats to slightly above original vanilla values, with boost speeds of 280 at level 4 and 300 at level 5. Held boost remains disabled online.

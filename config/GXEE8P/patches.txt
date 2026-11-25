@@ -286,6 +286,10 @@ decl uint32_t online_trail_quad(uint32_t quad, uint32_t racer, unsigned views);
 818A9190 before online_hud_end();
 # Parent work +0x20 and child work +0x10 carry the racer's index. Select the
 # original solo card geometry at construction and tag both pieces while drawing.
+# The final standings callback draws whole shared rows, including their glyphs.
+decl void gx_shared_standings(unsigned active);
+819291E4 before { if (netplay_no_cpus()) gx_shared_standings(1); }
+81929D44 before { if (netplay_no_cpus()) gx_shared_standings(0); }
 decl void online_result_begin(unsigned racer_index);
 81820D8C after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
 819311A4 after online_result_begin(ld8(c->r[30] + 0x20));

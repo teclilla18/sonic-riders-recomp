@@ -11,6 +11,39 @@ import time
 from net_route_2p import p1_online, p2_online
 
 
+def verify_race_results(args, logs):
+    if args.riders_plus:
+        assigned = set()
+        for path in logs:
+            report = path.read_bytes()
+            rules = re.search(rb"\[room-rules\] P(\d+) cap=999 hold=0 replenish=1 flight=1", report)
+            assert rules, f"Incorrect effective room settings in {path}"
+            seat = int(rules[1])
+            assigned.add(seat)
+            for racer in range(args.players):
+                for level in (4, 5):
+                    assert f"[levels] racer {racer}: Lv. {level} ".encode() in report, (seat, racer, level)
+        assert assigned == set(range(1, args.players + 1)), assigned
+        print("PASS: room rules and both extended levels on every racer and peer")
+    if args.finish:
+        finishes = []
+        for path in logs:
+            pairs = re.findall(rb"\[net\] frame (\d+): player (\d+) crossed the finish line", path.read_bytes())
+            finishes.append({int(player): int(frame) for frame, player in pairs if 4300 < int(frame) <= args.frames})
+        assert len(finishes[0]) == args.players and all(f == finishes[0] for f in finishes), finishes
+        order = sorted(finishes[0], key=finishes[0].get)
+        ranks = []
+        for path in logs:
+            rows = re.findall(rb"\[standings\] frame=\d+ seat=(\d+) rank=(\d+)", path.read_bytes())
+            ranks.append({int(seat): int(rank) for seat, rank in rows})
+        assert all(table == ranks[0] for table in ranks), ranks
+        assert sorted(ranks[0].values()) == list(range(1, args.players + 1)), ranks
+        for earlier, later in zip(order, order[1:]):
+            if finishes[0][earlier] < finishes[0][later]:
+                assert ranks[0][earlier] < ranks[0][later], ranks
+        print(f"PASS: finish frames {finishes[0]}, places {ranks[0]}")
+
+
 def race(args):
     suffix = ("-mixed" if args.mixed else "") + ("-leave" if args.disconnect else "")
     root = args.out or Path("build/online-room-test") / f"{args.players}p-{args.mode}{suffix}"
@@ -29,7 +62,11 @@ def race(args):
                 out = (root / f"p{slot + 1}").resolve()
                 (out / "saves").mkdir(parents=True, exist_ok=True)
                 (out / "build").mkdir(exist_ok=True)
-                (out / "saves/settings.ini").write_text(f"online_name=TestPlayer{slot + 1}\npc_scale=1\nupdate_check=0\n")
+                settings = f"online_name=TestPlayer{slot + 1}\npc_scale=1\nupdate_check=0\n"
+                if args.riders_plus:
+                    host = int(slot == 0)
+                    settings += f"ring_cap_999={host}\nboost_hold=1\nring_replenish={host}\nsuper_flight={host}\nauto_spin=1\n"
+                (out / "saves/settings.ini").write_text(settings)
                 recording = out / "race.srr"
                 recording.unlink(missing_ok=True)
                 records.append(recording)
@@ -41,6 +78,11 @@ def race(args):
                 if args.finish:
                     route.extend(entry for entry in p1_online() if int(entry.split(":")[0]) >= 4800)
                 env = dict(common, SR_INPUT=",".join(route), SR_RECORD=str(recording))
+                if args.riders_plus:
+                    env["SR_LEVELLOG"] = "1"
+                    env["SR_POKEAT"] = ",".join(
+                        f"{step}:{0x81A0D740 + i * 0x1080 + 0xB98:08X}:{rings:08X}"
+                        for step, rings in ((4400, 200), (4900, 300)) for i in range(args.players))
                 if args.mixed:
                     window, framerate, fps = profiles[slot]
                     env.update(SR_SCREEN="3", SR_WINDOW=window, SR_FRAMERATE=framerate, SR_FPS=fps,
@@ -86,13 +128,7 @@ def race(args):
                 assert all(len(sticks) > 1 for sticks in inputs), f"A port never steered. See {root}."
                 assert len({frozenset(sticks) for sticks in inputs}) == args.players, "Steering streams should be distinct."
             print(f"PASS: {args.players} players over {args.mode}, {args.frames} matching input/checksum records per peer. {root}")
-            if args.finish:
-                finishes = []
-                for path in logs:
-                    pairs = re.findall(rb"\[net\] frame (\d+): player (\d+) crossed the finish line", path.read_bytes())
-                    finishes.append({int(player): int(frame) for frame, player in pairs if 4300 < int(frame) <= args.frames})
-                assert len(finishes[0]) == args.players and all(f == finishes[0] for f in finishes), finishes
-                print(f"PASS: finish frames by seat {finishes[0]}")
+            verify_race_results(args, logs)
             if args.disconnect:
                 processes[-1].terminate()
                 processes[-1].wait(timeout=10)
@@ -120,6 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=("lan", "inet", "direct"), default="lan")
     parser.add_argument("--port", type=int, default=17888, help="port for direct connection tests")
     parser.add_argument("--frames", type=int, default=5400)
+    parser.add_argument("--riders-plus", action="store_true", help="test host rules and each seat crossing 200 and 300 rings")
     parser.add_argument("--finish", action="store_true", help="require every racer to finish within --frames")
     parser.add_argument("--mixed", action="store_true", help="different window ratios and picture rates")
     parser.add_argument("--out", type=Path, help="separate output folder for a diagnostic build")

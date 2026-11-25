@@ -157,6 +157,7 @@ static GxCmd* push_cmd(int type) {
  * frame drew 3D into: bit 0 the top, bit 1 the bottom (a full-width, half-height viewport with a
  * perspective projection). Read and cleared at the frame's XFB copy. */
 static unsigned g_split_seen, g_quad_seen;
+static int g_shared_standings;
 static void note_split_view(void) {
     const uint32_t* xr = g_gx.xf_reg;
     if (xr[0x26] != 0) return;  /* orthographic: 2D (the HUD) */
@@ -612,6 +613,7 @@ static void lookup_map(GxCmd* c, int map) {
 
 static void draw_impl(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size);
 static void draw(int prim, int vat, uint32_t count, const uint8_t* vertices, uint32_t vertex_size) {
+    if (g_gx.xf_reg[GX_XR_STANDINGS] && count) g_shared_standings = 1;
     if (gx_async()) {  /* on the GP thread: the profiler's variable is the game core's */
         draw_impl(prim, vat, count, vertices, vertex_size);
         return;
@@ -1305,6 +1307,7 @@ static void ownview_frame(GxFrame* f, int me) {
         if (c->type != GXC_DRAW) continue;
         OvXform* t = &tx[di];
         const float* b = bb[di++];
+        if (cu >= 0 && f->unis[cu].xfr[GX_XR_STANDINGS]) continue;
         if (cu < 0 || f->unis[cu].xfr[0x26] == 0) continue;  /* 3D: its register block changes in step 3 */
         float cx = 0.5f * (b[0] + b[1]), cy = 0.5f * (b[2] + b[3]);
         if (vp[cu] == me) {  /* 2D in this player's half viewport (made the whole screen): follows the 3D */
@@ -1367,7 +1370,7 @@ static void ownview_frame(GxFrame* f, int me) {
                 if (c->type == GXC_STATE) { cu = (int)c->a; continue; }
                 if (c->type != GXC_DRAW) continue;
                 const float* b = bb[di];
-                own[di] = cu >= 0 && f->unis[cu].xfr[0x26] != 0 && vp[cu] == 2 && !tx[di].hide && tx[di].sy == 1.0f && b[3] - b[2] < 1.0f && b[1] - b[0] < 1.0f &&
+                own[di] = cu >= 0 && !f->unis[cu].xfr[GX_XR_STANDINGS] && f->unis[cu].xfr[0x26] != 0 && vp[cu] == 2 && !tx[di].hide && tx[di].sy == 1.0f && b[3] - b[2] < 1.0f && b[1] - b[0] < 1.0f &&
                           (me == 0 ? b[2] >= -0.02f : b[3] <= 0.02f) &&
                           !(b[0] >= map[0] - 0.02f && b[1] <= map[1] + 0.02f && b[2] >= map[2] - 0.02f && b[3] <= map[3] + 0.02f);
                 di++;
@@ -1522,16 +1525,17 @@ static void efb_copy(uint32_t v) {
         int netplay_view_player(void);
         int p = netplay_view_player();
         int own = p >= 0 && p < 2 && g_split_seen == 3 && x == 0 && y == 0 && w == 640 && h == 480;
-        if (own && ownview_mode() <= 0)
+        if (own && ownview_mode() <= 0 && !g_shared_standings)
             c->copy[11] = (uint32_t)(p * 240) << 16 | 240;
         int own_quad = p >= 0 && p < 4 && (g_quad_seen & 7) == 7 && (g_quad_seen & (1u << p)) &&
                        x == 0 && y == 0 && w == 640 && h == 480;
-        int solo_camera = own_quad && netplay_no_cpus() && ld32(GAME_HUMAN_COUNT) == 4;
+        int solo_camera = own_quad && netplay_no_cpus() && (ld32(GAME_HUMAN_COUNT) == 4 || g_shared_standings);
         if (own_quad && !solo_camera) {
             c->copy[11] = (uint32_t)((p / 2) * 240) << 16 | 240;
             c->copy[12] = (uint32_t)((p % 2) * 320) << 16 | 320;
         }
-        own = own && ownview_mode() > 0;  /* the whole frame re-laid for this player (ownview_frame) */
+        own = own && (ownview_mode() > 0 || g_shared_standings);  /* the whole frame re-laid for this player (ownview_frame) */
+        g_shared_standings = 0;
         g_split_seen = 0;
         g_quad_seen = 0;
         /* SR_DUMPRAM=FRAME[,FRAME...]: guest RAM to build/ram.bin (one frame) or build/ram_<frame>.bin (a list) at

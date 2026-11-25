@@ -2,6 +2,7 @@
 
 ### Online Beta 1 candidate (not released)
 
+- Online Riders Plus levels and Auto Spin follow each racer through their own finish. The lobby exposes the host’s gameplay settings, including experimental Super Sonic flight. Held boost is disabled online. The shared results table retains its native layout on each screen.
 - The in-game Online lobby can host 2–4 players on LAN or with an internet invite code. The host relays inputs.
 - Each player uses their own picture shape and FPS settings. Three- and four-player views show the local racer, with the timer centered and minimap at upper right.
 - Online opponents use the original solo draw distances. Player Entry keeps right-hand models in their cards across Fit aspect ratios, and online replays reproduce the character-selection state.

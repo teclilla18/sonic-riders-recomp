@@ -182,7 +182,7 @@ def capacity_test(args):
                 name = f'Guest{slot}'.encode()
                 join = prefix + b'\x02' + struct.pack('<Q', compat) + bytes([len(name)]) + name
                 now = time.monotonic()
-                deadline = now + (5 if slot == 2 else 1.4)
+                deadline = now + (30 if slot == 2 else 1.4)  # first join includes renderer and lobby startup
                 while time.monotonic() < deadline:
                     peer.sendto(join, host)
                     try:

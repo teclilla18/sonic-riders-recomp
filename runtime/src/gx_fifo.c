@@ -758,6 +758,7 @@ static void gx_presentation_tag(uint8_t reg, unsigned tag) {
 }
 
 void gx_solo_hud_tag(unsigned tag) { gx_presentation_tag(GX_XR_HUD_SEAT, tag); }
+void gx_shared_standings(unsigned active) { gx_presentation_tag(GX_XR_STANDINGS, active); }
 void gx_entry_preview(unsigned active) { gx_presentation_tag(GX_XR_ENTRY_PREVIEW, active); }
 
 /* the CPU FIFO's bounds (PI FIFO base / end, physical): gx_dff.c */

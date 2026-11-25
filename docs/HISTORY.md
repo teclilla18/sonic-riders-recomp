@@ -2198,3 +2198,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [confirmed] The previous 29 replay mismatches came from skipping the same-character menu
   table update during playback. The repaired replay matched the recovery recording through the
   entire affected interval. Separate-device play and personal acceptance are pending.
+
+## 2026-11-25 — private four-player beta gameplay and standings
+
+- [confirmed] The compatibility-7 host recorded 103,340 matching live checksums with the physical Switch across three races. A two-player Windows control reproduced different standings layouts with identical simulation records. The host had enabled held boost and disabled experimental flight in the physical session.
+- [implemented] Compatibility 8 updates all online racers on the simulation clock, retains extended levels and spin eligibility until each racer's own finish, exposes host room rules in the lobby and disables online held boost. The renderer preserves native shared-results draws. The requested future Super Sonic balance and two reported visual issues are listed in the online beta notes.
+- [tested] Windows direct two-player and invite-code four-player rooms each matched 23,000 input/checksum records per seat through race completion. All seats reached both extended levels. The three-player room matched 21,100 steps. Native ranks agreed with crossing order. Results captures showed the same rows and times across seats. The Windows/Eden v0.1.1 pair matched the first 5,442 complete records, including the guest reaching levels 4 and 5. The Android arm64 candidate built and passed APK signature verification.
+- [uncertain] Physical play on this candidate, Android race behavior, full-course Auto Spin coverage and the experimental pose in an actual online Super Sonic race remain open. Private candidates only.
+- [tested] A second Windows host and Eden Switch guest matched 20,202 complete records through both finishes. The guest reached levels 4 and 5 after the host finished. Both displayed ranks in the same order in the simulation log. The four-player replay matched all 20,400 logged checksums. Offline solo and local four-player control captures matched their recovery images byte for byte.

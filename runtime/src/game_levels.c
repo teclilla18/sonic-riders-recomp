@@ -83,6 +83,17 @@ static int active_race(void) {
            ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
 }
 
+/* Online the race phase changes on the first crossing. Remaining controllers
+ * keep racing until the native finish handoff for their own racer. */
+int online_racer_unfinished(uint32_t racer) {
+    if (!netplay_no_cpus()) return 0;
+    int i = racer_index(racer);
+    unsigned count = ld32(GAME_TOP_MODE);
+    if (count < 2 || count > 4 || i < 0 || (unsigned)i >= count) return 0;
+    uint32_t offset = ld32(racer) - GAME_PAD_BASE;
+    return offset < 4 * GAME_PAD_SIZE && offset % GAME_PAD_SIZE == 0 && !ld8(racer + 0xBC);
+}
+
 /* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
  * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
 #define REPLENISH_NUM 1
@@ -303,7 +314,7 @@ void lv_racer_update(uint32_t racer) {
     LvRacer* r = &g_lv[i];
     /* Native racer/feedback hooks still run after finishing. Retire before any application,
      * using the same guest-state gate as frame retirement, or each frame rearms Lv.5 effects. */
-    if (!active_race()) {
+    if (!active_race() && !online_racer_unfinished(racer)) {
         if (r->valid) lv_racer_reset(racer);
         return;
     }
@@ -448,6 +459,12 @@ static void super_diag2(void) {
 void lv_racers_frame(void) {
     super_diag();
     super_diag2();
+    unsigned count = ld32(GAME_TOP_MODE);
+    if (netplay_no_cpus() && count >= 2 && count <= 4) {
+        for (unsigned i = 0; i < count; i++)
+            lv_racer_update(GAME_PLAYERS + i * GAME_PLAYER_SIZE);
+        return;
+    }
     if (!active_race()) {
         lv_race_reset();
         return;

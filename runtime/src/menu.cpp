@@ -654,10 +654,19 @@ void tab_gameplay() {
         settings_apply();
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
+    if (netplay_in_session()) {
+        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, held boost off.",
+                    settings_ring_cap() == 999 ? "on" : "off", settings_ring_replenish() ? "on" : "off",
+                    settings_super_flight() ? "on" : "off");
+        ImGui::BeginDisabled(settings_ring_cap() == 100);
+        if (check("Auto spin", &g_settings.auto_spin, "Assist this controller in spin sections.")) settings_apply();
+        ImGui::EndDisabled();
+        return;
+    }
     if (check("Riders Plus", &g_settings.ring_cap_999,
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
               "boost or a fall off the course takes 100 rings instead of all of them. Two more gear levels: "
-              "Lv. 4 at 200 rings and Lv. 5 at 350, each with a higher top speed and boost. The gold 100-ring "
+              "Lv. 4 at 200 rings and Lv. 5 at 300, each with a higher top speed and boost. The gold 100-ring "
               "capsule comes back 25 seconds after it is taken (+100 each time), dash panels push you 25 km/h "
               "past your own speed instead of slowing you down, Speed Shoes add 80 km/h, and holding A to "
               "charge a jump keeps your speed for 0.75 seconds before it starts slowing you. Turn off for the "
@@ -1061,6 +1070,17 @@ void lobby_window() {
     if (want!=typing) { if (want) SDL_StartTextInput(); else SDL_StopTextInput(); typing=want; }
 #endif
     ImGui::EndDisabled();
+    if (v->state == LAN_IDLE && ImGui::TreeNode("Gameplay settings")) {
+        ImGui::TextWrapped("If you host, these rules apply to everyone until the room closes.");
+        if (check("Riders Plus", &g_settings.ring_cap_999, "999 rings and gear levels 4 and 5.")) settings_apply();
+        ImGui::BeginDisabled(!g_settings.ring_cap_999);
+        if (check("Ring Replenish", &g_settings.ring_replenish, "Super Sonic gains rings from air rewards.")) settings_apply();
+        if (check("Super Sonic flight (experimental)", &g_settings.super_flight, "Use the flying pose while riding.")) settings_apply();
+        ImGui::EndDisabled();
+        if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Plus.")) settings_apply();
+        ImGui::TextUnformatted("Held boost is disabled online.");
+        ImGui::TreePop();
+    }
     if (v->error[0]) ImGui::TextWrapped("%s",v->error);
     ImGui::Spacing();
     static int internet;

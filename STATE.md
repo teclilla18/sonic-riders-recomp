@@ -1,4 +1,4 @@
-# State (2026-11-25): Private four-player visibility and Player Entry candidate
+# State (2026-11-25): Private four-player gameplay and standings candidate
 
 ## Released
 
@@ -19,7 +19,7 @@
 ## Work in progress (branches, not on main)
 
 **Four-player online candidate** (`codex/online-four`, from beta.4). In-game LAN and invite-code rooms
-hold 2–4 players. PROTO 6 / NET_COMPAT 6 bundles all inputs through the host. A common visibility
+hold 2–4 players. PROTO 6 / NET_COMPAT 8 bundles all inputs through the host. A common visibility
 camera keeps game state in sync while each player chooses their screen shape and presentation rate.
 The PC test runner defaults to Fit at 1910×800 (2.39:1).
 
@@ -37,7 +37,8 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
   four-player control captures matched their pre-change references byte for byte.
 - Recovery point 97543c7. The new private Windows build (4735839df57a, compatibility 7) uses native solo racer distance limits,
   delegates the missing EFB depth test to the renderer, keeps Player Entry models on their cards,
-  and replays the same menu-state update as live sessions. Tested 20,500 matching steps through all finishes. Personal review and separate devices pending.
+  and replays the same menu-state update as live sessions. Tested 20,500 matching steps through all finishes.
+- The subsequent user PC/Switch test exposed extended-level and results issues. The host log matched all 103,340 checksums across three races. Compatibility 8 keeps unfinished racers eligible after the first finish, shares the native standings table, and exposes effective host rules before play. See docs/notes/online-beta.md. PC races matched through the finish in 2P/3P/4P. Windows and Eden matched 20,202 complete records through both finishes, including the Switch guest reaching levels 4 and 5 after the host finished. Physical validation of these changes is pending.
 
 0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
    black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
@@ -82,7 +83,7 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
 4. **Online Beta 1 validation** (60 %): finish candidate testing/packages; internet room codes and relay, a shared
    30 fps mode, 3-4 players and ping/delay controls remain later work.
 5. **#33 32-bit Android**: branch `claude/android-armv7`; the reporter's APK ran but found no disc image; plain
-   copy-the-iso steps posted 2026-11-20. The reporter replied on 2026-11-24 and the race log is pending.
+   copy-the-iso steps posted 2026-11-20. The reporter acknowledged the request on 2026-11-25. The race log is pending.
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 7. **Discussion #34**: user replied. #35: private PC fix tested in local 2P and online 4P Player Entry. Personal review pending.

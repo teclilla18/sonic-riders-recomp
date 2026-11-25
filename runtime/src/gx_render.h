@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#define GX_XR_STANDINGS 0x79 /* native shared final results table */
 #define GX_XR_ENTRY_PREVIEW 0x7A /* Player Entry character or board in a menu card */
 #define GX_XR_HUD_SEAT 0x7B   /* host FIFO marker: 0 outside the personal solo HUD, else seat + 1 */
 #define EFB_WIDTH 640

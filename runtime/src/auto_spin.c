@@ -36,11 +36,11 @@ static const int8_t k_dx[4] = {0, 100, 0, -100}, k_dy[4] = {100, 0, -100, 0};
 
 uint32_t ppc_detclock_steps(void);
 
-static int in_race(uint64_t frame) {
+static int in_race(uint64_t frame, uint32_t racer) {
     static int s_was;
     uint32_t mode = GAME_MODE();
     int now = (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) &&
-              ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
+              (ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED || online_racer_unfinished(racer));
     if (now && !s_was) {  /* which controller drives which racer (0 = not a controller: a CPU) */
         char line[64]; int n = 0;
         for (int i = 0; i < 8; i++) {
@@ -89,8 +89,8 @@ void auto_spin_pad(int port, GcPad* p, int64_t frame) {
     static int s_section[4];
     if (port < 0 || port > 3) return;
     uint64_t frame_no = frame >= 0 ? (uint64_t)frame : (uint64_t)ppc_detclock_steps() + 1;
-    uint32_t r = settings_auto_spin() && in_race(frame_no) ? port_racer(port) : 0;
-    if (r && !spinning(r)) r = 0;
+    uint32_t r = settings_auto_spin() ? port_racer(port) : 0;
+    if (r && (!in_race(frame_no, r) || !spinning(r))) r = 0;
     int section = r ? (int)(int16_t)ld16(r + SPIN_SECTION) : 0;
     uint64_t t = frame >= 0 ? (uint64_t)frame : vi_field_count();
     int changed = r != s_racer[port] || section != s_section[port];

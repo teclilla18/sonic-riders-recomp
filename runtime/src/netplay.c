@@ -698,12 +698,18 @@ void netplay_init(void) {  /* main(), before the devices: the modes decide SR_DE
 void netplay_connect(void) {  /* main(), after the memory card is loaded, before the game runs */
     const char* net = getenv("SR_NET");
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
-    if (g_active) settings_fix_boost_hold(settings_boost_hold());  /* and Hold to boost */
+    if (net) {
+        settings_fix_boost_hold(0);
+        settings_fix_ring_replenish(settings_ring_replenish());
+    } else if (g_active) settings_fix_boost_hold(settings_boost_hold());
     if (net && (!strncmp(net, "host:", 5) || !strcmp(net, "inet:host") || !strcmp(net, "lan:host")))
         settings_fix_super_flight(settings_super_flight_setting());  /* a host offers its own choice (sent in WELCOME) */
     if (net && !net_connect(net)) { g_online_rules=0; g_ports=1; }
     /* A connected room or a replay already fixed the camera. For a local run use this machine's shape. */
     if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
+    if (g_net) rt_log("[room-rules] P%d cap=%d hold=%d replenish=%d flight=%d local-auto-spin=%d",
+                      g_me+1, settings_ring_cap(), settings_boost_hold(), settings_ring_replenish(),
+                      settings_super_flight(), settings_auto_spin());
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
 }
@@ -881,14 +887,22 @@ static int menu_screen(uint32_t* work) {
 #define SCREEN_MAIN_MENU 0x0F  /* Normal Race, Story, Tag, Survival, ... (0x0E is the step between it and the title) */
 static int g_reached_tracks;  /* the session's start has reached the main menu (the start-up presses stop) */
 /* the racer driven by controller port p has crossed the finish line (the game hands it to the CPU: +0xBC = 1) */
+static unsigned finish_mask;
 static int racer_finished(int p) {
     uint32_t racer = racer_for_port(p);
     if (!racer) return 0;
     int done = ld8(racer + 0xBCu) != 0;
-    static int logged[MAXP];
-    if (done != logged[p]) {
-        logged[p] = done;
-        if (done) rt_log("[net] frame %u: player %d crossed the finish line", g_frame, p + 1);
+    unsigned bit = 1u << p;
+    if (done && !(finish_mask & bit)) {
+        finish_mask |= bit;
+        rt_log("[net] frame %u: player %d crossed the finish line", g_frame, p + 1);
+        if (finish_mask == (1u << g_ports) - 1) {
+            for (int seat = 0; seat < g_ports; seat++) {
+                uint32_t finisher = racer_for_port(seat);
+                if (finisher) rt_log("[standings] frame=%u seat=%d rank=%u", g_frame, seat+1,
+                                     1u + ld8(finisher + 0x102C));
+            }
+        }
     }
     return done;
 }
@@ -929,9 +943,10 @@ static void online_rules(GcPad* pads) {
         return;
     }
     uint32_t mode = GAME_MODE();
-    if ((mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED)
+    if ((mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER) && ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED) {
+        finish_mask = 0;
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p].buttons &= (uint16_t)~0x1000u;  /* START */
-    else if (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER)
+    } else if (mode == GAME_TOP_MODE_RACE || mode == GAME_TOP_MODE_MULTIPLAYER)
         /* The phase turns "finished" when the FIRST player crosses the line, while the others still race (2026-11-21:
          * the OLED finished first and the S23's player 2 lost control). Each player's racer is handed to the CPU at
          * its own finish (racer +0xBC = 1, found by a per-racer probe of a two-copy race): a player is silenced for
