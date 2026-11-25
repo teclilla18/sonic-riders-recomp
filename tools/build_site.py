@@ -404,8 +404,9 @@ def render(name, body, meta, partials):
     desc = meta.get('description', 'Sonic Riders, running natively on Switch 2, Switch, PC, Android, Linux and iPhone. '
                                    'An unofficial fan port built from your own disc.')
     canonical = SITE + ('' if name == 'index.html' else name)
+    share_image = SITE + meta.get('share_image', 'assets/img/switch2-poster.jpg')
     head = partials['head'].replace('{{title}}', E(full_title)).replace('{{description}}', E(desc)).replace(
-        '{{canonical}}', canonical)
+        '{{canonical}}', canonical).replace('{{share_image}}', E(share_image))
     if meta.get('noindex'):
         head += '\n<meta name="robots" content="noindex">'
     if name == '404.html':  # served at any missing URL, so pin relative links to the site root
