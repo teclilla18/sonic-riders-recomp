@@ -1,0 +1,87 @@
+<!-- title="Race Room" nav="online" noanalytics="1" description="Riders Plus live quick chat, public race lobbies and private race rooms." share_image="assets/img/compare/recomp-1.jpg" -->
+<section class="page-hero race-heading">
+  <p class="eyebrow">Riders Plus Online Beta</p>
+  <h1 class="slant">Race <span class="accent">Room</span></h1>
+  <p class="lead">Find a race partner, use live quick chat and set up an in-game lobby.</p>
+  <p class="note-line"><a href="online.html#play">How to play online</a></p>
+</section>
+
+<section class="wrap race-app" id="race-room" data-api="https://riders-plus-race-room.ultrawolfbane.chatgpt.site">
+  <p id="race-status" class="panel race-status" role="status">Connecting to the Race Room…</p>
+  <noscript><p class="panel">Enable JavaScript to use live lobbies and quick chat.</p></noscript>
+
+  <div class="race-layout" id="race-board" hidden>
+    <section class="panel race-panel" aria-labelledby="race-lobbies-title">
+      <div>
+        <h2 id="race-lobbies-title">Find a lobby</h2>
+        <p>Listed lobbies are visible here until someone joins. Invite-only lobbies open from a link you share. Lobbies last 30 minutes.</p>
+      </div>
+      <form id="race-create" class="race-form">
+        <label>Your platform
+          <select name="platform" required>
+            <option value="">Choose a platform</option>
+            <option>PC</option><option>Linux / Steam Deck</option><option>Android</option>
+            <option>Switch</option><option>Switch 2</option><option>Other</option>
+          </select>
+        </label>
+        <label>Visibility
+          <select name="visibility">
+            <option value="public">Public listing</option>
+            <option value="private">Invite only</option>
+          </select>
+        </label>
+        <button class="btn btn-primary btn-sm" type="submit"><span class="btn-in">Create lobby</span></button>
+      </form>
+      <button class="btn btn-primary btn-sm race-resume" id="race-resume" type="button" hidden><span class="btn-in">Return to your lobby</span></button>
+      <ul id="race-lobbies" class="race-lobbies" aria-label="Open public lobbies"></ul>
+    </section>
+
+    <section class="panel race-panel" aria-labelledby="race-public-title">
+      <div>
+        <h2 id="race-public-title">Public quick chat</h2>
+        <p>Pick a message to send it live. The room gives everyone a temporary rider name.</p>
+      </div>
+      <ol id="race-public-log" class="race-log" role="log" aria-label="Public quick-chat messages" tabindex="0"></ol>
+      <div id="race-public-phrases" class="race-phrases" aria-label="Public quick-chat messages to send"></div>
+    </section>
+  </div>
+
+  <section id="race-lobby" class="panel race-panel race-room-detail" aria-labelledby="race-lobby-title" hidden>
+    <div class="race-lobby-heading">
+      <div>
+        <h2 id="race-lobby-title" tabindex="-1">Race lobby</h2>
+        <p id="race-lobby-meta"></p>
+      </div>
+      <button id="race-back" class="btn btn-ghost btn-sm" type="button"><span class="btn-in">Back to board</span></button>
+    </div>
+    <button id="race-join" class="btn btn-primary btn-sm" type="button" hidden><span class="btn-in">Join lobby</span></button>
+    <div id="race-members" class="race-member-content" hidden>
+      <div class="race-member-actions">
+        <button id="race-copy" class="btn btn-ghost btn-sm" type="button"><span class="btn-in">Copy lobby link</span></button>
+        <button id="race-leave" class="btn btn-ghost btn-sm" type="button"><span class="btn-in">Leave lobby</span></button>
+      </div>
+      <label class="race-invite-link" id="race-invite-link" hidden>Lobby link
+        <input type="url" id="race-invite-url" readonly>
+      </label>
+      <ol id="race-lobby-log" class="race-log" role="log" aria-label="Lobby quick-chat messages" tabindex="0"></ol>
+      <div id="race-lobby-phrases" class="race-phrases" aria-label="Lobby quick-chat messages to send"></div>
+      <div id="race-code-box" class="race-code-box">
+        <h3>In-game invite</h3>
+        <p id="race-code-help">Open your in-game internet lobby first. Share its code with a race partner you trust. The code can contain your public IP address.</p>
+        <form id="race-code-form" class="race-form" hidden>
+          <label>Game invite code
+            <input name="code" type="text" inputmode="numeric" autocomplete="off" maxlength="15" pattern="[0-9]{10}([0-9]{5})?" placeholder="10 or 15 digits" required>
+          </label>
+          <button class="btn btn-primary btn-sm" type="submit"><span class="btn-in">Share code</span></button>
+          <button class="btn btn-ghost btn-sm" id="race-code-clear" type="button" hidden><span class="btn-in">Remove code</span></button>
+        </form>
+        <p id="race-code-value"></p>
+      </div>
+    </div>
+  </section>
+</section>
+
+<section class="section race-privacy">
+  <p>Race Room names are generated from a random browser ID. Public quick chat and lobby details expire after 30 minutes. Lobby chat and game invites are visible to the host and their race partner.</p>
+</section>
+<script src="assets/js/race-room.js" defer></script>

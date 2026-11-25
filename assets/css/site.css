@@ -590,3 +590,42 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
   .online-hero, .online-cards { grid-template-columns: 1fr; }
 }
 .hero-race img { aspect-ratio: 1280 / 536; }
+
+/* Race Room */
+.race-app [hidden] { display: none !important; }
+.race-heading .note-line { margin: 16px 0 0; }
+.race-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; align-items: start; }
+.race-panel, .race-member-content { display: grid; gap: 16px; min-width: 0; }
+.race-panel h2 { font: 800 clamp(1.8rem, 4vw, 2.55rem)/1 var(--display); text-transform: uppercase; }
+.race-panel p { margin: 6px 0 0; color: var(--muted); }
+.race-status { margin: 0 0 14px; padding-block: 12px; }
+.race-status[data-error] { border-color: var(--boost); }
+.race-app button { justify-self: start; }
+.race-app button:disabled { cursor: wait; opacity: .61; }
+.race-form, .race-member-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.race-app label { display: grid; gap: 5px; color: var(--ink); }
+.race-app select, .race-app input {
+  width: 100%; min-height: 42px; padding: 7px 10px; background: #081428;
+  color: var(--ink); border: 1px solid #527d9a; border-radius: 4px; font: inherit;
+}
+.race-invite-link { max-width: 40rem; }
+.race-log, .race-lobbies { list-style: none; margin: 0; padding: 0; }
+.race-log { height: 230px; overflow-y: auto; border: 1px solid #36556d; border-radius: 4px; background: #081428; }
+.race-log li, .race-lobbies li { padding: 9px 12px; border-bottom: 1px solid #304c63; overflow-wrap: anywhere; }
+.race-log li:last-child, .race-lobbies li:last-child { border-bottom: 0; }
+.race-log strong { color: var(--cyan); margin-right: 8px; }
+.race-lobbies li { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.race-phrases { display: flex; flex-wrap: wrap; gap: 8px; }
+.race-phrases button {
+  min-height: 40px; border: 1px solid #527d9a; color: var(--ink); background: #10243a;
+  border-radius: 4px; padding: 6px 10px; font: inherit; cursor: pointer;
+}
+.race-phrases button:hover { border-color: var(--cyan); }
+.race-lobby-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+.race-code-box { border-block-start: 1px solid #36556d; padding-block-start: 16px; }
+.race-code-box .race-form { margin-top: 12px; }
+#race-code-value { color: var(--cyan); font-family: var(--mono); }
+.race-privacy { color: var(--muted); }
+@media (max-width: 760px) {
+  .race-layout { grid-template-columns: 1fr; }
+}

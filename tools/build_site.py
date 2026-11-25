@@ -407,6 +407,9 @@ def render(name, body, meta, partials):
     share_image = SITE + meta.get('share_image', 'assets/img/switch2-poster.jpg')
     head = partials['head'].replace('{{title}}', E(full_title)).replace('{{description}}', E(desc)).replace(
         '{{canonical}}', canonical).replace('{{share_image}}', E(share_image))
+    analytics = ('<meta name="referrer" content="no-referrer">' if meta.get('noanalytics')
+                 else '<script src="assets/js/analytics.js" defer></script>')
+    head = head.replace('{{analytics}}', analytics)
     if meta.get('noindex'):
         head += '\n<meta name="robots" content="noindex">'
     if name == '404.html':  # served at any missing URL, so pin relative links to the site root
