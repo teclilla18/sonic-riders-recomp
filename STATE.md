@@ -1,4 +1,10 @@
-# State (2026-11-24)
+# State (2026-11-25)
+
+## Standalone Android installer (local feature branch)
+
+- Phase 1 feasibility documented in [the Android installer roadmap](docs/notes/android-standalone-installer.md).
+  Prebuild the disc-free runtime and compile the disc-derived module on the phone. Phase 2 awaits user approval.
+  First device gate: build, load and reuse a synthetic native module on the Galaxy S23 Ultra at the release target SDK.
 
 ## Released
 

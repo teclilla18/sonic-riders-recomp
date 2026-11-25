@@ -2158,3 +2158,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   stutter: game-code hitches up to ~300 ms on the same frames on both PCs [likely]. Auto spin stuck on after a grind
   until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
 - Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.
+
+## 2026-11-25 — Standalone Android installer feasibility
+
+- [confirmed] The existing PC setup translates code from the user's disc into the APK and copies the ISO separately
+  for runtime reads. The Android runtime and packaging can be built from distributable inputs after a module split.
+- [uncertain] Loading and reusing an app-generated native module at the release target SDK. The
+  [roadmap](notes/android-standalone-installer.md) defines an offline S23 Ultra probe and the milestones that follow
+  it. Phase 1 was source and platform documentation review. Implementation awaits approval.
