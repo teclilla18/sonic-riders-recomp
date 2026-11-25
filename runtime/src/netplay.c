@@ -897,6 +897,14 @@ static void online_rules(GcPad* pads) {
     static const GcPad neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
     uint32_t work = 0;
     int screen = menu_screen(&work);
+    if (screen == SCREEN_PLAYER_ENTRY && work >= 0x80000000u && work < 0x81C00000u) {
+        /* the same character for several players (user, 2026-11-14): Player Entry's own task (update fn 8193D3AC,
+         * work = the menu work + 0x80) marks a picked character in a byte table at its work + 0x20 + character
+         * (8193DF8C), and its cursor skips marked characters (8193DE9C); cleared every frame, nothing is ever taken */
+        uint32_t taken = work + 0x80u + 0x20u;
+        for (uint32_t i = 0; i < 0x10u; i += 4) st32(taken + i, 0);
+    }
+    if (g_rep) return;  /* Replay the menu work above. The stored pads already include input filtering. */
     /* the session opens at the game's main menu (every mode: races, Tag, Survival...; user, 2026-11-14): until it
      * is first reached the game itself presses for player 1 (START every 20 frames while there are no menus: logos,
      * the intro movie; then A: the online save's NEW GAME screens and the title), every machine the same presses,
@@ -910,13 +918,6 @@ static void online_rules(GcPad* pads) {
         for (int p = 0; p < g_ports && p < MAXP; p++) pads[p] = neutral;
         if ((g_frame + 1) % 20 < 2) pads[0].buttons = screen >= 0 ? 0x0100u /* A */ : 0x1000u /* START */;
         return;
-    }
-    if (screen == SCREEN_PLAYER_ENTRY && work >= 0x80000000u && work < 0x81C00000u) {
-        /* the same character for several players (user, 2026-11-14): Player Entry's own task (update fn 8193D3AC,
-         * work = the menu work + 0x80) marks a picked character in a byte table at its work + 0x20 + character
-         * (8193DF8C), and its cursor skips marked characters (8193DE9C); cleared every frame, nothing is ever taken */
-        uint32_t taken = work + 0x80u + 0x20u;
-        for (uint32_t i = 0; i < 0x10u; i += 4) st32(taken + i, 0);
     }
     if (screen >= 0) {
         for (int p = 1; p < g_ports && p < MAXP; p++) {
@@ -978,7 +979,7 @@ void netplay_latch(GcPad* pads) {
     } else {
         for (int ch = 0; ch < g_ports; ch++) { input_get_pad(ch, &pads[ch]); auto_spin_pad(ch, &pads[ch], f); }
     }
-    if (g_online_rules && !g_rep) online_rules(pads);  /* a replay reads them as recorded (already applied) */
+    if (g_online_rules) online_rules(pads);
     if (g_rec) {
         uint8_t r[8 + MAXP * 8];
         put32(r, ppc_detclock_steps());

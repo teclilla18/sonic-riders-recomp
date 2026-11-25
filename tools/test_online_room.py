@@ -54,7 +54,7 @@ def race(args):
                 else:
                     env["SR_NET"] = f"{'join' if slot else 'host'}:127.0.0.1:{args.port}"
                 if args.finish:
-                    env["SR_SHOTSTEP"] = "3700,5300,12000,20000,24500"
+                    env["SR_SHOTSTEP"] = "2500,3700,5200,5300,12000,19400,20000,24500"
                 logs.append(out / "sonicriders.log")
                 log = resources.enter_context(logs[-1].open("wb"))
                 processes.append(subprocess.Popen([str(exe), str(iso)], cwd=out, env=env, stdout=log, stderr=log))

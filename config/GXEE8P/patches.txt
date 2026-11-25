@@ -8,8 +8,11 @@
 decl extern volatile double g_aspect_scale;
 # projection setup (fn_800645DC): f1 is the aspect ratio on entry
 800645DC before { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
-# race camera (REL text 0x14115C, originally 0x8053CF18): the aspect ratio computed by this fmadds
-81941218 after { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
+# Player Entry 81941218 computes the model's X translation in its card. Leave
+# the original slot positions intact; the wide projection already sets its scale.
+decl void gx_entry_preview(unsigned active);
+81941020 before gx_entry_preview(1);
+81941518 before gx_entry_preview(0);
 
 # ---- Diagnostics
 decl void rt_log(const char* fmt, ...);
@@ -237,6 +240,16 @@ decl int lv_magnet_hide(uint32_t task);
 # Select solo HUD task registration on every four-player online peer. Preserve r21
 # (human player count) for the remaining race setup, including its per-player loop.
 8183C644 after { if (netplay_no_cpus() && c->r[21] == 4) c->cr[2] = 1; }
+# Online cameras retain their native viewport and frustum. Use the solo racer's
+# squared distance cutoffs (60 units vs 40) and near-test distance (30 vs 20).
+# Read the corresponding solo constants from the same native table.
+8180F0B0 after { if (netplay_no_cpus()) c->f[0].ps0 = c->f[0].ps1 = ldf32(c->r[19] + 0x1134); }
+8180F0D4 after { if (netplay_no_cpus()) c->f[1].ps0 = c->f[1].ps1 = ldf32(c->r[19] + 0x1130); }
+# Status 3 is returned only by the native EFB depth peek. The port has no
+# guest-readable depth there (mmio_read returns zero). Submit the racer to
+# the real depth test. Preserve camera/sector rejection and the far cutoff.
+8180F0E8 after { if (netplay_no_cpus() && c->r[3] == 3) c->r[3] = 0; }
+8180F100 after { if (netplay_no_cpus()) c->f[0].ps0 = c->f[0].ps1 = ldf32(c->r[19] + 0x1134); }
 # Keep the multiplayer scene renderer and its viewport setup alongside the solo HUD.
 8183C664 before { if (netplay_no_cpus() && c->r[21] == 4) c->r[3] = 0x8180ED78u; }
 # Retain the multiplayer finish controller, which creates a card per finisher.

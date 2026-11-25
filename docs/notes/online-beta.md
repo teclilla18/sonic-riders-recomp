@@ -242,3 +242,34 @@ Test helpers: `tools/test_online_protocol.py`, `tools/net_route_2p.py`, `tests/d
   Final FPS samples were 60, 29.9–30.0, 114.8–120.0 and 44.6–44.9 on one Windows PC.
   Offline 16:9 solo and four-way split frame 6500 matched their prior captures byte for byte.
   Cross-device testing and personal review remain open.
+
+### Online opponent visibility, Player Entry and replay checksums (2026-11-25)
+
+- Native multiplayer scene 8180ED78 measures the squared camera-to-racer distance. It starts the farther
+  visibility/depth test at 20 units and drops the model at 40. Solo scene 8180F738 uses
+  30 and 60 respectively. The private online patch reads the solo constants for each native camera,
+  including the downstream distance-based model state. The camera and sector checks remain active.
+- 81849DA8 returns status 3 only on its EFB depth test through 8003062C. That CPU read uses
+  the EFB aperture, which falls through to zero in mmio_read. A threshold-only build still rejected
+  every tested opponent beyond 30 units. Only the online racer call site ignores that unavailable
+  depth result. The GPU still depth-tests submitted geometry against the track. Other callers and
+  the offline renderer keep their original behavior. Compatibility is 7.
+- [confirmed, Windows] On Metal City at step 5200 the recovery build omitted P2 and P3 from
+  P1's view. The camera trace measured 44.35 and 51.96 units. The new build draws both at the
+  same simulation step. Comparisons at 4750 and 5030 also show newly drawn racer pixels.
+- [confirmed] Player Entry renders all four previews with a full 640×480 scissor and viewport.
+  81941218 computes X position, not camera aspect. Removing its extra width multiplier keeps
+  models aligned. Preview draws ignore the race FOV. Compared the original 4:3 projection with
+  four online seats at 4:3, 16:10, 16:9 and 1910×800, plus 32:9 at 130% FOV. Local two-player
+  character and board selection checked at 1680×720.
+- [confirmed] Playback previously skipped the online Player Entry taken-character table clear
+  at menu work +0xA0. Its first difference was frame 2103 in rotating memory block 3. A control
+  with just the replay fix matched the original recording on all 3000 checks through that interval.
+  Live peers already ran the clear. Playback now reproduces the memory update and consumes the
+  recorded, already-filtered controller input.
+- Final Windows build SHA-256 4735839df57ad20c07ef2945bb147ede032140aef4ddfe34f5ba9dfa9caf5c52.
+  Four peers matched all 20,500 live records. Every peer recorded finish steps P2 18833,
+  P1 18942, P4 19046 and P3 19155, as in the recovery race. The four personal lap tables
+  at step 19400 and shared standings at 20000 agreed. Independent FPS settings were
+  60/30/120/45 on one PC, with the 120 target varying under load. Final offline solo and
+  local 2P/4P routes and the normal HUD fixture suite passed. Separate-device testing is pending.

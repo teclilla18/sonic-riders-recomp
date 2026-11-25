@@ -67,6 +67,14 @@ and moves; `SR_ANCHORLOG` shows the earlier anchor pass. Full PC 1P-4P x five-as
 - FOV (gx.vert): perspective draws scale clip x/y by 1 / (tan(fs * atan(1/P2)) * P2). Render-only.
 - `fn_800645DC` is not a projection setup (see git history of this note for details).
 
+## Player Entry previews (private PC test, 2026-11-25)
+
+Player Entry uses one full 640×480 viewport and scissor for four cards. In the model renderer
+81941020, 81941218 computes a preview X translation. Multiplying it by the camera aspect
+put the right-hand models off screen. Keep the native translation and the existing projection
+correction. Mark the preview draw through its return at 81941518 so race FOV does not scale
+menu models. Local 2P and four online seats tested. See the online beta note.
+
 ## Determinism (online play)
 
 - FOV and HUD placement do not change game memory [confirmed, RAM hashes over 6000 det-route steps].

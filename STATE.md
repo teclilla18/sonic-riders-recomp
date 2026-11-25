@@ -1,4 +1,4 @@
-# State (2026-11-25): Private four-player solo HUD candidate
+# State (2026-11-25): Private four-player visibility and Player Entry candidate
 
 ## Released
 
@@ -32,10 +32,12 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
   full-frame speed trail and one personal HUD. The map uses its original solo position.
 - Tested on four local Windows peers at four aspects. The direct candidate matched 28,200 full
   records, and the LAN candidate matched 23,000, including all four finishes in both races.
-  The invite-code iteration matched 21,000. The final Windows build (SHA-256 9aaedb7dcb7e)
+  The invite-code iteration matched 21,000. The recovery Windows build (SHA-256 9aaedb7dcb7e)
   matched 20,500 direct-room steps through the same four finishes. Its offline solo and local
   four-player control captures matched their pre-change references byte for byte.
-- Personal review and separate-device play remain pending. Keep this candidate private.
+- Recovery point 97543c7. The new private Windows build (4735839df57a, compatibility 7) uses native solo racer distance limits,
+  delegates the missing EFB depth test to the renderer, keeps Player Entry models on their cards,
+  and replays the same menu-state update as live sessions. Tested 20,500 matching steps through all finishes. Personal review and separate devices pending.
 
 0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
    black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
@@ -83,7 +85,7 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
    copy-the-iso steps posted 2026-11-20. The reporter replied on 2026-11-24 and the race log is pending.
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-7. **Discussion #34**: user replied. #35: 2P character placement with Fit to screen remains a known issue.
+7. **Discussion #34**: user replied. #35: private PC fix tested in local 2P and online 4P Player Entry. Personal review pending.
 8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
 9. Super Sonic overhaul (Riders Plus only; plan only). History-only CI failure: ask before changing `--history`.

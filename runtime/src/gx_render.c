@@ -208,6 +208,8 @@ static void push_state(void) {
             GxUniforms* u = &f->unis[f->nunis++];
             memcpy(u->bp, g_gx.bp, sizeof u->bp);
             memcpy(u->xfr, g_gx.xf_reg, sizeof u->xfr);
+            /* Menu models share the cards' coordinate system regardless of race FOV. */
+            if (u->xfr[GX_XR_ENTRY_PREVIEW]) u->xfr[GX_XR_FOV] = 0;
             memcpy(u->konst, g_gx.konst, sizeof u->konst);
             new_regs = 1;
             note_split_view();

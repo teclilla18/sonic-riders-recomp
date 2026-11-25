@@ -2186,3 +2186,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [confirmed] The solo finish controller shared the first finisher's lap table across peers.
   The multiplayer controller creates results work for each finishing racer. See the online beta
   note for the private review build and separate-device testing status.
+
+## 2026-11-25 — Four-player opponent visibility and Player Entry (private Windows candidate)
+
+- [confirmed] Native solo racer distances and GPU depth testing restored two opponents missing
+  from P1's view at the same Metal City step. Widening the CPU cutoff alone still failed because
+  the guest framebuffer depth read returned zero. Preserved solo HUD, camera and original sector test.
+- [confirmed] Player Entry's preview X translation had been misidentified as a camera aspect.
+  Keeping native positions aligned all four cards across five aspect ratios. Local two-player
+  board and character previews also stayed inside the right-hand panel.
+- [confirmed] The previous 29 replay mismatches came from skipping the same-character menu
+  table update during playback. The repaired replay matched the recovery recording through the
+  entire affected interval. Separate-device play and personal acceptance are pending.
