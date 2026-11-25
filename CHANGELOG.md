@@ -5,6 +5,8 @@
 - Standalone Android installer with phone-only ISO validation and game preparation, progress and elapsed time,
   retry and repair options, and a copyable diagnostic report. Signed in-place updates reuse a compatible
   game build and preserve the disc, saves, settings and mods.
+- Fixed standalone Android setup when a completed build failed to save its prepared game and report.
+  The installer can continue using the imported disc after an interrupted compile.
 
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 

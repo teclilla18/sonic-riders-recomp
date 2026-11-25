@@ -2195,3 +2195,13 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [confirmed] Host fingerprint tests retained compatibility for wording changes and invalidated it for
   compiler-flag and patch-rule changes. [uncertain] Fresh setup, interrupted retry, incompatible update
   rebuild and mod preservation still need device coverage.
+
+### Standalone Android v0.3 reliability and distribution checks
+
+- [confirmed] Isolated S23 QA rejected a malformed ISO and reported low space under both simulated quotas.
+  A force-stop during compilation exposed a module publication bug after a later successful link. Fixed
+  the worker's output variable clash. The regression test passed, and a fresh device retry built and rendered.
+- [confirmed] A signed update with the remapped beta native inputs detected the incompatible cached module,
+  rebuilt on the S23, preserved seeded file hashes and rendered after Play. The beta payload matched QA.
+  The updated module was reused after a cold restart. The working v0.2 app and data stayed in place.
+  APK signing, source notices, relevant corresponding sources, private paths and game-data packaging were audited.

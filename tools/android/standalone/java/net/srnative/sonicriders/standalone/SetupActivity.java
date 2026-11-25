@@ -64,7 +64,14 @@ public final class SetupActivity extends Activity {
                 .setMessage(error.getMessage()).setPositiveButton("Close", (d, w) -> finish()).show();
             return;
         }
+        installer.setQaStorageLimit(getIntent().getStringExtra("qa_storage_limit"));
         buildLayout();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (installer != null) installer.setQaStorageLimit(intent.getStringExtra("qa_storage_limit"));
     }
 
     @Override

@@ -13,7 +13,12 @@
   advanced. The roadmap has the memory and storage readings. Issue #38 tracks the feature.
 - Branded standalone candidate v0.2 (version code 2) uses the same package and key. The S23 in-place
   update reused its prepared module, rendered game frames and preserved the saved card, settings and ISO.
-  No mods were present in that test. Fresh setup, interrupted retry and a native-changing update still need validation.
+  The device's working v0.2 install is the preserved checkpoint.
+- v0.3 is the local limited-beta candidate. Isolated S23 QA passed clean setup, invalid ISO, simulated
+  low space, interrupted compile recovery and a signed update with a changed native fingerprint. Save,
+  settings, mod fixture and ISO hashes survived the rebuild. The candidate uses the same tested native
+  payload, the existing production certificate and bundled redistribution materials. Wider physical device
+  coverage is pending beta. Publishing needs the user's approval.
 
 ## Released
 

@@ -200,3 +200,61 @@ activity with advancing render frames. The race and overlay changes were tested 
   Play started the game and rendered frames, and Diagnostics showed the retained build timing. No mods were
   seeded on this device. The remaining device checks cover fresh setup, a rejected ISO, interruption/retry,
   and a native-changing update with seeded mods.
+
+## Limited beta preparation
+
+- The QA APKs use `net.srnative.sonicriders.standalone.qa` and their own certificate. The working S23
+  installation remains on `net.srnative.sonicriders.standalone`. Use `package_poc.py --qa` for the initial
+  test APK and `--qa --qa-remapped --version-code 3 --version-name 0.3` for the matching beta native
+  payload. The remapped inputs change the native fingerprint and force a real rebuild. The optional
+  `--qa-rebuild` flag tests invalidation by changing only the ELF build ID option. Only the QA package
+  accepts the ADB `qa_storage_limit` override (`disc` or `build`).
+- The initial test uses the system file picker for the invalid image and the verified USA revision 0
+  image. The QA ISO and the seeded save, settings and mod marker stay on the S23. The low-storage
+  cases inject zero available bytes into the production checks without filling the phone.
+- The dependency audit traced the exact Termux packages, Chaquopy runtime and dtk Cargo lockfile.
+  `build_notices.py` assembles the notices, complete GNU libiconv and zstd source archives with their
+  matching Termux recipes, and resource archives for the MPL-covered Rust crates. The staged dependency
+  inputs and notice tree are under `build/standalone/deps/licenses`. [Third-party inventory and source access](../../tools/android/standalone/THIRD_PARTY.md)
+- The release build uses the existing standalone signing certificate through a protected keystore copy.
+  `--release-keystore` requires the notice archive and accepts the password through
+  `RIDERSPLUS_STANDALONE_SIGNING_PASSWORD`. The password is absent from signing commands and logs.
+  The APK includes the redistribution archive and an original Riders Plus lettermark. It omits the
+  v0.2 credited fan icon because the original artwork's redistribution license was unverified.
+- The release artifacts use a path-remapped dtk, SDL2 and runtime object. Pass
+  `--remap-path-prefix=<home>=/build` to rustc through `CARGO_ENCODED_RUSTFLAGS`, and set the Cargo target
+  directory to `build/standalone/release-inputs/rust-target`.
+  Build the runtime and SDL with `configure.py --android-app runtime-objects --android-remap-prefix <home>`
+  and the regular Android SDK options. Release packaging rejects home paths in the native artifacts.
+  The QA update and beta native payload are identical.
+- Physical validation covers only the Galaxy S23 Ultra. Wider ARM64 device coverage belongs to the
+  limited public beta. The local Android emulators are x86_64 and do not validate the complete ARM64
+  compiler and game pipeline. The beta candidate requires 4 KB memory pages.
+
+### S23 reliability checks
+
+- The separate QA app began from empty data. It rejected the short invalid ISO through the Android picker.
+  Both simulated storage cases displayed the expected free-space message. The phone retained the verified
+  QA ISO after a force-stop during Clang compilation and displayed **Continue installation**.
+- The first recovery run exposed a finalization error after linking. The worker had reused its output directory
+  variable for the subprocess log handle. The fix separates those variables. A synthetic host test verifies that
+  the report and read-only module are published and temporary files are cleaned up.
+- On the fixed QA APK, a second forced interruption recovered and finished on the S23. The build took 231.26 s
+  with 199.75 s spent in native compile and link. Play started the resulting game and its render frames advanced.
+- The signed v0.2 to v0.3 QA update displayed **Prepare this version** and rebuilt from the existing ISO.
+  Build time was 246.99 s, including 214.89 s for native compile and link. The SHA-256 of the saved card,
+  settings, a synthetic mod marker and ISO matched before and after the rebuild. Play rendered game frames
+  with the updated module. Diagnostics confirmed reuse after a cold restart. The separate production v0.2
+  APK, saved card and settings hashes, and ISO metadata matched the measurements before the QA run.
+
+### Beta distribution files
+
+- `build/standalone/RidersPlus-Android-Standalone-Beta-v0.3-arm64.apk` uses package
+  `net.srnative.sonicriders.standalone`, version code 3, target SDK 35 and the existing certificate.
+  APK SHA-256 `29f6e74b9571578f689fb2cf793d7612d049bdcd08dd0e9ad29aedc0d058dbfb`.
+- The APK and nested archives passed integrity checks. The archive audit found no ISO, DOL, REL, generated
+  game code, ready-to-play game module or signing material. The shipped ELF files passed the home-path audit.
+  The embedded notices cover 200 dtk dependency records and include the corresponding sources for the three
+  MPL-covered crates, as well as matching libiconv and zstd sources.
+- Keep the candidate paired with `RidersPlus-Android-Standalone-Beta-v0.3-source.zip` when distribution is
+  authorized. The companion contains the exact standalone installer and Android runtime source from this branch.

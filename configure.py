@@ -60,6 +60,7 @@ ap.add_argument("--icon", default="", help="your own program icon (.ico; android
                 "setup/icon.png. Keep it out of git unless it is your own art")
 ap.add_argument("--android-app", choices=["game", "probe", "runtime-objects"], default="game",
                 help="android: game APK, platform probe, or disc-free runtime objects for the standalone probe")
+ap.add_argument("--android-remap-prefix", default="", help="hide this host prefix in standalone Android release binaries")
 args = ap.parse_args()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -77,8 +78,12 @@ if args.target == "ios":
     itools = ios_build.Tools(args, ROOT)
 GEN = "build/gen"
 android_runtime_only = args.target == "android" and args.android_app == "runtime-objects"
+if args.android_remap_prefix and not android_runtime_only:
+    ap.error("--android-remap-prefix requires --target android --android-app runtime-objects")
 OUT = "build/%s" % ("host-" + args.toolchain if args.target == "host" and args.toolchain in ("mingw", "linux") else
                     "android-" + args.abi if args.target == "android" else args.target)
+if args.android_remap_prefix:
+    OUT = "build/standalone/release-inputs/android-" + args.abi
 if args.trace_loads:
     OUT += "-trace"
 py = sys.executable.replace("\\", "/")
@@ -278,6 +283,9 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         sdl_inc, sdl_link = android_build.sdl_flags(t, args.abi)
         # a shared library loaded by SDLActivity; PIC for everything (the generated code too)
         andinc = "%s %s -fPIC -ffunction-sections -fdata-sections" % (inc, sdl_inc)
+        if args.android_remap_prefix:
+            prefix = args.android_remap_prefix.replace("\\", "/")
+            andinc += ' "-ffile-prefix-map=%s=/build"' % prefix
         n.variable("cc", "%s %s" % (t.clang, t.target(args.abi)))
         n.variable("cxx", "%s %s" % (t.clangxx, t.target(args.abi)))
         n.variable("cflags", "-std=gnu11 -g " + andinc)
@@ -448,7 +456,13 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
         n.build(OUT + "/SDL2.dll", "copy", sdl_dll)
         n.default(OUT + "/SDL2.dll")
     if args.target == "android":
-        dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
+        if args.android_remap_prefix:
+            dex, sdl_libs = android_build.add_common(
+                n, atools, py, ROOT, [args.abi], out="build/standalone/release-inputs/android",
+                remap_prefix=args.android_remap_prefix,
+            )
+        else:
+            dex, sdl_libs = android_build.add_common(n, atools, py, ROOT, [args.abi])
     if args.target == "android" and not android_runtime_only:
         apk = "build/android/sonicriders-%s.apk" % args.abi
         # the app icon: your own (--icon), else the fan-made icon in setup/icon.png

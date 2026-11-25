@@ -24,12 +24,12 @@ def build(root, native, iso, output):
     build_start = time.monotonic()
     stage = "initializing build"
     try:
-        with log.open("wb") as output:
+        with log.open("wb") as log_stream:
             def run(step, command):
                 nonlocal stage
                 stage = step
                 try:
-                    subprocess.run(command, cwd=temp, stdout=output, stderr=output, check=True)
+                    subprocess.run(command, cwd=temp, stdout=log_stream, stderr=log_stream, check=True)
                 except subprocess.CalledProcessError as error:
                     raise RuntimeError(f"exit status {error.returncode}") from None
 

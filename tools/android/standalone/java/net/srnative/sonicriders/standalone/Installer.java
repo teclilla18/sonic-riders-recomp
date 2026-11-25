@@ -40,6 +40,7 @@ final class Installer {
     final File root, output, tools;
     final SharedPreferences preferences;
     private volatile Progress progress;
+    private volatile String qaStorageLimit = "";
 
     static synchronized Installer get(Context context) {
         if (instance == null) instance = new Installer(context.getApplicationContext());
@@ -138,12 +139,19 @@ final class Installer {
     }
 
     String spaceCheck(boolean importing) {
-        if (importing && gameData().getUsableSpace() + pendingIso().length() < IMPORT_SPACE)
+        long discSpace = qaStorageLimit.equals("disc") ? 0 : gameData().getUsableSpace() + pendingIso().length();
+        if (importing && discSpace < IMPORT_SPACE)
             return "Free at least 1.5 GB for the imported disc image and try again.";
         long reclaimable = importing ? pendingIso().length() : 0;
-        if (context.getFilesDir().getUsableSpace() + reclaimable < WORK_SPACE)
+        long workSpace = qaStorageLimit.equals("build") ? 0 : context.getFilesDir().getUsableSpace() + reclaimable;
+        if (workSpace < WORK_SPACE)
             return "Free at least 512 MiB for the build workspace and try again.";
         return "";
+    }
+
+    void setQaStorageLimit(String limit) {
+        if (context.getPackageName().equals("net.srnative.sonicriders.standalone.qa"))
+            qaStorageLimit = limit == null ? "" : limit;
     }
 
     Progress progress() { return progress; }

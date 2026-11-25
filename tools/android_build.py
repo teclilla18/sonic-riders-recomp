@@ -44,13 +44,14 @@ def bat(path):
 
 
 # ---------------------------------------------------------------- steps
-def step_sdl(ndk, sdl_src, abi, outdir):
+def step_sdl(ndk, sdl_src, abi, outdir, remap_prefix=""):
     """SDL2's own Android.mk (with hidapi, so C++: the shared libc++ goes into the APK too)"""
     ndk_build = os.path.join(ndk, "ndk-build.cmd" if os.name == "nt" else "ndk-build")
+    flags = ["APP_CFLAGS=-ffile-prefix-map=" + remap_prefix.replace("\\", "/") + "=/build"] if remap_prefix else []
     run([ndk_build, "NDK_PROJECT_PATH=null", "APP_BUILD_SCRIPT=" + os.path.join(sdl_src, "Android.mk"),
          "APP_ABI=" + abi, "APP_PLATFORM=android-%d" % MIN_SDK, "APP_STL=c++_shared", "APP_OPTIM=release",
          "APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true", "NDK_OUT=" + os.path.join(outdir, "obj"),
-         "NDK_LIBS_OUT=" + os.path.join(outdir, "libs"), "-j%d" % (os.cpu_count() or 4)])
+         "NDK_LIBS_OUT=" + os.path.join(outdir, "libs"), "-j%d" % (os.cpu_count() or 4)] + flags)
     for lib in ("libSDL2.so", "libc++_shared.so"):
         if not os.path.isfile(os.path.join(outdir, "libs", abi, lib)):
             sys.exit("android_build: ndk-build made no %s" % lib)
@@ -129,8 +130,9 @@ def step_apk(a):
             z.write(path, "lib/%s/%s" % (abi, name), compress_type=zipfile.ZIP_STORED)
     aligned = os.path.join(work, "aligned.apk")
     run([os.path.join(tools, "zipalign"), "-f", "-P", "16", "4", base, aligned])
-    run([bat(os.path.join(tools, "apksigner")), "sign", "--ks", a.keystore, "--ks-pass", "pass:android",
-         "--key-pass", "pass:android", "--out", a.out, aligned], env=java_env(a.jdk))
+    password = getattr(a, "password", "pass:android")
+    run([bat(os.path.join(tools, "apksigner")), "sign", "--ks", a.keystore, "--ks-pass", password,
+         "--key-pass", password, "--out", a.out, aligned], env=java_env(a.jdk))
     shutil.rmtree(work, ignore_errors=True)
 
 
@@ -168,10 +170,12 @@ ME = "tools/android_build.py"
 OUT = "build/android"
 
 
-def add_common(n, t, py, root, abis):
+def add_common(n, t, py, root, abis, out=OUT, remap_prefix=""):
     """rules shared by the probe and the game: SDL2 per ABI, the Java code, the signing key, the APK step.
     Returns (dex, {abi: [libSDL2.so, libc++_shared.so]})."""
-    n.rule("sdl", "%s %s sdl %s %s $abi $outdir" % (py, ME, t.ndk, t.sdl_src), description="SDL2 ($abi, ndk-build)", pool="console")
+    suffix = ' "%s"' % remap_prefix.replace("\\", "/") if remap_prefix else ""
+    n.rule("sdl", "%s %s sdl %s %s $abi $outdir%s" % (py, ME, t.ndk, t.sdl_src, suffix),
+           description="SDL2 ($abi, ndk-build)", pool="console")
     n.rule("dex", "%s %s dex %s %s %s $out %s $srcdirs" % (py, ME, t.jdk, t.bt, t.plat, JAVA_PACKAGE_DIR), description="DEX $out")
     n.rule("keystore", "%s %s keystore %s $out" % (py, ME, t.jdk), description="KEYSTORE (local signing key)")
     n.rule("apk", "%s %s apk --jdk %s --build-tools %s --platform %s --manifest android/AndroidManifest.xml.in "
@@ -183,11 +187,11 @@ def add_common(n, t, py, root, abis):
     java_srcs = sorted(p.replace("\\", "/") for d in (sdl_java, os.path.join(root, JAVA_PACKAGE_DIR))
                        for p in glob.glob(os.path.join(d, "**", "*.java"), recursive=True))
     java_srcs = [os.path.relpath(p, root).replace("\\", "/") if p.startswith(rootf) else p for p in java_srcs]
-    dex = OUT + "/classes.dex"
+    dex = out + "/classes.dex"
     n.build(dex, "dex", java_srcs + [ME], variables={"srcdirs": sdl_java})
     libs = {}
     for abi in abis:
-        sdl_out = "%s/sdl/%s" % (OUT, abi)
+        sdl_out = "%s/sdl/%s" % (out, abi)
         libs[abi] = ["%s/libs/%s/libSDL2.so" % (sdl_out, abi), "%s/libs/%s/libc++_shared.so" % (sdl_out, abi)]
         n.build(libs[abi], "sdl", [ME], variables={"abi": abi, "outdir": sdl_out})
     return dex, libs
@@ -252,7 +256,7 @@ def main():
         sys.exit(__doc__)
     cmd, rest = sys.argv[1], sys.argv[2:]
     if cmd == "sdl":
-        step_sdl(*rest[:4])
+        step_sdl(*rest[:5])
     elif cmd == "dex":
         step_dex(rest[0], rest[1], rest[2], rest[3], rest[4:])
     elif cmd == "keystore":
