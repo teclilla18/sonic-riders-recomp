@@ -2166,3 +2166,9 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [uncertain] Loading and reusing an app-generated native module at the release target SDK. The
   [roadmap](notes/android-standalone-installer.md) defines an offline S23 Ultra probe and the milestones that follow
   it. Phase 1 was source and platform documentation review. Implementation awaits approval.
+
+### Milestone 1 probe
+
+- [confirmed] Standalone synthetic ARM64 probe APK built with a pinned TinyCC and verified for target SDK 35,
+  signature, 16 KB ZIP alignment and absence of requested permissions. The host copy of TinyCC generated the
+  expected ELF. [uncertain] On-device loading and reuse. Awaiting the user's offline Galaxy S23 Ultra test.

@@ -117,6 +117,8 @@ def step_apk(a):
          "--min-sdk-version", str(MIN_SDK), "--target-sdk-version", str(TARGET_SDK)] + res_inputs)
     with zipfile.ZipFile(base, "a") as z:
         z.write(a.dex, "classes.dex", compress_type=zipfile.ZIP_DEFLATED)
+        for asset in a.asset:
+            z.write(asset, "assets/" + os.path.basename(asset), compress_type=zipfile.ZIP_DEFLATED)
         for spec in a.lib:  # ABI=FILE; stored, so they load straight from the APK (extractNativeLibs false)
             abi, path = spec.split("=", 1)
             name = os.path.basename(path)
@@ -262,6 +264,7 @@ def main():
                   "keystore", "out"):
             ap.add_argument("--" + k, required=True)
         ap.add_argument("--lib", action="append", default=[])
+        ap.add_argument("--asset", action="append", default=[])
         ap.add_argument("--strip", default="", help="llvm-strip: remove debug info from the .so files")
         ap.add_argument("--icon", default="", help="app icon source (tools/android_icon.py)")
         step_apk(ap.parse_args(rest))

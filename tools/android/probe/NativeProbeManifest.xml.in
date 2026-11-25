@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="@PACKAGE@" android:versionCode="@VERSION_CODE@" android:versionName="@VERSION_NAME@">
+    <application android:label="@LABEL@" android:allowBackup="false" android:extractNativeLibs="false"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name="net.srnative.sonicriders.probe.NativeProbeActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

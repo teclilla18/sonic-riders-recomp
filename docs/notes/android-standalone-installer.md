@@ -1,7 +1,7 @@
 # Standalone Android installer
 
 Phase 1 feasibility, 2026-11-25. Source reviewed at `2f1d028`. The existing Android game runs on the S23 Ultra
-(see [Android notes](android.md)). On-device compilation and loading still need device proof.
+(see [Android notes](android.md)). The milestone 1 APK is ready for physical device testing.
 
 ## What the Windows installer does today
 
@@ -93,4 +93,25 @@ For milestone 1, use the existing probe and a temporary package ID. First load o
 intended private directory to isolate Android policy. Then exercise the same path with a phone-linked synthetic object
 if useful for isolating LLD, followed by phone compilation of the tiny C source. Advance only after the final case passes.
 
-Phase 1 ends with this roadmap. Milestone 1 is the next implementation step once approved.
+## Milestone 1 probe APK
+
+- The probe reuses the Android SDK packaging helpers. Its separate package is
+  `net.srnative.sonicriders.nativeprobe` (arm64-v8a, min SDK 30, target SDK 35). It declares no permissions.
+  TinyCC is a probe-only compiler. Its exact source and license are inside the APK. The game toolchain is still
+  an open selection. The synthetic module calls the packaged runtime helper through a C function pointer.
+- Artifact under the worktree at `build/native-probe/RidersPlus-Android-Native-Probe-arm64.apk`. Install from
+  the phone's Files app, enable airplane mode, turn off USB debugging, and open **Riders Plus Native Probe**.
+  Expect **PASS**, **Compiled on this launch**, and result **49**. Copy or capture the diagnostics. Force-stop the
+  probe from its App info screen, then open it again. Expect **PASS**, **Reused cached ELF**, and a new PID.
+  A failure includes the compiler or linker error. Keep the app installed to preserve the cached ELF.
+- On-screen storage shows the APK size, available space, and the ELF's logical and allocated bytes. The process
+  peak RSS is a lifetime high-water mark, with before/after readings on first compile. It includes Android's
+  process overhead. Compile time covers compilation, linking and writing the module.
+- Developer rebuild: check out [the pinned TinyCC revision](https://github.com/TinyCC/tinycc/tree/e9e9e7f6236895a32c5e905aada486bab6671e95)
+  under `build/native-probe/tinycc`, then run
+  `py -3 tools/android/probe/build_native_probe.py --tools <setup-tools>`. The helper compiles TinyCC with
+  embedded predefinitions using upstream's converter and signs with a separate local probe key.
+- [confirmed] APK signature, 16 KB ZIP alignment, ARM64 manifest with target SDK 35, and empty permission list
+  verified on the build host. A host build of the pinned compiler produced the expected synthetic AArch64 ELF
+  with the exported entry, indirect helper call and separate executable and writable segments.
+  [uncertain] Device policy, successful execution and cached reload, and the measured phone timings and RSS.
