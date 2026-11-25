@@ -1,5 +1,7 @@
 package net.srnative.sonicriders.standalone;
 
+import java.io.File;
+
 import net.srnative.sonicriders.SonicRidersActivity;
 
 public final class GameActivity extends SonicRidersActivity {
@@ -11,16 +13,24 @@ public final class GameActivity extends SonicRidersActivity {
     @Override
     public void loadLibraries() {
         super.loadLibraries();
-        System.load(getMainSharedObject());
+        try {
+            System.load(getMainSharedObject());
+        } catch (UnsatisfiedLinkError error) {
+            Installer.get(this).loadFailed();
+            throw error;
+        }
     }
 
     @Override
     protected String getMainSharedObject() {
-        return SetupActivity.module(this).getAbsolutePath();
+        Installer installer = Installer.get(this);
+        File prepared = installer.prepared();
+        if (prepared == null) throw new UnsatisfiedLinkError("Return to Riders Plus setup to repair the installation.");
+        return new File(prepared, "libmain.so").getAbsolutePath();
     }
 
     @Override
     protected String[] getArguments() {
-        return new String[] {SetupActivity.iso(this).getAbsolutePath()};
+        return new String[] {Installer.get(this).iso().getAbsolutePath()};
     }
 }

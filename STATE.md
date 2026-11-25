@@ -11,6 +11,9 @@
   the title screen, completed a race and accepted overlay changes. After a separate ADB cold start,
   the setup screen reported cached module reuse. Play opened the game and its render frame counter
   advanced. The roadmap has the memory and storage readings. Issue #38 tracks the feature.
+- Branded standalone candidate v0.2 (version code 2) uses the same package and key. The S23 in-place
+  update reused its prepared module, rendered game frames and preserved the saved card, settings and ISO.
+  No mods were present in that test. Fresh setup, interrupted retry and a native-changing update still need validation.
 
 ## Released
 

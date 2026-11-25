@@ -1,5 +1,11 @@
 # Changelog
 
+### Unreleased
+
+- Standalone Android installer with phone-only ISO validation and game preparation, progress and elapsed time,
+  retry and repair options, and a copyable diagnostic report. Signed in-place updates reuse a compatible
+  game build and preserve the disc, saves, settings and mods.
+
 ### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
 
 - Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to

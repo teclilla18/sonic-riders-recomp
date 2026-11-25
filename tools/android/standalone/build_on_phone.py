@@ -1,6 +1,7 @@
 """Run once per verified ISO and tool bundle, with the APK's own tools."""
 
 from pathlib import Path
+import fcntl
 import resource
 import shutil
 import subprocess
@@ -12,15 +13,14 @@ def blocks(paths):
     return sum(p.stat().st_blocks * 512 for path in paths for p in path.rglob("*") if p.is_file())
 
 
-def main():
-    root, native, iso = map(Path, sys.argv[1:])
-    temp = root / "stage"
+def build(root, native, iso, output):
+    temp = output / "stage"
     shutil.rmtree(temp, ignore_errors=True)
     temp.mkdir()
     shutil.copytree(root / "config", temp / "config")
     (temp / "baserom").mkdir()
     gen = temp / "gen"
-    log = root / "build.log"
+    log = output / "build.log"
     build_start = time.monotonic()
     stage = "initializing build"
     try:
@@ -33,11 +33,11 @@ def main():
                 except subprocess.CalledProcessError as error:
                     raise RuntimeError(f"exit status {error.returncode}") from None
 
-            print("Extracting disc executables…", flush=True)
+            print("18|Reading game files", flush=True)
             run("extraction", [sys.executable, root / "tools/extract_iso.py", iso, "baserom", "--no-verify-iso"])
-            print("Analyzing PowerPC code…", flush=True)
+            print("23|Analyzing game code", flush=True)
             run("dtk analysis", [native / "libsr_dtk.so", "dol", "split", "config/GXEE8P/config.yml", "analysis"])
-            print("Translating PowerPC to C…", flush=True)
+            print("29|Translating game code", flush=True)
             run("recompiler", [sys.executable, root / "tools/recomp/gcrecomp.py", "config/GXEE8P", "baserom", gen])
             bin_start = time.monotonic()
             objects = []
@@ -47,7 +47,7 @@ def main():
             if len(chunks) < 2:
                 raise RuntimeError("the recompiler emitted no game code")
             for index, source in enumerate(chunks, 1):
-                print(f"Compiling ARM64 {index}/{len(chunks)}", flush=True)
+                print(f"{35 + (index - 1) * 59 // len(chunks)}|Building game code  {index}/{len(chunks)}", flush=True)
                 obj = temp / (source.stem + ".o")
                 run(f"Clang unit {index}", [
                     clang, "--target=aarch64-linux-android30", "-fintegrated-cc1", "-std=gnu11",
@@ -57,7 +57,7 @@ def main():
                     "-I", root / "include", "-I", gen, "-c", source, "-o", obj,
                 ])
                 objects.append(obj)
-            print("Linking local game module…", flush=True)
+            print("95|Finishing installation", flush=True)
             run("LLD link", [
                 native / "libsr_lld.so", "-flavor", "gnu", "-shared", "--no-undefined", "--gc-sections",
                 "--build-id=sha1", "-z", "max-page-size=16384", "-soname", "libmain.so",
@@ -68,7 +68,7 @@ def main():
             ])
         elapsed = time.monotonic() - build_start
         native_elapsed = time.monotonic() - bin_start
-        allocated = blocks([root])
+        allocated = blocks({root, output})
         module = temp / "libmain.so"
         size = module.stat().st_size
         module.chmod(0o400)
@@ -79,11 +79,11 @@ def main():
             f"Internal build files before cleanup: {allocated:,} bytes allocated (tools + staging).\n"
             f"Cached module: {size:,} bytes. ISO copy: {iso.stat().st_size:,} bytes."
         )
-        (root / "report.txt").write_text(report, encoding="utf-8")
-        module.replace(root / "libmain.so")
-        print(report, flush=True)
+        (output / "report.txt").write_text(report, encoding="utf-8")
+        module.replace(output / "libmain.so")
+        print("100|Ready to play", flush=True)
     except (OSError, RuntimeError) as error:
-        print(f"FAIL during {stage}: {error}. Build details are in the app’s local build.log.", flush=True)
+        print(f"FAIL|{stage}: {error}", flush=True)
         return 1
     finally:
         shutil.rmtree(temp, ignore_errors=True)
@@ -91,4 +91,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    root, native, iso, output = map(Path, sys.argv[1:])
+    output.mkdir(parents=True, exist_ok=True)
+    with (output / "build.lock").open("wb") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("FAIL|A build is already running. Wait a moment, then reopen Riders Plus.", flush=True)
+            sys.exit(1)
+        sys.exit(build(root, native, iso, output))

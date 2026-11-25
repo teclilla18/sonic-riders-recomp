@@ -176,3 +176,27 @@ activity with advancing render frames. The race and overlay changes were tested 
 | Internal tools and staging before cleanup | 450,293,760 bytes allocated |
 | Cached game module | 32,139,920 bytes |
 | Retained ISO | 1,459,978,240 bytes |
+
+## Branded installer candidate v0.2
+
+- The S23-tested source checkpoint is `23f5d6b`. The original v0.1 APK remains under
+  `build/standalone/RidersPlus-Android-Standalone-PoC-arm64.apk`. The signed version code 2 candidate
+  is `build/standalone/RidersPlus-Android-Standalone-v0.2-arm64.apk`. Both use
+  `net.srnative.sonicriders.standalone` and the same existing local signing key.
+- Setup uses the approved app icon and the website palette. It validates and copies the ISO using the Android
+  picker and shows the build stage, progress and elapsed time. It requires ARM64, Android 11 or newer,
+  Vulkan 1.1 and 4 KB memory pages. The dtk executable in this APK has 4 KB ELF load alignment.
+- Open **Updates** for the GitHub Releases link and in-place update instructions. Android handles installation
+  of the downloaded signed APK. The standalone app has no Internet permission. The **Diagnostics** report can
+  be copied and includes resource readings and a stage-level error. Raw compiler output stays app-private.
+- The APK fingerprints the native build inputs, including the runtime object, translator and patch rules,
+  compiler and libraries, and build commands. Wording and diagnostics changes preserve the key. A matching
+  v0.1 module is reused directly. A different key prepares a new module in its own app-private directory.
+  The imported ISO, saves, settings and mods remain in the original package's data folder.
+- If import is interrupted, reselect the ISO. An interruption after the verified copy retains the ISO and offers
+  a retry. Retries recreate scratch files. An optional **Repair build** action rebuilds from the existing ISO.
+- On the S23, v0.2 installed over the existing v0.1 app. Candidate readback matched the signed APK. The
+  ISO metadata and saved card and settings hashes matched before and after. The ready screen offered Play,
+  Play started the game and rendered frames, and Diagnostics showed the retained build timing. No mods were
+  seeded on this device. The remaining device checks cover fresh setup, a rejected ISO, interruption/retry,
+  and a native-changing update with seeded mods.

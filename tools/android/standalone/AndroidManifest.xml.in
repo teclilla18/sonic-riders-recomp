@@ -2,10 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="@PACKAGE@" android:versionCode="@VERSION_CODE@" android:versionName="@VERSION_NAME@">
     <uses-permission android:name="android.permission.VIBRATE" />
-    <application android:label="@LABEL@" android:allowBackup="false" android:extractNativeLibs="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <application android:label="@LABEL@" @ICON@ android:allowBackup="false" android:extractNativeLibs="true"
+        android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name="net.srnative.sonicriders.standalone.SetupActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden" android:exported="true">
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTop" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

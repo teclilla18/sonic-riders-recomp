@@ -2185,3 +2185,13 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   accepted overlay changes. After force-stop, the setup screen reported cached module reuse and displayed
   the retained build metrics. Total build 275.56 s, native compile/link 242.82 s. [confirmed, ADB]
   A separate cold start showed cached reuse, and Play started the game with advancing render frames.
+
+### Standalone Android installer candidate v0.2
+
+- [confirmed] The candidate uses the original package and signing certificate. S23 v0.1 → v0.2 updated
+  in place with the original ISO and matching hashes for the saved card and settings. The installed
+  APK SHA-256 matched the host file. The app reused the compatible module, displayed the original timings
+  and rendered game frames after Play. The Updates dialog displayed its release action.
+- [confirmed] Host fingerprint tests retained compatibility for wording changes and invalidated it for
+  compiler-flag and patch-rule changes. [uncertain] Fresh setup, interrupted retry, incompatible update
+  rebuild and mod preservation still need device coverage.

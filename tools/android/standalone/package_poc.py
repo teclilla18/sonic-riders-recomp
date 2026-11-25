@@ -1,6 +1,7 @@
 """Package the disc-free standalone Android proof of concept."""
 
 import argparse
+import ast
 import hashlib
 import io
 from pathlib import Path
@@ -19,6 +20,10 @@ import android_build
 WORK = ROOT / "build/standalone"
 DEPS = WORK / "deps"
 DTK_REV = "a0c455e46cab58e1d2e0885623f85089ff0499db"
+PACKAGE = "net.srnative.sonicriders.standalone"
+MODULE_RECIPE = b"android-arm64-gx-recomp-v1"
+# Derived once from the S23-tested v0.1 APK. Keep the original APK as a local test checkpoint.
+LEGACY_MODULE_KEY = "3c7dcd45092d2578c4e9ce0c341719b0cea241fa2890ba5a6be92ec238616768"
 NATIVE = {
     "clang": ("clang-21", "libsr_clang.so"),
     "lld": ("lld", "libsr_lld.so"),
@@ -83,9 +88,29 @@ def package_deb(archive, package):
                 archive.writestr(f"notices/{package}/{name}", payload.extractfile(item).read())
 
 
+def module_key(bundle, native):
+    """Fingerprint build inputs, excluding UI, reporting code and notices."""
+    digest = hashlib.sha256(MODULE_RECIPE)
+    with ZipFile(bundle) as z:
+        recipe = ast.parse(z.read("build_on_phone.py"))
+        for node in ast.walk(recipe):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run":
+                digest.update(ast.dump(node.args[1]).encode() + b"\0")
+        for name in sorted(z.namelist()):
+            if name == "build_on_phone.py" or name.startswith("notices/"):
+                continue
+            with z.open(name) as entry:
+                digest.update(name.encode() + b"\0" + hashlib.file_digest(entry, "sha256").digest())
+    for name, data in sorted(native):
+        digest.update(name.encode() + b"\0" + hashlib.sha256(data).digest())
+    return digest.hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tools", type=Path, required=True)
+    parser.add_argument("--version-code", type=int, default=2)
+    parser.add_argument("--version-name", default="0.2")
     args = parser.parse_args()
     t = args.tools.resolve()
     sdk = t / "android-sdk"
@@ -95,9 +120,11 @@ def main():
     ndk = sdk / "ndk/27.3.13750724/toolchains/llvm/prebuilt" / android_build.HOST_TAG
     exe = ".exe" if sys.platform == "win32" else ""
     sysroot = ndk / "sysroot/usr"
-    out = WORK / "RidersPlus-Android-Standalone-PoC-arm64.apk"
+    out = WORK / f"RidersPlus-Android-Standalone-v{args.version_name}-arm64.apk"
     assets = WORK / "standalone-tools.zip"
     key = WORK / "local.keystore"
+    if args.version_code < 2 or not key.is_file():
+        parser.error("Use version code 2 or higher and keep the existing standalone signing key.")
     dex = WORK / "classes.dex"
     dtk = DEPS / "dtk"
     if subprocess.check_output(["git", "-C", str(dtk), "rev-parse", "HEAD"], text=True).strip() != DTK_REV:
@@ -151,17 +178,30 @@ def main():
     libs = ROOT / "build/android/sdl/arm64-v8a/libs/arm64-v8a"
     apk_libs = [libs / "libSDL2.so", libs / "libc++_shared.so", python, WORK / "libsr_dtk.so"]
     apk_libs.extend(WORK / target for _, target in NATIVE.values())
+    stripped = WORK / "apk-libs"
+    stripped.mkdir(exist_ok=True)
+    strip = str(ndk / "bin" / ("llvm-strip" + exe))
+    for library in apk_libs:
+        android_build.run([strip, "--strip-debug", "-o", str(stripped / library.name), str(library)])
+    apk_libs = [stripped / library.name for library in apk_libs]
+    metadata = WORK / "installer.properties"
+    current_key = module_key(assets, [(p.name, p.read_bytes()) for p in apk_libs])
+    worker = (HERE / "build_on_phone.py").read_bytes()
+    bundle_key = hashlib.sha256(current_key.encode() + b"\0" + worker).hexdigest()
+    metadata.write_text(f"module={current_key}\nlegacy={LEGACY_MODULE_KEY}\nbundle={bundle_key}\n"
+                        f"version={args.version_name} ({args.version_code})\n", encoding="ascii")
     android_build.step_dex(jdk, bt, platform, str(dex), [
         str(HERE / "java"), str(ROOT / "android/java"), str(t / "sdl2-src/android-project/app/src/main/java"),
     ])
-    android_build.step_keystore(jdk, str(key))
     android_build.step_apk(SimpleNamespace(
         out=str(out), manifest=str(HERE / "AndroidManifest.xml.in"),
-        package="net.srnative.sonicriders.standalone", label="Riders Plus Standalone PoC",
-        version_code="1", version_name="0.1", icon="", build_tools=bt, platform=platform,
-        jdk=jdk, dex=str(dex), keystore=str(key), strip=str(ndk / "bin" / ("llvm-strip" + exe)),
-        lib=[f"arm64-v8a={path}" for path in apk_libs], asset=[str(assets)],
+        package=PACKAGE, label="Riders Plus",
+        version_code=str(args.version_code), version_name=args.version_name,
+        icon=str(ROOT / "setup/icon.png"), build_tools=bt, platform=platform,
+        jdk=jdk, dex=str(dex), keystore=str(key), strip="",
+        lib=[f"arm64-v8a={path}" for path in apk_libs], asset=[str(assets), str(metadata)],
     ))
+    print(f"Prepared module compatible with original PoC: {current_key == LEGACY_MODULE_KEY}")
     print(out)
 
 
