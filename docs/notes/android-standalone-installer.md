@@ -1,8 +1,7 @@
 # Standalone Android installer
 
 Phase 1 feasibility, 2026-11-25. Source reviewed at `2f1d028`. The existing Android game runs on the S23 Ultra
-(see [Android notes](android.md)). The synthetic compiler and loader passed on the S23 Ultra. The full-game
-proof of concept uses Clang and needs a separate device test.
+(see [Android notes](android.md)). The synthetic probe and first full-game launch passed on the S23 Ultra.
 
 ## What the Windows installer does today
 
@@ -153,11 +152,27 @@ The APK was 1,577,638 bytes. The phone reported approximately 42.8 GB available.
   NDK Clang compiled all 36 translation units, and LLD linked them against the planned runtime and libraries.
   The resulting ARM64 ELF exported `SDL_main`. A representative chunk and the table also compiled using
   only the packaged headers. The signed APK passed ZIP and nested asset checks, and contained no ISO,
-  generated code, game module or analysis output. On-phone tool startup, full compilation, play, module
-  reuse, timing, peak memory and storage remain pending.
+  generated code, game module or analysis output.
 - **Rebuild inputs.** `tools/android/standalone/package_poc.py` pins the Termux Clang/LLD 21.1.8-3 package
   payloads and Chaquopy CPython 3.13.9-0 ARM64 and stdlib zips under `build/standalone/deps`. Build dtk
   v1.8.4 there with Rust 1.88.0, the `aarch64-linux-android` target and the NDK API 30 Clang linker.
   Build `build/android-arm64-v8a/runtime.o` and the two SDL dependencies with the Android runtime-objects
   Ninja graph, then run the packaging helper with `--tools <setup-tools>`. The dependency choices and notices
   need release review before distributing a public installer.
+
+### Galaxy S23 Ultra full-game test
+
+The user completed first-time build on the phone, reached the title screen, finished a race, and changed
+overlay settings successfully. After force-stop, the setup screen displayed **Reused local module** and
+the saved build report. A separate ADB cold start reproduced the cached status. Tapping Play opened the game
+activity with advancing render frames. The race and overlay changes were tested on the first launch.
+
+| Measurement | Result |
+| --- | ---: |
+| Extraction through link | 275.56 s |
+| Native compile and link | 242.82 s |
+| Peak RSS of largest tool process | 294,492 KiB |
+| Peak RSS of build worker | 229,680 KiB |
+| Internal tools and staging before cleanup | 450,293,760 bytes allocated |
+| Cached game module | 32,139,920 bytes |
+| Retained ISO | 1,459,978,240 bytes |

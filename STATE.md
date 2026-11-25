@@ -7,10 +7,10 @@
 - Milestone 1 user-tested on the S23 Ultra (Android 17 API 37, target 35, 4 KB pages, USB debugging off).
   Native compile/link/write 1.307 ms, expected result 49, cached reuse after process restart. The roadmap has
   both reports. TinyCC failed the generated game's mandatory tail-call check.
-- Full-game PoC builds with packaged Clang, LLD, CPython and dtk. Host Clang compiled and linked all 36
-  generated units with the disc-free runtime. Next test is the separate-package APK on the S23 Ultra, from
-  verified ISO import through race and cached relaunch. Full-game device timings and memory are pending.
-  Issue #38 tracks the feature.
+- Full-game PoC user-tested on the S23 Ultra. It built in 275.56 s (242.82 s native compile/link), reached
+  the title screen, completed a race and accepted overlay changes. After a separate ADB cold start,
+  the setup screen reported cached module reuse. Play opened the game and its render frame counter
+  advanced. The roadmap has the memory and storage readings. Issue #38 tracks the feature.
 
 ## Released
 

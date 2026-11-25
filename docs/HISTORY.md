@@ -2180,3 +2180,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [confirmed] TinyCC ignores the mandatory tail-call attribute and emitted a normal call in the isolation test.
   The existing Android Clang/LLD compiled and linked all generated units on the host. The standalone PoC
   bundles Android-hosted Clang/LLD and builds from a verified ISO. [uncertain] Full flow on the phone.
+
+- [confirmed, user-tested] S23 Ultra full-game PoC built on the phone, reached title, finished a race and
+  accepted overlay changes. After force-stop, the setup screen reported cached module reuse and displayed
+  the retained build metrics. Total build 275.56 s, native compile/link 242.82 s. [confirmed, ADB]
+  A separate cold start showed cached reuse, and Play started the game with advancing render frames.
