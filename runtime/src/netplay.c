@@ -713,6 +713,99 @@ int netplay_online_save(void) { return g_online_save; }  /* main(): a fresh card
 /* patches.txt (Player Entry's racer count): online races have only the players, no CPU racers (user, 2026-11-22).
  * The same on every machine of a session, and in a recording made with the online rules */
 int netplay_no_cpus(void) { return g_online_rules; }
+
+/* Keep the three native HUD task families and their work blocks for every seat.
+ * Each peer executes them in the same order, including their guest FIFO writes. */
+enum { HUD_PERSONAL, HUD_LAP, HUD_GAUGE, HUD_GROUPS };
+static uint32_t hud_tasks[HUD_GROUPS][4];
+static uint32_t hud_racer;
+static uint32_t racer_for_port(int port) {
+    for (unsigned i = 0; i < 8; i++) {
+        uint32_t racer = GAME_PLAYERS + i * GAME_PLAYER_SIZE;
+        if (ld32(racer) == GAME_PAD_BASE + GAME_PAD_SIZE * (unsigned)port) return racer;
+    }
+    return 0;
+}
+void f_800E2724(Cpu* c);
+void gx_solo_hud_tag(unsigned tag);
+
+void online_hud_gauge_task(uint32_t first) { hud_tasks[HUD_GAUGE][0] = first; }
+
+static void register_hud_group(Cpu* task, int group, uint32_t callback, uint32_t priority, int work_class) {
+    for (int i = 1; i < 4; i++) {
+        task->r[3] = callback;
+        task->r[4] = priority;
+        task->r[5] = work_class;
+        f_800E2724(task);
+        hud_tasks[group][i] = task->r[3];
+    }
+}
+
+void online_hud_register(Cpu* c) {
+    Cpu task = *c;
+    hud_tasks[HUD_PERSONAL][0] = ld32(0x81A16BC4u);
+    hud_tasks[HUD_LAP][0] = ld32(0x81A16BC8u);
+    register_hud_group(&task, HUD_PERSONAL, 0x8183172Cu, 0xEAC4, 1);
+    register_hud_group(&task, HUD_LAP, 0x81826000u, 0xEAC5, 1);
+    register_hud_group(&task, HUD_GAUGE, 0x818293C0u, 0xEAC6, 2);
+    task.r[3] = 0x8184D524u;
+    task.r[4] = 0xD73C;
+    task.r[5] = 0;
+    f_800E2724(&task);
+}
+
+uint32_t online_hud_begin(uint32_t base, int group) {
+    if (!g_online_rules || ld32(GAME_HUMAN_COUNT) != 4) return base;
+    uint32_t task = ld32(0x8021C314u);
+    for (int i = 0; i < 4; i++) {
+        if (task != hud_tasks[group][i]) continue;
+        gx_solo_hud_tag(i + 1);
+        hud_racer = racer_for_port(i);
+        if (!hud_racer) hud_racer = base;
+        if (group == HUD_PERSONAL && (g_frame == 5299 || g_frame == 11999) && getenv("SR_HUDTRACE"))
+            rt_log("[hudvalue] frame=%u seat=%d racer=%08X kmh=%.1f rings=%u level=%u rank=%u lapByte=%u air=%u",
+                   g_frame, i + 1, hud_racer, 216.0 * ldf32(hud_racer + 0xAAC), ld32(hud_racer + 0xB98),
+                   ld8(hud_racer + 0x102E) + 1, ld8(hud_racer + 0x102C) + 1, ld8(hud_racer + 0x102A),
+                   ld32(hud_racer + 0x984));
+        return hud_racer;
+    }
+    return base;
+}
+
+uint32_t online_hud_racer(uint32_t base) { return hud_racer ? hud_racer : base; }
+
+void online_hud_init_record(uint32_t work) {
+    if (hud_racer) memset(mem_phys(work + 3), 0, 3);
+}
+
+void online_result_begin(unsigned index) {
+    if (!g_online_rules || index >= 4 || ld32(GAME_HUMAN_COUNT) != 4) return;
+    uint32_t racer = GAME_PLAYERS + index * GAME_PLAYER_SIZE;
+    uint32_t pad = ld32(racer);
+    if (pad < GAME_PAD_BASE || pad >= GAME_PAD_BASE + 4 * GAME_PAD_SIZE) return;
+    hud_racer = racer;
+    gx_solo_hud_tag(1 + (pad - GAME_PAD_BASE) / GAME_PAD_SIZE);
+}
+
+/* The speed trail samples the preceding full-frame EFB copy. Each racer keeps
+ * its native opacity and gets the original solo quad with full texture coordinates. */
+uint32_t online_trail_quad(uint32_t quad, uint32_t racer, unsigned views) {
+    if (!g_online_rules || views != 4) return quad;
+    for (int port = 0; port < 4; port++) {
+        if (ld32(racer) != GAME_PAD_BASE + GAME_PAD_SIZE * (unsigned)port) continue;
+        hud_racer = racer;
+        gx_solo_hud_tag(port + 1);
+        return ld32(0x819E8898u);
+    }
+    return quad;
+}
+
+void online_hud_end(void) {
+    if (hud_racer) {
+        gx_solo_hud_tag(0);
+        hud_racer = 0;
+    }
+}
 /* an online session is under way (not ended): the host-clock backstops (sched.c alarm, vi.c retrace)
  * must not decide anything then, since the other machine's clock differs; a stall only slows the game */
 int netplay_in_session(void) { return g_net && !g_net_ended; }
@@ -789,15 +882,15 @@ static int menu_screen(uint32_t* work) {
 static int g_reached_tracks;  /* the session's start has reached the main menu (the start-up presses stop) */
 /* the racer driven by controller port p has crossed the finish line (the game hands it to the CPU: +0xBC = 1) */
 static int racer_finished(int p) {
-    for (uint32_t r = 0; r < 8; r++) {
-        uint32_t racer = 0x81A0D740u + 0x1080u * r;  /* player array (docs/notes/game-addresses.md) */
-        if (ld32(racer) != 0x801AF9F0u + 0x30u * (uint32_t)p) continue;
-        int done = ld8(racer + 0xBCu) != 0;
-        static int logged[MAXP];
-        if (done != logged[p]) { logged[p] = done; if (done) rt_log("[net] frame %u: player %d crossed the finish line", g_frame, p + 1); }
-        return done;
+    uint32_t racer = racer_for_port(p);
+    if (!racer) return 0;
+    int done = ld8(racer + 0xBCu) != 0;
+    static int logged[MAXP];
+    if (done != logged[p]) {
+        logged[p] = done;
+        if (done) rt_log("[net] frame %u: player %d crossed the finish line", g_frame, p + 1);
     }
-    return 0;
+    return done;
 }
 
 static void online_rules(GcPad* pads) {

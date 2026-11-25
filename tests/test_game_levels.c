@@ -7,6 +7,10 @@
 
 uint8_t* ppc_mem_base_var;
 volatile int g_ring_cap = 999;
+int settings_ring_replenish(void) { return 0; }
+int settings_no_ring_drain(void) { return 0; }
+uint64_t rt_ticks(void) { return 0; }
+void f_8188CC74(Cpu* c) { (void)c; assert(0 && "unexpected magnetic barrier spawn"); }
 void rt_log(const char* fmt, ...) { (void)fmt; }
 uint32_t mmio_read(uint32_t ea, int size) { (void)ea; (void)size; assert(0); return 0; }
 void mmio_write(uint32_t ea, uint32_t v, int size) { (void)ea; (void)v; (void)size; assert(0); }

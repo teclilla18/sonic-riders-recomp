@@ -28,6 +28,9 @@
 #define GAME_CHAR_STATUS     0x81AAD3A0u
 #define GAME_PLAYERS         0x81A0D740u  /* _Main.rel bss: the 8 racers (code indexes it by i * 0x1080) */
 #define GAME_PLAYER_SIZE     0x1080u
+#define GAME_HUMAN_COUNT     0x8021B8C8u
+#define GAME_PAD_BASE        0x801AF9F0u
+#define GAME_PAD_SIZE        0x30u
 #define GAME_GEAR_TABLE      0x819EA240u  /* _Main.rel data: 41 Extreme Gear records of 0x1D0 bytes (game_mods.c) */
 
 /* main.dol .sdata: the game's top-level mode. 1 on the intro, title, attract screens and menus (Player Entry

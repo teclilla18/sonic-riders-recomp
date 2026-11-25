@@ -1,4 +1,4 @@
-# State (2026-11-24): Four-player online PC candidate
+# State (2026-11-25): Private four-player solo HUD candidate
 
 ## Released
 
@@ -19,7 +19,7 @@
 ## Work in progress (branches, not on main)
 
 **Four-player online candidate** (`codex/online-four`, from beta.4). In-game LAN and invite-code rooms
-hold 2–4 players. PROTO 6 / NET_COMPAT 5 bundles all inputs through the host. A common visibility
+hold 2–4 players. PROTO 6 / NET_COMPAT 6 bundles all inputs through the host. A common visibility
 camera keeps game state in sync while each player chooses their screen shape and presentation rate.
 The PC test runner defaults to Fit at 1910×800 (2.39:1).
 
@@ -27,13 +27,15 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
   5,400 matching input/checksum records per peer. Mixed local ratios and 30, 45, 60, 120 FPS choices.
   Three-player direct race 5,400 and two-player regression 4,800. The invite-code lobby refused a fifth.
   Disconnecting a guest ended lockstep on all three remaining copies.
-- HUD: each racer fills the picture from its quadrant. The timer is centered and the minimap is upper
-  right. The other gauges still use the split-screen artwork, and some gauges overlap the timer or
-  map. See the user's Fit ultrawide reference for the target.
-- **Next:** reuse the actual solo HUD drawing path for each peer. Match the ring/boost panel upper left,
-  rank/lap/record lower left and tall speed gauge lower right. Verify with offline Fit ultrawide captures
-  and equal online checksums. Then test across devices and real internet routes. Plan eight players
-  after the four-player beta is released.
+- Implemented private four-player race HUD. Each peer schedules the original personal HUD, lap
+  panel and gauge for all four controller owners. The renderer composes the selected camera,
+  full-frame speed trail and one personal HUD. The map uses its original solo position.
+- Tested on four local Windows peers at four aspects. The direct candidate matched 28,200 full
+  records, and the LAN candidate matched 23,000, including all four finishes in both races.
+  The invite-code iteration matched 21,000. The final Windows build (SHA-256 9aaedb7dcb7e)
+  matched 20,500 direct-room steps through the same four finishes. Its offline solo and local
+  four-player control captures matched their pre-change references byte for byte.
+- Personal review and separate-device play remain pending. Keep this candidate private.
 
 0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
    black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.

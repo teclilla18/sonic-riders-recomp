@@ -105,7 +105,8 @@ static GxFrame* frame(void) {
         static unsigned menu_frames;
         /* after the finish line (results screen: menu flag 0) the rank/name/time rows must stay together */
         menu_frames = ld32(GAME_MENU_FLAG) || ld32(GAME_RACE_PHASE) == GAME_RACE_FINISHED ? menu_frames + 1 : 0;
-        int racing = GAME_MODE() == GAME_TOP_MODE_RACE && menu_frames < 8;
+        int racing = (GAME_MODE() == GAME_TOP_MODE_RACE ||
+                      (netplay_no_cpus() && ld32(GAME_HUMAN_COUNT) == 4)) && menu_frames < 8;
         /* bloom: races only. Mode 8 alone stays on in menus (character select / Player Entry after a race,
          * notes/game-addresses.md), so also the menu flag, 8 frames in a row to leave (it blips in races);
          * the results screen (menu flag 0) keeps it */
@@ -1229,6 +1230,41 @@ static void local_hud_frame(GxFrame* f, int own_quad) {
     free(out); free(draws);
 }
 
+/* The scheduler supplies a full-frame solo HUD. Expand the local camera before
+ * composition so the HUD keeps its original projection and viewport. */
+static void solo_camera_frame(GxFrame* f, int me) {
+    for (uint32_t i = 0; i < f->nunis; i++) {
+        GxUniforms* u = &f->unis[i];
+        int view = hud_view_id(hud_viewport(u), 1);
+        unsigned hud = u->xfr[GX_XR_HUD_SEAT];
+        if ((hud && hud != (unsigned)me + 1) || (!hud && view >= 0 && view != me)) {
+            u->bp[0x20] = (1u << 12) | 1u;
+            u->bp[0x21] = 0;
+            continue;
+        }
+        if (view < 0) continue;
+        unsigned ox = (u->bp[0x59] & 0x3ff) * 2;
+        unsigned oy = ((u->bp[0x59] >> 10) & 0x3ff) * 2;
+        u->xfr[0x1A] = ubits(2.0f * fbits(u->xfr[0x1A]));
+        u->xfr[0x1B] = ubits(2.0f * fbits(u->xfr[0x1B]));
+        u->xfr[0x1D] = ubits(ox + 320.0f);
+        u->xfr[0x1E] = ubits(oy + 240.0f);
+        u->bp[0x20] = (ox << 12) | oy;
+        u->bp[0x21] = ((ox + 639) << 12) | (oy + 479);
+    }
+    for (uint32_t i = 0; i < f->ncmds; i++) {
+        GxCmd* c = &f->cmds[i];
+        if (c->type != GXC_COPY || c->copy[4] || c->copy[2] != 320 || c->copy[3] != 240) continue;
+        if (c->copy[0] == (unsigned)(me % 2) * 320 && c->copy[1] == (unsigned)(me / 2) * 240) {
+            c->copy[0] = c->copy[1] = 0;
+            c->copy[2] = 640;
+            c->copy[3] = 480;
+        } else {
+            c->copy[5] = 0;
+        }
+    }
+}
+
 static void ownview_frame(GxFrame* f, int me) {
     int mode = ownview_mode();
     uint32_t nu0 = f->nunis, nd = 0;
@@ -1488,7 +1524,8 @@ static void efb_copy(uint32_t v) {
             c->copy[11] = (uint32_t)(p * 240) << 16 | 240;
         int own_quad = p >= 0 && p < 4 && (g_quad_seen & 7) == 7 && (g_quad_seen & (1u << p)) &&
                        x == 0 && y == 0 && w == 640 && h == 480;
-        if (own_quad) {
+        int solo_camera = own_quad && netplay_no_cpus() && ld32(GAME_HUMAN_COUNT) == 4;
+        if (own_quad && !solo_camera) {
             c->copy[11] = (uint32_t)((p / 2) * 240) << 16 | 240;
             c->copy[12] = (uint32_t)((p % 2) * 320) << 16 | 320;
         }
@@ -1512,7 +1549,8 @@ static void efb_copy(uint32_t v) {
         game_mods_frame();
         push_cmd(GXC_PRESENT);
         gx_decode_sync();
-        if (p < 0 || own_quad) local_hud_frame(g_frame, own_quad ? p : -1);
+        if (solo_camera) solo_camera_frame(g_frame, p);
+        else if (p < 0 || own_quad) local_hud_frame(g_frame, own_quad ? p : -1);
         if (own) ownview_frame(g_frame, p);
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;

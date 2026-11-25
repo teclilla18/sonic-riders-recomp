@@ -4,6 +4,7 @@
 
 - The in-game Online lobby can host 2–4 players on LAN or with an internet invite code. The host relays inputs.
 - Each player uses their own picture shape and FPS settings. Three- and four-player views show the local racer, with the timer centered and minimap at upper right.
+- Four-player races use the original solo Fit to Screen HUD for each controller, including the lap panel, air gauge and full-screen speed trail.
 - Auto spin only takes over the stick while the racer is in a spin section. Its log gives the frame for each section start and end.
 - Online races have no CPU racers: only the players race (offline races keep them).
 - Online settings tab and a controller-driven LAN lobby: choose a name, host a race or join a discovered race.

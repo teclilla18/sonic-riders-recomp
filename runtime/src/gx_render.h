@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#define GX_XR_HUD_SEAT 0x7B   /* host FIFO marker: 0 outside the personal solo HUD, else seat + 1 */
 #define EFB_WIDTH 640
 #define EFB_HEIGHT 528
 

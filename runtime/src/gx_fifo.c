@@ -748,6 +748,15 @@ int gx_async(void) { return g_gx_async; }
 /* the game thread has nothing to run (sched.c): what it wrote reaches the GP now */
 void gx_pipe_idle(void) { pipe_flush(); }
 
+/* Queue a host presentation register in order with the guest's GX commands.
+ * The guest FIFO RAM and write pointer receive only the original command bytes. */
+void gx_solo_hud_tag(unsigned tag) {
+    const uint8_t marker[] = {0x10, 0, 0, 0x10, GX_XR_HUD_SEAT, 0, 0, 0, (uint8_t)tag};
+    pipe_flush();
+    if (g_gx_async) ring_push(marker, sizeof marker);
+    else gp_feed(marker, sizeof marker);
+}
+
 /* the CPU FIFO's bounds (PI FIFO base / end, physical): gx_dff.c */
 void gx_pi_fifo_range(uint32_t* base, uint32_t* end) { *base = g_pi_base & 0x03FFFFFF; *end = g_pi_end & 0x03FFFFFF; }
 void gx_dff_init(void);

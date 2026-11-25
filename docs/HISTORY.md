@@ -2173,3 +2173,16 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   with the shared clock centered and its minimap upper right. The split-screen gauges still differ
   from the user's single-player reference. Exact original solo HUD and 4P across devices/networks
   remain open. The eight-player design follows the release of the four-player beta.
+
+## 2026-11-25 — Original solo HUD on four online views (private PC candidate)
+
+- [confirmed] The registration branch uses the human count. Preserving the four-racer scene and
+  scheduling original solo HUD tasks for each controller produced a full-screen camera, personal
+  panel, lap/rank, speed and air gauge for each peer. Map markers and other racers remain visible.
+- [confirmed, Windows] Compared all four seats with offline solo references at 21:9, 16:9, 4:3
+  and 16:10. A direct room matched through 28,200 steps, LAN through 23,000 and an invite-code
+  loopback through 21,000, each through all four finishes. Offline solo and local four-player
+  control captures matched their respective prior builds byte for byte.
+- [confirmed] The solo finish controller shared the first finisher's lap table across peers.
+  The multiplayer controller creates results work for each finishing racer. See the online beta
+  note for the private review build and separate-device testing status.

@@ -166,6 +166,47 @@ static void check_own_quad_hud(void) {
         assert(draws[3].scale == 0 && draws[3].move == 0 && draws[3].move_y == 0);
     }
 }
+static void check_solo_camera(void) {
+    for (int me = 0; me < 4; me++) {
+        GxUniforms uniforms[9];
+        GxCmd copies[5] = {0};
+        GxFrame frame = {.unis = uniforms, .nunis = 9, .cmds = copies, .ncmds = 5};
+        for (int seat = 0; seat < 4; seat++) {
+            uniforms[seat] = view(hud_player_view(seat, 1), 0);
+            copies[seat].type = GXC_COPY;
+            copies[seat].copy[0] = (seat % 2) * 320;
+            copies[seat].copy[1] = (seat / 2) * 240;
+            copies[seat].copy[2] = 320;
+            copies[seat].copy[3] = 240;
+            copies[seat].copy[5] = 1;
+        }
+        GxUniforms hud = view((HudView){0, 0, 1, 1}, 1);
+        uniforms[4] = hud;
+        for (int seat = 0; seat < 4; seat++) {
+            uniforms[5 + seat] = view(hud_player_view(3, 1), 1);
+            uniforms[5 + seat].xfr[GX_XR_HUD_SEAT] = seat + 1;
+        }
+        copies[4].type = GXC_COPY;
+        copies[4].copy[4] = 1;
+        solo_camera_frame(&frame, me);
+        assert(memcmp(&hud, &uniforms[4], sizeof hud) == 0);
+        assert(!copies[4].copy[11] && !copies[4].copy[12]);
+        for (int seat = 0; seat < 4; seat++) {
+            GxUniforms* personal = &uniforms[5 + seat];
+            if (seat == me) {
+                HudView v = hud_viewport(&uniforms[seat]);
+                assert(v.hx == 1 && v.hy == 1 && v.cx == 0 && v.cy == 0);
+                assert(copies[seat].copy[2] == 640 && copies[seat].copy[3] == 480);
+                assert(hud_viewport(personal).hx == 1 && personal->bp[0x20] < personal->bp[0x21]);
+            } else {
+                assert(uniforms[seat].bp[0x20] > uniforms[seat].bp[0x21]);
+                assert(!copies[seat].copy[5]);
+                assert(personal->bp[0x20] > personal->bp[0x21]);
+            }
+        }
+    }
+}
+
 int main(void) {
     ppc_mem_base_var = calloc(1, 32 * 1024 * 1024); assert(ppc_mem_base_var);
     st32(GAME_TOP_MODE, GAME_TOP_MODE_MULTIPLAYER); g_settings.screen = SCREEN_FIT;
@@ -175,6 +216,7 @@ int main(void) {
         timer_overlap(ratios[k], 0); timer_overlap(ratios[k], 1);
     }
     check_own_quad_hud();
+    check_solo_camera();
     puts("local_hud: complete frames, 2/3/4P x five aspects, shared timer/map, centred notification, silhouette, group spacing, clipping and state isolation PASS");
     free(ppc_mem_base_var);
 }

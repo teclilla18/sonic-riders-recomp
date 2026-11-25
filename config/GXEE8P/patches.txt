@@ -233,3 +233,51 @@ decl int lv_magnet_hide(uint32_t task);
 81815EF0 before lv_magnet_spawn(c, c->r[1], c->r[29]);
 818F0D38 before lv_magnet_keep(c->r[8]);
 818F0DD8 after { if (lv_magnet_hide(c->r[8])) c->r[0] = 1; }
+
+# Select solo HUD task registration on every four-player online peer. Preserve r21
+# (human player count) for the remaining race setup, including its per-player loop.
+8183C644 after { if (netplay_no_cpus() && c->r[21] == 4) c->cr[2] = 1; }
+# Keep the multiplayer scene renderer and its viewport setup alongside the solo HUD.
+8183C664 before { if (netplay_no_cpus() && c->r[21] == 4) c->r[3] = 0x8180ED78u; }
+# Retain the multiplayer finish controller, which creates a card per finisher.
+8183C6C4 before { if (netplay_no_cpus() && c->r[21] == 4) c->r[3] = 0x818201C8u; }
+decl void online_hud_register(Cpu* c);
+decl void online_hud_gauge_task(uint32_t task);
+decl uint32_t online_hud_begin(uint32_t base, int group);
+decl uint32_t online_hud_racer(uint32_t base);
+decl void online_hud_end(void);
+8183C55C after { if (netplay_no_cpus() && c->r[21] == 4) online_hud_gauge_task(c->r[3]); }
+8183C6E4 after { if (netplay_no_cpus() && c->r[21] == 4) online_hud_register(c); }
+81831740 after c->r[8] = online_hud_begin(c->r[8], 0);
+818337DC after c->r[8] = online_hud_racer(c->r[8]);
+81833774 after online_hud_end();
+81826020 after c->r[27] = online_hud_begin(c->r[27], 1);
+# The native constructor seeds the three blank record fields with the starting
+# rank (always zero in solo). Keep both actual rank fields for the place display.
+decl void online_hud_init_record(uint32_t work);
+818260F0 after online_hud_init_record(c->r[30]);
+81827E58 after online_hud_end();
+# The gauge task has native layouts for one, two and four players. Each scheduled
+# instance draws its own racer using the single-player positions and loop count.
+81829424 after { if (netplay_no_cpus() && c->r[15] == 4) c->r[15] = 1; }
+81829438 after c->r[5] = online_hud_begin(c->r[5], 2);
+818294A8 after c->r[24] = online_hud_racer(c->r[24]);
+8182A200 after c->r[24] = online_hud_racer(c->r[24]);
+8182A83C after c->r[20] = online_hud_racer(c->r[20]);
+8182AD60 after online_hud_end();
+# Choose the original solo map position when the map task initializes. Its
+# separate racer iteration still receives the actual field size for the markers.
+81818B50 after { if (netplay_no_cpus() && c->r[3] == 4) c->r[3] = 1; }
+decl uint32_t online_trail_quad(uint32_t quad, uint32_t racer, unsigned views);
+818A914C after c->r[26] = online_trail_quad(c->r[26], c->r[28], c->r[27]);
+818A9190 before online_hud_end();
+# Parent work +0x20 and child work +0x10 carry the racer's index. Select the
+# original solo card geometry at construction and tag both pieces while drawing.
+decl void online_result_begin(unsigned racer_index);
+81820D8C after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+819311A4 after online_result_begin(ld8(c->r[30] + 0x20));
+81931754 after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+81931DC8 after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+81931F94 after online_hud_end();
+8192DEA0 after online_result_begin(ld8(c->r[31] + 0x10));
+8192EF30 after online_hud_end();

@@ -3,6 +3,7 @@ import argparse
 from contextlib import ExitStack
 import os
 from pathlib import Path
+import re
 import struct
 import subprocess
 import time
@@ -12,7 +13,7 @@ from net_route_2p import p1_online, p2_online
 
 def race(args):
     suffix = ("-mixed" if args.mixed else "") + ("-leave" if args.disconnect else "")
-    root = Path("build/online-room-test") / f"{args.players}p-{args.mode}{suffix}"
+    root = args.out or Path("build/online-room-test") / f"{args.players}p-{args.mode}{suffix}"
     exe, iso = args.exe.resolve(), args.iso.resolve()
     common = {key: value for key, value in os.environ.items() if key not in ("SR_NET", "SR_ONLINE", "SR_LOBBY_TEST")}
     common.update(SR_WINDOW="1910x800", SR_MINIMIZED="1", SR_LOGSYNC="1",
@@ -37,6 +38,8 @@ def race(args):
                 route = [entry for entry in route if int(entry.split(":")[0]) < 4300]
                 route += [f"{4300 + 25 * slot}:SY=100", f"{4400 + 25 * slot}:SX={60 - 35 * slot}",
                           f"{4480 + 25 * slot}:SX=0", f"{4600 + 25 * slot}:A", f"{4640 + 25 * slot}:-A"]
+                if args.finish:
+                    route.extend(entry for entry in p1_online() if int(entry.split(":")[0]) >= 4800)
                 env = dict(common, SR_INPUT=",".join(route), SR_RECORD=str(recording))
                 if args.mixed:
                     window, framerate, fps = profiles[slot]
@@ -50,6 +53,8 @@ def race(args):
                                SR_LOBBY_TEST="inet-host" if slot == 0 else "inet-join:2130706433")
                 else:
                     env["SR_NET"] = f"{'join' if slot else 'host'}:127.0.0.1:{args.port}"
+                if args.finish:
+                    env["SR_SHOTSTEP"] = "3700,5300,12000,20000,24500"
                 logs.append(out / "sonicriders.log")
                 log = resources.enter_context(logs[-1].open("wb"))
                 processes.append(subprocess.Popen([str(exe), str(iso)], cwd=out, env=env, stdout=log, stderr=log))
@@ -81,6 +86,13 @@ def race(args):
                 assert all(len(sticks) > 1 for sticks in inputs), f"A port never steered. See {root}."
                 assert len({frozenset(sticks) for sticks in inputs}) == args.players, "Steering streams should be distinct."
             print(f"PASS: {args.players} players over {args.mode}, {args.frames} matching input/checksum records per peer. {root}")
+            if args.finish:
+                finishes = []
+                for path in logs:
+                    pairs = re.findall(rb"\[net\] frame (\d+): player (\d+) crossed the finish line", path.read_bytes())
+                    finishes.append({int(player): int(frame) for frame, player in pairs if 4300 < int(frame) <= args.frames})
+                assert len(finishes[0]) == args.players and all(f == finishes[0] for f in finishes), finishes
+                print(f"PASS: finish frames by seat {finishes[0]}")
             if args.disconnect:
                 processes[-1].terminate()
                 processes[-1].wait(timeout=10)
@@ -108,7 +120,9 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=("lan", "inet", "direct"), default="lan")
     parser.add_argument("--port", type=int, default=17888, help="port for direct connection tests")
     parser.add_argument("--frames", type=int, default=5400)
+    parser.add_argument("--finish", action="store_true", help="require every racer to finish within --frames")
     parser.add_argument("--mixed", action="store_true", help="different window ratios and picture rates")
+    parser.add_argument("--out", type=Path, help="separate output folder for a diagnostic build")
     parser.add_argument("--disconnect", action="store_true", help="end a guest after the recording check")
     parser.add_argument("--timeout", type=float, default=250)
     race(parser.parse_args())

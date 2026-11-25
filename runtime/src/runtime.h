@@ -94,6 +94,7 @@ void vi_write(uint32_t ea, uint32_t v, int size);
 uint32_t vi_xfb_address(void);
 uint32_t vi_field_count(void);
 int netplay_in_session(void);
+int netplay_no_cpus(void);
 
 /* di.c: DVD Interface (drive) model */
 uint32_t di_read(uint32_t ea, int size);

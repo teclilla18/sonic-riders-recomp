@@ -180,10 +180,8 @@ Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). N
 - The 32:9 game camera gives all copies the same visibility. Each device narrows its rendering to its
   own aspect. Lower presentation rates skip display copies while executing the original GX work.
   The PC in-between renderer still uses its local picture-rate setting.
-- The 3–4 player view expands its original 320×240 quadrant to the local display. Its timer is top
-  center and the minimap plus markers are upper right. Split-screen positions can still touch the
-  clock or map. The 1P HUD match still needs its original
-  ring/boost panel upper left, rank/lap/record lower left and tall speed gauge lower right.
+- The original candidate enlarged a composited quadrant, including the split-screen HUD. Three-player
+  rooms retain this behavior. The private four-player replacement is described below.
 - PC Metal City [confirmed]: 5,400 equal input/checksum records per peer for 4P LAN, 4P invite-code
   loopback and 3P direct. Mixed local choices included 30, 45, 60 and 120 FPS. The higher rate dipped
   with four copies drawing on one computer. A 2P direct run passed 4,800. A fifth participant was
@@ -203,3 +201,44 @@ Build: beta.3 zip (ab358f6) on both PCs (user + brother, about 2 hours apart). N
   active (overlay_text_typing). Built on PC, not yet tried by typing.
 
 Test helpers: `tools/test_online_protocol.py`, `tools/net_route_2p.py`, `tests/disc_cache_test.c`.
+
+### Four-player solo HUD, private PC candidate (2026-11-25)
+
+- The race initializer loads human count 8021B8C8 into r21 at 8183BBFC. The compare at 8183C644
+  selects the solo task group. Keep r21 and the later per-player loops intact. The original scene
+  registration must still use the multiplayer renderer 8180ED78. Choosing the entire solo branch
+  unmodified left three cameras showing an empty track.
+- The scheduler 800E2724 assigns the callback, initial state and a persistent work block.
+  Current task is at 8021C314, work at task +0x10, state byte at +0x14. For the personal HUD
+  the primary handle is at 81A16BC4. Four distinct tasks progressed from state 2 to 4 to 5 in the
+  bounded PC trace. Use the common constructor path at 8183C6E4. Normal Race skips 8183C710.
+- Each peer runs the same four instances of 8183172C (personal panel), 81826000 (lap and rank)
+  and 818293C0 (gauge). Resolve each racer by its controller pointer. Native task work carries
+  its animation between frames. A host-only FIFO marker follows the draws through asynchronous
+  GX decoding. Foreign personal layers have an empty scissor in the completed frame.
+- The map task 81818A58 selects solo placement at 81818B50. The marker loop still sees the
+  full field. The camera effect 818A8E84 samples the previous EFB image. Each racer uses the
+  original solo quad and its own opacity. Its former quadrant geometry left a translucent rectangle.
+- The lap panel seeds both its rank animation and three empty record-time fields from the initial
+  rank. In solo this is zero. The online constructor clears only work bytes +3 through +5 to
+  prevent P2–P4 from displaying their starting position as minutes, seconds and hundredths.
+- `SR_HUDTRACE=1` samples the four task owners at frames 5299 and 11999. Cross-check captures
+  against the controller pointer, speed (+0xAAC × 216), rings (+0xB98), level (+0x102E),
+  position (+0x102C, zero-based), lap (+0x102A) and air (+0x984). The timestamp on a displayed
+  capture can differ by a few hundredths across local presentation rates.
+- `tools/test_online_room.py --players 4 --mixed --finish --frames 23000` compares every recorded
+  pad/checksum bundle and requires all peers to report the same four finish frames. The tool also
+  takes simulation-step captures. Supply the executable, local disc and a fresh output directory.
+
+- On the invite-code iteration, all 21,000 four-player input/checksum records agreed. Each peer
+  recorded P2 at 18834, P4 at 18891, P1 at 18946 and P3 at 19306. These are simulation steps.
+- The native multiplayer finish controller 818201C8 supplies the finishing racer to results
+  parent 81931174 (work +0x20) and lap table 8192DE54 (work +0x10). Retain that controller and
+  use the native solo placement for its owned panels. The original solo finish controller
+  supplied the first finisher's times to every display.
+- Final private Windows executable SHA-256 9aaedb7dcb7e72b5fae139111d3a3b40ceb61f5aeab90d4f33aa3bd598fc7920.
+  Four direct peers matched every input/checksum bundle through frame 20500. Finishes by seat
+  were 18942, 18833, 19155 and 19046. The final standings showed four distinct times in finish order.
+  Final FPS samples were 60, 29.9–30.0, 114.8–120.0 and 44.6–44.9 on one Windows PC.
+  Offline 16:9 solo and four-way split frame 6500 matched their prior captures byte for byte.
+  Cross-device testing and personal review remain open.
