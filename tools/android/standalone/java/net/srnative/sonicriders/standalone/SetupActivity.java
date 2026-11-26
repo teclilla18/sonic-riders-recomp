@@ -60,7 +60,7 @@ public final class SetupActivity extends Activity {
         try {
             installer = Installer.get(this);
         } catch (IllegalStateException error) {
-            new AlertDialog.Builder(this).setTitle("Could not open Riders Plus")
+            new AlertDialog.Builder(this).setTitle("Could not open Riders Crosswake")
                 .setMessage(error.getMessage()).setPositiveButton("Close", (d, w) -> finish()).show();
             return;
         }
@@ -109,7 +109,7 @@ public final class SetupActivity extends Activity {
         LinearLayout identity = column();
         identity.setPadding(dp(12), 0, 0, 0);
         TextView name = text(32, INK, true);
-        name.setText("Riders Plus");
+        name.setText("Riders Crosswake");
         identity.addView(name);
         TextView platform = text(14, MUTED, false);
         platform.setText("Standalone Android installer");
@@ -163,7 +163,7 @@ public final class SetupActivity extends Activity {
         elapsed.setVisibility(active ? View.VISIBLE : View.GONE);
         primary.setVisibility(active ? View.GONE : View.VISIBLE);
         if (active) {
-            display("INSTALLING", progress.title, "Keep Riders Plus open while your phone builds the game.", "");
+            display("INSTALLING", progress.title, "Keep Riders Crosswake open while your phone builds the game.", "");
             bar.setProgress(progress.percent);
             long seconds = (SystemClock.elapsedRealtime() - progress.start) / 1000;
             setText(elapsed, String.format(Locale.ROOT, "%d%%   ·   %d:%02d elapsed",
@@ -187,7 +187,7 @@ public final class SetupActivity extends Activity {
         } else if (installer.needsUpdateBuild()) {
             display("UPDATE READY", "Prepare this version", "This update needs a new game build. Your disc, saves, settings and mods will stay in place.", "Build update");
         } else if (installer.hasIso()) {
-            display("DISC READY", "Build Riders Plus", "Your verified disc is on this phone. The build takes a few minutes.", "Build game");
+            display("DISC READY", "Build Riders Crosswake", "Your verified disc is on this phone. The build takes a few minutes.", "Build game");
         } else {
             display("FIRST-TIME SETUP", "Choose your disc image",
                 "Select your own Sonic Riders ISO for GameCube (USA, revision 0). Keep about 2 GB free for setup. The build runs offline on this phone.",
@@ -248,7 +248,7 @@ public final class SetupActivity extends Activity {
         AlertDialog.Builder dialog = new AlertDialog.Builder(this).setTitle("Build diagnostics")
             .setMessage(report).setNeutralButton("Close", null)
             .setPositiveButton("Copy report", (d, w) -> {
-                getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Riders Plus", report));
+                getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Riders Crosswake", report));
                 Toast.makeText(this, "Report copied", Toast.LENGTH_SHORT).show();
             });
         if (installer.prepared() != null && installer.progress() == null) {
@@ -264,13 +264,13 @@ public final class SetupActivity extends Activity {
     }
 
     private void showUpdates() {
-        new AlertDialog.Builder(this).setTitle("Riders Plus updates")
+        new AlertDialog.Builder(this).setTitle("Riders Crosswake updates")
             .setMessage("Download the standalone Android APK from GitHub Releases and open it over this installation. Android verifies the signature. Keep this app installed to retain your game data.")
             .setNegativeButton("Close", null).setPositiveButton("Open releases", (dialog, which) -> {
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES)));
                 } catch (ActivityNotFoundException exception) {
-                    Toast.makeText(this, "Open the Riders Plus GitHub Releases page in a browser.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Open the Riders Crosswake GitHub Releases page in a browser.", Toast.LENGTH_LONG).show();
                 }
             }).show();
     }

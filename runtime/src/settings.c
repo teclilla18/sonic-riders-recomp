@@ -16,6 +16,8 @@ static int g_boost_hold;        /* Hold to boost in effect */
 static int g_fixed_boost_hold = -1;  /* settings_fix_boost_hold, -1 = the setting's */
 static int g_ring_replenish;    /* Ring Replenish in effect */
 static int g_fixed_ring_replenish = -1;  /* settings_fix_ring_replenish, -1 = the setting's */
+static int g_fixed_super_classic = -1;   /* settings_fix_super_classic: an online room's (the host's) or a recording's */
+static int g_fixed_super_flight = -1;    /* settings_fix_super_flight: an online room's (the host's) or a recording's */
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
 static volatile float g_window_aspect = 16.0f / 9.0f;
@@ -68,7 +70,7 @@ static float own_display_aspect(void) {
     }
 }
 
-/* of the presented picture: this machine's own shape (narrowed to the room's camera if that is narrower) */
+/* of the presented picture, limited by the camera used for game-side visibility */
 float settings_display_aspect(void) { return g_fixed_k >= 1.0f ? 4.0f / 3.0f * g_wide_k : own_display_aspect(); }
 float settings_wide_k(void) { return g_wide_k; }
 /* the camera aspect the game itself uses (game state: the room's in an online session, a recording's in a replay) */
@@ -88,14 +90,11 @@ static void settings_log(const char* when) {
 }
 
 static void apply_view(void) {
-    /* widescreen: the cameras' aspect ratio from 4:3 to the screen's, and an EFB as much wider */
-    /* online / replays (settings_fix_wide_k): the game keeps the fixed camera aspect (game state), while this
-     * machine draws its own screen shape; gx.vert narrows the perspective views by game k / own k
-     * (GX_XR_ASPECT). A picture wider than the game's camera would show past what the game culls, so the
-     * own shape is used only up to the fixed one (the room uses its widest player's shape). */
+    /* A fixed camera covers the whole supported view. The renderer narrows perspective projection
+     * to the local window shape while retaining the wider game-side visibility checks. */
     int wide = g_settings.screen == SCREEN_WIDE || g_settings.screen == SCREEN_FIT;
     float own = wide ? own_display_aspect() / (4.0f / 3.0f) : 1.0f;
-    g_wide_k = g_fixed_k >= 1.0f ? (own < g_fixed_k ? own : g_fixed_k) : own;
+    g_wide_k = g_fixed_k >= 1.0f ? fminf(own, g_fixed_k) : own;
     g_aspect_scale = g_fixed_k >= 1.0f ? g_fixed_k : own;
     g_fov_scale = g_settings.fov / 100.0;
 }
@@ -125,7 +124,11 @@ void settings_load(void) {
             if (!eq) continue;
             *eq = 0;
             int v = atoi(eq + 1);
-            if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
+            if (!strcmp(line, "online_name")) {
+                void lan_clean_name(char*, const char*);
+                lan_clean_name(g_settings.online_name, eq + 1);
+            }
+            else if (!strcmp(line, "screen") && v >= 0 && v < SCREEN_MODES) g_settings.screen = v;
             else if (!strcmp(line, "show_fps")) g_settings.show_fps = v != 0;
             else if (!strcmp(line, "resolution") && v >= 0 && v < RES_MODES) g_settings.resolution = v;
             /* a new key: older builds saved "chaos_emerald" as on by default */
@@ -152,6 +155,7 @@ void settings_load(void) {
             else if (!strcmp(line, "boost_hold")) g_settings.boost_hold = v != 0;
             else if (!strcmp(line, "ring_replenish")) g_settings.ring_replenish = v != 0;
             else if (!strcmp(line, "super_flight")) g_settings.super_flight = v != 0;
+            else if (!strcmp(line, "super_classic")) g_settings.super_classic = v != 0;
             else if (!strcmp(line, "no_ring_drain")) g_settings.no_ring_drain = v != 0;
         }
         fclose(f);
@@ -225,7 +229,24 @@ int settings_ring_replenish(void) { return g_ring_replenish; }
 /* a cheat: never in online play, a recording or a replay (they all run on the game-driven clock) */
 int settings_super_flight(void) {
     int ppc_detclock(void);
+    if (g_fixed_super_flight >= 0) return g_fixed_super_flight && g_ring_cap != 100;
     return g_settings.super_flight && g_ring_cap != 100 && !ppc_detclock();
+}
+/* Flight only changes which animation Super Sonic plays, from game state every machine has, so a room can use it
+ * as long as every machine uses the same value: the host's (WELCOME) or a recording's. */
+int settings_super_flight_setting(void) { return g_settings.super_flight && g_ring_cap != 100; }
+void settings_fix_super_flight(int on) {
+    g_fixed_super_flight = on != 0;
+    rt_log("[settings] Super Sonic flight fixed for this run: %s", on ? "on" : "off");
+}
+/* Limit Break Super Sonic (super_tuning.h; internally "classic") changes game state: online / recordings use the host's / recorded value */
+int settings_super_classic(void) {
+    return g_fixed_super_classic >= 0 ? g_fixed_super_classic : g_settings.super_classic;
+}
+int settings_super_classic_setting(void) { return g_settings.super_classic; }
+void settings_fix_super_classic(int on) {
+    g_fixed_super_classic = on != 0;
+    rt_log("[settings] Super Sonic: %s for this run", on ? "Limit Break (v0.9.0 numbers)" : "balanced");
 }
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
 int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */
@@ -256,5 +277,7 @@ void settings_apply(void) {
             g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
             g_settings.ring_cap_999, g_settings.auto_spin, g_settings.boost_hold,
             g_settings.ring_replenish, g_settings.no_ring_drain, g_settings.super_flight);
+    fprintf(f, "super_classic=%d\n", g_settings.super_classic);
+    fprintf(f, "online_name=%s\n", g_settings.online_name);
     fclose(f);
 }

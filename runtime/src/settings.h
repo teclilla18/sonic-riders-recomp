@@ -39,8 +39,10 @@ typedef struct Settings {
     int auto_spin;      /* races: the port turns the stick in the game's spin scenes (auto_spin.c, #23) */
     int boost_hold;     /* races: a boost lasts while B (or X) is held, taking air (boost_hold.c) */
     int ring_replenish; /* races: Super Sonic gains rings where others gain air (game_levels.c) */
-    int super_flight;   /* experimental: Super Sonic flies off his board (super_flight.c); off by default, off online */
+    int super_classic;  /* Classic Super Sonic: v0.9.0 numbers (super_tuning.h); off = balanced; host selects for online */
+    int super_flight;   /* experimental: Super Sonic flies off his board (super_flight.c); off by default, host selects for online */
     int no_ring_drain;  /* cheat: a player's Super Sonic never loses rings (game_levels.c); off online */
+    char online_name[21]; /* chosen by the player; never a device/account name */
 } Settings;
 
 enum { FR_60, FR_AUTO, FR_30, FR_MODES };
@@ -65,14 +67,13 @@ void settings_apply(void);  /* after a change: applies, saves and logs */
 float settings_display_aspect(void);  /* of the presented picture: 4/3, 16/9 or the window's */
 /* the wide modes draw a wider EFB instead of stretching: its width is 640 x this (1 = the original);
  * the backends scale viewports, scissors and copies by it (gx_render.c frame start) */
-float settings_wide_k(void);  /* this machine's EFB width factor (its own screen shape) */
+float settings_wide_k(void);  /* this machine's EFB width factor */
 float settings_game_k(void);  /* the game's camera aspect factor (game state; online: the room's) */
 /* backends: the window's or screen's aspect (width / height), for SCREEN_FIT; cheap when unchanged */
 void settings_set_window_aspect(float aspect);
 const char* settings_screen_name(int mode);
 /* online sessions, recordings and replays (netplay.c): the camera aspect is game state, so it is fixed
- * for the whole run, the same on every machine (EFB width factor k; 0 = not fixed). Screen settings
- * and window size changes then only change how the picture is shown. */
+ * for the whole run (EFB width factor k; 0 = not fixed). Each display can present a narrower picture. */
 void settings_fix_wide_k(float k);
 /* the ring cap from a recording or the online host (999 or 100): game state, kept for this run */
 void settings_fix_ring_cap(int cap);
@@ -85,7 +86,12 @@ double boost_hold_audio(void);  /* boost_hold.c: the same effect's strength 0..1
 int settings_auto_spin(void);   /* in effect (needs Riders Plus): 1 = on */
 void settings_fix_ring_replenish(int on);
 int settings_ring_replenish(void);
-int settings_super_flight(void);  /* on, Riders Plus, and not online / recording / replaying */
+int settings_super_flight(void);  /* on, Riders Plus; online / recordings: the host's / recorded value */
+int settings_super_flight_setting(void);  /* this machine's own choice (what a host offers its room) */
+void settings_fix_super_flight(int on);
+int settings_super_classic(void);          /* in effect (online / recordings: the host's / recorded value) */
+int settings_super_classic_setting(void);  /* this machine's own choice */
+void settings_fix_super_classic(int on);
 int settings_no_ring_drain(void);  /* the cheat in effect: on, and not online / recording / replaying */  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);

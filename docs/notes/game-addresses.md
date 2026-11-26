@@ -6,6 +6,9 @@ Legend: **[confirmed]** = verified directly; **[likely]** = strong evidence, not
 
 ## Known game addresses
 
+- `8021B8C0` is really the **racer count** (2026-11-22): Player Entry (fn_1_13D2F0) stores 8 with 1-2 players, else 4,
+  at 8193F6DC (r17 = the human players); other modes and the menus store their own (1, 4, 8). 422 reads in the REL.
+  Online races set it to the players (patches.txt, no CPU racers); the runtime reads it through `GAME_MODE()`.
 - `8021B8C0` (.sdata, `GAME_TOP_MODE`): 1 = intro / title / attract / menus (Player Entry seen), 8 = races (demo
   and Free Race seen). Found 2026-11-03 by RAM dumps on the phone + a PC menu route; other modes unchecked.
   **Not "racing now":** 8 can stay on in menus (Player Entry in a non-deterministic run; the user's Extras and

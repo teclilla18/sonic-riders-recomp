@@ -19,8 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v0.9.0"
-UPDATED = "2026-11-20"
+VERSION = "Private online gameplay and standings candidate"
+UPDATED = "2026-11-25"
 
 # (label, weight, percent done); labels must match the README table's first column
 AREAS = [
@@ -28,7 +28,7 @@ AREAS = [
     ("Graphics match the GameCube",    15, 80),
     ("Switch performance",             15, 70),
     ("Platforms",                      15, 85),
-    ("Online play",                    15, 55),
+    ("Online play",                    15, 64),
     ("Features and polish",            15, 73),
 ]
 

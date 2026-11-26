@@ -10,10 +10,10 @@
 namespace lobby {
 
 enum State { IDLE, HOSTING, JOINING, JOINED, STARTING };
-constexpr int kLobbyPort = 7778;      /* the host's lobby socket */
-constexpr int kDiscoverPort = 7779;   /* lobby announcements (broadcast) */
+constexpr int kLobbyPort = 7788;      /* launcher-only control sockets, separate from the in-game lobby */
+constexpr int kDiscoverPort = 7789;   /* launcher lobby announcements (broadcast) */
 constexpr int kGamePort = 7777;       /* the game's own session (SR_NET) */
-constexpr int kMaxPlayers = 2;        /* the game's sessions are two players so far */
+constexpr int kMaxPlayers = 2;        /* Open Online uses the in-game lobby for up to four */
 constexpr int kNameMax = 20;
 
 struct Found {                        /* a lobby announced on the local network */
@@ -30,10 +30,10 @@ struct View {
     std::string host_ip;               /* joined: the host's address (the game joins it) */
     std::string error;                 /* the last problem, for the page */
     std::vector<Found> found;
-    bool ready = false;                /* the game file is read (its fingerprint is known) */
+    bool ready = false;                /* networking and the shared compatibility version are ready */
 };
 
-void init(const std::wstring& game_exe);  /* starts the thread; reads the game's fingerprint */
+void init(const std::wstring& game_exe);  /* starts the lobby thread */
 void shutdown();
 void host(const std::string& name);
 void join(const std::string& ip, const std::string& name);

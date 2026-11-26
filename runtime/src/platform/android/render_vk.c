@@ -33,6 +33,7 @@
 #include "gx_shader_key.h"
 #include "gx_spec_spv.h"     /* generated: tools/gen_shaders.py --vk (specialized fragment shaders) */
 #include "overlay.h"
+#include "online_boot.h"
 #include "runtime.h"
 #include "settings.h"
 #include "touch_android.h"
@@ -1707,6 +1708,11 @@ static void present_picture(const GxCmd* c) {
         sh = (float)SC(c->copy[11] & 0xFFFF);
         aspect *= (float)h / (float)(c->copy[11] & 0xFFFF);
     }
+    if (c->copy[12]) {
+        x += c->copy[12] >> 16;
+        aspect *= (float)(c->copy[12] & 0xFFFF) / (float)w;
+        w = c->copy[12] & 0xFFFF;
+    }
     float uv[4] = {(float)XSC(x) / EFB_W, sy / EFB_H, (float)XSC(x + w) / EFB_W, (sy + sh) / EFB_H};
     float px[4];
     picture_rect(aspect, px);
@@ -1761,6 +1767,11 @@ static void draw_overlay_and_touch(void) {
     if (!(img && g_ov_box[0] < g_ov_box[2]) && !nt) return;
     barrier(g_simg[g_swap_idx], VK_IMAGE_ASPECT_COLOR_BIT, &g_slayout[g_swap_idx], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     target_begin(g_sview[g_swap_idx], g_img_ext.width, g_img_ext.height, 0);
+    if (online_loading()) {
+        VkClearAttachment black={VK_IMAGE_ASPECT_COLOR_BIT,0,{.color={{0,0,0,1}}}};
+        VkClearRect rect={{{0,0},g_ext},0,1};
+        vkCmdClearAttachments(g_cmd,1,&black,1,&rect);
+    }
     if (img && g_ov_box[0] < g_ov_box[2]) quad(Q_TEX_OVER, TGT_SWAP, 15, g_ov.view, g_samp_lin, W, H, ov, NULL, NULL, NULL);
     for (int i = 0; i < nt; i++) {
         float px[4] = {ts[i].cx - ts[i].r, ts[i].cy - ts[i].r, ts[i].cx + ts[i].r, ts[i].cy + ts[i].r};
@@ -1900,7 +1911,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
     efb_end();
     if (c->copy[4]) {
-        present_picture(c);
+        int limit = gx_online_picture_limit(0);
+        g_render_counts_fps = limit != 0;
+        if (gx_take_display_copy(limit)) present_picture(c);
     } else if ((int)c->copy[8] >= 0) {
         VkImg* t = tex_prepare((int)c->copy[8]);
         if (t && t->live) {
@@ -2250,6 +2263,7 @@ static void execute(GxFrame* f) {
             draws++;
             break;
         }
+        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
         case GXC_COPY:
             if (cur) {
                 efb_copy(c, cur);
@@ -2487,7 +2501,12 @@ static void pump(void) {
         case SDL_WINDOWEVENT:
             if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) g_swap_bad = 1;
             break;
+        case SDL_TEXTINPUT: overlay_text(e.text.text); break;
+        case SDL_KEYUP:
+            overlay_edit_key(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE, 0);
+            break;
         case SDL_KEYDOWN:
+            overlay_edit_key(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE, 1);
             /* the phone's Back (button or gesture): the settings menu instead of leaving the game */
             if (e.key.keysym.scancode == SDL_SCANCODE_AC_BACK && !e.key.repeat) overlay_menu_toggle();
             break;

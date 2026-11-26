@@ -25,7 +25,7 @@ public final class GameActivity extends SonicRidersActivity {
     protected String getMainSharedObject() {
         Installer installer = Installer.get(this);
         File prepared = installer.prepared();
-        if (prepared == null) throw new UnsatisfiedLinkError("Return to Riders Plus setup to repair the installation.");
+        if (prepared == null) throw new UnsatisfiedLinkError("Return to Riders Crosswake setup to repair the installation.");
         return new File(prepared, "libmain.so").getAbsolutePath();
     }
 

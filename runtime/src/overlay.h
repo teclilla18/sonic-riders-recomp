@@ -19,6 +19,8 @@ enum { OV_UP = 1, OV_DOWN = 2, OV_LEFT = 4, OV_RIGHT = 8, OV_ACCEPT = 16, OV_BAC
 
 /* each input poll, with the OV_* buttons held: 1 while the game must see a neutral controller */
 int overlay_input(unsigned held);
+/* 1 while a menu text box has the keyboard (letter keys are then text, not menu buttons) */
+int overlay_text_typing(void);
 /* the overlay image (OVERLAY_W x OVERLAY_H RGBA, premultiplied alpha) or NULL when there is nothing to
  * show; *version changes whenever the pixels do. box (may be NULL) gets the rectangle x0, y0, x1, y1
  * outside which the image is transparent (all 0: nothing to draw) */
@@ -44,6 +46,8 @@ void overlay_pointer(float x, float y, int down);  /* touch on the open menu (ov
 void overlay_mouse_pos(float x, float y);
 void overlay_mouse_button(int button, int down);
 void overlay_mouse_wheel(float dx, float dy);
+void overlay_text(const char* text); /* SDL_TEXTINPUT, for the chosen online name */
+void overlay_edit_key(int backspace, int down);
 
 #ifdef __cplusplus
 }

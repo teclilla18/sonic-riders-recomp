@@ -295,15 +295,17 @@ void input_pump(void) {
     /* the settings menu (overlay.h): F1 or the controller's Back held opens it */
     unsigned ov = 0;
     if (k) {
+        /* while a menu text box is being typed in (online name), letters are text, not menu buttons */
+        const int letters = !overlay_text_typing();
         if (k[SDL_SCANCODE_F1]) ov |= OV_MENU;
-        if (k[SDL_SCANCODE_UP] || k[SDL_SCANCODE_W]) ov |= OV_UP;
-        if (k[SDL_SCANCODE_DOWN] || k[SDL_SCANCODE_S]) ov |= OV_DOWN;
-        if (k[SDL_SCANCODE_LEFT] || k[SDL_SCANCODE_A]) ov |= OV_LEFT;
-        if (k[SDL_SCANCODE_RIGHT] || k[SDL_SCANCODE_D]) ov |= OV_RIGHT;
-        if (k[SDL_SCANCODE_RETURN] || k[SDL_SCANCODE_J]) ov |= OV_ACCEPT;
-        if (k[SDL_SCANCODE_ESCAPE] || k[SDL_SCANCODE_K]) ov |= OV_BACK;
-        if (k[SDL_SCANCODE_Q] || k[SDL_SCANCODE_PAGEUP]) ov |= OV_TAB_L;
-        if (k[SDL_SCANCODE_E] || k[SDL_SCANCODE_PAGEDOWN]) ov |= OV_TAB_R;
+        if (k[SDL_SCANCODE_UP] || (letters && k[SDL_SCANCODE_W])) ov |= OV_UP;
+        if (k[SDL_SCANCODE_DOWN] || (letters && k[SDL_SCANCODE_S])) ov |= OV_DOWN;
+        if (k[SDL_SCANCODE_LEFT] || (letters && k[SDL_SCANCODE_A])) ov |= OV_LEFT;
+        if (k[SDL_SCANCODE_RIGHT] || (letters && k[SDL_SCANCODE_D])) ov |= OV_RIGHT;
+        if (k[SDL_SCANCODE_RETURN] || (letters && k[SDL_SCANCODE_J])) ov |= OV_ACCEPT;
+        if (k[SDL_SCANCODE_ESCAPE] || (letters && k[SDL_SCANCODE_K])) ov |= OV_BACK;
+        if ((letters && k[SDL_SCANCODE_Q]) || k[SDL_SCANCODE_PAGEUP]) ov |= OV_TAB_L;
+        if ((letters && k[SDL_SCANCODE_E]) || k[SDL_SCANCODE_PAGEDOWN]) ov |= OV_TAB_R;
     }
     if (g_ctl[0]) {
         static const struct { SDL_GameControllerButton b; unsigned m; } om[] = {

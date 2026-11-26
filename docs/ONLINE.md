@@ -2,12 +2,39 @@
 
 Goal: race other players over the internet, PC and Switch together (cross-play).
 
+## Four-player test candidate
+
+The `codex/online-four` candidate supports two to four players, one per device, on a home network or by
+internet invite code. Tests so far used PC copies on localhost.
+
+1. Choose **Online > Open Online** in the Windows launcher or the game's settings.
+   Opening Online restarts the game before any race begins. Switch can also use its separate ONLINE application.
+2. Choose your own name once. It is saved; the game never uses the device or account name.
+3. For LAN, one player chooses **Host a race** and each guest chooses **Join** in the list. For internet,
+   choose **Internet**, share the host's invite code privately, and let each guest into the room.
+4. The host chooses **Start race** when everyone is in. The host chooses menus and everyone chooses
+   their character. Each device shows its own racer at the local screen shape and presentation rate.
+
+No address, command or settings-file edit is needed. **Back to offline** leaves the lobby and starts normal
+offline play. Offline saves are preserved; online uses its generated, fully unlocked save.
+
+Everyone needs the same online compatibility version. Platform build strings may differ.
+Music packs are unavailable in this candidate (the music loader has not merged); a later merge must keep
+replacements disabled online. First use of a texture pack can still stutter. The 2P character model can sit
+outside its panel with Fit to screen (#35). The 3–4 player own view still uses split-screen racing art.
+
+After a problem, attach **sonicriders.log from each device** using the **Online Beta problem** issue form.
+The form explains where each platform saves its log. Keep the desync frame shown on screen, if any.
+Never attach a disc image, build, save, extracted game files or keys.
+
+Implementation and precise test limits: [Online Beta notes](notes/online-beta.md).
+
 ## Rules
 
 - **One player per machine.** Online races are joined from single-player: each machine brings exactly
   one local racer (its first controller); other local controllers are ignored while online. The rest
   of the grid (up to 4 racers) is COM.
-- **Cross-play.** PC and Switch players can race each other. Every machine runs the same game build
+- **Cross-play.** PC and Switch players can race each other. Every machine runs a compatible online version
   and must compute exactly the same race.
 
 ## How it works
@@ -154,7 +181,8 @@ code, which only the recompiled copy runs, so the game itself is unaffected), to
   heads hand over themselves, on the game thread (patches.txt -> vi.c `vi_det_loop_point`), after waiting for the
   GPU to finish its queued work. The rolling checksum would otherwise have reported false desyncs there.
 
-Not done yet: more than two players (the protocol carries a player number; the host would relay).
+The earlier two-player protocol ended here. The four-player candidate uses host input bundles. See
+[the four-player notes](notes/online-beta.md#four-player-pc-candidate).
 
 ## Phase 3 (in progress)
 
@@ -286,18 +314,11 @@ possible: a session-wide switch to the game's 30 fps mode at the same agreed fra
 host, carried in the lockstep stream), and every picture-only setting per player (resolution, FOV, HUD placement,
 bloom, colour, sharpness, PC in-between pictures).
 
-**Own screen shape per player (2026-11-15, protocol 4).** The game's camera aspect stays game state, but each
-machine now draws its own shape: the joiner sends its screen shape in the hello (bytes 4-7), the host fixes the
-room's camera to the wider of the two (`settings_fix_wide_k`), and each machine's EFB/picture uses its own shape up
-to the room's (settings.c apply_view; `settings_game_k` = the game's, `settings_wide_k` = this screen's). The
-vertex shader narrows perspective views by game k / own k (`GX_XR_ASPECT`, XF register 0x7C, gx.vert), the same
-vertical view as the game's. The room uses the widest screen so nobody sees past what the game culls. Recordings
-store the game's k. Tested [confirmed, PC, two copies on localhost, 2P race route]: 16:9 host + 4:3 joiner, 9,000
-checksums equal, the joiner's 4:3 picture matches an offline 4:3 run of the same frame (framing and proportions);
-4:3 host + 16:9 joiner, the room took 16:9, 6,600 checksums equal. Switch-Switch [confirmed, 2026-11-15, build 4873a73]: OLED host 16:9
-(Fit, 1.5x) + second console joining at 4:3 (`SR_SCREEN=0`): 12,000 checksums equal on both; the joiner showed a full
-4:3 picture (bars at the sides of its 16:9 screen), the host 16:9, same race moment. A first try failed only because
-the joiner was started before the host was listening long enough ("the host did not answer within 60 s").
+**History of shared screen shape (Online Beta.4, NET_COMPAT 4).** The camera aspect is game state. The joiner offers
+its screen shape in HELLO (bytes 4–7), and the host sends the narrower of the two in WELCOME (bytes 8–11).
+The room uses that shape for both the game camera and the rendered picture. Each window fits the picture
+with bars as needed, including after a resize. Older recordings still use their stored camera aspect and
+can show a narrower picture through `GX_XR_ASPECT`. See [Online Beta test notes](notes/online-beta.md#beta4-pc-test).
 
 ## Lobby design (agreed with the user 2026-11-15; not implemented)
 
@@ -358,7 +379,7 @@ the host's **Start race** makes every launcher start the game with `SR_NET` (hos
 - UDP, a thread: the host's lobby socket 7778, announcements broadcast to 7779 every second (every adapter's
   broadcast address, 255.255.255.255 and 127.0.0.1); JOIN / LIST / REFUSE / PING / LEAVE / START messages (lobby.cpp
   header). Players are dropped after 6 s without a word. Two players (the game's sessions); a third is refused ("The
-  lobby is full"), another game build too (fingerprint = hash of sonicriders.exe); names are made unique ("Name (2)").
+  lobby is full"), incompatible online versions too (shared NET_COMPAT); names are made unique ("Name (2)").
 - Join code: the host's local IPv4 in 7 characters (`ABC-DEFG`, no 0 O 1 I), so it works on the same network; over
   the internet only with UDP 7777-7778 forwarded. The lobby server with real codes (notes/online-research.md) replaces
   this later.

@@ -17,6 +17,7 @@
 #include "gx_shader_key.h"
 #include "gx_shaders_gl.h"  /* generated: tools/embed_shaders.py */
 #include "overlay.h"
+#include "online_boot.h"
 #include "runtime.h"
 #include "settings.h"
 #include "fsr1_gl.h"  /* AMD FSR 1 shaders (MIT) */
@@ -100,6 +101,7 @@ static int g_gltex_cap;
 
 static mtx_t g_lock;
 static cnd_t g_cv;
+static int g_render_ready;
 static GxFrame g_frames[4];
 static GxFrame* g_free[4];
 static int g_nfree;
@@ -115,6 +117,10 @@ static int g_scan_at, g_scan_step;  /* SR_SCREENSHOT=N[,N...]: the presented fra
  * block, each saved as build/same_N_<block>.png: which draws make a difference, on one exact frame */
 static int g_same_at, g_same_step, g_same_first, g_same_k = -1;  /* ,FIRST: start at draw FIRST */
 static unsigned g_presented;
+
+static int online_picture_limit(void) {
+    return gx_online_picture_limit(g_settings.pc_fps == 45 ? 45 : 0);
+}
 
 static GLuint compile(GLenum type, const char* src) {
     const char* parts[2] = {"#version 330 core\n", src};
@@ -424,6 +430,10 @@ static void draw_overlay(int ww, int wh) {
         g_ov_version = version;
     }
     p_glUseProgram(g_ov_prog);
+    if (online_loading()) { /* black outside the menu's 16:9 rectangle too */
+        glDisable(GL_SCISSOR_TEST); glColorMask(1,1,1,1);
+        glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
+    }
     {
         /* the overlay is a 16:9 picture (the menu's layout): centred, not stretched over a 4:3 window */
         int vw = ww, vh = ww * 9 / 16;
@@ -455,7 +465,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     p_glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fbo);
     glDisable(GL_SCISSOR_TEST);
     if (c->copy[4]) {  /* to the XFB: show it */
-        if (!g_headless) {
+        if (!g_headless && gx_take_display_copy(online_picture_limit())) {
             int ww, wh;
             SDL_GetWindowSize(g_win, &ww, &wh);
             if (ww <= 0 || wh <= 0) { ww = 1280; wh = 960; }
@@ -467,17 +477,21 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             /* the picture at the chosen aspect (settings.h), centred; the EFB is stored top row first:
              * flip while blitting to the window */
             float aspect = g_wide_k > 1.0f ? 4.0f / 3.0f * g_wide_k : settings_display_aspect();
-            int sy = y, sh = h;
+            int sx = x, sw = w, sy = y, sh = h;
             if (c->copy[11]) {  /* online: this player's part of a split screen (gx_render.c), same scale both ways */
                 sy = y + (int)(c->copy[11] >> 16), sh = (int)(c->copy[11] & 0xFFFF);
                 aspect *= (float)h / (float)sh;
+            }
+            if (c->copy[12]) {
+                sx = x + (int)(c->copy[12] >> 16); sw = (int)(c->copy[12] & 0xFFFF);
+                aspect *= (float)sw / (float)w;
             }
             int dw = ww, dh = wh;
             if ((float)ww > (float)wh * aspect) dw = (int)((float)wh * aspect + 0.5f);
             else dh = (int)((float)ww / aspect + 0.5f);
             int dx = (ww - dw) / 2, dy = (wh - dh) / 2;
-            if (!fsr_present(wx(x), sy * EFB_SCALE, wx(x + w) - wx(x), sh * EFB_SCALE, dx, dy, dw, dh))
-                p_glBlitFramebuffer(wx(x), sy * EFB_SCALE, wx(x + w), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
+            if (!fsr_present(wx(sx), sy * EFB_SCALE, wx(sx + sw) - wx(sx), sh * EFB_SCALE, dx, dy, dw, dh))
+                p_glBlitFramebuffer(wx(sx), sy * EFB_SCALE, wx(sx + sw), (sy + sh) * EFB_SCALE, dx, dy + dh, dx + dw, dy,
                                     GL_COLOR_BUFFER_BIT, GL_LINEAR);
             /* the menu's "Save screenshot": the game's picture without the menu on top (read before the
              * overlay is drawn; the user's first shots showed the settings window over the game) */
@@ -1249,6 +1263,7 @@ static void execute(GxFrame* f) {
             glDrawElements(c->prim == GXP_TRIANGLES ? GL_TRIANGLES : c->prim == GXP_LINES ? GL_LINES : GL_POINTS,
                            (GLsizei)c->b, GL_UNSIGNED_INT, (const void*)((uintptr_t)c->a * 4));
             break;
+        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
         case GXC_COPY:
             if (cur) efb_copy(c, cur);
             if (cur) apply_state(cur);
@@ -1319,6 +1334,9 @@ static void mouse_to_overlay(int mx, int my, float* ox, float* oy) {
 }
 
 static void handle_event(const SDL_Event* e) {
+    if (e->type == SDL_TEXTINPUT) overlay_text(e->text.text);
+    if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP)
+        overlay_edit_key(e->key.keysym.scancode == SDL_SCANCODE_BACKSPACE, e->type == SDL_KEYDOWN);
     if (e->type == SDL_QUIT) g_quit = 1;
     /* the mouse works the settings menu (F1) */
     float ox, oy;
@@ -1375,7 +1393,7 @@ static uint64_t g_ip_fps_t0;
 
 /* pictures per second wanted from in-between pictures: 0 = off (the game's own pacing) */
 static int ip_target(void) {
-    if (g_headless || g_settings.framerate == FR_30) return 0;
+    if (g_headless || g_settings.framerate == FR_30 || online_picture_limit()) return 0;
     return g_settings.pc_fps;
 }
 
@@ -1510,6 +1528,9 @@ static int render_thread(void* arg) {
                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (minimized ? SDL_WINDOW_MINIMIZED : 0));
         if (!g_win) rt_fatal("SDL_CreateWindow: %s", SDL_GetError());
         if (!SDL_GL_CreateContext(g_win)) rt_fatal("SDL_GL_CreateContext: %s", SDL_GetError());
+        sync_fullscreen();
+        SDL_GetWindowSize(g_win, &win_w, &win_h);
+        if (win_w > 0 && win_h > 0) settings_set_window_aspect((float)win_w / (float)win_h);
         /* vsync, so frames line up with the display (no tearing); test runs (minimized) and
          * SR_NOVSYNC=1 present at once */
         int vsync = !minimized && !getenv("SR_NOVSYNC");
@@ -1517,9 +1538,13 @@ static int render_thread(void* arg) {
         set_vsync(vsync);
         gl_setup();
     }
+    mtx_lock(&g_lock);
+    g_render_ready = 1;
+    cnd_broadcast(&g_cv);
+    mtx_unlock(&g_lock);
     for (;;) {
         int ip = ip_target();
-        g_render_counts_fps = ip != 0;
+        g_render_counts_fps = ip != 0 || online_picture_limit() != 0;
         if (ip) {
             ip_round(ip);
             goto round_done;
@@ -1621,6 +1646,10 @@ void render_start(void) {
         rt_fatal("SDL_Init: %s", SDL_GetError());
     input_init();
     rt_thread_start(render_thread, NULL);
+    /* The online handshake can run before the first draw. Publish the initial window shape first. */
+    mtx_lock(&g_lock);
+    while (!g_render_ready) cnd_wait(&g_cv, &g_lock);
+    mtx_unlock(&g_lock);
 }
 
 /* ---- minimal PNG writer (stored deflate blocks), for screenshots ---- */

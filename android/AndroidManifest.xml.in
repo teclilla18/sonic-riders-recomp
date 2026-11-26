@@ -29,6 +29,12 @@
         android:hardwareAccelerated="true">
         <!-- simpleperf and the Android profilers can attach to this build (no debuggable flag) -->
         <profileable android:shell="true" />
+        <activity android:name="net.srnative.sonicriders.OnlineRestartActivity"
+            android:process=":online_restart"
+            android:taskAffinity="@PACKAGE@.online_restart"
+            android:excludeFromRecents="true"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
         <activity android:name="net.srnative.sonicriders.SonicRidersActivity"
             android:label="@LABEL@"
             android:alwaysRetainTaskState="true"

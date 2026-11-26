@@ -2208,3 +2208,127 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 - End-of-session handoff records the official name Riders Crosswake and the verified v0.3 artifact pair.
   Public beta branding and publication approval are pending.
+
+## 2026-11-20: Online Beta 1 LAN candidate (not released)
+
+- Implemented a portable SRLB lobby before guest boot, saved player names, Online restart entry points and a
+  silent black loading screen until Mode Select. Compatible platform builds use NET_COMPAT instead of exact
+  version strings; incompatible lobby/game handshakes are refused. Added the tester issue form and both-log request.
+- PC two-copy discovered-lobby race finished with all compared checksums equal through 24,600 [confirmed].
+  A cache-on PC run stayed equal through 6,600. PC/OLED race segment stayed equal through 17,400 reports;
+  the bounded PC test then closed. First hardware mode/clocks were not captured: no speed claim.
+- Android foreground helper fixed an alarm-based restart failure; S23 Open Online restarted into the lobby
+  [confirmed]. PC/Android reached a race, both logs agree through 6,600 [confirmed].
+- Deterministic disc read-ahead uses two 256 KiB windows and a separate read-only handle. Guest completion points
+  unchanged; synthetic stream/boundary/EOF/mod tests pass. PC/OLED each served 457/600 reads from memory.
+  OLED rejected core 3 affinity; final build uses allowed helper core 2, and the final menu/cache check passed (handheld CPU 1785 / GPU 614.4 / MEM 2133 MHz).
+- Switch lobby rendered in Eden v0.1.1 [confirmed]. Separate native Switch 2 candidate builds from public Alpha 3;
+  not hardware-tested. Music loader is absent from main, so no replacements online. Slow-SD improvement, cold
+  packages, user acceptance and release remain unproven. No issue, Discussion, release or tag was posted.
+
+### 2026-11-21: final candidate checks
+
+- Final cache-enabled PC pair: finish capture confirmed, all compared checksums equal through 25,200; both
+  caches served 950/1200 reads from memory [confirmed]. Both PC/Android logs agree through 6,600 racing frames.
+- Final OLED core-2 menu/cache check: handheld CPU 1785 / GPU 614.4 / MEM 2133 MHz logged, no affinity failure.
+  This short check did not repeat the race. Native Switch 2 online-only package/deployment prepared separately;
+  hardware gameplay and cold setup candidates still pending. No public release or post.
+
+### 2026-11-21 (later): desktop relaunch, Back to offline, native audit baseline
+
+- Windows restart to Online rebuilt only `exe --online`, dropping an explicit disc path (found by review). Fix: reuse
+  the original command line and append `--online` (a5fc6a2). Tested on PC with a spaced folder and an outside ISO
+  [confirmed]; the menu button itself was not clicked (the restart code was run by a harness). Linux still drops it.
+- Back to offline on PC: game went on to the intro, no net session, memory card unchanged [confirmed].
+- Native package audit rebased on released Alpha 3 plus the Online Beta files (user's choice); audit PASS for
+  bd12a07. PC/Switch/Android candidates rebuilt from a5fc6a2; all four archive reviews PASS. Switch 2 cross-play
+  still not played.
+- Cold Windows Sandbox (from the a5fc6a2 zips, normal + spaced path): PC PASS, Android PASS [confirmed].
+- Switch 2 package: the homebrew menu shows one app per folder, so the online NRO next to the normal one was hidden on
+  the user's Switch 2, and its setup would have replaced the normal app. Fixed on `codex/online-beta-switch2` (7cc264a):
+  own folder `/switch/sonicriders-switch2-online/`; data stays in `/switch/sonicriders-switch2/`.
+
+## 2026-11-21 (evening): Online Beta internet play, end-of-race control fix (branch codex/online-beta)
+
+- **Internet races without a server** (inet.c, lan_lobby.c, netplay.c, menu.cpp): invite codes (10 digits =
+  public IPv4 on port 7777, 15 with the port), one UDP socket for STUN + lobby + game handed to netplay, host
+  approval, session id, ping-based delay, both-codes punching, best-effort UPnP. Details and tests:
+  docs/notes/online-beta.md "Internet play". [confirmed] S23 on an iPhone hotspot hosting vs PC (home ethernet):
+  equal through frame 14,400; vs OLED (handheld, CPU 1785 / GPU 614.4 / MEM 2133): equal through 26,328.
+- **Stale code**: the first S23 code stopped working after minutes (carrier NAT moved the idle port 4793 -> 4772;
+  a raw UDP probe from the PC got nothing). Fix: STUN keepalive every 10 s in the lobby, the code updates if the
+  port still moves. [likely: the cause fits the port change; the keepalive itself not yet run on a device for long]
+- **Player 2 lost control after player 1 finished** (user, OLED + S23): the race phase 0xA means the FIRST finish;
+  the online rules silenced every player but player 1 from then. Fix: per-player finish (racer +0xBC, the game's CPU
+  takeover). [confirmed on PC: player 2 drove only after player 1's finish and still finished; 42,600 frames
+  equal] Not yet replayed on the devices.
+- Plan only: docs/notes/online-roadmap.md (3-4 players, Super Sonic online rules, quick chat, stage voting,
+  rematches).
+- Later the same evening: **flight online** (it was off in every deterministic run): now the host's setting, sent
+  in WELCOME and stored in recordings, NET_COMPAT 2 (794a9f8) [PC: joiner with flight off logged "on", checksums
+  equal; not played online]. **LAN regression** S23 host / OLED join: two races equal through 29,741, the OLED kept
+  control after the S23 finished [confirmed, user-played]. **Slow countdown online** = the OLED's texture-pack
+  lookups at the race start (682 / 592 / 174 ms frames, handheld 1785/614.4/2133) holding the lockstep [confirmed by
+  log]. **Missing CPU/1P markers** = GXSRTE's `Misc/tex1_256x256_d8d7b29f19324bf2_843adf87433cfe86_9.png` is fully
+  transparent on purpose (alpha 0 everywhere), blanking the game's marker sheet (1P-4P, COM, faces, target ring);
+  renamed to `.png.off` on the OLED, the son's Switch and the PC copies [likely fixed; not yet seen in a race].
+
+## 2026-11-24: Online Beta.4 PC retest candidate (branch codex/online-beta)
+
+- The two-home race had a 2.3875 host and 1.7792 joiner. Beta.4 negotiates the narrower camera and
+  picture together (NET_COMPAT 4). SDL supplies the window size before connecting. [confirmed, PC]
+  Metal City localhost with 1910×800 and 1424×800 windows picked 1.7792. All checksums agreed
+  through checkpoint 15,600. Captures show the nearby racers, HUD and track rings. The wider-camera
+  diagnostic also drew readable HUD and rings. Distant racer visibility and the reported two-home
+  visual and audio symptoms still need the user's retest [uncertain].
+- Auto spin now requires a spin flag and a compatible movement state. Enter, leave and watchdog
+  logs include the input frame. [confirmed, offline PC] Forcing a stale flag changed 215 of 225
+  samples before the fix and zero after it. Natural Auto spin still turned through frames 10987–11162,
+  then released. Both online racers also completed natural spin sections. The reported grind sequence
+  still needs a natural replay. See docs/notes/online-beta.md.
+- LAN and internet protocol tests passed, including the narrower-shape assertion at the LAN handshake.
+
+## 2026-11-24: Four-player online PC candidate
+
+- Implemented on `codex/online-four`. Host-relayed inputs, per-peer checksums, LAN and invite-code
+  rooms for 2–4, each device's own rendered aspect and FPS. PROTO 6 and NET_COMPAT 5.
+- [confirmed, PC] 4P LAN and invite-code loopback Metal City reached 5,400 matching full input/checksum
+  records per peer. Mixed 30/45/60/120 FPS and aspect choices also agreed. 3P direct reached 5,400,
+  2P direct reached 4,800. The lobby refused a fifth and a guest disconnect ended all remaining peers.
+- [confirmed, PC captures] The test runner defaults to Fit 1910×800. Each view shows its local racer,
+  with the shared clock centered and its minimap upper right. The split-screen gauges still differ
+  from the user's single-player reference. Exact original solo HUD and 4P across devices/networks
+  remain open. The eight-player design follows the release of the four-player beta.
+
+## 2026-11-25 — Original solo HUD on four online views (private PC candidate)
+
+- [confirmed] The registration branch uses the human count. Preserving the four-racer scene and
+  scheduling original solo HUD tasks for each controller produced a full-screen camera, personal
+  panel, lap/rank, speed and air gauge for each peer. Map markers and other racers remain visible.
+- [confirmed, Windows] Compared all four seats with offline solo references at 21:9, 16:9, 4:3
+  and 16:10. A direct room matched through 28,200 steps, LAN through 23,000 and an invite-code
+  loopback through 21,000, each through all four finishes. Offline solo and local four-player
+  control captures matched their respective prior builds byte for byte.
+- [confirmed] The solo finish controller shared the first finisher's lap table across peers.
+  The multiplayer controller creates results work for each finishing racer. See the online beta
+  note for the private review build and separate-device testing status.
+
+## 2026-11-25 — Four-player opponent visibility and Player Entry (private Windows candidate)
+
+- [confirmed] Native solo racer distances and GPU depth testing restored two opponents missing
+  from P1's view at the same Metal City step. Widening the CPU cutoff alone still failed because
+  the guest framebuffer depth read returned zero. Preserved solo HUD, camera and original sector test.
+- [confirmed] Player Entry's preview X translation had been misidentified as a camera aspect.
+  Keeping native positions aligned all four cards across five aspect ratios. Local two-player
+  board and character previews also stayed inside the right-hand panel.
+- [confirmed] The previous 29 replay mismatches came from skipping the same-character menu
+  table update during playback. The repaired replay matched the recovery recording through the
+  entire affected interval. Separate-device play and personal acceptance are pending.
+
+## 2026-11-25 — private four-player beta gameplay and standings
+
+- [confirmed] The compatibility-7 host recorded 103,340 matching live checksums with the physical Switch across three races. A two-player Windows control reproduced different standings layouts with identical simulation records. The host had enabled held boost and disabled experimental flight in the physical session.
+- [implemented] Compatibility 8 updates all online racers on the simulation clock, retains extended levels and spin eligibility until each racer's own finish, exposes host room rules in the lobby and disables online held boost. The renderer preserves native shared-results draws. The requested future Super Sonic balance and two reported visual issues are listed in the online beta notes.
+- [tested] Windows direct two-player and invite-code four-player rooms each matched 23,000 input/checksum records per seat through race completion. All seats reached both extended levels. The three-player room matched 21,100 steps. Native ranks agreed with crossing order. Results captures showed the same rows and times across seats. The Windows/Eden v0.1.1 pair matched the first 5,442 complete records, including the guest reaching levels 4 and 5. The Android arm64 candidate built and passed APK signature verification.
+- [uncertain] Physical play on this candidate, Android race behavior, full-course Auto Spin coverage and the experimental pose in an actual online Super Sonic race remain open. Private candidates only.
+- [tested] A second Windows host and Eden Switch guest matched 20,202 complete records through both finishes. The guest reached levels 4 and 5 after the host finished. Both displayed ranks in the same order in the simulation log. The four-player replay matched all 20,400 logged checksums. Offline solo and local four-player control captures matched their recovery images byte for byte.

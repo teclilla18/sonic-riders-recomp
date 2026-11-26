@@ -31,6 +31,7 @@
 #include "game_addrs.h"
 #include "runtime.h"
 #include "settings.h"
+#include "super_tuning.h"
 
 #define PAD_STRUCTS    0x801AF9F0u
 #define PAD_STRUCT_SZ  0x30u
@@ -51,10 +52,7 @@
 #define PULL_MIN       (1.5 * KMH)
 #define SUPER_CAP      (350.0 * KMH)
 #define SUPER_RAMP     240       /* frames held to reach SUPER_CAP: 4 s */
-/* Super Sonic's held boost costs this much more than the gear's rate (the user, 2026-11-20, after 3 laps on Switch 2:
- * "ring consumption should be nerfed ... almost twice as much"; 1.9x, then 2.3x after the ring magnet, then 2.9x; Switch 1) */
-#define SUPER_HOLD_COST_NUM 29
-#define SUPER_HOLD_COST_DEN 10
+/* Super Sonic's held boost cost: super_tuning.h (classic 2.9x, balanced 4.5x the gear's rate) */
 
 static uint16_t g_armed[8];      /* the boost buttons that started this racer's boost and are held */
 static uint32_t g_extra[8];      /* frames added to the current boost (log) */
@@ -67,6 +65,8 @@ static int super_racer(uint32_t racer) {
     return ld8(racer + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
            ld8(racer + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
 }
+/* held boost: every racer, but Super Sonic only with Limit Break Super Sonic (user 2026-11-25) */
+static int super_ok(uint32_t racer) { return !super_racer(racer) || settings_super_classic(); }
 
 /* 0..4096: (2^(3h/SUPER_RAMP) - 1) / 7, the power of two drawn as straight pieces (integers only) */
 static uint32_t ramp(uint32_t h) {
@@ -81,7 +81,7 @@ static void hold_speed(int i, uint32_t racer, uint32_t blk) {
     float boost = ldf(blk + 0x34u);
     if (!(boost > 0.0f) || boost > 5.0f) return;  /* not a speed */
     double target = boost, pull = PULL;
-    if (super_racer(racer) && boost < SUPER_CAP) {
+    if (super_racer(racer) && super_tune()->hold_climb && boost < SUPER_CAP) {  /* classic only */
         uint32_t f = ramp(g_held[i]);
         double extra = SUPER_CAP - boost;
         extra = extra * (double)f;
@@ -189,7 +189,7 @@ void boost_hold_tick(uint32_t racer) {
     if (t == BOOST_FRAMES - 1) {  /* a new boost's first tick */
         g_extra[i] = 0;
         g_held[i] = 0;
-        g_armed[i] = settings_boost_hold() ? (uint16_t)(held_buttons(racer) & BOOST_BUTTONS) : 0;
+        g_armed[i] = settings_boost_hold() && super_ok(racer) ? (uint16_t)(held_buttons(racer) & BOOST_BUTTONS) : 0;
         if (log_on() && g_armed[i])
             rt_log("[boost] racer %d: boost with button %x held, level %u, cost %u, air %d", i, g_armed[i],
                    ld8(racer + R_LEVEL), ld32(racer + R_BLOCKS + 0x38u * (ld8(racer + R_LEVEL) > 2 ? 2u : ld8(racer + R_LEVEL)) + 0x28u),
@@ -197,7 +197,7 @@ void boost_hold_tick(uint32_t racer) {
         return;
     }
     if (!g_armed[i]) return;
-    if (!settings_boost_hold()) { stop(i, racer, "option off"); return; }
+    if (!settings_boost_hold() || !super_ok(racer)) { stop(i, racer, "option off"); return; }
     if (!(held_buttons(racer) & g_armed[i])) { stop(i, racer, "released"); return; }
     if (!(ld32(racer + R_STATE) & STATE_BOOST)) { stop(i, racer, "boost over"); return; }
     uint32_t lv = ld8(racer + R_LEVEL);
@@ -211,7 +211,7 @@ void boost_hold_tick(uint32_t racer) {
     if (cost == 0 || cost > 10000000u) { stop(i, racer, "no boost cost"); return; }
     uint32_t frames = (uint32_t)(HOLD_T - (t < -1 ? -1 : t));
     uint32_t need = (uint32_t)(((uint64_t)frames * cost + BOOST_FRAMES - 1) / BOOST_FRAMES);  /* rounded up */
-    if (super_racer(racer)) need = (uint32_t)((uint64_t)need * SUPER_HOLD_COST_NUM / SUPER_HOLD_COST_DEN);
+    if (super_racer(racer)) need = (uint32_t)((uint64_t)need * super_tune()->hold_cost_num / super_tune()->hold_cost_den);
     int32_t air = (int32_t)ld32(racer + R_AIR);
     if (air <= 0 || (uint32_t)air < need) { stop(i, racer, "out of air"); return; }
     st32(racer + R_AIR, (uint32_t)(air - (int32_t)need));

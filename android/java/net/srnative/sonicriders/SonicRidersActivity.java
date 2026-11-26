@@ -13,6 +13,16 @@ import org.libsdl.app.SDLActivity;
 public class SonicRidersActivity extends SDLActivity {
     private static boolean crashChecked;
 
+    // A new process starts lockstep at frame 1; SDL's native state cannot be reused mid-game.
+    public void restartOnline() {
+        runOnUiThread(() -> {
+            Intent intent = new Intent(this, OnlineRestartActivity.class);
+            intent.putExtra("oldPid", android.os.Process.myPid());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        });
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         // before the game starts (it rotates sonicriders.log): a report of the last run, if it ended badly

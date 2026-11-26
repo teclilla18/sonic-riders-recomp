@@ -2415,6 +2415,8 @@ void online_poll() {
         g_online_phase = 2;
     }
 }
+void play(bool online = false);
+
 void page_online(float w) {
     if (!g_online_inited) {
         g_online_inited = true;
@@ -2431,6 +2433,12 @@ void page_online(float w) {
         ImGui::PopTextWrapPos();
         return;
     }
+    section("ONLINE");
+    if (big_button("Open Online", ImVec2(180 * g_dpi, 40 * g_dpi), true,
+                   !game_on && v.state == lobby::IDLE)) play(true);
+    note("Host or join a race with 2 to 4 players on a home network or with an internet invite code.");
+    ImGui::Separator();
+    section("TWO-PLAYER LAN LOBBY");
     section("YOUR NAME");
     ImGui::BeginDisabled(v.state != lobby::IDLE);
     ImGui::SetNextItemWidth(cw * 0.6f);
@@ -2479,10 +2487,8 @@ void page_online(float w) {
         if (ImGui::Button("Join with code")) { lobby::clear_error(); online_save(); lobby::join(ip, name); }
         ImGui::EndDisabled();
         ImGui::Spacing();
-        note("Both computers must be on the same network for now (playing over the internet comes later). The first "
-             "time, Windows may ask to let the launcher and the game through the firewall: allow it (Private networks). "
-             "Online races are two players, one per computer, each on their own screen; everyone races with every "
-             "character and board unlocked, and your own saves are not used or changed.");
+        note("The launcher lobby is for two players on a home network. Windows may ask to let the launcher and "
+             "game through the firewall on Private networks.");
         break;
     }
     case lobby::HOSTING:
@@ -2527,11 +2533,12 @@ void page_online(float w) {
 
 /* ---------------------------------------------------------------- the frame */
 
-void play() {
+void play(bool online) {
     if (g_set_dirty) settings_save();
     if (g_mods_dirty) mods_save();
     if (g_ctl_dirty) controls_save();
     std::wstring cmd = L"\"" + path(L"build\\host-mingw\\sonicriders.exe") + L"\"";
+    if (online) cmd += L" --online";
     if (start_child(g_game, cmd, {}, false, false, nullptr)) g_status = "Running";
     else g_status = "Could not start the game.";
 }

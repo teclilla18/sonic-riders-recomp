@@ -133,7 +133,7 @@ static void stick_update(float x, float y) {
 
 /* the game's menus vs everything else (races, and modes not identified yet keep the race behaviour) */
 static int game_in_race(void) {
-    uint32_t m = ld32(GAME_TOP_MODE);
+    uint32_t m = GAME_MODE();
     static uint32_t last = 0xFFFFFFFFu;
     if (m != last) {
         rt_log("[touch] game mode %u (%s)", m, m == GAME_TOP_MODE_MENUS ? "menus: bigger stick dead zone" : "race");

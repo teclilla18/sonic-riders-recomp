@@ -8,8 +8,11 @@
 decl extern volatile double g_aspect_scale;
 # projection setup (fn_800645DC): f1 is the aspect ratio on entry
 800645DC before { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
-# race camera (REL text 0x14115C, originally 0x8053CF18): the aspect ratio computed by this fmadds
-81941218 after { double k = g_aspect_scale; if (k != 1.0) { double v = to_single(c->f[1].ps0 * k); c->f[1].ps0 = v; c->f[1].ps1 = v; } }
+# Player Entry 81941218 computes the model's X translation in its card. Leave
+# the original slot positions intact; the wide projection already sets its scale.
+decl void gx_entry_preview(unsigned active);
+81941020 before gx_entry_preview(1);
+81941518 before gx_entry_preview(0);
 
 # ---- Diagnostics
 decl void rt_log(const char* fmt, ...);
@@ -216,6 +219,13 @@ decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);
 8193E0A0 after c->r[0] = 0;
 8193EA10 after c->r[0] = 0;
 
+# ---- Online races have no CPU racers (user, 2026-11-22; netplay.c netplay_no_cpus = the online rules, the same on
+# every machine and in recordings made with them). Player Entry (fn_1_13D2F0) sets the racer count 8021B8C0 when the
+# race starts: 8 with 1-2 players, else 4 (li r0 8 / li r0 4, r17 = the human players). Online it becomes r17, so the
+# game creates only the players' racers. Offline it is unchanged. The runtime reads 8021B8C0 through GAME_MODE().
+decl int netplay_no_cpus(void);
+8193F6DC before { if (netplay_no_cpus()) c->r[0] = c->r[17]; }
+
 
 # ---- Super Sonic's invisible ring magnet (game_levels.c lv_magnet_*): the Magnetic Barrier item's task kept on for him,
 # its 600-step timer held, its drawing skipped. 81815EF0: his fuel step (racer r29, stack r1); 818F0D38: the task's
@@ -226,3 +236,65 @@ decl int lv_magnet_hide(uint32_t task);
 81815EF0 before lv_magnet_spawn(c, c->r[1], c->r[29]);
 818F0D38 before lv_magnet_keep(c->r[8]);
 818F0DD8 after { if (lv_magnet_hide(c->r[8])) c->r[0] = 1; }
+
+# Select solo HUD task registration on every four-player online peer. Preserve r21
+# (human player count) for the remaining race setup, including its per-player loop.
+8183C644 after { if (netplay_no_cpus() && c->r[21] == 4) c->cr[2] = 1; }
+# Online cameras retain their native viewport and frustum. Use the solo racer's
+# squared distance cutoffs (60 units vs 40) and near-test distance (30 vs 20).
+# Read the corresponding solo constants from the same native table.
+8180F0B0 after { if (netplay_no_cpus()) c->f[0].ps0 = c->f[0].ps1 = ldf32(c->r[19] + 0x1134); }
+8180F0D4 after { if (netplay_no_cpus()) c->f[1].ps0 = c->f[1].ps1 = ldf32(c->r[19] + 0x1130); }
+# Status 3 is returned only by the native EFB depth peek. The port has no
+# guest-readable depth there (mmio_read returns zero). Submit the racer to
+# the real depth test. Preserve camera/sector rejection and the far cutoff.
+8180F0E8 after { if (netplay_no_cpus() && c->r[3] == 3) c->r[3] = 0; }
+8180F100 after { if (netplay_no_cpus()) c->f[0].ps0 = c->f[0].ps1 = ldf32(c->r[19] + 0x1134); }
+# Keep the multiplayer scene renderer and its viewport setup alongside the solo HUD.
+8183C664 before { if (netplay_no_cpus() && c->r[21] == 4) c->r[3] = 0x8180ED78u; }
+# Retain the multiplayer finish controller, which creates a card per finisher.
+8183C6C4 before { if (netplay_no_cpus() && c->r[21] == 4) c->r[3] = 0x818201C8u; }
+decl void online_hud_register(Cpu* c);
+decl void online_hud_gauge_task(uint32_t task);
+decl uint32_t online_hud_begin(uint32_t base, int group);
+decl uint32_t online_hud_racer(uint32_t base);
+decl void online_hud_end(void);
+8183C55C after { if (netplay_no_cpus() && c->r[21] == 4) online_hud_gauge_task(c->r[3]); }
+8183C6E4 after { if (netplay_no_cpus() && c->r[21] == 4) online_hud_register(c); }
+81831740 after c->r[8] = online_hud_begin(c->r[8], 0);
+818337DC after c->r[8] = online_hud_racer(c->r[8]);
+81833774 after online_hud_end();
+81826020 after c->r[27] = online_hud_begin(c->r[27], 1);
+# The native constructor seeds the three blank record fields with the starting
+# rank (always zero in solo). Keep both actual rank fields for the place display.
+decl void online_hud_init_record(uint32_t work);
+818260F0 after online_hud_init_record(c->r[30]);
+81827E58 after online_hud_end();
+# The gauge task has native layouts for one, two and four players. Each scheduled
+# instance draws its own racer using the single-player positions and loop count.
+81829424 after { if (netplay_no_cpus() && c->r[15] == 4) c->r[15] = 1; }
+81829438 after c->r[5] = online_hud_begin(c->r[5], 2);
+818294A8 after c->r[24] = online_hud_racer(c->r[24]);
+8182A200 after c->r[24] = online_hud_racer(c->r[24]);
+8182A83C after c->r[20] = online_hud_racer(c->r[20]);
+8182AD60 after online_hud_end();
+# Choose the original solo map position when the map task initializes. Its
+# separate racer iteration still receives the actual field size for the markers.
+81818B50 after { if (netplay_no_cpus() && c->r[3] == 4) c->r[3] = 1; }
+decl uint32_t online_trail_quad(uint32_t quad, uint32_t racer, unsigned views);
+818A914C after c->r[26] = online_trail_quad(c->r[26], c->r[28], c->r[27]);
+818A9190 before online_hud_end();
+# Parent work +0x20 and child work +0x10 carry the racer's index. Select the
+# original solo card geometry at construction and tag both pieces while drawing.
+# The final standings callback draws whole shared rows, including their glyphs.
+decl void gx_shared_standings(unsigned active);
+819291E4 before { if (netplay_no_cpus()) gx_shared_standings(1); }
+81929D44 before { if (netplay_no_cpus()) gx_shared_standings(0); }
+decl void online_result_begin(unsigned racer_index);
+81820D8C after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+819311A4 after online_result_begin(ld8(c->r[30] + 0x20));
+81931754 after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+81931DC8 after { if (netplay_no_cpus() && c->r[0] == 4) c->r[0] = 1; }
+81931F94 after online_hud_end();
+8192DEA0 after online_result_begin(ld8(c->r[31] + 0x10));
+8192EF30 after online_hud_end();

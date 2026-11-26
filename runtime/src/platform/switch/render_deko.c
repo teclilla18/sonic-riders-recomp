@@ -950,7 +950,9 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
     uint32_t x = c->copy[0], y = c->copy[1], w = c->copy[2], h = c->copy[3];
     DkImageRect src = {XSC(x), SC(y), 0, XSC(x + w) - XSC(x), SC(h), 1};
     bar(DkBarrier_Primitives, 0);  /* everything drawn so far, before the 2D engine reads */
-    if (c->copy[4]) {  /* to the XFB: into the swapchain image, letterboxed to 4:3 */
+    int limit = c->copy[4] ? gx_online_picture_limit(0) : 0;
+    if (c->copy[4]) g_render_counts_fps = limit != 0;
+    if (c->copy[4] && gx_take_display_copy(limit)) {  /* to the XFB: into the swapchain image */
         if (g_fb_slot < 0) g_fb_slot = dkQueueAcquireImage(g_queue, g_swap);
         DkImageView fv;
         dkImageViewDefaults(&fv, &g_fb[g_fb_slot]);
@@ -972,6 +974,12 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             src.height = SC(c->copy[11] & 0xFFFF);
             aspect *= (float)h / (float)(c->copy[11] & 0xFFFF);
         }
+        if (c->copy[12]) {
+            uint32_t sx = x + (c->copy[12] >> 16), sw = c->copy[12] & 0xFFFF;
+            src.x = XSC(sx);
+            src.width = XSC(sx + sw) - XSC(sx);
+            aspect *= (float)sw / (float)w;
+        }
         uint32_t dw = FB_W, dh = FB_H;
         if ((float)FB_W > FB_H * aspect) dw = (uint32_t)(FB_H * aspect + 0.5f);
         else dh = (uint32_t)(FB_W / aspect + 0.5f);
@@ -984,7 +992,7 @@ static void efb_copy(const GxCmd* c, const GxUniforms* u) {
             DkImageView const* efb_targets[1] = {&g_efb_view};
             dkCmdBufBindRenderTargets(g_cmd, efb_targets, 1, &g_efb_depth_view);
         }
-    } else if ((int)c->copy[8] >= 0) {  /* to a texture */
+    } else if (!c->copy[4] && (int)c->copy[8] >= 0) {  /* to a texture */
         int id = (int)c->copy[8];
         tex_prepare(id);
         DkTex* t = tex_slot(id);
@@ -1348,6 +1356,7 @@ static void execute(GxFrame* f) {
                                                                 : DkPrimitive_Points,
                                 c->b, 1, c->a, 0, 0);
             break;
+        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
         case GXC_COPY:
             if (cur) {
                 efb_copy(c, cur);

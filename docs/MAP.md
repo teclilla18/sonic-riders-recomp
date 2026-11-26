@@ -32,8 +32,12 @@ functions or macros (line numbers drift). Sizes are approximate line counts.
 | Gear Lv. 4 / 5 (999 rings, Super Sonic) | game_levels.c, config/GXEE8P/patches.txt, frame_pacing.c | `lv_racer_update`, `lv_racer_reset`, `lv_race_reset`, `lv_super_air_cap`, `lv_super_player_update`, `lv_racers_frame`, `lv_hud_cell`, `lv_texture_decoded` |
 | Local split-screen edge HUD | gx_render.c `local_hud_frame` (`hud_viewport`, `hud_owner`, `hud_join`) | `SR_LOCALHUDLOG`; tests/test_gameplay_hud.py |
 | Online / lockstep | netplay.c (600) | `SR_NET` |
+| Online LAN lobby / pre-game screen | lan_lobby.c, online_boot.c, menu.cpp | `lan_lobby_poll`, `online_boot_wait`, `lobby_window`, `loading_screen` |
+| Deterministic DVD read-ahead | disc_cache.c, di.c | `disc_read_cached`, `dma_from_disc` |
 | Online lobby (launcher) | launcher/lobby.cpp (protocol), launcher.cpp `page_online`, `online_poll` | `SR_NET_NAME`, `SR_NET_PEER` |
 | Online own view (full-screen split view) | gx_render.c `ownview_frame` (`ov_viewport`, `ov_bbox`) | `SR_OWNVIEW`, `SR_OVLOG`, `SR_VIEW` |
+| Online racer visibility / Player Entry models | patches.txt scene 8180ED78, solo reference 8180F738, preview 81941020; gx_fifo.c and gx_render.c | docs/notes/online-beta.md, docs/notes/ultrawide-fov.md |
+| Four-player online solo HUD | patches.txt HUD registration; netplay.c `online_hud_register`, `online_hud_begin`; gx_render.c `solo_camera_frame` | `SR_HUDTRACE`, tools/test_online_room.py --mixed --finish |
 | Perf test | perftest.c | `SCENE_KEY` |
 
 ## Platforms (`runtime/src/platform/`)

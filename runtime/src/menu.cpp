@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(__ANDROID__) || defined(SR_IOS)
+#ifndef __SWITCH__
 #include <SDL.h>
 #endif
 
@@ -23,6 +23,10 @@
 #include "overlay.h"
 #include "runtime.h"
 #include "settings.h"
+#include "lan_lobby.h"
+#include "inet.h"
+#include "online_boot.h"
+#include "net_compat.h"
 #ifdef __SWITCH__
 #include <switch.h>
 #endif
@@ -384,9 +388,8 @@ void tab_display() {
             settings_apply();
         }
     }
-    if (settings_wide_k_fixed())
-        note("Online (or a recording): the picture's shape is fixed for this session so every player's game "
-             "matches; changes here apply to how it is shown, and fully after the session.");
+    if (settings_wide_k_fixed() && !netplay_in_session())
+        note("The camera shape is fixed for this recording or replay.");
     heading("Field of view");
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14);
     ImGui::SliderInt("##fov", &g_settings.fov, FOV_MIN, FOV_MAX, "%d%%");
@@ -536,6 +539,8 @@ static void pc_frame_rate() {
                               ? "As many pictures as the PC can draw, without vsync (the picture may tear)."
                               : "The game still runs at 60 steps a second; the PC draws extra pictures in between "
                                 "for smoother motion. Vsync is used when the display runs at this rate.";
+        if (netplay_in_session() && (v == 30 || v == 45))
+            tip = "Limit the pictures displayed on this PC. The race stays on the shared simulation clock.";
         if (i % 4) ImGui::SameLine(0, 18);
         if (radio(label, cur == v, tip)) {
             if (v == 30) {
@@ -649,10 +654,20 @@ void tab_gameplay() {
         settings_apply();
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
+    if (netplay_in_session()) {
+        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost %s.",
+                    settings_ring_cap() == 999 ? "on" : "off", settings_ring_replenish() ? "on" : "off",
+                    settings_super_flight() ? "on" : "off", settings_super_classic() ? "Limit Break" : "balanced",
+                    settings_boost_hold() ? (settings_super_classic() ? "on" : "on (not Super Sonic)") : "off");
+        ImGui::BeginDisabled(settings_ring_cap() == 100);
+        if (check("Auto spin", &g_settings.auto_spin, "Assist this controller in spin sections.")) settings_apply();
+        ImGui::EndDisabled();
+        return;
+    }
     if (check("Riders Plus", &g_settings.ring_cap_999,
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
               "boost or a fall off the course takes 100 rings instead of all of them. Two more gear levels: "
-              "Lv. 4 at 200 rings and Lv. 5 at 350, each with a higher top speed and boost. The gold 100-ring "
+              "Lv. 4 at 200 rings and Lv. 5 at 300, each with a higher top speed and boost. The gold 100-ring "
               "capsule comes back 25 seconds after it is taken (+100 each time), dash panels push you 25 km/h "
               "past your own speed instead of slowing you down, Speed Shoes add 80 km/h, and holding A to "
               "charge a jump keeps your speed for 0.75 seconds before it starts slowing you. Turn off for the "
@@ -672,19 +687,25 @@ void tab_gameplay() {
                   "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
                   "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
                   "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
-                  "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
-                  "350 km/h. Online, the host's setting is used."))
+                  "quick tap is still the normal boost. Super Sonic's boost is 270 km/h, 280 at 200 rings and 300 at 300 rings. "
+                  "Online, the host's setting is used."))
             settings_apply();
         if (check("Ring Replenish", &g_settings.ring_replenish,
                   "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "
                   "nothing where other racers refill air. With this on he gains rings instead: in the spin "
-                  "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes. Online, "
-                  "the host's setting is used."))
+                  "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes (with "
+                  "Limit Break Super Sonic; balanced, only from tricks, and fewer). Online, the host's setting is used."))
+            settings_apply();
+        if (check("Limit Break Super Sonic", &g_settings.super_classic,
+                  "Off by default. Off: the balanced Super Sonic, a little faster than the original game, boost "
+                  "270 / 280 / 300 km/h, rings back only from his ring magnet and from tricks. On: no limits, the "
+                  "overpowered Super Sonic from when he first joined (v0.9.0): much faster, held boost up to 350 "
+                  "km/h, rings from almost everything. For fun, not for fair races. Online, the host's setting is used."))
             settings_apply();
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight,
                   "Off by default (experimental). Super Sonic rides off his board in a flying pose, except on "
                   "rails, in tricks, in the spin scenes and while charging a jump. Known issue: after an air trick "
-                  "he can stay on his board until your next move; a fix is coming. Not used in online races."))
+                  "he can stay on his board until your next move; a fix is coming. Online, the host's setting is used."))
             settings_apply();
         ImGui::EndDisabled();
         if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
@@ -859,6 +880,331 @@ void quit_row() {
 #endif
 }
 
+void tab_online() {
+    heading("Online Beta 1");
+    ImGui::TextWrapped("Race with 2 players, at home or over the internet. Each device needs its own copy of the game.");
+    ImGui::Spacing();
+    if (getenv("SR_NET")) ImGui::TextWrapped("You are in an online run. Close the game to start a new race lobby.");
+    else {
+#ifdef __SWITCH2__
+        ImGui::TextWrapped("Close the game and open the Online application to start a lobby.");
+#else
+        ImGui::TextWrapped("Opening Online restarts the game. Your offline save is kept.");
+        if (ImGui::Button("Open Online")) {
+            if (!platform_restart_online()) overlay_set_banner("Could not reopen Online. Close the game and use its Online launch mode.");
+        }
+#endif
+    }
+    ImGui::TextWrapped("The host chooses the menus. Everyone chooses their character. Music packs are off online.");
+}
+
+/* Internet races: a number pad for invite codes (10 or 15 digits), the code screen, approval and input delay. */
+#ifdef SR_PHONE  /* fingers: keys about 2.3x the PC size (the S23 showed 5 mm keys), bigger digits */
+#define PAD_KEY ImVec2(150,110)
+#define PAD_WIDE ImVec2(200,110)
+#define PAD_FONT 1.8f
+#else
+#define PAD_KEY ImVec2(64,48)
+#define PAD_WIDE ImVec2(100,48)
+#define PAD_FONT 1.0f
+#endif
+static bool code_pad(const char* title,char* typed,size_t cap) {
+    bool ok=false;
+    bool open=ImGui::BeginPopupModal(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize);
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
+    {   /* PC: SDL sends typed digits only with text input on; on while any code pad is open (both pads share it) */
+        static int last_open=-10; static bool on;
+        int f=ImGui::GetFrameCount();
+        if (open) { last_open=f; if (!on) { SDL_StartTextInput(); on=true; } }
+        else if (on && last_open<f-1) { SDL_StopTextInput(); on=false; }
+    }
+#endif
+    if (open) {
+        ImGui::SetWindowFontScale(PAD_FONT);
+        char pretty[40]; inet_code_pretty(typed,pretty,sizeof pretty);
+        ImGui::TextWrapped("Type the 10 or 15 numbers your friend sees.");
+        ImGui::Text("%s_",pretty);
+        {   /* PC keyboard: the number row and the number pad type (SDL text input, overlay_text), Backspace deletes */
+            ImGuiIO& io=ImGui::GetIO();
+            for (int k=0;k<io.InputQueueCharacters.Size;k++) {
+                ImWchar c=io.InputQueueCharacters[k]; size_t n=strlen(typed);
+                if (c>='0' && c<='9' && n<15 && n+1<cap) { typed[n]=(char)c; typed[n+1]=0; }
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+        }
+        const char* keys="1234567890";
+        for (int i=0;keys[i];i++) {
+            ImGui::PushID(2000+i); char label[2]={keys[i],0};
+            if (ImGui::Button(label,PAD_KEY)) { size_t n=strlen(typed); if (n<15 && n+1<cap) { typed[n]=keys[i]; typed[n+1]=0; } }
+            if (i%3!=2 && i!=9) ImGui::SameLine();
+            ImGui::PopID();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete",PAD_WIDE)) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+#ifndef __SWITCH__
+        ImGui::SameLine();
+        if (ImGui::Button("Paste",PAD_WIDE)) {
+            const char* c=ImGui::GetClipboardText(); size_t n=0;
+            for (; c && *c && n<15 && n+1<cap; c++) if (*c>='0' && *c<='9') typed[n++]=*c;
+            typed[n]=0;
+        }
+#endif
+        size_t n=strlen(typed);
+        ImGui::BeginDisabled(n!=10 && n!=15);
+        if (ImGui::Button("OK",PAD_WIDE)) { ok=true; ImGui::CloseCurrentPopup(); }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel",PAD_WIDE)) ImGui::CloseCurrentPopup();
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::EndPopup();
+    }
+    return ok;
+}
+static void show_code(const char* label,const char* code) {
+    char pretty[40]; inet_code_pretty(code,pretty,sizeof pretty);
+    ImGui::Text("%s",label);
+    ImGui::SetWindowFontScale(2.0f); ImGui::Text("%s",pretty); ImGui::SetWindowFontScale(1.0f);
+#ifndef __SWITCH__
+    ImGui::SameLine();
+    ImGui::PushID(label);
+    if (ImGui::Button("Copy")) ImGui::SetClipboardText(code);
+    ImGui::PopID();
+#endif
+}
+static void internet_lobby(const LanLobby* v,bool focus_start) {
+    static char typed[24];
+    if (v->state==LAN_IDLE) {
+        ImGui::TextWrapped("Race a friend anywhere. One of you hosts and sends the invite code; the other types it.");
+        ImGui::BeginDisabled(!g_settings.online_name[0]);
+        if (ImGui::Button("Host an internet race")) { settings_apply(); lan_lobby_host_inet(g_settings.online_name); }
+        ImGui::SameLine();
+        if (ImGui::Button("Join with a code")) { typed[0]=0; ImGui::OpenPopup("Friend's code"); }
+        if (code_pad("Friend's code",typed,sizeof typed)) { settings_apply(); lan_lobby_join_inet(typed,g_settings.online_name); }
+        ImGui::EndDisabled();
+        ImGui::Spacing();
+        ImGui::TextWrapped("A code contains your internet address. Share it only with the friend you race.");
+        return;
+    }
+    for (int i=0;i<v->players;i++) ImGui::Text("Player %d: %s",i+1,v->names[i]);
+    if (v->state==LAN_HOSTING) {
+        if (!v->inet_ready) ImGui::TextWrapped("Getting your invite code...");
+        else if (v->players<LAN_MAX_PLAYERS) {
+            show_code("Your invite code:",v->my_code);
+            if (v->note[0]) ImGui::TextWrapped("%s",v->note);
+            if (v->pending) {
+                ImGui::Separator();
+                ImGui::TextWrapped("%s wants to join.",v->pending_name);
+                if (ImGui::Button("Let them in")) lan_lobby_answer(1);
+                ImGui::SameLine();
+                if (ImGui::Button("Say no")) lan_lobby_answer(0);
+            } else ImGui::TextWrapped(v->punching?"Opening a path to your friend...":"Friends can join with this code.");
+            if (ImGui::Button("Add friend's code")) { typed[0]=0; ImGui::OpenPopup("Your friend's own code"); }
+            if (code_pad("Your friend's own code",typed,sizeof typed)) lan_lobby_add_code(typed);
+            ImGui::TextWrapped("Only if they can't get in: ask for the code on their screen and add it here.");
+        }
+        if (v->players>=2) {
+            ImGui::Text("Ping %d ms, jitter %d ms",v->rtt_ms,v->jitter_ms);
+            ImGui::Text("Input delay: %d frames (%s)",v->delay,v->delay_manual?"chosen by hand":"automatic");
+            ImGui::SameLine();
+            if (ImGui::Button("-")) lan_lobby_set_delay((v->delay_manual?v->delay_manual:v->delay)-1<1?1:(v->delay_manual?v->delay_manual:v->delay)-1);
+            ImGui::SameLine();
+            if (ImGui::Button("+")) lan_lobby_set_delay((v->delay_manual?v->delay_manual:v->delay)+1);
+            ImGui::SameLine();
+            if (ImGui::Button("Auto")) lan_lobby_set_delay(0);
+            if (focus_start) ImGui::SetKeyboardFocusHere();
+            if (ImGui::Button("Start race")) lan_lobby_start();
+        }
+    } else if (v->state==LAN_JOINING) {
+        ImGui::TextWrapped(v->waiting?"Connected. Waiting for the host to let you in...":"Connecting to your friend's race...");
+        if (v->inet_ready && v->my_code[0]) show_code("Your own code (only if the host asks for it):",v->my_code);
+    } else if (v->state==LAN_JOINED) {
+        ImGui::TextWrapped("Waiting for the host to start...");
+        ImGui::Text("Ping %d ms",v->rtt_ms);
+    } else ImGui::TextWrapped("Starting...");
+    if (v->state!=LAN_STARTING && ImGui::Button("Leave race")) lan_lobby_leave();
+}
+
+void lobby_window() {
+    static bool initialized;
+    if (!initialized) { lan_lobby_open(); initialized=true; }
+    const LanLobby* v=lan_lobby_poll();
+    static int previous_players;
+    bool focus_start=v->state==LAN_HOSTING && v->players>=2 && previous_players<2;
+    previous_players=v->players;
+    /* Repeatable two-copy lobby tests: the same actions as the buttons, never a direct SR_NET bypass. */
+    if (const char* test=getenv("SR_LOBBY_TEST")) {
+        static uint64_t since=platform_now_ns();
+        int target=getenv("SR_NET_PLAYERS")?atoi(getenv("SR_NET_PLAYERS")):2;
+        if (platform_now_ns()-since>2000000000ull) {
+            if (!strcmp(test,"host")) {
+                if (v->state==LAN_IDLE) lan_lobby_host("Test host");
+                else if (v->state==LAN_HOSTING && v->players==target) lan_lobby_start();
+            } else if (!strncmp(test,"join:",5) && v->state==LAN_IDLE && !v->error[0]) {
+                lan_lobby_join(test+5,g_settings.online_name[0]?g_settings.online_name:"Test joiner");
+            } else if (!strcmp(test,"join") && v->state==LAN_IDLE) {
+                for (int i=0;i<v->count;i++) if (v->found[i].open && v->found[i].compatible) {
+                    rt_log("[lobby] test joined discovered race: %s",v->found[i].name);
+                    lan_lobby_join(v->found[i].ip,"Test joiner"); break;
+                }
+            } else if (!strcmp(test,"inet-host")) {  /* lets the first asker in, starts after 3 s of ping samples */
+                if (v->state==LAN_IDLE) lan_lobby_host_inet("Test host");
+                else if (v->state==LAN_HOSTING && v->pending) lan_lobby_answer(1);
+                else if (v->state==LAN_HOSTING && v->players==target && v->samples>=12) lan_lobby_start();
+            } else if (!strncmp(test,"inet-join:",10) && v->state==LAN_IDLE && !v->error[0]) {
+                lan_lobby_join_inet(test+10,g_settings.online_name[0]?g_settings.online_name:"Test joiner");
+            } else if (!strcmp(test,"offline")) {
+                lan_lobby_leave(); lan_lobby_close(); online_lobby_finish(nullptr,nullptr,nullptr);
+            }
+        }
+    }
+    ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0),ImVec2(OVERLAY_W,OVERLAY_H),IM_COL32(0,0,0,255));
+    ImGui::SetNextWindowPos(ImVec2(OVERLAY_W/2,OVERLAY_H/2),ImGuiCond_Always,ImVec2(.5f,.5f));
+    ImGui::SetNextWindowSize(ImVec2(960,600),ImGuiCond_Always);
+    ImGui::Begin("Riders Plus Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::TextWrapped("2 players, at home or over the internet. The host starts when everyone is in.");
+    ImGui::Separator();
+    ImGui::BeginDisabled(v->state!=LAN_IDLE);
+#ifdef __SWITCH2__
+    ImGui::Text("Your name: %s",g_settings.online_name[0]?g_settings.online_name:"Choose a name");
+    if (ImGui::Button("Change name")) ImGui::OpenPopup("Your online name");
+    if (ImGui::BeginPopupModal("Your online name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s",g_settings.online_name);
+        const char* keys="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        for (int i=0;keys[i];i++) {
+            ImGui::PushID(i); char label[2]={keys[i],0};
+            if (ImGui::Button(label,ImVec2(48,40))) {
+                size_t n=strlen(g_settings.online_name);
+                if (n<20) { g_settings.online_name[n]=keys[i]; g_settings.online_name[n+1]=0; }
+            }
+            if (i%10!=9 && keys[i+1]) ImGui::SameLine();
+            ImGui::PopID();
+        }
+        if (ImGui::Button("Delete")) { size_t n=strlen(g_settings.online_name); if(n) g_settings.online_name[n-1]=0; }
+        ImGui::SameLine();
+        if (ImGui::Button("Done")) { settings_apply(); ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+#elif defined(__SWITCH__)
+    ImGui::Text("Your name: %s",g_settings.online_name[0]?g_settings.online_name:"Choose a name");
+    if (ImGui::Button("Change name")) {
+        SwkbdConfig kb;
+        if (R_SUCCEEDED(swkbdCreate(&kb,0))) {
+            swkbdConfigMakePresetDefault(&kb);
+            swkbdConfigSetHeaderText(&kb,"Your online name");
+            swkbdConfigSetInitialText(&kb,g_settings.online_name);
+            swkbdConfigSetStringLenMax(&kb,20);
+            char name[128]={0};
+            if (R_SUCCEEDED(swkbdShow(&kb,name,sizeof name))) { lan_clean_name(g_settings.online_name,name); settings_apply(); }
+            swkbdClose(&kb);
+        }
+    }
+#else
+    if (ImGui::InputTextWithHint("Your name","Choose a name",g_settings.online_name,sizeof g_settings.online_name,ImGuiInputTextFlags_CharsNoBlank)) settings_apply();
+    static bool typing;
+    bool want=ImGui::IsItemActive();
+    if (want!=typing) { if (want) SDL_StartTextInput(); else SDL_StopTextInput(); typing=want; }
+#endif
+    ImGui::EndDisabled();
+    if (v->state == LAN_IDLE && ImGui::TreeNode("Gameplay settings")) {
+        ImGui::TextWrapped("If you host, these rules apply to everyone until the room closes.");
+        if (check("Riders Plus", &g_settings.ring_cap_999, "999 rings and gear levels 4 and 5.")) settings_apply();
+        ImGui::BeginDisabled(!g_settings.ring_cap_999);
+        if (check("Ring Replenish", &g_settings.ring_replenish, "Super Sonic gains rings from air rewards.")) settings_apply();
+        if (check("Limit Break Super Sonic", &g_settings.super_classic, "Off: balanced Super Sonic for fair races. On: the overpowered one from v0.9.0, for fun.")) settings_apply();
+        if (check("Super Sonic flight (experimental)", &g_settings.super_flight, "Use the flying pose while riding.")) settings_apply();
+        ImGui::EndDisabled();
+        if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Plus.")) settings_apply();
+        ImGui::TextUnformatted("Hold to boost follows the host. Super Sonic only gets it with Limit Break.");
+        ImGui::TreePop();
+    }
+    if (v->error[0]) ImGui::TextWrapped("%s",v->error);
+    ImGui::Spacing();
+    static int internet;
+    if (v->inet && v->state!=LAN_IDLE) internet=1;
+    ImGui::BeginDisabled(v->state!=LAN_IDLE);
+    if (ImGui::RadioButton("Home network",!internet)) internet=0;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Internet",internet)) internet=1;
+    ImGui::EndDisabled();
+    if (internet) internet_lobby(v,focus_start);
+    else if (v->state==LAN_IDLE) {
+        ImGui::BeginDisabled(!g_settings.online_name[0]);
+        if (ImGui::Button("Host a race")) { settings_apply(); lan_lobby_host(g_settings.online_name); }
+        heading("Races on your network");
+        if (!v->count) ImGui::TextWrapped("Searching... Ask the other player to choose Host a race. Guest Wi-Fi may block discovery.");
+        for (int i=0;i<v->count;i++) {
+            const LanFound& f=v->found[i]; ImGui::PushID(i);
+            ImGui::Text("%s's race  %d/%d",f.name,f.players,f.max_players); ImGui::SameLine();
+            ImGui::BeginDisabled(!f.open || !f.compatible);
+            if (ImGui::Button("Join")) { settings_apply(); lan_lobby_join(f.ip,g_settings.online_name); }
+            ImGui::EndDisabled();
+            if (!f.compatible) ImGui::TextWrapped("Install the same Online Beta on both devices.");
+            ImGui::PopID();
+        }
+        /* Fallback when the network hides rooms (some routers drop console broadcasts): type the host's address. */
+        static char typed[48];
+        if (ImGui::Button("Join by address")) {
+            const char* dot=v->my_ip[0]?strrchr(v->my_ip,'.'):nullptr; /* start with this network's first three numbers */
+            if (dot) snprintf(typed,sizeof typed,"%.*s",(int)(dot-v->my_ip+1),v->my_ip); else typed[0]=0;
+            ImGui::OpenPopup("Host's address");
+        }
+        if (ImGui::BeginPopupModal("Host's address",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextWrapped("Type the address shown on the host's screen.");
+            ImGui::Text("%s_",typed);
+            const char* keys="123456789.0";
+            for (int i=0;keys[i];i++) {
+                ImGui::PushID(1000+i); char label[2]={keys[i],0};
+                if (ImGui::Button(label,ImVec2(64,48))) { size_t n=strlen(typed); if (n<15) { typed[n]=keys[i]; typed[n+1]=0; } }
+                if (i%3!=2 && keys[i+1]) ImGui::SameLine();
+                ImGui::PopID();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Delete",ImVec2(100,48))) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+            if (ImGui::Button("Join",ImVec2(100,48))) { settings_apply(); lan_lobby_join(typed,g_settings.online_name); ImGui::CloseCurrentPopup(); }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel",ImVec2(100,48))) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+        ImGui::EndDisabled();
+    } else {
+        for (int i=0;i<v->players;i++) ImGui::Text("Player %d: %s",i+1,v->names[i]);
+        if (v->state==LAN_HOSTING) {
+            if (v->players<2) ImGui::TextWrapped("Waiting for a player to join...");
+            if (v->players<2 && v->my_ip[0]) ImGui::TextWrapped("If they can't see your race, they can choose Join by address and type: %s",v->my_ip);
+            ImGui::BeginDisabled(v->players<2);
+            if (focus_start) ImGui::SetKeyboardFocusHere();
+            if (ImGui::Button("Start race")) lan_lobby_start();
+            ImGui::EndDisabled();
+        } else ImGui::TextWrapped(v->state==LAN_JOINING?"Joining the race...":"Waiting for the host to start...");
+        if (v->state!=LAN_STARTING && ImGui::Button("Leave race")) lan_lobby_leave();
+    }
+    ImGui::Separator();
+    if (v->state!=LAN_STARTING && ImGui::Button("Back to offline")) {
+        lan_lobby_leave(); lan_lobby_close(); online_lobby_finish(nullptr,nullptr,nullptr);
+    }
+    if (v->ready) {
+        rt_log("[lobby] starting with %d players",v->players);
+        const char* spec=v->inet?(v->me==0?"inet:host":"inet:join"):(v->me==0?"lan:host":"lan:join");
+        const char* name=lan_lobby_local_name();
+        const char* peer=v->me!=0?v->names[0]:v->players==2?v->names[1]:"the other players";
+        lan_lobby_handoff();
+        lan_lobby_close(); online_loading_set(1); online_lobby_finish(spec,name,peer);
+    }
+    ImGui::End();
+}
+
+void loading_screen() {
+    ImDrawList* dl=ImGui::GetForegroundDrawList();
+    dl->AddRectFilled(ImVec2(0,0),ImVec2(OVERLAY_W,OVERLAY_H),IM_COL32(0,0,0,255));
+    const char* title="Loading online multiplayer";
+    ImVec2 size=ImGui::CalcTextSize(title);
+    dl->AddText(ImVec2((OVERLAY_W-size.x)/2,320),IM_COL32(255,255,255,255),title);
+    char progress[128]; const char* peer=getenv("SR_NET_PEER");
+    snprintf(progress,sizeof progress,"Getting ready with %s...",peer&&*peer?peer:"the other player");
+    size=ImGui::CalcTextSize(progress);
+    dl->AddText(ImVec2((OVERLAY_W-size.x)/2,360),IM_COL32(180,190,210,255),progress);
+}
+
 void settings_window() {
     const ImVec2 size(fminf(980.0f, OVERLAY_W * 0.94f), fminf(620.0f, OVERLAY_H * 0.90f));
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W * 0.5f, OVERLAY_H * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -886,7 +1232,7 @@ void settings_window() {
         }
         static const Tab tabs[] = {{"Display", tab_display}, {"Performance", tab_performance}, {"Controls", tab_controls},
                                    {"Gameplay", tab_gameplay}, {"Cheats", tab_cheats},     {"Mods", tab_mods},
-                                   {"About", tab_about}};
+                                   {"Online", tab_online}, {"About", tab_about}};
         const int ntabs = (int)(sizeof tabs / sizeof tabs[0]);
         if (ImGui::BeginTabBar("tabs", ImGuiTabBarFlags_FittingPolicyShrink)) {
             for (int i = 0; i < ntabs; i++) {
@@ -991,9 +1337,13 @@ void frame() {
     g_last_ns = now;
     io.DeltaTime = dt > 0.0f && dt < 0.5f ? dt : 1.0f / 60.0f;
     ImGui::NewFrame();
-    if (g_open) settings_window();
-    fps_counter();
-    banner_box();
+    if (online_lobby_visible()) lobby_window();
+    else if (online_loading()) loading_screen();
+    else {
+        if (g_open) settings_window();
+        fps_counter();
+        banner_box();
+    }
     ImGui::Render();
     ImDrawData* dd = ImGui::GetDrawData();
     uint64_t h = draw_hash(dd);
@@ -1072,10 +1422,11 @@ int overlay_take_screenshot_request(void) {
     return r;
 }
 
-int overlay_menu_open(void) { return g_open; }
+int overlay_menu_open(void) { return g_open || online_lobby_visible(); }
 
 /* a touch control's menu button: open or close at once (no hold) */
 void overlay_menu_toggle(void) {
+    if (online_lobby_visible() || online_loading()) return;
     if (g_open) {
         close_menu();
         return;
@@ -1097,7 +1448,7 @@ void overlay_pointer(float x, float y, int down) {
 /* the PC mouse (render_gl.c, the render thread, like the menu itself): point, click, drag sliders,
  * scroll; events while the menu is closed are dropped, except releases (no button left held) */
 void overlay_mouse_pos(float x, float y) {
-    if (!g_open) return;
+    if (!overlay_menu_open()) return;
     init();
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
@@ -1105,7 +1456,7 @@ void overlay_mouse_pos(float x, float y) {
 }
 
 void overlay_mouse_button(int button, int down) {
-    if ((!g_open && down) || button < 0 || button > 2) return;
+    if ((!overlay_menu_open() && down) || button < 0 || button > 2) return;
     init();
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
@@ -1113,11 +1464,20 @@ void overlay_mouse_button(int button, int down) {
 }
 
 void overlay_mouse_wheel(float dx, float dy) {
-    if (!g_open) return;
+    if (!overlay_menu_open()) return;  /* the F1 menu or the online lobby (was F1 only: no scrolling online) */
     init();
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
     io.AddMouseWheelEvent(dx, dy);
+}
+
+void overlay_text(const char* text) {
+    if (!online_lobby_visible()) return;
+    init(); ImGui::GetIO().AddInputCharactersUTF8(text);
+}
+void overlay_edit_key(int backspace,int down) {
+    if (!online_lobby_visible() || !backspace) return;
+    init(); ImGui::GetIO().AddKeyEvent(ImGuiKey_Backspace,down!=0);
 }
 
 void overlay_request_quit(void) { g_quit_request = 1; }
@@ -1149,6 +1509,10 @@ void overlay_shutdown(void) {
     g_ready = false;
 }
 
+int overlay_text_typing(void) {
+    return ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput;
+}
+
 int overlay_take_quit_request(void) {
     int r = g_quit_request;
     g_quit_request = 0;
@@ -1156,6 +1520,16 @@ int overlay_take_quit_request(void) {
 }
 
 int overlay_input(unsigned held) {
+    if (online_loading()) return 1;
+    if (online_lobby_visible()) {
+        init(); unsigned changed=held^g_prev; g_prev=held;
+        feed(ImGuiKey_GamepadDpadUp,held,changed,OV_UP);
+        feed(ImGuiKey_GamepadDpadDown,held,changed,OV_DOWN);
+        feed(ImGuiKey_GamepadDpadLeft,held,changed,OV_LEFT);
+        feed(ImGuiKey_GamepadDpadRight,held,changed,OV_RIGHT);
+        feed(ImGuiKey_GamepadFaceDown,held,changed,OV_ACCEPT);
+        return 1;
+    }
     static int tested;
     if (!tested++ && getenv("SR_TEST_MENU")) {  /* debugging: start with the menu open (=N: on tab N) */
         g_open = g_just_opened = true;
@@ -1201,8 +1575,8 @@ int overlay_input(unsigned held) {
         }
     }
     if (!g_quit_popup) {
-        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 6) % 7;
-        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 7;
+        if (pressed & OV_TAB_L) g_select_tab = (g_tab + 7) % 8;
+        if (pressed & OV_TAB_R) g_select_tab = (g_tab + 1) % 8;
     }
     feed(ImGuiKey_GamepadDpadUp, held, changed, OV_UP);
     feed(ImGuiKey_GamepadDpadDown, held, changed, OV_DOWN);
@@ -1224,12 +1598,15 @@ const uint8_t* overlay_image(unsigned* version, int box[4]) {
         g_shown_banner_seq = bseq;
     }
     static bool was_open;
-    bool shown = g_open || g_settings.show_fps || g_banner[0];
+    bool online = online_lobby_visible() || online_loading();
+    static bool was_online;
+    bool shown = g_open || g_settings.show_fps || g_banner[0] || online;
     /* the menu runs every frame while open (navigation, tooltips); the counter only when it changes */
     collect();
     /* a picture left waiting because the helper was busy is made again too */
     bool open_before = g_open;
-    if (g_open || fps_changed || banner_changed || was_open != g_open || g_retry) frame();
+    if (online || was_online != online || g_open || fps_changed || banner_changed || was_open != g_open || g_retry) frame();
+    was_online = online;
     /* a touch on Close (or Quit) closes the menu inside frame(): that picture still shows the menu,
      * so the next call draws again without it */
     was_open = open_before;

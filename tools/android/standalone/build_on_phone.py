@@ -97,6 +97,6 @@ if __name__ == "__main__":
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            print("FAIL|A build is already running. Wait a moment, then reopen Riders Plus.", flush=True)
+            print("FAIL|A build is already running. Wait a moment, then reopen Riders Crosswake.", flush=True)
             sys.exit(1)
         sys.exit(build(root, native, iso, output))
