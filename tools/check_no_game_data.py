@@ -87,7 +87,7 @@ OWN_ART = {
     "docs/images/riders-plus/lv5-boost.jpg": "56cefaa56117aa79fc437d676cc7f10fe9287daa",
     "docs/images/riders-plus/trick-rank-ss.jpg": "d8d432b8da8a8a35b25ecaf7131ad59e8620f533",
     "docs/images/riders-plus/tunnel-294.jpg": "8ac53a61c267a2e2cbb103b35d38f4c7b229803d",
-    "launcher/icon_256.png": "63ac234157ed85b52956c00551649422b1ef07bc",  # Riders Rebuilt logo (maintainer-approved AI exception, 2026-11-26)
+    "launcher/icon_256.png": "aaf442318fc0c29a1f378ef7650db4a6fa47ded8",  # "RR" from the Riders Rebuilt logo (maintainer-approved, 2026-11-26)
     "launcher/icon_32.png": "1ab1e760b6743d71eb7b37359346e99703ab4242",  # "RR" from the Riders Rebuilt logo (maintainer-approved, 2026-11-26)
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
     "setup/icon_256.jpg": "4ab58b2f4da4418a9febadea57937eae7f2da5a6",  # the same, 256 x 256 for the Switch NRO
