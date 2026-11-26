@@ -65,7 +65,7 @@
 ## Riders Plus: break the limits
 
 <p align="center">
-  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Riders Plus: Break the limits. Sonic and Super Sonic on Extreme Gear in Metal City, with 999 rings and a Lv. 5 badge">
+  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
 </p>
 
 **Riders Plus** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
