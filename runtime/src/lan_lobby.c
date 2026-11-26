@@ -198,7 +198,7 @@ static void list(void) {
 static void announce(const struct sockaddr_in* to) {
     if (inet_mode) return; /* internet rooms are never broadcast */
     Packet p=packet(ANNOUNCE); compat(&p);
-    p.b[p.n++]=(unsigned char)v.players; p.b[p.n++]=LAN_MAX_PLAYERS; p.b[p.n++]=(unsigned char)(v.state==LAN_HOSTING && v.players<LAN_MAX_PLAYERS);
+    p.b[p.n++]=(unsigned char)v.players; p.b[p.n++]=LAN_ROOM_LIMIT; p.b[p.n++]=(unsigned char)(v.state==LAN_HOSTING && v.players<LAN_ROOM_LIMIT);
     string(&p,my_name);
     if (to) send_packet(p,session,to); else send_everywhere(session,p.b,p.n,7779);
 }
@@ -276,7 +276,7 @@ void lan_lobby_add_code(const char* code) {
 void lan_lobby_answer(int accept) {
     if (!inet_mode || !v.pending || v.state!=LAN_HOSTING) return;
     v.pending=0;
-    if (accept && v.players<LAN_MAX_PLAYERS) {
+    if (accept && v.players<LAN_ROOM_LIMIT) {
         if (!sid) sid=rnd();
         add_peer(&pend,v.pending_name,platform_now_ns());
         if (same(&pend,&punch_to)) v.punching=0;
@@ -422,7 +422,7 @@ static void inet_packet(const unsigned char* b,int n,const struct sockaddr_in* f
             if (c!=NET_COMPAT) no="Different online version. Install the same Online Beta on both devices.";
             else if (refused_peer(from,now)) no="The host said no.";
             else if (slot) { peers[slot].heard=now; list(); return; }
-            else if (v.players==LAN_MAX_PLAYERS) no="This race is full.";
+            else if (v.players>=LAN_ROOM_LIMIT) no="This race is full.";
             if (no) { Packet p=packet(REFUSE); string(&p,no); ssend(p,from); return; }
             if (v.pending && !same(&pend,from)) { ssend(packet(WAIT),from); return; }
             if (!v.pending) {
@@ -473,7 +473,7 @@ static void inet_timers(uint64_t now) {
         if (v.pending && now-pend_heard>6000000000ull) { v.pending=0; rt_log("[lobby] the waiting player stopped asking"); }
         expire_peers(now);
         if (now-tick>1000000000ull) { tick=now; list(); }
-        if (v.punching && v.players<LAN_MAX_PLAYERS) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 60 s */
+        if (v.punching && v.players<LAN_ROOM_LIMIT) { /* both send at once: 10 a second for 3 s, then 4 a second, up to 60 s */
             uint64_t age=now-punch_since, gap=age<3000000000ull?100000000ull:250000000ull;
             if (age>60000000000ull) { v.punching=0; snprintf(v.error,sizeof v.error,"Could not reach your friend's code. Check it, and ask them to try joining again."); }
             else if (now-punch_last>gap) { punch_last=now; Packet p=packet(PUNCH); compat(&p); ssend(p,&punch_to); }
@@ -529,7 +529,7 @@ const LanLobby* lan_lobby_poll(void) {
             else if (b[5]==JOIN && n>=15) {
                 uint64_t c=0; for (int i=0;i<8;i++) c|=(uint64_t)b[6+i]<<(8*i);
                 char name[LAN_NAME]; pos=14; if (!read_string(b,n,&pos,name,sizeof name) || !name[0]) continue;
-                if (c!=NET_COMPAT || (!slot && v.players==LAN_MAX_PLAYERS)) {
+                if (c!=NET_COMPAT || (!slot && v.players>=LAN_ROOM_LIMIT)) {
                     Packet p=packet(REFUSE); string(&p,c!=NET_COMPAT?"Different online version. Install the same Online Beta on both devices.":"This race is full."); send_packet(p,session,&from);
                 } else {
                     if (!slot) { add_peer(&from,name,now); rt_log("[lobby] %s joined, %d players",name,v.players); }

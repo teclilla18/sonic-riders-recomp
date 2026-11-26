@@ -16,7 +16,7 @@ def verify_race_results(args, logs):
         assigned = set()
         for path in logs:
             report = path.read_bytes()
-            rules = re.search(rb"\[room-rules\] P(\d+) cap=999 hold=0 replenish=1 flight=1 super-classic=1", report)
+            rules = re.search(rb"\[room-rules\] P(\d+) cap=999 hold=1 replenish=1 flight=1 super-classic=1", report)
             assert rules, f"Incorrect effective room settings in {path}"
             seat = int(rules[1])
             assigned.add(seat)

@@ -655,9 +655,10 @@ void tab_gameplay() {
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
     if (netplay_in_session()) {
-        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost off.",
+        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost %s.",
                     settings_ring_cap() == 999 ? "on" : "off", settings_ring_replenish() ? "on" : "off",
-                    settings_super_flight() ? "on" : "off", settings_super_classic() ? "Limit Break" : "balanced");
+                    settings_super_flight() ? "on" : "off", settings_super_classic() ? "Limit Break" : "balanced",
+                    settings_boost_hold() ? (settings_super_classic() ? "on" : "on (not Super Sonic)") : "off");
         ImGui::BeginDisabled(settings_ring_cap() == 100);
         if (check("Auto spin", &g_settings.auto_spin, "Assist this controller in spin sections.")) settings_apply();
         ImGui::EndDisabled();
@@ -881,7 +882,7 @@ void quit_row() {
 
 void tab_online() {
     heading("Online Beta 1");
-    ImGui::TextWrapped("Race with 2 to 4 players, at home or over the internet. Each device needs its own copy of the game.");
+    ImGui::TextWrapped("Race with 2 players, at home or over the internet. Each device needs its own copy of the game.");
     ImGui::Spacing();
     if (getenv("SR_NET")) ImGui::TextWrapped("You are in an online run. Close the game to start a new race lobby.");
     else {
@@ -1060,7 +1061,7 @@ void lobby_window() {
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W/2,OVERLAY_H/2),ImGuiCond_Always,ImVec2(.5f,.5f));
     ImGui::SetNextWindowSize(ImVec2(960,600),ImGuiCond_Always);
     ImGui::Begin("Riders Plus Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextWrapped("2 to 4 players, at home or over the internet. The host starts when everyone is in.");
+    ImGui::TextWrapped("2 players, at home or over the internet. The host starts when everyone is in.");
     ImGui::Separator();
     ImGui::BeginDisabled(v->state!=LAN_IDLE);
 #ifdef __SWITCH2__
@@ -1113,7 +1114,7 @@ void lobby_window() {
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight, "Use the flying pose while riding.")) settings_apply();
         ImGui::EndDisabled();
         if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Plus.")) settings_apply();
-        ImGui::TextUnformatted("Held boost is disabled online.");
+        ImGui::TextUnformatted("Hold to boost follows the host. Super Sonic only gets it with Limit Break.");
         ImGui::TreePop();
     }
     if (v->error[0]) ImGui::TextWrapped("%s",v->error);

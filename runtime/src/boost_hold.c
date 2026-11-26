@@ -65,6 +65,8 @@ static int super_racer(uint32_t racer) {
     return ld8(racer + GAME_RACER_GEAR) == GAME_GEAR_CHAOS_EMERALD &&
            ld8(racer + GAME_RACER_CHARACTER) == GAME_CHAR_SUPER_SONIC;
 }
+/* held boost: every racer, but Super Sonic only with Limit Break Super Sonic (user 2026-11-25) */
+static int super_ok(uint32_t racer) { return !super_racer(racer) || settings_super_classic(); }
 
 /* 0..4096: (2^(3h/SUPER_RAMP) - 1) / 7, the power of two drawn as straight pieces (integers only) */
 static uint32_t ramp(uint32_t h) {
@@ -187,7 +189,7 @@ void boost_hold_tick(uint32_t racer) {
     if (t == BOOST_FRAMES - 1) {  /* a new boost's first tick */
         g_extra[i] = 0;
         g_held[i] = 0;
-        g_armed[i] = settings_boost_hold() ? (uint16_t)(held_buttons(racer) & BOOST_BUTTONS) : 0;
+        g_armed[i] = settings_boost_hold() && super_ok(racer) ? (uint16_t)(held_buttons(racer) & BOOST_BUTTONS) : 0;
         if (log_on() && g_armed[i])
             rt_log("[boost] racer %d: boost with button %x held, level %u, cost %u, air %d", i, g_armed[i],
                    ld8(racer + R_LEVEL), ld32(racer + R_BLOCKS + 0x38u * (ld8(racer + R_LEVEL) > 2 ? 2u : ld8(racer + R_LEVEL)) + 0x28u),
@@ -195,7 +197,7 @@ void boost_hold_tick(uint32_t racer) {
         return;
     }
     if (!g_armed[i]) return;
-    if (!settings_boost_hold()) { stop(i, racer, "option off"); return; }
+    if (!settings_boost_hold() || !super_ok(racer)) { stop(i, racer, "option off"); return; }
     if (!(held_buttons(racer) & g_armed[i])) { stop(i, racer, "released"); return; }
     if (!(ld32(racer + R_STATE) & STATE_BOOST)) { stop(i, racer, "boost over"); return; }
     uint32_t lv = ld8(racer + R_LEVEL);

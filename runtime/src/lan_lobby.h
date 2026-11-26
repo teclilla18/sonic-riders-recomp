@@ -6,7 +6,8 @@
 extern "C" {
 #endif
 enum { LAN_IDLE, LAN_HOSTING, LAN_JOINING, LAN_JOINED, LAN_STARTING };
-enum { LAN_MAX_FOUND = 16, LAN_NAME = 21, LAN_MAX_PLAYERS = 4 };
+enum { LAN_MAX_FOUND = 16, LAN_NAME = 21, LAN_MAX_PLAYERS = 4,
+       LAN_ROOM_LIMIT = 2 };  /* Online Beta 1: rooms admit 2 (3-4 draw every split view, user 2026-11-25); arrays stay 4 */
 typedef struct {
     char name[LAN_NAME], ip[48];
     int players, max_players, open, compatible;

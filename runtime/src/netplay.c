@@ -703,7 +703,7 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
     const char* net = getenv("SR_NET");
     if (g_active) settings_fix_ring_cap(settings_ring_cap());  /* the ring cap too (a replay's is kept) */
     if (net) {
-        settings_fix_boost_hold(0);
+        settings_fix_boost_hold(settings_boost_hold());  /* the host's (joiners: replaced by WELCOME); Super Sonic only with Limit Break */
         settings_fix_ring_replenish(settings_ring_replenish());
     } else if (g_active) settings_fix_boost_hold(settings_boost_hold());
     if (net && (!strncmp(net, "host:", 5) || !strcmp(net, "inet:host") || !strcmp(net, "lan:host")))
