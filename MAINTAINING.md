@@ -74,8 +74,10 @@ Text that is still written by hand and may need a touch after big changes: the R
 
 - The site uses the maintainer-supplied Painterly Riders Rebuilt logo in `assets/img/logo.webp` and
   `assets/img/logo-sm.webp`. The site icons use the existing placeholders.
-- The supplied logo is the sole exception to the ban on AI-generated imagery. Use commissioned art,
-  online art with the artist credited, in-game screenshots, or screenshots edited by the maintainer.
+- The maintainer approved the supplied logo and the Skyway Adventure composite. Skyway Adventure
+  combines the maintainer's screenshot with the Sonic Riders logo using ChatGPT and is approved for
+  the rules header and homepage rules teaser. Use commissioned art, credited online art, in-game
+  screenshots, or screenshots edited by the maintainer for other placements.
   Add maintainer-approved images to `tools/approved_images.txt`.
 - The background grid is the maintainer's picture, redrawn sharp by `tools/bg/`: `analyse.py <picture>` measures
   every element (grid, crossings, sparkles, streaks, squares) into `elements.json`; `render.py <picture> <scale> <out>
