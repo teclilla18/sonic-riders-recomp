@@ -1,8 +1,8 @@
 # SHA-1  path  (source). Every picture on the site must be listed; tools/check_site.py enforces it.
 5d33a306e5ff9565f22bc291a564bb2546a847b1  assets/img/grid-tile.jpg  (background grid supplied by the maintainer 2026-11-19, redrawn at 2x by tools/bg (repeating tile))
 a923937180bbc360e62aad021cbf4baa9839c16d  assets/img/grid-portrait.jpg  (background grid supplied by the maintainer 2026-11-19, redrawn at 2x by tools/bg)
-f10a9e4f09881ab1a0b8af072068d083f3dde786  assets/img/logo.webp  (temporary commissioned-art notice)
-a45e6d734db5dac6afdbaa2ea24a9948189713f5  assets/img/logo-sm.webp  (temporary commissioned-art notice)
+8b6a2ab0392433ed8f405fa4369e89a68760ce1e  assets/img/logo.webp  (Painterly Riders Rebuilt logo supplied by the maintainer)
+a21002258bf31bebe3c8722eb3f653a6ee54651c  assets/img/logo-sm.webp  (Painterly Riders Rebuilt logo supplied by the maintainer)
 0bf77858e496e9e6c29331c171820a585cbdde4f  assets/img/icon-64.png  (temporary commissioned-art notice)
 826bafc721a8404960a56beba31c561e01bbf2dd  assets/img/icon-180.png  (temporary commissioned-art notice)
 b8f599c76f1e13e4ba8349b89cf02fd203cfb042  assets/guide/switch-build.svg  (from main:docs/images/installation/switch-build.svg)
