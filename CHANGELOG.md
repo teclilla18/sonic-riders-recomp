@@ -11,9 +11,9 @@
 
 - Online rooms take **2 players** for this beta (3-4 players later). Hold to boost works online for every character (the host's setting); Super Sonic gets it only with Limit Break Super Sonic, offline too.
 - Online lobby: the mouse wheel scrolls (PC), the number row and number pad type invite codes (PC), bigger code keys on phones, and the touch screen works the menus in Switch handheld mode.
-- **Super Sonic is balanced** (Riders Crosswake rules): a little faster than the original game (top speed 186 / 190 / 195, boost 270 / 280 / 300 km/h at base / 200 / 300 rings), no held-boost climb. With Ring Replenish he gets rings back only from his ring magnet and from trick landings (about a third of before); grinding, flying, smashed objects and spin turns give none. Each boost costs 50 rings, and he cannot boost with fewer.
+- **Super Sonic is balanced** (Riders Rebuilt rules): a little faster than the original game (top speed 186 / 190 / 195, boost 270 / 280 / 300 km/h at base / 200 / 300 rings), no held-boost climb. With Ring Replenish he gets rings back only from his ring magnet and from trick landings (about a third of before); grinding, flying, smashed objects and spin turns give none. Each boost costs 50 rings, and he cannot boost with fewer.
 - **Limit Break Super Sonic** option (Gameplay, off by default): the overpowered Super Sonic from v0.9.0, for fun. Online, the host picks it for the room.
-- Online Riders Plus levels and Auto Spin follow each racer through their own finish. The lobby exposes the host’s gameplay settings, including experimental Super Sonic flight. Held boost is disabled online. The shared results table retains its native layout on each screen.
+- Online Riders Rebuilt levels and Auto Spin follow each racer through their own finish. The lobby exposes the host’s gameplay settings, including experimental Super Sonic flight. Held boost is disabled online. The shared results table retains its native layout on each screen.
 - The in-game Online lobby can host 2–4 players on LAN or with an internet invite code. The host relays inputs.
 - Each player uses their own picture shape and FPS settings. Three- and four-player views show the local racer, with the timer centered and minimap at upper right.
 - Online opponents use the original solo draw distances. Player Entry keeps right-hand models in their cards across Fit aspect ratios, and online replays reproduce the character-selection state.
@@ -34,18 +34,18 @@
 - Two players, LAN or internet. Music packs are unavailable; texture-pack first-use stutter (it slows both players
   online) and #35 remain known issues; some mobile networks cannot connect without a relay.
 
-### v0.9.0: Hold to boost and the Riders Plus features list (2026-11-20)
+### v0.9.0: Hold to boost and the Riders Rebuilt features list (2026-11-20)
 
-- Riders Plus now has a fold-out list, "Riders Plus features", in F1 > Gameplay: Auto spin and the new Hold to
-  boost, both on by default and only active with Riders Plus.
+- Riders Rebuilt now has a fold-out list, "Riders Rebuilt features", in F1 > Gameplay: Auto spin and the new Hold to
+  boost, both on by default and only active with Riders Rebuilt.
 - Hold to boost: keep B (or X) held after boosting and the boost goes on, like nitrous, taking air at your gear's
   boost rate; a tap is still the normal boost. Super Sonic keeps speeding up while held, up to 350 km/h.
 - Super Sonic gains rings in the stick-spin scenes. Auto spin gives the stick back if the game stops counting turns.
-- Ring Replenish (Riders Plus feature, on by default): Super Sonic's rings refill where other racers refill air.
+- Ring Replenish (Riders Rebuilt feature, on by default): Super Sonic's rings refill where other racers refill air.
   Tricks pay by rank: C 15, B 22, A 30, AA 33, S 37, SS 45, X 75 rings. Grinding, flying, smashing objects and
   each stick-spin turn (about 1.5 rings) add more.
 - Holding a Super boost widens the view within half a second, and a little more as he speeds up to 350 km/h.
-- Super Sonic (Riders Plus): flight as an experimental option, off by default (F1 > Gameplay > Riders Plus features >
+- Super Sonic (Riders Rebuilt): flight as an experimental option, off by default (F1 > Gameplay > Riders Rebuilt features >
   "Super Sonic flight": a flying pose instead of standing on his board; rails, tricks and spin scenes keep the board;
   known issue: after an air trick he can stay on his board until the next move; never online), an invisible ring magnet (the game's Magnetic Barrier, kept on without its bubble), and his held
   boost burns rings 2.9 times as fast as other gears burn air.

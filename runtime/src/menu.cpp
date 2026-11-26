@@ -655,7 +655,7 @@ void tab_gameplay() {
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
     if (netplay_in_session()) {
-        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost %s.",
+        ImGui::Text("Room rules: Riders Rebuilt %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost %s.",
                     settings_ring_cap() == 999 ? "on" : "off", settings_ring_replenish() ? "on" : "off",
                     settings_super_flight() ? "on" : "off", settings_super_classic() ? "Limit Break" : "balanced",
                     settings_boost_hold() ? (settings_super_classic() ? "on" : "on (not Super Sonic)") : "off");
@@ -664,7 +664,7 @@ void tab_gameplay() {
         ImGui::EndDisabled();
         return;
     }
-    if (check("Riders Plus", &g_settings.ring_cap_999,
+    if (check("Riders Rebuilt", &g_settings.ring_cap_999,
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
               "boost or a fall off the course takes 100 rings instead of all of them. Two more gear levels: "
               "Lv. 4 at 200 rings and Lv. 5 at 300, each with a higher top speed and boost. The gold 100-ring "
@@ -674,24 +674,24 @@ void tab_gameplay() {
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
-    /* the Riders Plus extras: a fold-out list under its check box, each on by default, active only with it */
-    if (ImGui::TreeNode("Riders Plus features")) {
+    /* the Riders Rebuilt extras: a fold-out list under its check box, each on by default, active only with it */
+    if (ImGui::TreeNode("Riders Rebuilt features")) {
         ImGui::BeginDisabled(!g_settings.ring_cap_999);
         if (check("Auto spin", &g_settings.auto_spin,
-                  "On by default (with Riders Plus). In the Automatic Trails, where the game takes over and asks you "
+                  "On by default (with Riders Rebuilt). In the Automatic Trails, where the game takes over and asks you "
                   "to rotate the Control Stick as fast as you can, it is spun for you at a fast player's pace (7 turns "
                   "a second): your speed and air climb, and no more wrecking your sticks. Only your own racers, never "
                   "the CPUs."))
             settings_apply();
         if (check("Hold to boost", &g_settings.boost_hold,
-                  "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
+                  "On by default (with Riders Rebuilt). Keep B (or X) held after boosting and the boost goes on, like "
                   "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
                   "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
                   "quick tap is still the normal boost. Super Sonic's boost is 270 km/h, 280 at 200 rings and 300 at 300 rings. "
                   "Online, the host's setting is used."))
             settings_apply();
         if (check("Ring Replenish", &g_settings.ring_replenish,
-                  "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "
+                  "On by default (with Riders Rebuilt). Super Sonic's air is his rings, so the game gives him "
                   "nothing where other racers refill air. With this on he gains rings instead: in the spin "
                   "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes (with "
                   "Limit Break Super Sonic; balanced, only from tricks, and fewer). Online, the host's setting is used."))
@@ -708,7 +708,7 @@ void tab_gameplay() {
                   "he can stay on his board until your next move; a fix is coming. Online, the host's setting is used."))
             settings_apply();
         ImGui::EndDisabled();
-        if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
+        if (!g_settings.ring_cap_999) note("Turn on Riders Rebuilt to use these.");
         ImGui::TreePop();
     }
 }
@@ -1060,7 +1060,7 @@ void lobby_window() {
     ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0),ImVec2(OVERLAY_W,OVERLAY_H),IM_COL32(0,0,0,255));
     ImGui::SetNextWindowPos(ImVec2(OVERLAY_W/2,OVERLAY_H/2),ImGuiCond_Always,ImVec2(.5f,.5f));
     ImGui::SetNextWindowSize(ImVec2(960,600),ImGuiCond_Always);
-    ImGui::Begin("Riders Plus Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::Begin("Riders Rebuilt Online Beta 1",nullptr,ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
     ImGui::TextWrapped("2 players, at home or over the internet. The host starts when everyone is in.");
     ImGui::Separator();
     ImGui::BeginDisabled(v->state!=LAN_IDLE);
@@ -1107,13 +1107,13 @@ void lobby_window() {
     ImGui::EndDisabled();
     if (v->state == LAN_IDLE && ImGui::TreeNode("Gameplay settings")) {
         ImGui::TextWrapped("If you host, these rules apply to everyone until the room closes.");
-        if (check("Riders Plus", &g_settings.ring_cap_999, "999 rings and gear levels 4 and 5.")) settings_apply();
+        if (check("Riders Rebuilt", &g_settings.ring_cap_999, "999 rings and gear levels 4 and 5.")) settings_apply();
         ImGui::BeginDisabled(!g_settings.ring_cap_999);
         if (check("Ring Replenish", &g_settings.ring_replenish, "Super Sonic gains rings from air rewards.")) settings_apply();
         if (check("Limit Break Super Sonic", &g_settings.super_classic, "Off: balanced Super Sonic for fair races. On: the overpowered one from v0.9.0, for fun.")) settings_apply();
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight, "Use the flying pose while riding.")) settings_apply();
         ImGui::EndDisabled();
-        if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Plus.")) settings_apply();
+        if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Rebuilt.")) settings_apply();
         ImGui::TextUnformatted("Hold to boost follows the host. Super Sonic only gets it with Limit Break.");
         ImGui::TreePop();
     }
