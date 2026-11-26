@@ -60,6 +60,10 @@
 > you to the Switch 2 homebrew developers for making this possible.
 > [What to expect](docs/SWITCH2-ALPHA.md)
 >
+> **🌐 New: the Online Beta.** Race a friend online on PC, Switch and Android, at home or over the internet, and
+> a balanced Super Sonic (or keep him overpowered with Limit Break). [How to play online](docs/PLAY-ONLINE.md) ·
+> [Race Room](https://teclilla18.github.io/sonic-riders-recomp/race-room.html)
+>
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
 ## Riders Rebuilt: break the limits
@@ -130,6 +134,7 @@ Updating? Stable versions update with one press of **UPDATE NOW** in the app (th
 | a modded **Nintendo Switch** / Lite / OLED | `SonicRiders-Switch-Setup-<version>.zip` from the [latest release](../../releases/latest) | [Picture booklet](https://teclilla18.github.io/sonic-riders-recomp/install-switch.html) · [Install on Switch](docs/INSTALL.md#install-on-switch) |
 | a **Windows PC** | `SonicRiders-PC-Setup-<version>.zip` | [Install on PC](docs/INSTALL.md#install-on-pc) |
 | an **Android phone** (64-bit, Android 11+) | `SonicRiders-Android-Setup-<version>.zip` | [Install on Android](docs/INSTALL.md#install-on-android) |
+| an **Android phone, no PC needed** (beta, 64-bit) | `RidersRebuilt-Android-NoPC-<version>.zip`: install the app, pick your disc image, the phone builds the game (about 5 minutes) | [How it works](docs/ANDROID-NO-PC.md) |
 | **Linux** or a **Steam Deck** (test version) | `SonicRiders-Linux-Setup-<version>.zip` | [Install on Linux / Steam Deck](docs/INSTALL.md#install-on-linux--steam-deck) |
 | an **iPhone** or **iPad** (built on a Mac) | `SonicRiders-iOS-Setup-<version>.zip` | [Install on iPhone / iPad](docs/INSTALL.md#install-on-iphone--ipad) |
 
