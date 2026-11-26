@@ -74,6 +74,8 @@ Text that is still written by hand and may need a touch after big changes: the R
 
 - The site uses the maintainer-supplied Painterly Riders Rebuilt logo in `assets/img/logo.webp` and
   `assets/img/logo-sm.webp`. List maintainer-approved replacements in `tools/approved_images.txt`.
+- Skyway Adventure is the maintainer's screenshot combined with the Sonic Riders logo using ChatGPT.
+  The maintainer approved it for the rules header and homepage rules teaser.
 - The background grid is the maintainer's picture, redrawn sharp by `tools/bg/`: `analyse.py <picture>` measures
   every element (grid, crossings, sparkles, streaks, squares) into `elements.json`; `render.py <picture> <scale> <out>
   [x0,y0,x1,y1]` redraws it at any scale (the optional box drops streaks crossing a repeating tile's edges).
