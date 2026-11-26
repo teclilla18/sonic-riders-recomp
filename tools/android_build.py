@@ -17,7 +17,7 @@ import subprocess
 import sys
 import zipfile
 
-HOST_TAG = "windows-x86_64" if os.name == "nt" else "linux-x86_64"
+HOST_TAG = "windows-x86_64" if os.name == "nt" else ("darwin-x86_64" if sys.platform == "darwin" else "linux-x86_64")
 MIN_SDK = 30     # Android 11: Vulkan 1.1, AAudio, C11 <threads.h> in bionic
 TARGET_SDK = 35
 ABIS = {"arm64-v8a": "aarch64-linux-android", "x86_64": "x86_64-linux-android"}

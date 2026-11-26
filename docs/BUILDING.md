@@ -25,6 +25,21 @@ ninja
 
 The PC build plays the first `*.iso` in `baserom/` (or the image given on its command line).
 
+## macOS (Android target)
+
+The manual steps above also build the **Android** target on macOS with a user-supplied SDK and NDK
+(for example Android Studio, or `brew install android-commandlinetools`), a JDK 17 and `ninja`:
+
+```
+python configure.py --target android --abi arm64-v8a \
+    --android-sdk <sdk> --jdk <jdk17> --sdl-src <SDL2 source>   # -> build/android/sonicriders-arm64-v8a.apk
+ninja
+```
+
+The automatic toolchain download (`setup/setup.ps1`) stays Windows-only; here the NDK, build-tools
+and JDK are supplied by the user. The NDK's host toolchain on macOS is `darwin-x86_64` (it runs on
+Apple Silicon through Rosetta 2).
+
 After cloning, enable the game-data guard: `git config core.hooksPath tools/git-hooks`. It refuses
 commits that contain anything derived from the game.
 
