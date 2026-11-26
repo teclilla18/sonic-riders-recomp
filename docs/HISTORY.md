@@ -2179,3 +2179,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 - The maintainer supplied their own gameplay screenshot annotated in Canva for the v0.9.0 release and website overview.
   Published at its original dimensions with a full-size link. The release tag and setup downloads remain available.
+
+## 2026-11-26: Blue-background Switch 2 release art
+
+- Carried the maintainer's blue-background revision to both applicable Switch 2 Alpha release banners and the website's share preview.
+  The Alpha 2 and Alpha 3 tags and setup downloads remain available.
