@@ -13,6 +13,8 @@
 
 ## On main since v0.9.0 (docs only)
 
+- The Switch 2 Alpha 3 release notes use the maintainer-approved composite of a console image and their gameplay photo.
+
 - The v0.8.2 release notes use the Riders Rebuilt name and the maintainer-approved Rainbow Rush artwork credited to Lanmana.
 
 - The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The README uses the Riders Rebuilt name, embeds the supplied gameplay-section GIF from Reddit, and keeps attribution in Credits.

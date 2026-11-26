@@ -49,6 +49,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # maintainer's own art (not from the game), exactly these files with exactly this content. A new or changed
 # picture is refused until its SHA-1 is put here. The temporary art notices are also listed by exact hash.
 OWN_ART = {
+    "docs/images/switch2-alpha3-banner.jpg": "3bc7fa019646a0f6b0ad97200748e7a830820fbb",  # Maintainer-approved composite for the Switch 2 Alpha 3 release
     "docs/images/v0.8.2/rainbow-rush.jpg": "4ef97573b2fd22e9a5ad24c321dfa982fdda91bd",  # Lanmana artwork supplied and approved by the maintainer for v0.8.2
     "docs/images/sonic-riders-readme.jpg": "f073efe44153a731bc96f6f1f4a3473180487f2c",  # SEGA promotional artwork supplied by the maintainer for the README
     # User-requested documentation: reviewed current installer UI, privacy masks and vector annotations.

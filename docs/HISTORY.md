@@ -2169,3 +2169,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 ## 2026-11-26: v0.8.2 release artwork
 
 - Added Lanmana's Rainbow Rush artwork for the v0.8.2 release notes and updated the display name to Riders Rebuilt. The release tag and setup downloads remain available.
+
+## 2026-11-26: Switch 2 Alpha 3 release banner
+
+- Added the maintainer-approved AI-assisted composite of a Switch 2 console image and the maintainer's own gameplay photo.
+  The artwork exception applies to this release banner. The release tag and setup download remain available.
