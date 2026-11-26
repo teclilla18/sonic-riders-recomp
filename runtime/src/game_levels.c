@@ -1,4 +1,4 @@
-/* Gear levels 4 and 5 (part of the "Riders Plus" option, formerly "Ring Limit 999": settings.c g_ring_cap != 100).
+/* Gear levels 4 and 5 (part of the "Riders Rebuilt" option, formerly "Ring Limit 999": settings.c g_ring_cap != 100).
  *
  * The game keeps a racer's level in a byte at racer +0x102E (0..2 = Lv. 1..3), raised when the rings reach
  * 30 / 60 (byte table at REL rodata 0x19FC) and lowered below them, and three per-level stat blocks of
@@ -42,7 +42,7 @@ extern volatile int g_ring_cap;
 static const float k_top[3]   = {1.0f, 200.0f / 180.0f, 215.0f / 180.0f};
 static const float k_boost[3] = {1.0f, 1.10f, 1.20f};
 static const float k_drift[3] = {1.0f, 1.10f, 1.25f};
-/* Super only, Riders Plus on: target top/drift/boost from the unmodified 182/100/250 live baseline.
+/* Super only, Riders Rebuilt on: target top/drift/boost from the unmodified 182/100/250 live baseline.
  * Ratios preserve stat mods; always multiply the captured unscaled field, including the Base tier. */
 static float k_super(int f, int ext) {  /* super_tuning.h: the balanced or classic preset */
     const SuperTune* t = super_tune();
@@ -67,7 +67,7 @@ typedef struct {
     int cost_on;
 } LvRacer;
 static LvRacer g_lv[8];
-/* boost_hold.c: a racer's Riders Plus tier, 0 = base, 1 = Lv. 4, 2 = Lv. 5 */
+/* boost_hold.c: a racer's Riders Rebuilt tier, 0 = base, 1 = Lv. 4, 2 = Lv. 5 */
 int lv_tier(uint32_t racer) {
     uint32_t d = racer - GAME_PLAYERS;
     if (d >= 8 * GAME_PLAYER_SIZE || d % GAME_PLAYER_SIZE) return 0;
@@ -103,7 +103,7 @@ int online_racer_unfinished(uint32_t racer) {
     return offset < 4 * GAME_PAD_SIZE && offset % GAME_PAD_SIZE == 0 && !ld8(racer + 0xBC);
 }
 
-/* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
+/* Ring Replenish (Riders Rebuilt option): Super Sonic's rings grow at this share of the air the same move gives
  * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
 /* the second tuning (the user, 2026-11-20: "still too broken", chains of hoops / grinds / objects grew the
  * game's reward each time): one step's air rewards count up to this many rings before the share above, and a
@@ -231,13 +231,13 @@ uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
     return old + paid;
 }
 
-/* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost). The game's
+/* Super Sonic's invisible ring magnet (Riders Rebuilt, the user 2026-11-20, with the dearer held boost). The game's
  * Magnetic Barrier (item box type 7, "draws in rings like a magnet") is f_8188CC74(racer index): it sets racer +0xBB0
  * bit 0x4 and starts task 818F0B94, which registers a collision sphere around the racer (f_81852314, touch callback
  * 818F0EA4 pulls the rings), draws the electric bubble, and ends after 600 steps (timer task +0x1C) by clearing the
  * bit. The flag alone does nothing (Switch 2 test). So: while a Super Sonic has no barrier, one is started for him
  * (lv_magnet_spawn, at his fuel step); his barrier's timer is held at 0 (lv_magnet_keep) and its drawing is skipped
- * (lv_magnet_hide). Game memory, game steps only: online and recordings stay in step (Riders Plus is synced). */
+ * (lv_magnet_hide). Game memory, game steps only: online and recordings stay in step (Riders Rebuilt is synced). */
 void f_8188CC74(Cpu* c);
 
 static int magnet_racer(uint32_t task) {  /* the Super Sonic racer a Magnetic Barrier task belongs to, else 0 */
@@ -702,9 +702,9 @@ void lv_texture_decoded(GxTexture* t) {
             make_cell(t, &k_kind[kind], 319 + 22 * e, 199, 22, 22, k_kind[kind].dx[e], k_kind[kind].dy);
 }
 
-/* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
+/* Spin scenes (Riders Rebuilt): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
  * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
- * gives him SPIN_FUEL here (1600, about 1.45 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * gives him SPIN_FUEL here (1600, about 1.45 rings), up to the Riders Rebuilt ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
     if (!settings_ring_replenish() || !super_racer(racer) || !super_tune()->spin_fuel) return;

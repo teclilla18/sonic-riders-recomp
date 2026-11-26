@@ -102,7 +102,7 @@ static void apply_view(void) {
 static void apply(void) {
     apply_view();
     g_ring_cap = g_fixed_ring_cap ? g_fixed_ring_cap : g_settings.ring_cap_999 ? 999 : 100;
-    /* part of Riders Plus: only with it (an online host / a recording: its value) */
+    /* part of Riders Rebuilt: only with it (an online host / a recording: its value) */
     g_boost_hold = g_fixed_boost_hold >= 0 ? g_fixed_boost_hold : g_settings.boost_hold && g_ring_cap != 100;
     g_ring_replenish = g_fixed_ring_replenish >= 0 ? g_fixed_ring_replenish
                                                    : g_settings.ring_replenish && g_ring_cap != 100;
@@ -249,7 +249,7 @@ void settings_fix_super_classic(int on) {
     rt_log("[settings] Super Sonic: %s for this run", on ? "Limit Break (v0.9.0 numbers)" : "balanced");
 }
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
-int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */
+int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Rebuilt */
 
 void settings_set_window_aspect(float aspect) {
     if (!(aspect > 0.1f) || fabsf(aspect - g_window_aspect) < 0.001f) return;

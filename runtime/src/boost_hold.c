@@ -19,7 +19,7 @@
  *
  * Speed while held: the game sets the boost speed once at the start, and after a turn or a bump its normal
  * acceleration climbs back very slowly. A held boost pulls the speed (+0xAAC) back up to the boost speed (level
- * block +0x34) quickly instead. Super Sonic (Riders Plus): the longer it is held, the higher his boost speed and
+ * block +0x34) quickly instead. Super Sonic (Riders Rebuilt): the longer it is held, the higher his boost speed and
  * the harder the pull, rising exponentially to 350 km/h after SUPER_RAMP frames (top speed +0xAB4 raised with
  * it; the game puts its own back when the boost ends, fn 81896C9C). Integer curve, no libm: the same on every
  * machine in an online race.

@@ -1,4 +1,4 @@
-/* Super Sonic tuning (Riders Crosswake): every balance number in one place, two presets.
+/* Super Sonic tuning (Riders Rebuilt): every balance number in one place, two presets.
  *   balanced (default, 2026-11-25, the user's spec for the four-player Online Beta): stats a little above vanilla,
  *     boost 270 / 280 / 300 km/h, no held-boost climb, rings back only from the ring magnet and (much smaller)
  *     trick landings: nothing from grinding, flying, smashed objects or spin turns.

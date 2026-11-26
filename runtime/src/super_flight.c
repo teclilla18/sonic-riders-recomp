@@ -1,4 +1,4 @@
-/* Super Sonic in constant flight (Riders Plus, the user 2026-11-20: "he FEELS like Super Sonic"): off his board
+/* Super Sonic in constant flight (Riders Rebuilt, the user 2026-11-20: "he FEELS like Super Sonic"): off his board
  * except when grinding, in a trick jump, in a spin section or charging a jump.
  *
  * An object's (for a racer: the racer itself) playing animation is +0x764. It is taken from the object's queue
