@@ -2318,3 +2318,11 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Updated the easy-read install and update sources for the two-player Online Beta and the Android no-PC app. The sources keep the previous download links for Linux, iOS and Switch 2 [confirmed]. Artifact republishing is pending.
 - Refreshed the Pages approvals for the maintainer-supplied logo in two sizes and five charts whose text changed to Riders Rebuilt. The local site link and image checks passed [confirmed]. Pages deploys after the release.
 - Aligned the changelog with the Riders Rebuilt name for the project and gameplay mod and kept the old section anchor. Updated the Pages branch README. The old rules-page URL and current social addresses still resolve through the same paths [confirmed].
+
+## 2026-11-26: v0.10.0 Online Beta released
+
+- Merged current main into the candidate (conflicts only in README, STATE, HISTORY). Final setup ZIPs from the tag commit;
+  cold Windows Sandbox PASS for PC (normal + space path) and Android on d3a83ee [confirmed]. Later commits change only the
+  launcher icon (now the maintainer's "RR" from the Riders Rebuilt logo) and docs; the user chose to skip a Sandbox rerun.
+- The S23 got the v0.10.0 APK (d3a83ee game code) for the maintainer's own play test; no new device race was run this session.
+- README, website home and both easy-read guides lead with online play, the Race Room and "two players now, four coming soon".

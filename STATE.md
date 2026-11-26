@@ -2,7 +2,13 @@
 
 ## Released
 
-- **[v0.9.0 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0)** (latest, 2026-11-20;
+- **[v0.10.0 Online Beta](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0)** (latest, 2026-11-26;
+  tag `ecdd995`): two-player online crossplay (PC, Switch family, 64-bit Android; LAN + internet invite codes; Race Room
+  live chat on the website), balanced Super Sonic + Limit Break option, Android without a PC (beta,
+  `RidersRebuilt-Android-NoPC-v0.10.0.zip`), Riders Rebuilt name, RR launcher icon. Cold Sandbox PASS (PC + space path,
+  Android) on d3a83ee; the later commits only change the launcher icon and docs. Linux / iOS stay on v0.9.0.
+  Four-player online: next update (in testing on codex/online-four).
+- **[v0.9.0 Stable](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0)** (2026-11-20;
   tag `bce3a5f`): Hold to boost, Auto spin (#23), same character for several players, Super Sonic ring magnet /
   Ring Replenish / 350 km/h held boost, Cheats tab, Switch sleep + start-up clock fixes, unpacked-not-installed
   check. Super Sonic flight is an experimental option, off by default. Zips: PC, Switch, Android, Linux. Cold
@@ -11,17 +17,12 @@
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
-## v0.10.0 candidate
+## On main since v0.10.0 (docs only)
 
-- Riders Rebuilt is the name of both the project and the gameplay mod. The public site adopts it with the v0.10.0 Pages update.
+- README and website: v0.10.0 online spotlight with the maintainer's Online Crossplay art; both guides open with a
+  "Race your friends online" box pointing to the Race Room.
 
-- **Implemented** on `claude/online-balance`: Riders Rebuilt branding, two-player Online Beta for Windows PC, the original Switch family and 64-bit Android, and balanced Super Sonic with the optional Limit Break rules.
-- **Tested on earlier candidates**: PC localhost finished with matching checksums, and an earlier Android/Switch test finished two LAN races with matching checksums. The final packages and cold PC/Android Sandbox checks are release gates.
-- The Android no-PC beta is built from `claude/standalone-online` (6921c1e). Setup is based on the player's own verified disc. The no-PC release APK and the S23 QA APK are distinct.
-- Both easy-read guide sources include Online and the Android no-PC steps. Claude republishes the two Artifacts after approval. The Pages update follows the release.
-- **Accepted** and **released** status for v0.10.0 is pending. v0.9.0 and Switch 2 Alpha 3 remain the public releases.
-
-## On main since v0.9.0 (docs only)
+## Before v0.10.0 (docs only, on main)
 
 - The website uses Riders Rebuilt for the project and gameplay rules. Its old rules-page URLs redirect to the current one.
 
