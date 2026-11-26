@@ -1,4 +1,4 @@
-<p align="center"><b>New: Riders Crosswake has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
+<p align="center"><b>New: Riders Rebuilt has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
 
 <p align="center">
   <img src="docs/images/sonic-riders-readme.jpg" width="80%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Crosswake website</a>
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Rebuilt website</a>
   &nbsp;·&nbsp;
   <a href="https://www.facebook.com/riderscrosswake">Facebook</a>
   &nbsp;·&nbsp;
@@ -54,23 +54,25 @@
 </p>
 
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
-> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Crosswake.
+> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Rebuilt.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
 > [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml).
 > [What to expect](docs/SWITCH2-ALPHA.md)
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
-## Riders Crosswake: break the limits
+<a id="riders-crosswake-break-the-limits"></a>
+
+## Riders Rebuilt: break the limits
 
 <p align="center">
   <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
 </p>
 
-**Riders Crosswake** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
-gear; the limits are what change. Turn it off any time in **Settings > Gameplay > Riders Crosswake** for the original rules.
+**Riders Rebuilt** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
+gear; the limits are what change. Turn the mod off in **Settings > Gameplay** for the original rules.
 
-| | Original game | Riders Crosswake |
+| | Original game | Riders Rebuilt |
 |---|---|---|
 | Ring limit | 100 | **999** (a hit or a fall still costs 100) |
 | Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 300** |
@@ -100,7 +102,7 @@ at Lv. 4 and 215 / 300 at Lv. 5.
 
 <p align="center">
   <img src="docs/images/gear-levels-chart.svg" width="49%" alt="Chart: Blue Star top speed and boost from Lv. 1 to Lv. 5">
-  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Crosswake">
+  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Rebuilt">
   <br>
   <img src="docs/images/riders-plus/trick-rank-ss.jpg" width="49%" alt="Rank SS trick in Metal City">
 </p>
@@ -244,7 +246,6 @@ Licensed under the [Mozilla Public License 2.0](LICENSE). The translator license
 ## Credits
 
 - README header: Sonic Riders promotional artwork © [SEGA](https://sonic.sega.jp/riders/).
-- Previous Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana).
 - Thanks to the Switch 2 homebrew developers who made the alpha possible, including the teams behind ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell. See the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the

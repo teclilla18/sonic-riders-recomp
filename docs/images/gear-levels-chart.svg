@@ -16,9 +16,9 @@
 <rect x="300" y="590" width="260" height="3" rx="1.5" fill="#9fd8ff" opacity="0.05" transform="skewX(-20)"/>
 <rect x="980" y="95" width="200" height="3" rx="1.5" fill="#9fd8ff" opacity="0.08" transform="skewX(-20)"/>
 <text x="48" y="74" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-style="italic" font-weight="900" fill="#ffffff" letter-spacing="0.5">BLUE STAR: SPEED BY LEVEL</text>
-<text x="50" y="108" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#b7c6ff">Sonic's board. Lv. 1-3 are the original game; Riders Crosswake adds Lv. 4 and Lv. 5.</text>
+<text x="50" y="108" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#b7c6ff">Sonic's board. Lv. 1-3 are the original game; Riders Rebuilt adds Lv. 4 and Lv. 5.</text>
 <rect x="724" y="140" width="442" height="450" rx="16" fill="url(#plus)" stroke="#ffd23f" stroke-opacity="0.55" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="945" y="166" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="22" font-style="italic" font-weight="900" fill="#ffd23f" text-anchor="middle" letter-spacing="1">RIDERS CROSSWAKE</text>
+<text x="945" y="166" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="22" font-style="italic" font-weight="900" fill="#ffd23f" text-anchor="middle" letter-spacing="1">RIDERS REBUILT</text>
 <line x1="70" y1="411" x2="1160" y2="411" stroke="#ffffff" stroke-opacity="0.08"/>
 <text x="62" y="417" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" fill="#8798d8" text-anchor="end">100</text>
 <line x1="70" y1="301" x2="1160" y2="301" stroke="#ffffff" stroke-opacity="0.08"/>
