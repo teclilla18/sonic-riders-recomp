@@ -13,6 +13,8 @@
 
 ## v0.10.0 candidate
 
+- Riders Rebuilt is the name of both the project and the gameplay mod. The public site adopts it with the v0.10.0 Pages update.
+
 - **Implemented** on `claude/online-balance`: Riders Rebuilt branding, two-player Online Beta for Windows PC, the original Switch family and 64-bit Android, and balanced Super Sonic with the optional Limit Break rules.
 - **Tested on earlier candidates**: PC localhost finished with matching checksums, and an earlier Android/Switch test finished two LAN races with matching checksums. The final packages and cold PC/Android Sandbox checks are release gates.
 - The Android no-PC beta is built from `claude/standalone-online` (6921c1e). Setup is based on the player's own verified disc. The no-PC release APK and the S23 QA APK are distinct.

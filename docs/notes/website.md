@@ -1,7 +1,8 @@
 # Website (Riders Rebuilt, GitHub Pages)
 
 Live: https://teclilla18.github.io/sonic-riders-recomp/ (since 2026-11-19). The project's public name is
-**Riders Rebuilt**; the gameplay changes are the "Riders Rebuilt rules". Repository and URL keep `sonic-riders-recomp`.
+**Riders Rebuilt**, also the name of the gameplay mod. The repository and website keep the
+`sonic-riders-recomp` path. The old rules-page URL redirects to `riders-rebuilt.html`.
 
 - Source: branch **`gh-pages`** (orphan, website only; never merge with main). Worktree: `.local/gh-pages`.
   GitHub Pages serves `gh-pages` `/` (before 2026-11-19: `main` `/docs`). Full procedure, rules and rollback:

@@ -67,31 +67,33 @@
 ## v0.8.7 (2026-11-18)
 
 - iPhone / iPad: the iOS setup ZIP is now on v0.8.7 (added to the v0.8.7 release on 2026-11-19).
-- Super Sonic works with Riders Crosswake:999 rings, Lv4/5 progression and active top/boost/drift targets
+- Super Sonic works with Riders Rebuilt: 999 rings, Lv4/5 progression and active top/boost/drift targets
   195/270/110 Base,220/300/125 Lv4 and240/330/140 Lv5 km/h. Native level/resource costs and stat mods preserved.
 - Adaptive multiplayer HUD positioning, independent shared2P timer and correct multiplayer Lv4/5 digits29.
 - Stop finished-race repeated stat application and native level-up effects.
 - Includes validated Android Vulkan compatibility/shutdown fixes32 and Linux/SteamDeck setup fix30.
 - Windows, originalSwitch, Android and Linux setup packages; existing iOSv0.8.4 remains available separately.
 
-### More Riders Crosswake details
+<a id="more-riders-crosswake-details"></a>
+
+### More Riders Rebuilt details
 
 - Keep the2P shared clock independent and ring/boost panels together; retain quarter layouts.
 - Stop finished-race Lv5 stat reapplication and repeated native level-up effect-path entries.
 - Native Switch2 builds permanently embed the universal game icon from setup/icon_256.jpg, with
   tracked dependencies/resource identity and exact asset validation. Latest local test build deployed.
 
-- Riders Crosswake Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
+- Riders Rebuilt Super Sonic active top/boost/drift targets: Base 195/270/110, Lv.4 220/300/125,
   Lv.5 240/330/140 km/h, scaled from unmodified fields to preserve stat mods without compounding.
   Standard characters and Plus-off Super retain their existing stats. Released in v0.8.7.
 - Add a local Windows OunceMTP deployment utility: read-only detection/backups, temporary transfer probes,
   staged NRO/manifest deployment with explicit apply/current-hash gates, SHA-256 readback and FTP fallback.
-- Riders Crosswake supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own
+- Riders Rebuilt supports Super Sonic's 999-ring resource ceiling and Lv. 4/5 progression using his own
   live stats, while retaining his native level, ring costs and transformation. Extended feedback skips air refill.
 - Wide local split-screen HUD groups follow each player's view edges, keeping their size, shared timer/map,
   centred notifications and the 3P silhouette. Rendering changes do not write guest RAM.
 - Separately, fix the missing split-screen Lv. 4/5 digit hooks (#29), including Super Sonic's multiplayer HUD.
-  Validation and remaining checks: [Riders Crosswake / HUD note](docs/notes/riders-plus-local-hud.md).
+  Validation and remaining checks: [Riders Rebuilt / HUD note](docs/notes/riders-plus-local-hud.md).
 ## Android download update — v0.8.6 (#32, 2026-11-18)
 
 - Automatically use traditional render passes on drivers without dynamic rendering;
@@ -130,11 +132,11 @@
 
 ## v0.8.5 (2026-11-16)
 
-Known issue: in split-screen races the HUD still shows Lv. 3 after Riders Crosswake Lv. 4 or 5 (#29); the level itself
+Known issue: in split-screen races the HUD still shows Lv. 3 after Riders Rebuilt Lv. 4 or 5 (#29); the level itself
 works. The auto stick-spin option (#23) comes in the next version.
 
 - **Lv. 5 now at 300 rings** (was 350), from player feedback: 350 was too hard to reach in a normal 3-lap race.
-- **Drift dash adds to your speed** instead of capping you at about 250 km/h (Riders Crosswake).
+- **Drift dash adds to your speed** instead of capping you at about 250 km/h (Riders Rebuilt).
 - **Online: everyone keeps their own screen shape.** A 4:3 player and a 16:9 (or ultrawide) player in the same
   race each get a full picture in their own shape, without black bars. (Sessions need both players on this
   version.)
@@ -201,25 +203,25 @@ v0.8.3 plus these two changes only (branch `release/v0.8.4`; the Unreleased item
   The old "16:9 widescreen" and "stretch the HUD" options are gone; if you had them, you get Fit to screen.
 ## v0.8.2 (2026-11-14; iOS zip updated 2026-11-14)
 
-- **"Riders Crosswake"**: the settings option "Ring Limit set to 999" is now called "Riders Crosswake" (Gameplay tab), since it
+- The Gameplay option now called **Riders Rebuilt** expanded the former "Ring Limit set to 999" setting. It
   holds all of the custom gameplay below as well as the 999 rings. Your saved choice is kept. Off = the original game.
-- **Charging a jump keeps your speed for 0.75 seconds** (with "Riders Crosswake"): holding A to charge a jump made the game
+- **Charging a jump keeps your speed for 0.75 seconds** (with "Riders Rebuilt"): holding A to charge a jump made the game
   slow you down right away. Now your speed holds for 0.75 seconds after you first press A, then the game's own
   slowdown starts as before (gently, then down to 80 km/h). The jump itself is unchanged. Every racer gets it.
-- **Gear Lv. 4 and Lv. 5** (with "Riders Crosswake", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
+- **Gear Lv. 4 and Lv. 5** (with "Riders Rebuilt", the default): Lv. 4 at 200 rings, Lv. 5 at 350. Every
   gear keeps its own Lv. 1-3 stats and raises its own Lv. 3 numbers: Lv. 4 top speed x1.11 and boost x1.1, Lv. 5
   top speed x1.19 and boost x1.2 (drift dash x1.1 / x1.25); Sonic's Blue Star goes 180 / 250 -> 200 / 275 -> 215 / 300.
   Reaching them plays the game's own LEVEL UP!! (sparkle, sound, air refilled), and the HUD shows "Lv. 4" /
   "Lv. 5" in the game's own digit style (drawn at run time from the HUD's other digits). Dropping below 200 rings
   (a hit or a fall takes 100) goes back to Lv. 3. Split screen: the levels work; the HUD digit there is not
   checked yet.
-- **The gold 100-ring capsule comes back** (with "Riders Crosswake"): 25 seconds after it is taken (normal
+- **The gold 100-ring capsule comes back** (with "Riders Rebuilt"): 25 seconds after it is taken (normal
   capsules keep their 3 seconds), and it gives +100 rings each time. With the original 100-ring limit it stays gone
   for the race, as before.
-- **Dash panels push you on** (with "Riders Crosswake"): a panel used to set every racer to its own speed
+- **Dash panels push you on** (with "Riders Rebuilt"): a panel used to set every racer to its own speed
   (200 km/h in Splash Canyon), so a racer coming in faster was slowed down. Now you get the panel's speed or your
   own speed + 25 km/h, whichever is higher.
-- **Speed Shoes add speed** (with "Riders Crosswake"): the Speed Shoes item set your speed to 200 km/h, which did
+- **Speed Shoes add speed** (with "Riders Rebuilt"): the Speed Shoes item set your speed to 200 km/h, which did
   nothing (or slowed you) above 200. Now you get your own speed + 80 km/h, and at least 200.
 - **Switch: heavy race views hold 60 fps** with the picture options on. The Switch now draws into three screen
   images instead of two, so a frame that finishes just after the screen refresh no longer makes the next one wait a
