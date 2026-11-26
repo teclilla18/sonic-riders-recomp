@@ -49,6 +49,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # maintainer's own art (not from the game), exactly these files with exactly this content. A new or changed
 # picture is refused until its SHA-1 is put here. The temporary art notices are also listed by exact hash.
 OWN_ART = {
+    "docs/images/sonic-riders-readme.jpg": "f073efe44153a731bc96f6f1f4a3473180487f2c",  # SEGA promotional artwork supplied by the maintainer for the README
     # User-requested documentation: reviewed current installer UI, privacy masks and vector annotations.
     "docs/images/installation/switch-completion.png": "1cb4e8d8313b987baf8fdc731e780fd6b4de6dc0",
     "docs/images/installation/switch-installer.png": "76fe8771aefad69448b6c98767a9e02cb566a664",

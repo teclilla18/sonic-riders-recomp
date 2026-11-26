@@ -1,7 +1,8 @@
 <p align="center"><b>New: Riders Crosswake has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
 
 <p align="center">
-  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw. Sonic Riders now runs on Nintendo Switch 2 via homebrew.">
+  <img src="docs/images/sonic-riders-readme.jpg" width="100%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
+  <br><sub>Sonic Riders promotional artwork &copy; <a href="https://sonic.sega.jp/riders/">SEGA</a>.</sub>
 </p>
 
 <p align="center">

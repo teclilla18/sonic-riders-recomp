@@ -1,4 +1,4 @@
-# State (2026-11-24)
+# State (2026-11-26)
 
 ## Released
 
@@ -12,6 +12,8 @@
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
 ## On main since v0.9.0 (docs only)
+
+- The README opens with the maintainer-selected Sonic Riders promotional artwork, credited to SEGA.
 
 - README: website announcement line at the very top (b35298f).
 

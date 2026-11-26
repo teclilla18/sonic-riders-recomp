@@ -2158,3 +2158,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   stutter: game-code hitches up to ~300 ms on the same frames on both PCs [likely]. Auto spin stuck on after a grind
   until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
 - Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.
+
+## 2026-11-26: README header artwork
+
+- Replaced the placeholder at the top of the README with the maintainer-supplied Sonic Riders promotional artwork.
+  The unchanged illustration is credited to SEGA. Removed the JPEG metadata block before adding it [confirmed].
