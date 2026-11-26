@@ -239,14 +239,14 @@ void settings_fix_super_flight(int on) {
     g_fixed_super_flight = on != 0;
     rt_log("[settings] Super Sonic flight fixed for this run: %s", on ? "on" : "off");
 }
-/* Classic Super Sonic (super_tuning.h) changes game state: online / recordings use the host's / recorded value */
+/* Limit Break Super Sonic (super_tuning.h; internally "classic") changes game state: online / recordings use the host's / recorded value */
 int settings_super_classic(void) {
     return g_fixed_super_classic >= 0 ? g_fixed_super_classic : g_settings.super_classic;
 }
 int settings_super_classic_setting(void) { return g_settings.super_classic; }
 void settings_fix_super_classic(int on) {
     g_fixed_super_classic = on != 0;
-    rt_log("[settings] Super Sonic: %s for this run", on ? "classic (v0.9.0)" : "balanced");
+    rt_log("[settings] Super Sonic: %s for this run", on ? "Limit Break (v0.9.0 numbers)" : "balanced");
 }
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
 int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */

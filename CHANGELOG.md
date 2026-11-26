@@ -3,7 +3,7 @@
 ### Online Beta 1 candidate (not released)
 
 - **Super Sonic is balanced** (Riders Crosswake rules): a little faster than the original game (top speed 186 / 190 / 195, boost 270 / 280 / 300 km/h at base / 200 / 300 rings), no held-boost climb. With Ring Replenish he gets rings back only from his ring magnet and from trick landings (about a third of before); grinding, flying, smashed objects and spin turns give none.
-- **Classic Super Sonic** option (Gameplay, off by default): Super Sonic as he was in v0.9.0. Online, the host picks it for the room.
+- **Limit Break Super Sonic** option (Gameplay, off by default): the overpowered Super Sonic from v0.9.0, for fun. Online, the host picks it for the room.
 - Online Riders Plus levels and Auto Spin follow each racer through their own finish. The lobby exposes the host’s gameplay settings, including experimental Super Sonic flight. Held boost is disabled online. The shared results table retains its native layout on each screen.
 - The in-game Online lobby can host 2–4 players on LAN or with an internet invite code. The host relays inputs.
 - Each player uses their own picture shape and FPS settings. Three- and four-player views show the local racer, with the timer centered and minimap at upper right.

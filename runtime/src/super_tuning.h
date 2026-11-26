@@ -2,7 +2,7 @@
  *   balanced (default, 2026-11-25, the user's spec for the four-player Online Beta): stats a little above vanilla,
  *     boost 270 / 280 / 300 km/h, no held-boost climb, rings back only from the ring magnet and (much smaller)
  *     trick landings: nothing from grinding, flying, smashed objects or spin turns.
- *   classic (option "Classic Super Sonic"): the numbers of v0.9.0, when he first joined.
+ *   classic (option "Limit Break Super Sonic"): the overpowered numbers of v0.9.0, when he first joined.
  * Online the host's choice is used by everyone (netplay.c WELCOME / recording header), so both presets are game
  * state: a change here must bump NET_COMPAT (netplay.c) if two different builds could meet online.
  * Used by game_levels.c (stats, tiers, ring rewards) and boost_hold.c (held boost). */
