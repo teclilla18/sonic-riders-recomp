@@ -60,4 +60,4 @@ e943e0f254e90fc9076ac0dedd5fbbde8db8b0c1  assets/img/riders-plus/lv5-level-up.jp
 d8d432b8da8a8a35b25ecaf7131ad59e8620f533  assets/img/riders-plus/trick-rank-ss.jpg  (from main:docs/images/riders-plus/trick-rank-ss.jpg)
 8ac53a61c267a2e2cbb103b35d38f4c7b229803d  assets/img/riders-plus/tunnel-294.jpg  (from main:docs/images/riders-plus/tunnel-294.jpg)
 c02503fd7d6f88b77049d5b695505cab0fc6bb7b  assets/img/settings-display.jpg  (from main:docs/images/settings-display.jpg)
-557fff627f1130606981565212eb3223e3e86544  assets/img/switch2-poster.jpg  (from main:docs/images/switch2-poster.jpg)
+ccbd00b191343185ca1d6a2145c82a1ebd9fe09d  assets/img/switch2-poster.jpg  (from main:docs/images/switch2-poster.jpg)

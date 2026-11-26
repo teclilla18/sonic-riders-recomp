@@ -89,7 +89,7 @@ Text that is still written by hand and may need a touch after big changes: the R
   `OWN_ART`) or approved by the maintainer may be added; list each in `tools/approved_images.txt`.
   Never bypass the pre-commit hook. No DX (Extreme Gear Labs) material, no APKs or game builds.
 - No personal details (home paths, e-mail addresses, console setups) in any file.
-- Keep artist credits for the previous Switch 2 poster by Lanmana and the game icon by cedry2kio. Keep the unofficial fan-project disclaimer in the footer and on `community.html#legal`.
+- Keep the Credits entries for the Switch 2 release banner and the game icon by cedry2kio. Keep the unofficial fan-project disclaimer in the footer and on `community.html#legal`.
 - Experimental builds are always orange and labelled "experimental alpha"; stable ones green "Stable".
 - External loads include Google Fonts and GitHub's public API. Google Analytics loads only after visitors opt in.
   Its measurement ID and consent handling live in `assets/js/analytics.js`. The privacy details and preference
