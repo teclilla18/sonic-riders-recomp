@@ -13,7 +13,7 @@
 
 ## On main since v0.9.0 (docs only)
 
-- The README opens with the maintainer-selected Sonic Riders promotional artwork, credited to SEGA.
+- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio.
 
 - README: website announcement line at the very top (b35298f).
 

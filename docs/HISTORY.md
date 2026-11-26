@@ -2162,4 +2162,4 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 ## 2026-11-26: README header artwork
 
 - Replaced the placeholder at the top of the README with the maintainer-supplied Sonic Riders promotional artwork.
-  The unchanged illustration is credited to SEGA. Removed the JPEG metadata block before adding it [confirmed].
+  The unchanged illustration is credited to SEGA. Removed the JPEG metadata block and set the display width to 80% with automatic height [confirmed].
