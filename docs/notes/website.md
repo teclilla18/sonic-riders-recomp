@@ -1,7 +1,7 @@
-# Website (Riders Plus, GitHub Pages)
+# Website (Riders Crosswake, GitHub Pages)
 
 Live: https://teclilla18.github.io/sonic-riders-recomp/ (since 2026-11-19). The project's public name is
-**Riders Plus**; the gameplay changes are the "Riders Plus rules". Repository and URL keep `sonic-riders-recomp`.
+**Riders Crosswake**; the gameplay changes are the "Riders Crosswake rules". Repository and URL keep `sonic-riders-recomp`.
 
 - Source: branch **`gh-pages`** (orphan, website only; never merge with main). Worktree: `.local/gh-pages`.
   GitHub Pages serves `gh-pages` `/` (before 2026-11-19: `main` `/docs`). Full procedure, rules and rollback:

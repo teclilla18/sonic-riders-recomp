@@ -1,11 +1,11 @@
 name: Bug report
-description: Something in Riders Plus does not work, looks or sounds wrong, runs slowly, or will not install.
+description: Something in Riders Crosswake does not work, looks or sounds wrong, runs slowly, or will not install.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping make Riders Plus better!
+        Thanks for helping make Riders Crosswake better!
 
         **Never attach game files**: no disc image (.iso/.rvz), builds (.nro/.nsp/.exe/.apk/.ipa), saves,
         extracted game files or keys. Issues containing them are deleted. Logs and screenshots are fine.

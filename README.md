@@ -1,4 +1,4 @@
-<p align="center"><b>New: Riders Plus has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
+<p align="center"><b>New: Riders Crosswake has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
 
 <p align="center">
   <img src="docs/images/switch2-poster.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw. Sonic Riders now runs on Nintendo Switch 2 via homebrew.">
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Plus website</a>
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Crosswake website</a>
   &nbsp;·&nbsp;
   <a href="https://www.facebook.com/ridersplusgame">Facebook</a>
   &nbsp;·&nbsp;
@@ -54,7 +54,7 @@
 </p>
 
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
-> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Plus.
+> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Crosswake.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
 > [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). A huge thank
 > you to the Switch 2 homebrew developers for making this possible.
@@ -62,16 +62,16 @@
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
-## Riders Plus: break the limits
+## Riders Crosswake: break the limits
 
 <p align="center">
   <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
 </p>
 
-**Riders Plus** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
-gear; the limits are what change. Turn it off any time in **Settings > Gameplay > Riders Plus** for the original rules.
+**Riders Crosswake** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
+gear; the limits are what change. Turn it off any time in **Settings > Gameplay > Riders Crosswake** for the original rules.
 
-| | Original game | Riders Plus |
+| | Original game | Riders Crosswake |
 |---|---|---|
 | Ring limit | 100 | **999** (a hit or a fall still costs 100) |
 | Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 300** |
@@ -101,7 +101,7 @@ at Lv. 4 and 215 / 300 at Lv. 5.
 
 <p align="center">
   <img src="docs/images/gear-levels-chart.svg" width="49%" alt="Chart: Blue Star top speed and boost from Lv. 1 to Lv. 5">
-  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Plus">
+  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Crosswake">
   <br>
   <img src="docs/images/riders-plus/trick-rank-ss.jpg" width="49%" alt="Rank SS trick in Metal City">
 </p>

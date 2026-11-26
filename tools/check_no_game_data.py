@@ -76,7 +76,7 @@ OWN_ART = {
     "docs/images/issues/mp-level-hud.jpg": "e8d45030f746c1ce4f90e66e622662965dd961e0",  # issue: split-screen HUD stays Lv 3 (user, 2026-11-16)
     "docs/images/v0.8.2/online-coming-soon.jpg": "e4710f7b6b9a3e3f14b827d7dc1e8db5dfa89aac",  # Temporary commissioned-art notice
     "docs/images/v0.8.2/riders-plus-lv5.jpg": "334b4f1100ec2981fd006e6ea71ffbc81046e2e1",
-    # README Riders Plus section (the user's OK, 2026-11-16): the user's recorded PC race, replayed at 21:9
+    # README Riders Crosswake section (the user's OK, 2026-11-16): the user's recorded PC race, replayed at 21:9
     "docs/images/riders-plus/lv4-level-up.jpg": "49e32a6731443637290c05c66091ecf539dfbbd5",
     "docs/images/riders-plus/lv5-level-up.jpg": "e943e0f254e90fc9076ac0dedd5fbbde8db8b0c1",
     "docs/images/riders-plus/gold-capsule-298.jpg": "785f018329aae3140b9fa36fadfc437808b482fb",

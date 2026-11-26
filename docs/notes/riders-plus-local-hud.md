@@ -1,4 +1,4 @@
-# Riders Plus Super Sonic and local HUD (2026-11-18)
+# Riders Crosswake Super Sonic and local HUD (2026-11-18)
 
 Current follow-up implements the two defects investigated below:2P clock reservation/panel grouping and
 finished-phase retirement before application/feedback. See the final section for tests and deployment.
@@ -29,7 +29,7 @@ OunceMTP backups, apply/readback and rollback are documented in [switch2-mtp.md]
   and `818160C8` otherwise limit it to 100. Extend only their ceiling to `max_air * ring_cap / 100`, preserving
   the denominator, all native drains/boost costs and the stat's max-air value. Ring-word-only pokes disappear
   on the next native update; resource tests must change both the fuel and mirror coherently.
-- Super-only balance, Riders Plus on: Base top/boost/drift 195/270/110, Lv.4 220/300/125 at 200 rings,
+- Super-only balance, Riders Crosswake on: Base top/boost/drift 195/270/110, Lv.4 220/300/125 at 200 rings,
   Lv.5 240/330/140 at 300 rings (km/h). Multiply each captured unscaled live field by its target / vanilla
   baseline (top182, boost250, drift100), so existing stat mods retain their proportional changes.
   These are active-block values, not maximum road speeds in every terrain/state. Vanilla Super is unchanged.

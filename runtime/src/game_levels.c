@@ -1,4 +1,4 @@
-/* Gear levels 4 and 5 (part of the "Riders Plus" option, formerly "Ring Limit 999": settings.c g_ring_cap != 100).
+/* Gear levels 4 and 5 (part of the "Riders Crosswake" option, formerly "Ring Limit 999": settings.c g_ring_cap != 100).
  *
  * The game keeps a racer's level in a byte at racer +0x102E (0..2 = Lv. 1..3), raised when the rings reach
  * 30 / 60 (byte table at REL rodata 0x19FC) and lowered below them, and three per-level stat blocks of
@@ -41,7 +41,7 @@ extern volatile int g_ring_cap;
 static const float k_top[3]   = {1.0f, 200.0f / 180.0f, 215.0f / 180.0f};
 static const float k_boost[3] = {1.0f, 1.10f, 1.20f};
 static const float k_drift[3] = {1.0f, 1.10f, 1.25f};
-/* Super only, Riders Plus on: target top/drift/boost from the unmodified 182/100/250 live baseline.
+/* Super only, Riders Crosswake on: target top/drift/boost from the unmodified 182/100/250 live baseline.
  * Ratios preserve stat mods; always multiply the captured unscaled field, including the Base tier. */
 static const float k_super[3][3] = {
     {195.0f / 182.0f, 220.0f / 182.0f, 240.0f / 182.0f},
@@ -83,7 +83,7 @@ static int active_race(void) {
            ld32(GAME_RACE_PHASE) != GAME_RACE_FINISHED;
 }
 
-/* Ring Replenish (Riders Plus option): Super Sonic's rings grow at this share of the air the same move gives
+/* Ring Replenish (Riders Crosswake option): Super Sonic's rings grow at this share of the air the same move gives
  * (the user, 2026-11-20: the first build's rate was 30 % too fast). */
 #define REPLENISH_NUM 1
 #define REPLENISH_DEN 2   /* 50 % (fourth tuning, 2026-11-20: 30 % felt "too nerfed ... pointless") */
@@ -174,13 +174,13 @@ uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value) {
     return old + paid;
 }
 
-/* Super Sonic's invisible ring magnet (Riders Plus, the user 2026-11-20, with the dearer held boost). The game's
+/* Super Sonic's invisible ring magnet (Riders Crosswake, the user 2026-11-20, with the dearer held boost). The game's
  * Magnetic Barrier (item box type 7, "draws in rings like a magnet") is f_8188CC74(racer index): it sets racer +0xBB0
  * bit 0x4 and starts task 818F0B94, which registers a collision sphere around the racer (f_81852314, touch callback
  * 818F0EA4 pulls the rings), draws the electric bubble, and ends after 600 steps (timer task +0x1C) by clearing the
  * bit. The flag alone does nothing (Switch 2 test). So: while a Super Sonic has no barrier, one is started for him
  * (lv_magnet_spawn, at his fuel step); his barrier's timer is held at 0 (lv_magnet_keep) and its drawing is skipped
- * (lv_magnet_hide). Game memory, game steps only: online and recordings stay in step (Riders Plus is synced). */
+ * (lv_magnet_hide). Game memory, game steps only: online and recordings stay in step (Riders Crosswake is synced). */
 void f_8188CC74(Cpu* c);
 
 static int magnet_racer(uint32_t task) {  /* the Super Sonic racer a Magnetic Barrier task belongs to, else 0 */
@@ -618,9 +618,9 @@ void lv_texture_decoded(GxTexture* t) {
             make_cell(t, &k_kind[kind], 319 + 22 * e, 199, 22, 22, k_kind[kind].dx[e], k_kind[kind].dy);
 }
 
-/* Spin scenes (Riders Plus): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
+/* Spin scenes (Riders Crosswake): each counted stick turn refills a racer's air by 5000, but Super Sonic's air is his
  * rings and the game's refill stops at his normal tank (100 rings), so he gained nothing. With Ring Replenish each turn
- * gives him SPIN_FUEL here (1600, about 1.45 rings), up to the Riders Plus ceiling (lv_super_air_cap). patches.txt: the turn is
+ * gives him SPIN_FUEL here (1600, about 1.45 rings), up to the Riders Crosswake ceiling (lv_super_air_cap). patches.txt: the turn is
  * counted at 818A78E8 (racer r3: +0xA04 bit 31), once per turn. */
 void lv_super_spin_turn(uint32_t racer) {
     if (!settings_ring_replenish() || !super_racer(racer)) return;

@@ -91,7 +91,7 @@ decl extern volatile int g_ring_cap;
 # cap: the higher of 200 km/h and the racer's own + 80 km/h
 8188A018 before { if (g_ring_cap != 100) { union { uint32_t u; float f; } cur_; cur_.u = ld32(c->r[21] + 0xAACu); double v_ = (double)cur_.f + 80.0 / 216.0; if (v_ > c->f[0].ps0) { float s_ = (float)v_; c->f[0].ps0 = s_; c->f[0].ps1 = s_; } } }
 # drift dash (racer r29): 818DF63C adds the level block's drift-dash speed (+0x30) to the speed (+0xAAC), then
-# 818DF648-818DF684 clamp it to the constant at r31+0x60 (f0 = min, f3 = after the add). With Riders Plus: no clamp,
+# 818DF648-818DF684 clamp it to the constant at r31+0x60 (f0 = min, f3 = after the add). With Riders Crosswake: no clamp,
 # the dash adds to the racer's own speed (user request 2026-11-16)
 818DF684 before { if (g_ring_cap != 100) { c->f[0].ps0 = c->f[3].ps0; c->f[0].ps1 = c->f[3].ps0; } }
 # falling off the course: the respawn (fn 81817264) stores 0 (r6, which also clears other fields after it) as the
@@ -108,7 +108,7 @@ decl void lv_racer_reset(uint32_t racer);
 # Ring-powered fuel is clamped before conversion back to rings. Super keeps his own max-air
 # denominator (and per-ring cost); only the ceiling is extended, never the stat's resource scale.
 decl uint32_t lv_super_air_cap(uint32_t racer, uint32_t air, uint32_t max_air, uint32_t original);
-# Ring Replenish (game_levels.c, Riders Plus option): Super Sonic keeps the step's air rewards (+0x988, thrown
+# Ring Replenish (game_levels.c, Riders Crosswake option): Super Sonic keeps the step's air rewards (+0x988, thrown
 # away for ring-powered gear at 81815EEC), and the fuel before the step's gains is noted (both branches) so the
 # clamps below keep only part of a gain
 decl uint32_t lv_super_rewards(uint32_t racer, uint32_t rewards, uint32_t original);
@@ -139,7 +139,7 @@ decl uint32_t lv_hud_cell(uint32_t racer, uint32_t cell, int kind);
 81833300 after c->r[3] = lv_hud_cell(c->r[26], c->r[3], 1);
 81831148 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
 81831178 after c->r[9] = lv_hud_cell(c->r[21], c->r[9], 0);
-# ---- Charge jump (game_levels.c; with the 999 ring cap, "Riders Plus"): the slowdown while A charges a jump
+# ---- Charge jump (game_levels.c; with the 999 ring cap, "Riders Crosswake"): the slowdown while A charges a jump
 # starts 0.75 s after the charge does. fn_1_6D5D4, racer r30: count at entry (after mr r30, r3), then the
 # slowdown's t/50 in f0 just before it is squared (fmuls f0, f0, f0; then speed += -0.009259 * f0)
 decl void jump_charge_step(uint32_t racer);
@@ -150,7 +150,7 @@ decl double jump_charge_scale(uint32_t racer, double orig);
 # game step while boosting) has just counted the timer +0x8AC down; a held boost may put it back before the test
 decl void boost_hold_tick(uint32_t racer);
 81896CC0 before boost_hold_tick(c->r[31]);
-# ---- Spin scenes (game_levels.c, Riders Plus): a counted stick turn (+0xA04 bit 31 just set, racer r3) also
+# ---- Spin scenes (game_levels.c, Riders Crosswake): a counted stick turn (+0xA04 bit 31 just set, racer r3) also
 # fills Super Sonic's ring fuel
 decl void lv_super_spin_turn(uint32_t racer);
 818A78EC before lv_super_spin_turn(c->r[3]);
@@ -158,7 +158,7 @@ decl void lv_super_spin_turn(uint32_t racer);
 # by stfs f0, 0xaac(r24)) waits during the same 0.75 s
 decl int jump_charge_grace(uint32_t racer);
 81815ABC before { if (jump_charge_grace(c->r[24])) { c->f[0].ps0 = c->f[3].ps0; c->f[0].ps1 = c->f[3].ps0; } }
-# ---- Super Sonic in constant flight (super_flight.c, Riders Plus): an object's playing animation +0x764 is set from
+# ---- Super Sonic in constant flight (super_flight.c, Riders Crosswake): an object's playing animation +0x764 is set from
 # its queue (+0x78C, 16-byte entries, count +0x7CC) at three places; a Super Sonic's riding animations become the
 # flying one there
 decl uint32_t super_flight_anim(uint32_t obj, uint32_t anim);
@@ -166,7 +166,7 @@ decl uint32_t super_flight_anim(uint32_t obj, uint32_t anim);
 818B6790 before c->r[4] = super_flight_anim(c->r[3], c->r[4]);
 818B6D24 before c->r[3] = super_flight_anim(c->r[26], c->r[3]);
 
-# ---- Riders Plus reward sources (game_levels.c lv_reward_site): every place the game adds to a racer's step air rewards
+# ---- Riders Crosswake reward sources (game_levels.c lv_reward_site): every place the game adds to a racer's step air rewards
 # (+0x988). For a player's Super Sonic each gain is scaled by its kind (tricks by rank, flying, objects...); SR_BOOSTLOG
 # logs every site and amount. Sites found by their store (stw rB, 0x988(rA)).
 decl uint32_t lv_reward_site(uint32_t site, uint32_t racer, uint32_t value);

@@ -18,7 +18,7 @@
 - docs/TEXTURE-PACKS.md: texture packs on every device with nine drawn pictures; linked from the README (Get it
   line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
 
-- Website (gh-pages fa21b1d, 98f33f0, 2026-11-21): v0.9.0 features on the Riders Plus page (Hold to boost, Auto
+- Website (gh-pages fa21b1d, 98f33f0, 2026-11-21): v0.9.0 features on the Riders Crosswake page (Hold to boost, Auto
   spin, same character, Super Sonic 350 km/h / magnet / Ring Replenish / flight option, toggles, Cheats tab, release
   charts), home ticker/teaser, FAQ (texture guide link, sleep fix, FINISH UPDATE). Checked in Chrome at desktop and
   phone width. Rule (user, 2026-11-21): update the website after every release, pleasing and easy to read.
@@ -84,7 +84,7 @@
 7. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
 8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
-9. Super Sonic overhaul (Riders Plus only; plan only). History-only CI failure: ask before changing `--history`.
+9. Super Sonic overhaul (Riders Crosswake only; plan only). History-only CI failure: ask before changing `--history`.
 
 ## Devices (user's own)
 

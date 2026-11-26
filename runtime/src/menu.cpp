@@ -649,7 +649,7 @@ void tab_gameplay() {
         settings_apply();
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
-    if (check("Riders Plus", &g_settings.ring_cap_999,
+    if (check("Riders Crosswake", &g_settings.ring_cap_999,
               "On by default: a racer keeps collecting rings past 100, up to 999, and a hit from an opponent's "
               "boost or a fall off the course takes 100 rings instead of all of them. Two more gear levels: "
               "Lv. 4 at 200 rings and Lv. 5 at 350, each with a higher top speed and boost. The gold 100-ring "
@@ -659,24 +659,24 @@ void tab_gameplay() {
               "original game: at most 100 rings and Lv. 3, a hit or a fall takes them all, the gold capsule is "
               "gone once taken, panels and shoes set a fixed speed, and a jump charge slows you at once."))
         settings_apply();
-    /* the Riders Plus extras: a fold-out list under its check box, each on by default, active only with it */
-    if (ImGui::TreeNode("Riders Plus features")) {
+    /* the Riders Crosswake extras: a fold-out list under its check box, each on by default, active only with it */
+    if (ImGui::TreeNode("Riders Crosswake features")) {
         ImGui::BeginDisabled(!g_settings.ring_cap_999);
         if (check("Auto spin", &g_settings.auto_spin,
-                  "On by default (with Riders Plus). In the Automatic Trails, where the game takes over and asks you "
+                  "On by default (with Riders Crosswake). In the Automatic Trails, where the game takes over and asks you "
                   "to rotate the Control Stick as fast as you can, it is spun for you at a fast player's pace (7 turns "
                   "a second): your speed and air climb, and no more wrecking your sticks. Only your own racers, never "
                   "the CPUs."))
             settings_apply();
         if (check("Hold to boost", &g_settings.boost_hold,
-                  "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
+                  "On by default (with Riders Crosswake). Keep B (or X) held after boosting and the boost goes on, like "
                   "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
                   "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
                   "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
                   "350 km/h. Online, the host's setting is used."))
             settings_apply();
         if (check("Ring Replenish", &g_settings.ring_replenish,
-                  "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "
+                  "On by default (with Riders Crosswake). Super Sonic's air is his rings, so the game gives him "
                   "nothing where other racers refill air. With this on he gains rings instead: in the spin "
                   "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes. Online, "
                   "the host's setting is used."))
@@ -687,7 +687,7 @@ void tab_gameplay() {
                   "he can stay on his board until your next move; a fix is coming. Not used in online races."))
             settings_apply();
         ImGui::EndDisabled();
-        if (!g_settings.ring_cap_999) note("Turn on Riders Plus to use these.");
+        if (!g_settings.ring_cap_999) note("Turn on Riders Crosswake to use these.");
         ImGui::TreePop();
     }
 }
