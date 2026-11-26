@@ -87,8 +87,8 @@ OWN_ART = {
     "docs/images/riders-plus/lv5-boost.jpg": "56cefaa56117aa79fc437d676cc7f10fe9287daa",
     "docs/images/riders-plus/trick-rank-ss.jpg": "d8d432b8da8a8a35b25ecaf7131ad59e8620f533",
     "docs/images/riders-plus/tunnel-294.jpg": "8ac53a61c267a2e2cbb103b35d38f4c7b229803d",
-    "launcher/icon_256.png": "f9b393122164043da06b4002970f1a78aee9d7af",  # Temporary commissioned-art notice
-    "launcher/icon_32.png": "086786f3ba04dfc99c50e9956dd6614db8327640",  # Temporary commissioned-art notice
+    "launcher/icon_256.png": "f27b0ff95984666c5fd48087e54d3e5163b7fc01",  # Riders Rebuilt logo (maintainer-approved AI exception, 2026-11-26)
+    "launcher/icon_32.png": "af21825c7fc73fcca80b7295ed2bd62d4eb6631a",  # Riders Rebuilt logo (maintainer-approved AI exception, 2026-11-26)
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
     "setup/icon_256.jpg": "4ab58b2f4da4418a9febadea57937eae7f2da5a6",  # the same, 256 x 256 for the Switch NRO
     "android/touch_icons/boost_b.png": "e91d748d8a99c76b0aad985ea40ae1437c10e982",
@@ -116,8 +116,8 @@ PAST_ART = {
     "docs/images/v0.8.2/riders-plus-banner.jpg": {"74a6b9d10125473c5be6130b8520b29aabc5c750"},
     "docs/images/v0.8.2/online-coming-soon.jpg": {"2d581b0f9a375a972d77d26a7d870cfeade37af2"},
     "docs/images/switch2-alpha1-banner.jpg": {"b4be7ce0f7e34e3b56735283781a58c775fc5161"},
-    "launcher/icon_256.png": {"80541e60eb82d9440c001da3bc4c7240bda2b111"},
-    "launcher/icon_32.png": {"24e3018e7e6651be4cbba8228f81364bf9d0a70e"},
+    "launcher/icon_256.png": {"f9b393122164043da06b4002970f1a78aee9d7af", "80541e60eb82d9440c001da3bc4c7240bda2b111"},
+    "launcher/icon_32.png": {"086786f3ba04dfc99c50e9956dd6614db8327640", "24e3018e7e6651be4cbba8228f81364bf9d0a70e"},
     "docs/images/banner.jpg": {"54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b", "4c0e681fef3ff69d583129825b1023f00a86f0c5"},  # removed from README 2026-11-19
     "launcher/banner.jpg": {"a1d51fb7890668be5dfd126311b946aec8744339"},
     "setup/icon.png": {"b84f997daba5df2563d0c3526cf633aa87151ebf", "b42362f551138986cd53dda64721510c101a80e2"},

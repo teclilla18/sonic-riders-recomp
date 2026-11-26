@@ -2,7 +2,7 @@
 
 ## v0.10.0: Online Beta (2026-11-26)
 
-- The project is now called **Riders Rebuilt**.
+- The project is now called **Riders Rebuilt**. The launchers and installers use the new Riders Rebuilt logo as their icon.
 - **Online Beta** supports two players on Windows PC, the original Nintendo Switch family, and 64-bit Android. Open the game's settings and choose **Online > Open Online**. The game restarts into the lobby.
 - Host or join on the same network, or share an internet invite code privately. The lobby shows the room rules, ping and input delay. Players need the same online version.
 - Online races have no CPU racers. The host sets Riders Rebuilt rules, Hold to boost, Ring Replenish, Super Sonic flight and Limit Break. Each player sets their own Auto spin and keeps control until their own finish.
