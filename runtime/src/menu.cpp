@@ -898,24 +898,51 @@ void tab_online() {
 }
 
 /* Internet races: a number pad for invite codes (10 or 15 digits), the code screen, approval and input delay. */
+#ifdef SR_PHONE  /* fingers: keys about 2.3x the PC size (the S23 showed 5 mm keys), bigger digits */
+#define PAD_KEY ImVec2(150,110)
+#define PAD_WIDE ImVec2(200,110)
+#define PAD_FONT 1.8f
+#else
+#define PAD_KEY ImVec2(64,48)
+#define PAD_WIDE ImVec2(100,48)
+#define PAD_FONT 1.0f
+#endif
 static bool code_pad(const char* title,char* typed,size_t cap) {
     bool ok=false;
-    if (ImGui::BeginPopupModal(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+    bool open=ImGui::BeginPopupModal(title,nullptr,ImGuiWindowFlags_AlwaysAutoResize);
+#if !defined(__SWITCH__) && !defined(SR_PHONE)
+    {   /* PC: SDL sends typed digits only with text input on; on while any code pad is open (both pads share it) */
+        static int last_open=-10; static bool on;
+        int f=ImGui::GetFrameCount();
+        if (open) { last_open=f; if (!on) { SDL_StartTextInput(); on=true; } }
+        else if (on && last_open<f-1) { SDL_StopTextInput(); on=false; }
+    }
+#endif
+    if (open) {
+        ImGui::SetWindowFontScale(PAD_FONT);
         char pretty[40]; inet_code_pretty(typed,pretty,sizeof pretty);
         ImGui::TextWrapped("Type the 10 or 15 numbers your friend sees.");
         ImGui::Text("%s_",pretty);
+        {   /* PC keyboard: the number row and the number pad type (SDL text input, overlay_text), Backspace deletes */
+            ImGuiIO& io=ImGui::GetIO();
+            for (int k=0;k<io.InputQueueCharacters.Size;k++) {
+                ImWchar c=io.InputQueueCharacters[k]; size_t n=strlen(typed);
+                if (c>='0' && c<='9' && n<15 && n+1<cap) { typed[n]=(char)c; typed[n+1]=0; }
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+        }
         const char* keys="1234567890";
         for (int i=0;keys[i];i++) {
             ImGui::PushID(2000+i); char label[2]={keys[i],0};
-            if (ImGui::Button(label,ImVec2(64,48))) { size_t n=strlen(typed); if (n<15 && n+1<cap) { typed[n]=keys[i]; typed[n+1]=0; } }
+            if (ImGui::Button(label,PAD_KEY)) { size_t n=strlen(typed); if (n<15 && n+1<cap) { typed[n]=keys[i]; typed[n+1]=0; } }
             if (i%3!=2 && i!=9) ImGui::SameLine();
             ImGui::PopID();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Delete",ImVec2(100,48))) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
+        if (ImGui::Button("Delete",PAD_WIDE)) { size_t n=strlen(typed); if (n) typed[n-1]=0; }
 #ifndef __SWITCH__
         ImGui::SameLine();
-        if (ImGui::Button("Paste",ImVec2(100,48))) {
+        if (ImGui::Button("Paste",PAD_WIDE)) {
             const char* c=ImGui::GetClipboardText(); size_t n=0;
             for (; c && *c && n<15 && n+1<cap; c++) if (*c>='0' && *c<='9') typed[n++]=*c;
             typed[n]=0;
@@ -923,10 +950,11 @@ static bool code_pad(const char* title,char* typed,size_t cap) {
 #endif
         size_t n=strlen(typed);
         ImGui::BeginDisabled(n!=10 && n!=15);
-        if (ImGui::Button("OK",ImVec2(100,48))) { ok=true; ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("OK",PAD_WIDE)) { ok=true; ImGui::CloseCurrentPopup(); }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel",ImVec2(100,48))) ImGui::CloseCurrentPopup();
+        if (ImGui::Button("Cancel",PAD_WIDE)) ImGui::CloseCurrentPopup();
+        ImGui::SetWindowFontScale(1.0f);
         ImGui::EndPopup();
     }
     return ok;
@@ -1435,7 +1463,7 @@ void overlay_mouse_button(int button, int down) {
 }
 
 void overlay_mouse_wheel(float dx, float dy) {
-    if (!g_open) return;
+    if (!overlay_menu_open()) return;  /* the F1 menu or the online lobby (was F1 only: no scrolling online) */
     init();
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);

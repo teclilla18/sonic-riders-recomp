@@ -45,6 +45,7 @@ static const GcPad k_neutral = {0, 0x80, 0x80, 0x80, 0x80, 0, 0};
 
 void input_init(void) {
     padConfigureInput(PLAYERS, HidNpadStyleSet_NpadStandard);
+    hidInitializeTouchScreen();  /* handheld: fingers work the open menu / online lobby (touch_menu) */
     /* single Joy-Cons are held sideways (only matters once the user splits a pair) */
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
     /* player 1's controller and handheld mode are read separately: one combined PadState reported
@@ -175,6 +176,25 @@ static GcPad read_player(int i, unsigned* ov) {
     return p;
 }
 
+/* Handheld touch screen on the open menu or online lobby: the panel reports 1280 x 720, the overlay's own size
+ * (OVERLAY_W x OVERLAY_H), so a finger maps 1:1. Docked there are no touches. Same thread as overlay_input. */
+static void touch_menu(void) {
+    static int down;
+    static float lx, ly;
+    HidTouchScreenState t = {0};
+    int n = hidGetTouchScreenStates(&t, 1) ? t.count : 0;
+    if (!overlay_menu_open()) { if (down) overlay_pointer(lx, ly, 0); down = 0; return; }
+    if (n > 0) {
+        lx = (float)t.touches[0].x * OVERLAY_W / 1280.0f;
+        ly = (float)t.touches[0].y * OVERLAY_H / 720.0f;
+        overlay_pointer(lx, ly, 1);
+        down = 1;
+    } else if (down) {
+        overlay_pointer(lx, ly, 0);
+        down = 0;
+    }
+}
+
 void input_pump(void) {
     if (overlay_take_controllers_request()) show_controller_applet();
     GcPad p[PLAYERS];
@@ -200,6 +220,7 @@ void input_pump(void) {
     /* the settings menu (overlay.h) is driven by player 1; while it is open every port is neutral */
     ov |= input_script_menu();  /* SR_INPUT "M." steps (tests) */
     int menu = overlay_input(ov);
+    touch_menu();
     for (int i = 0; i < PLAYERS; i++) atomic_store(&g_state[i], pack(menu ? &k_neutral : &p[i]));
 }
 
