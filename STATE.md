@@ -13,6 +13,8 @@
 
 ## On main since v0.9.0 (docs only)
 
+- The v0.9.0 release notes and website feature overview use the maintainer's annotated gameplay screenshot.
+
 - The Switch 2 Alpha 3 release notes use the maintainer-approved composite of a console image and their gameplay photo.
 
 - The v0.8.2 release notes use the Riders Rebuilt name and the maintainer-approved Rainbow Rush artwork credited to Lanmana.

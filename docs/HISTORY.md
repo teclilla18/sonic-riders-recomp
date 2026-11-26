@@ -2174,3 +2174,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 - Added the maintainer-approved AI-assisted composite of a Switch 2 console image and the maintainer's own gameplay photo.
   The artwork exception applies to this release banner. The release tag and setup download remain available.
+
+## 2026-11-26: v0.9.0 feature artwork
+
+- The maintainer supplied their own gameplay screenshot annotated in Canva for the v0.9.0 release and website overview.
+  Published at its original dimensions with a full-size link. The release tag and setup downloads remain available.
