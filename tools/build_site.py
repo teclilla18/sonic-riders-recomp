@@ -125,7 +125,7 @@ def parse_progress(make_progress, readme):
 
 
 def slim_release(r):
-    return dict(name=(r.get('name') or r['tag_name']).replace('Riders Plus', 'Riders Rebuilt'), tag=r['tag_name'], prerelease=r['prerelease'],
+    return dict(name=re.sub(r'\bRiders (?:Plus|Crosswake)\b', 'Riders Rebuilt', r.get('name') or r['tag_name'], flags=re.I), tag=r['tag_name'], prerelease=r['prerelease'],
                 date=(r.get('published_at') or '')[:10], url=r['html_url'],
                 assets=[dict(name=a['name'], url=a['browser_download_url'], size=a['size'],
                              downloads=a['download_count']) for a in r.get('assets', [])])
@@ -385,7 +385,7 @@ def load_socials():
 def social_cards(items, reveal):
     cls = 'comm panel reveal' if reveal else 'comm panel'
     return '\n'.join(f'    <a class="{cls}" href="{E(i["url"])}" rel="me" data-social><h3>{E(i["name"])}</h3>'
-                     f'<p>{E(i.get("about", ""))} {E(i.get("handle", ""))}</p><span class="go">Follow →</span></a>' for i in items)
+                     f'<p>{E(i.get("about", ""))}</p><span class="go">Follow →</span></a>' for i in items)
 
 
 def social_links(items):
@@ -426,7 +426,7 @@ def render(name, body, meta, partials):
             f'<script src="assets/js/site.js" defer></script>\n</body>\n</html>\n')
 
 
-REDIRECTS = {'riders-plus.html': 'riders-rebuilt.html', 'install-guide.html': 'install.html', 'update-guide.html': 'update.html'}
+REDIRECTS = {'riders-plus.html': 'riders-rebuilt.html', 'riders-crosswake.html': 'riders-rebuilt.html', 'install-guide.html': 'install.html', 'update-guide.html': 'update.html'}
 
 
 def build():

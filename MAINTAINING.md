@@ -15,8 +15,8 @@ a minute or two. A typo leaves the previous links on the site, so nothing breaks
 ```json
   {
     "name": "YouTube",
-    "handle": "@riderscrosswake",
-    "url": "https://www.youtube.com/@riderscrosswake",
+    "handle": "@channel-handle",
+    "url": "https://www.youtube.com/@channel-handle",
     "about": "Trailers and gameplay videos."
   }
 ```
