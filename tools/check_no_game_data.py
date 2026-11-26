@@ -49,6 +49,10 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # maintainer's own art (not from the game), exactly these files with exactly this content. A new or changed
 # picture is refused until its SHA-1 is put here. The temporary art notices are also listed by exact hash.
 OWN_ART = {
+    "docs/images/v0.9.0/riders-rebuilt-overview.jpg": "367159e2206ec59ffcba9181a18b0c29b865df58",  # Maintainer's Canva artwork using their gameplay capture
+    "docs/images/switch2-alpha3-banner.jpg": "ccbd00b191343185ca1d6a2145c82a1ebd9fe09d",  # Maintainer-approved Switch 2 composite with blue background
+    "docs/images/v0.8.2/rainbow-rush.jpg": "4ef97573b2fd22e9a5ad24c321dfa982fdda91bd",  # Lanmana artwork supplied and approved by the maintainer for v0.8.2
+    "docs/images/sonic-riders-readme.jpg": "f073efe44153a731bc96f6f1f4a3473180487f2c",  # SEGA promotional artwork supplied by the maintainer for the README
     # User-requested documentation: reviewed current installer UI, privacy masks and vector annotations.
     "docs/images/installation/switch-completion.png": "1cb4e8d8313b987baf8fdc731e780fd6b4de6dc0",
     "docs/images/installation/switch-installer.png": "76fe8771aefad69448b6c98767a9e02cb566a664",
@@ -61,7 +65,7 @@ OWN_ART = {
     "docs/images/installation/switch2-select-card.png": "3415e8d035862c907f3cdeefe8bd3dbe7e84a600",
     "docs/images/installation/switch2-select-disc.png": "eff37dd176652aa70c7c8977d04d0e95f70abfcb",
     "docs/images/switch2-alpha1-banner.jpg": "50f383f932945e183f8a2ab34c8d84d9083e9887",  # Temporary commissioned-art notice
-    "docs/images/switch2-poster.jpg": "557fff627f1130606981565212eb3223e3e86544",  # Temporary commissioned-art notice and Switch 2 homebrew announcement
+    "docs/images/switch2-poster.jpg": "ccbd00b191343185ca1d6a2145c82a1ebd9fe09d",  # Maintainer-approved Switch 2 composite with blue background
     "docs/images/riders-plus/riders-plus-banner.jpg": "7fa3b8313fe95d24cd5c040a76954685fef24315",  # Temporary commissioned-art notice
     "docs/images/v0.9.0/super-sonic-banner.jpg": "79a2665eb5b64fbce7f0c94920175405cf4e656e",  # Temporary commissioned-art notice
     "launcher/banner.jpg": "0c0d252792e9f873acabec1def46d38675b10f8f",  # Temporary commissioned-art notice
@@ -101,7 +105,8 @@ OWN_ART = {
 # the user's choice, 2026-11-07) and cedry2kio's game icon (the user's OK, 2026-11-10); and the maintainer's own
 # touch-control art. Committing any of these again as a new file is still refused unless it is in OWN_ART.
 PAST_ART = {
-    "docs/images/switch2-poster.jpg": {"1b3ad238b2a0864f3b838fbde681415262cc5d47"},
+    "docs/images/switch2-alpha3-banner.jpg": {"3bc7fa019646a0f6b0ad97200748e7a830820fbb"},
+    "docs/images/switch2-poster.jpg": {"1b3ad238b2a0864f3b838fbde681415262cc5d47", "557fff627f1130606981565212eb3223e3e86544"},
     "docs/images/installation/switch-installer.png": {"c99dbc9b73cd2eff24ca90320837d46c7323a15d"},
     "docs/images/installation/switch-completion.png": {"117e009d71e381fddb4c4cb6332ece8c87c3f63d"},
     "docs/images/installation/switch2-installer.png": {"2d0427e65a7c73bfdd9d84250ac27995cd60bf60"},

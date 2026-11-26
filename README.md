@@ -1,7 +1,7 @@
 <p align="center"><b>New: Riders Rebuilt has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
 
 <p align="center">
-  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw. Sonic Riders now runs on Nintendo Switch 2 via homebrew.">
+  <img src="docs/images/sonic-riders-readme.jpg" width="80%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
 </p>
 
 <p align="center">
@@ -56,8 +56,7 @@
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
 > Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Rebuilt.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
-> [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). A huge thank
-> you to the Switch 2 homebrew developers for making this possible.
+> [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml).
 > [What to expect](docs/SWITCH2-ALPHA.md)
 >
 > **🌐 New: the Online Beta.** Race a friend online on PC, Switch and Android, at home or over the internet, and
@@ -66,10 +65,12 @@
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
+<a id="riders-crosswake-break-the-limits"></a>
+
 ## Riders Rebuilt: break the limits
 
 <p align="center">
-  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
+  <img src="https://i.redd.it/20rt6qvlpr1e1.gif" width="500" alt="Sonic wearing green racing goggles">
 </p>
 
 **Riders Rebuilt** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
@@ -232,10 +233,8 @@ Known issues: [Issues](../../issues). What changed in each version: [CHANGELOG](
 
 The game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of time on your PC
 (**static recompilation**), and the GameCube hardware (graphics, disc, audio, memory card,
-controllers) is reimplemented natively: deko3d on the Switch, OpenGL 3.3 or Vulkan elsewhere. The approach follows
-[SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
-[ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp), whose PowerPC→C translator this
-project forks. Current status is in [STATE.md](STATE.md); design notes in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/HISTORY.md](docs/HISTORY.md).
+controllers) is reimplemented natively: deko3d on the Switch, OpenGL 3.3 or Vulkan elsewhere.
+Current status is in [STATE.md](STATE.md); design notes in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Legal
 
@@ -247,13 +246,13 @@ project forks. Current status is in [STATE.md](STATE.md); design notes in [docs/
 - **Never share** your built `.nro`, `.exe` or `.nsp`, or your disc image. Issues and pull requests
   that contain game files are deleted.
 
-Licensed under the [Mozilla Public License 2.0](LICENSE), like the ZeldaWWHDRecomp translator it
-forks (`third_party/LICENSE-MPL-2.0`).
+Licensed under the [Mozilla Public License 2.0](LICENSE). The translator license is in `third_party/LICENSE-MPL-2.0`.
 
 ## Credits
 
-- Previous Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana).
-- Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
+- README header: Sonic Riders promotional artwork © [SEGA](https://sonic.sega.jp/riders/).
+- Riders Rebuilt section animation: [Sonic Riders GIF hosted on Reddit](https://i.redd.it/20rt6qvlpr1e1.gif).
+- Thanks to the Switch 2 homebrew developers who made the alpha possible, including the teams behind ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell. See the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the
   PowerPC→C translator this project forks (MPL-2.0).

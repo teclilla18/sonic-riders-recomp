@@ -2283,6 +2283,36 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
 - Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.
 
+## 2026-11-26: README header artwork
+
+- Replaced the placeholder at the top of the README with the maintainer-supplied Sonic Riders promotional artwork.
+  The illustration is unchanged, with its SEGA attribution in the Credits section. Removed the JPEG metadata block and set the display width to 80% with automatic height [confirmed].
+- Renamed the README section and its charts to Riders Rebuilt, kept the old anchor, and removed the former poster credit [confirmed].
+- Replaced the image under the Riders Rebuilt heading with the supplied GIF. The Reddit URL serves the exact attached animation [confirmed].
+
+## 2026-11-26: v0.8.2 release artwork
+
+- Added Lanmana's Rainbow Rush artwork for the v0.8.2 release notes and updated the display name to Riders Rebuilt. The release tag and setup downloads remain available.
+
+## 2026-11-26: Switch 2 Alpha 3 release banner
+
+- Added the maintainer-approved AI-assisted composite of a Switch 2 console image and the maintainer's own gameplay photo.
+  The artwork exception applies to this release banner. The release tag and setup download remain available.
+
+## 2026-11-26: v0.9.0 feature artwork
+
+- The maintainer supplied their own gameplay screenshot annotated in Canva for the v0.9.0 release and website overview.
+  Published at its original dimensions with a full-size link. The release tag and setup downloads remain available.
+
+## 2026-11-26: Blue-background Switch 2 release art
+
+- Carried the maintainer's blue-background revision to both applicable Switch 2 Alpha release banners and the website's share preview.
+  The Alpha 2 and Alpha 3 tags and setup downloads remain available.
+
+## 2026-11-26: Riders Rebuilt website naming
+
+- Updated the public site's display name and chart labels to Riders Rebuilt. Kept the old rules-page redirects and social destinations.
+
 ## 2026-11-26: Riders Rebuilt v0.10.0 release preparation
 
 - Updated the easy-read install and update sources for the two-player Online Beta and the Android no-PC app. The sources keep the previous download links for Linux, iOS and Switch 2 [confirmed]. Artifact republishing is pending.

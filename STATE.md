@@ -23,6 +23,16 @@
 
 ## On main since v0.9.0 (docs only)
 
+- The website uses Riders Rebuilt for the project and gameplay rules. Its old rules-page URLs redirect to the current one.
+
+- The v0.9.0 release notes and website feature overview use the maintainer's annotated gameplay screenshot.
+
+- The Switch 2 Alpha 2 and Alpha 3 release banners and website share previews use the maintainer's blue-background composite.
+
+- The v0.8.2 release notes use the Riders Rebuilt name and the maintainer-approved Rainbow Rush artwork credited to Lanmana.
+
+- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The README uses the Riders Rebuilt name, embeds the supplied gameplay-section GIF from Reddit, and keeps attribution in Credits.
+
 - README: website announcement line at the very top (b35298f).
 
 - docs/TEXTURE-PACKS.md: texture packs on every device with nine drawn pictures; linked from the README (Get it
