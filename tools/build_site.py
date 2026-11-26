@@ -1,4 +1,4 @@
-"""Build the Riders Crosswake website (Sonic Riders, recompiled; repo sonic-riders-recomp) (gh-pages branch). Python 3 standard library only.
+"""Build the Riders Rebuilt website (Sonic Riders, recompiled; repo sonic-riders-recomp) (gh-pages branch). Python 3 standard library only.
 
     py -3 tools/build_site.py sync     refresh content from origin/main + GitHub (needs git + internet)
     py -3 tools/build_site.py build    render every page from src/ into the branch root (offline)
@@ -125,7 +125,7 @@ def parse_progress(make_progress, readme):
 
 
 def slim_release(r):
-    return dict(name=(r.get('name') or r['tag_name']).replace('Riders Plus', 'Riders Crosswake'), tag=r['tag_name'], prerelease=r['prerelease'],
+    return dict(name=re.sub(r'\bRiders (?:Plus|Crosswake)\b', 'Riders Rebuilt', r.get('name') or r['tag_name'], flags=re.I), tag=r['tag_name'], prerelease=r['prerelease'],
                 date=(r.get('published_at') or '')[:10], url=r['html_url'],
                 assets=[dict(name=a['name'], url=a['browser_download_url'], size=a['size'],
                              downloads=a['download_count']) for a in r.get('assets', [])])
@@ -385,7 +385,7 @@ def load_socials():
 def social_cards(items, reveal):
     cls = 'comm panel reveal' if reveal else 'comm panel'
     return '\n'.join(f'    <a class="{cls}" href="{E(i["url"])}" rel="me" data-social><h3>{E(i["name"])}</h3>'
-                     f'<p>{E(i.get("about", ""))} {E(i.get("handle", ""))}</p><span class="go">Follow →</span></a>' for i in items)
+                     f'<p>{E(i.get("about", ""))}</p><span class="go">Follow →</span></a>' for i in items)
 
 
 def social_links(items):
@@ -399,8 +399,8 @@ def page_meta(text):
 
 
 def render(name, body, meta, partials):
-    title = meta.get('title', 'Riders Crosswake')
-    full_title = title if title.startswith('Riders Crosswake') else f'{title} · Riders Crosswake'
+    title = meta.get('title', 'Riders Rebuilt')
+    full_title = title if title.startswith('Riders Rebuilt') else f'{title} · Riders Rebuilt'
     desc = meta.get('description', 'Sonic Riders, running natively on Switch 2, Switch, PC, Android, Linux and iPhone. '
                                    'An unofficial fan port built from your own disc.')
     canonical = SITE + ('' if name == 'index.html' else name)
@@ -426,7 +426,7 @@ def render(name, body, meta, partials):
             f'<script src="assets/js/site.js" defer></script>\n</body>\n</html>\n')
 
 
-REDIRECTS = {'riders-plus.html': 'riders-crosswake.html', 'install-guide.html': 'install.html', 'update-guide.html': 'update.html'}
+REDIRECTS = {'riders-plus.html': 'riders-rebuilt.html', 'riders-crosswake.html': 'riders-rebuilt.html', 'install-guide.html': 'install.html', 'update-guide.html': 'update.html'}
 
 
 def build():
@@ -451,7 +451,7 @@ def build():
     for native in (False, True):
         g = data.guide(native)
         meta = dict(title=f'{g["platform"]} installation booklet', nav='guides',
-                    description=f'Illustrated, beginner-friendly installation booklet for Sonic Riders on {g["platform"]} (Riders Crosswake) ({g["edition"]}).')
+                    description=f'Illustrated, beginner-friendly installation booklet for Sonic Riders on {g["platform"]} (Riders Rebuilt) ({g["edition"]}).')
         (ROOT / f'install-{g["mode"]}.html').write_text(render(f'install-{g["mode"]}.html', booklet(g), meta, partials),
                                                        encoding='utf-8', newline='\n')
     for old, new in REDIRECTS.items():

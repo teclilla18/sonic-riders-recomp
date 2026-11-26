@@ -1,4 +1,4 @@
-/* Riders Crosswake website script. No dependencies. Every page works without it: the HTML already holds the
+/* Riders Rebuilt website script. No dependencies. Every page works without it: the HTML already holds the
    snapshot made by tools/build_site.py; this file refreshes it from GitHub's public data when it can. */
 (function () {
   'use strict';
@@ -71,14 +71,14 @@
       $all('[data-release="' + k[0] + '"]').forEach(function (card) {
         var dl = 0;
         (r.assets || []).forEach(function (a) { dl += a.download_count || 0; });
-        setText(card.querySelector('[data-rel-name]'), (r.name || r.tag_name).replace(/Riders Plus/gi, 'Riders Crosswake'));
+        setText(card.querySelector('[data-rel-name]'), (r.name || r.tag_name).replace(/\bRiders (?:Plus|Crosswake)\b/gi, 'Riders Rebuilt'));
         setText(card.querySelector('[data-rel-tag]'), r.tag_name);
         var t = card.querySelector('[data-rel-date]');
         if (t) { t.textContent = fmtDate(r.published_at); t.setAttribute('datetime', (r.published_at || '').slice(0, 10)); }
         setText(card.querySelector('[data-rel-dl]'), dl.toLocaleString('en-US'));
         $all('[data-rel-name], [data-rel-link]', card).forEach(function (a) { a.href = r.html_url; });
       });
-      $all('[data-latest="' + k[0] + '"]').forEach(function (el) { el.textContent = k[1] ? ((r.name || r.tag_name).replace(/Riders Plus/gi, 'Riders Crosswake')).split(':')[0] : r.tag_name; });
+      $all('[data-latest="' + k[0] + '"]').forEach(function (el) { el.textContent = k[1] ? ((r.name || r.tag_name).replace(/\bRiders (?:Plus|Crosswake)\b/gi, 'Riders Rebuilt')).split(':')[0] : r.tag_name; });
     });
     // Easy-read guides name the current ZIP files (patterns match PLATFORMS in tools/build_site.py)
     $all('[data-file]').forEach(function (el) {
@@ -108,7 +108,7 @@
         $all('[data-social]', parent).forEach(function (a) { a.remove(); });
         var html = items.map(function (i) {
           return '<a class="comm panel' + (reveal ? ' reveal in-view' : '') + '" href="' + esc(i.url) + '" rel="me" data-social><h3>' + esc(i.name) +
-            '</h3><p>' + esc(i.about || '') + ' ' + esc(i.handle || '') + '</p><span class="go">Follow →</span></a>';
+            '</h3><p>' + esc(i.about || '') + '</p><span class="go">Follow →</span></a>';
         }).join('');
         slot.insertAdjacentHTML('afterend', html);
       });
