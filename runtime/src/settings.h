@@ -39,6 +39,7 @@ typedef struct Settings {
     int auto_spin;      /* races: the port turns the stick in the game's spin scenes (auto_spin.c, #23) */
     int boost_hold;     /* races: a boost lasts while B (or X) is held, taking air (boost_hold.c) */
     int ring_replenish; /* races: Super Sonic gains rings where others gain air (game_levels.c) */
+    int super_classic;  /* Classic Super Sonic: v0.9.0 numbers (super_tuning.h); off = balanced; host selects for online */
     int super_flight;   /* experimental: Super Sonic flies off his board (super_flight.c); off by default, host selects for online */
     int no_ring_drain;  /* cheat: a player's Super Sonic never loses rings (game_levels.c); off online */
     char online_name[21]; /* chosen by the player; never a device/account name */
@@ -88,6 +89,9 @@ int settings_ring_replenish(void);
 int settings_super_flight(void);  /* on, Riders Plus; online / recordings: the host's / recorded value */
 int settings_super_flight_setting(void);  /* this machine's own choice (what a host offers its room) */
 void settings_fix_super_flight(int on);
+int settings_super_classic(void);          /* in effect (online / recordings: the host's / recorded value) */
+int settings_super_classic_setting(void);  /* this machine's own choice */
+void settings_fix_super_classic(int on);
 int settings_no_ring_drain(void);  /* the cheat in effect: on, and not online / recording / replaying */  /* in effect (needs Riders Plus): 1 = on */
 int settings_wide_k_fixed(void);
 const char* settings_resolution_name(int res);

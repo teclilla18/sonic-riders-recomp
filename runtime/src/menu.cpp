@@ -655,9 +655,9 @@ void tab_gameplay() {
     note("Buy it in the Shop, then pick it for Sonic in Player Entry.");
     heading("Races");
     if (netplay_in_session()) {
-        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, held boost off.",
+        ImGui::Text("Room rules: Riders Plus %s, Ring Replenish %s, flight %s, Super Sonic %s, held boost off.",
                     settings_ring_cap() == 999 ? "on" : "off", settings_ring_replenish() ? "on" : "off",
-                    settings_super_flight() ? "on" : "off");
+                    settings_super_flight() ? "on" : "off", settings_super_classic() ? "classic" : "balanced");
         ImGui::BeginDisabled(settings_ring_cap() == 100);
         if (check("Auto spin", &g_settings.auto_spin, "Assist this controller in spin sections.")) settings_apply();
         ImGui::EndDisabled();
@@ -686,14 +686,20 @@ void tab_gameplay() {
                   "On by default (with Riders Plus). Keep B (or X) held after boosting and the boost goes on, like "
                   "nitrous: boost speed (it pulls you back up to it after a turn or a bump), the boost look and "
                   "boost attacks, taking air for as long as you hold it. Let go or run out of air and it ends. A "
-                  "quick tap is still the normal boost. Super Sonic keeps speeding up while you hold, up to "
-                  "350 km/h. Online, the host's setting is used."))
+                  "quick tap is still the normal boost. Super Sonic's boost is 270 km/h, 280 at 200 rings and 300 at 300 rings. "
+                  "Online, the host's setting is used."))
             settings_apply();
         if (check("Ring Replenish", &g_settings.ring_replenish,
                   "On by default (with Riders Plus). Super Sonic's air is his rings, so the game gives him "
                   "nothing where other racers refill air. With this on he gains rings instead: in the spin "
-                  "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes. Online, "
-                  "the host's setting is used."))
+                  "scenes, on rails, from tricks, from smashing objects, from flying and from air boxes (with "
+                  "Classic Super Sonic; balanced, only from tricks, and fewer). Online, the host's setting is used."))
+            settings_apply();
+        if (check("Classic Super Sonic", &g_settings.super_classic,
+                  "Off by default. Off: the balanced Super Sonic, a little faster than the original game, boost "
+                  "270 / 280 / 300 km/h, rings back only from his ring magnet and from tricks. On: Super Sonic as "
+                  "he was when he first joined (v0.9.0), much faster, rings from almost everything. Online, the "
+                  "host's setting is used."))
             settings_apply();
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight,
                   "Off by default (experimental). Super Sonic rides off his board in a flying pose, except on "
@@ -1075,6 +1081,7 @@ void lobby_window() {
         if (check("Riders Plus", &g_settings.ring_cap_999, "999 rings and gear levels 4 and 5.")) settings_apply();
         ImGui::BeginDisabled(!g_settings.ring_cap_999);
         if (check("Ring Replenish", &g_settings.ring_replenish, "Super Sonic gains rings from air rewards.")) settings_apply();
+        if (check("Classic Super Sonic", &g_settings.super_classic, "Off: balanced Super Sonic for racing. On: the overpowered one from v0.9.0, for fun.")) settings_apply();
         if (check("Super Sonic flight (experimental)", &g_settings.super_flight, "Use the flying pose while riding.")) settings_apply();
         ImGui::EndDisabled();
         if (check("Auto Spin on this device", &g_settings.auto_spin, "Assist this controller in spin sections when the room enables Riders Plus.")) settings_apply();

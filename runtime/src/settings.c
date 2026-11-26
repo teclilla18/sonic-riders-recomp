@@ -16,6 +16,7 @@ static int g_boost_hold;        /* Hold to boost in effect */
 static int g_fixed_boost_hold = -1;  /* settings_fix_boost_hold, -1 = the setting's */
 static int g_ring_replenish;    /* Ring Replenish in effect */
 static int g_fixed_ring_replenish = -1;  /* settings_fix_ring_replenish, -1 = the setting's */
+static int g_fixed_super_classic = -1;   /* settings_fix_super_classic: an online room's (the host's) or a recording's */
 static int g_fixed_super_flight = -1;    /* settings_fix_super_flight: an online room's (the host's) or a recording's */
 volatile double g_aspect_scale = 1.0;
 volatile double g_fov_scale = 1.0;
@@ -154,6 +155,7 @@ void settings_load(void) {
             else if (!strcmp(line, "boost_hold")) g_settings.boost_hold = v != 0;
             else if (!strcmp(line, "ring_replenish")) g_settings.ring_replenish = v != 0;
             else if (!strcmp(line, "super_flight")) g_settings.super_flight = v != 0;
+            else if (!strcmp(line, "super_classic")) g_settings.super_classic = v != 0;
             else if (!strcmp(line, "no_ring_drain")) g_settings.no_ring_drain = v != 0;
         }
         fclose(f);
@@ -237,6 +239,15 @@ void settings_fix_super_flight(int on) {
     g_fixed_super_flight = on != 0;
     rt_log("[settings] Super Sonic flight fixed for this run: %s", on ? "on" : "off");
 }
+/* Classic Super Sonic (super_tuning.h) changes game state: online / recordings use the host's / recorded value */
+int settings_super_classic(void) {
+    return g_fixed_super_classic >= 0 ? g_fixed_super_classic : g_settings.super_classic;
+}
+int settings_super_classic_setting(void) { return g_settings.super_classic; }
+void settings_fix_super_classic(int on) {
+    g_fixed_super_classic = on != 0;
+    rt_log("[settings] Super Sonic: %s for this run", on ? "classic (v0.9.0)" : "balanced");
+}
 int settings_no_ring_drain(void) { int ppc_detclock(void); return g_settings.no_ring_drain && !ppc_detclock(); }
 int settings_auto_spin(void) { return g_settings.auto_spin && g_ring_cap != 100; }  /* part of Riders Plus */
 
@@ -266,6 +277,7 @@ void settings_apply(void) {
             g_settings.char_light, g_settings.pc_fps, g_settings.pad_background, g_settings.sharpness, g_settings.update_check,
             g_settings.ring_cap_999, g_settings.auto_spin, g_settings.boost_hold,
             g_settings.ring_replenish, g_settings.no_ring_drain, g_settings.super_flight);
+    fprintf(f, "super_classic=%d\n", g_settings.super_classic);
     fprintf(f, "online_name=%s\n", g_settings.online_name);
     fclose(f);
 }

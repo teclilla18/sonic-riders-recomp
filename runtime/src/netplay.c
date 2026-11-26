@@ -108,7 +108,8 @@ static void rec_open(const char* path, int flags) {
     put32(h + 12, (uint32_t)g_ports);
     put32(h + 16, (uint32_t)flags | (settings_ring_cap() == 999 ? 4u : 0u) | (g_online_rules ? 8u : 0u) |
           (settings_boost_hold() ? 16u : 0u) |
-          (settings_ring_replenish() ? 32u : 0u) | (settings_super_flight() ? 64u : 0u));
+          (settings_ring_replenish() ? 32u : 0u) | (settings_super_flight() ? 64u : 0u) |
+          (settings_super_classic() ? 0u : 128u));  /* 128: balanced Super Sonic (older recordings: classic) */
     float k = settings_game_k();  /* the game's camera aspect (an online session's: the room's) */
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -144,6 +145,7 @@ static int rep_open(const char* path) {
     settings_fix_boost_hold(get32(h + 16) & 16 ? 1 : 0);   /* and Hold to boost (older recordings: off) */
     settings_fix_ring_replenish(get32(h + 16) & 32 ? 1 : 0);  /* and Ring Replenish (older: off) */
     settings_fix_super_flight(get32(h + 16) & 64 ? 1 : 0);    /* and Super Sonic flight (older: off) */
+    settings_fix_super_classic(get32(h + 16) & 128 ? 0 : 1);  /* and his balance (older: classic) */
     uint32_t kb = get32(h + 20);
     if (kb) {  /* the recorded camera aspect: game state */
         float k;
@@ -305,7 +307,8 @@ static void net_send_input(void) {
 static void net_send_welcome(int p) {
     uint8_t m[80] = {'S', 'R', M_WELCOME, (uint8_t)p, (uint8_t)g_delay, (uint8_t)g_players,
                      (uint8_t)((settings_ring_cap() == 999) | (settings_boost_hold() ? 2 : 0) |
-                               (settings_ring_replenish() ? 4 : 0) | (settings_super_flight() ? 8 : 0)), 0};
+                               (settings_ring_replenish() ? 4 : 0) | (settings_super_flight() ? 8 : 0) |
+                               (settings_super_classic() ? 16 : 0)), 0};
     float k = settings_game_k();
     uint32_t kb;
     memcpy(&kb, &k, 4);
@@ -655,6 +658,7 @@ static int net_connect(const char* spec) {
                 settings_fix_boost_hold(m[6] & 2 ? 1 : 0);    /* and Hold to boost */
                 settings_fix_ring_replenish(m[6] & 4 ? 1 : 0);  /* and Ring Replenish */
                 settings_fix_super_flight(m[6] & 8 ? 1 : 0);    /* and Super Sonic flight */
+                settings_fix_super_classic(m[6] & 16 ? 1 : 0);  /* and Classic Super Sonic */
                 break;
             }
         }
@@ -703,13 +707,16 @@ void netplay_connect(void) {  /* main(), after the memory card is loaded, before
         settings_fix_ring_replenish(settings_ring_replenish());
     } else if (g_active) settings_fix_boost_hold(settings_boost_hold());
     if (net && (!strncmp(net, "host:", 5) || !strcmp(net, "inet:host") || !strcmp(net, "lan:host")))
+    {
         settings_fix_super_flight(settings_super_flight_setting());  /* a host offers its own choice (sent in WELCOME) */
+        settings_fix_super_classic(settings_super_classic_setting());
+    }
     if (net && !net_connect(net)) { g_online_rules=0; g_ports=1; }
     /* A connected room or a replay already fixed the camera. For a local run use this machine's shape. */
     if (g_active && !settings_wide_k_fixed()) settings_fix_wide_k(settings_wide_k());
-    if (g_net) rt_log("[room-rules] P%d cap=%d hold=%d replenish=%d flight=%d local-auto-spin=%d",
+    if (g_net) rt_log("[room-rules] P%d cap=%d hold=%d replenish=%d flight=%d super-classic=%d local-auto-spin=%d",
                       g_me+1, settings_ring_cap(), settings_boost_hold(), settings_ring_replenish(),
-                      settings_super_flight(), settings_auto_spin());
+                      settings_super_flight(), settings_super_classic(), settings_auto_spin());
     const char* rec = getenv("SR_RECORD");
     if (rec) rec_open(rec, g_net | g_online_save << 1);
 }

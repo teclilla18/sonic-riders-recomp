@@ -16,7 +16,7 @@ def verify_race_results(args, logs):
         assigned = set()
         for path in logs:
             report = path.read_bytes()
-            rules = re.search(rb"\[room-rules\] P(\d+) cap=999 hold=0 replenish=1 flight=1", report)
+            rules = re.search(rb"\[room-rules\] P(\d+) cap=999 hold=0 replenish=1 flight=1 super-classic=1", report)
             assert rules, f"Incorrect effective room settings in {path}"
             seat = int(rules[1])
             assigned.add(seat)
@@ -65,7 +65,7 @@ def race(args):
                 settings = f"online_name=TestPlayer{slot + 1}\npc_scale=1\nupdate_check=0\n"
                 if args.riders_plus:
                     host = int(slot == 0)
-                    settings += f"ring_cap_999={host}\nboost_hold=1\nring_replenish={host}\nsuper_flight={host}\nauto_spin=1\n"
+                    settings += f"ring_cap_999={host}\nboost_hold=1\nring_replenish={host}\nsuper_flight={host}\nsuper_classic={host}\nauto_spin=1\n"
                 (out / "saves/settings.ini").write_text(settings)
                 recording = out / "race.srr"
                 recording.unlink(missing_ok=True)
