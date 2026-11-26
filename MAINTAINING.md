@@ -1,7 +1,7 @@
-# Maintaining the Riders Crosswake website (gh-pages branch)
+# Maintaining the Riders Rebuilt website (gh-pages branch)
 
 For Claude Code, Codex and people. Site: https://teclilla18.github.io/sonic-riders-recomp/
-The project is called **Riders Crosswake**; the gameplay changes are the "Riders Crosswake rules".
+The project is called **Riders Rebuilt**; the gameplay changes are the "Riders Rebuilt rules".
 The repository and URL keep the name `sonic-riders-recomp`.
 
 ## Adding a social media account (no tools needed)
@@ -66,15 +66,17 @@ py -3 tools/preview.py            # http://localhost:8018/sonic-riders-recomp/
 Look at the changed pages in the preview (phone and desktop width), then commit and push `gh-pages`
 (after the maintainer's OK for anything visible). Pages redeploys within a minute or two.
 
-Text that is still written by hand and may need a touch after big changes: the Riders Crosswake rules page
-(`src/pages/riders-crosswake.html`), FAQ and troubleshooting (`faq.html`), the easy-read guides (`install.html`,
+Text that is still written by hand and may need a touch after big changes: the Riders Rebuilt rules page
+(`src/pages/riders-rebuilt.html`), FAQ and troubleshooting (`faq.html`), the easy-read guides (`install.html`,
 `update.html`; keep them in step with main's `docs/INSTALL.md`), credits (`community.html`).
 
 ## Brand pictures and the background
 
-- The logo (`assets/img/logo.webp`, `logo-sm.webp`) and icon (`icon-64.png`, `icon-180.png`) use gray placeholder
-  images while the maintainer arranges commissioned artwork. List approved replacements in
-  `tools/approved_images.txt`.
+- The site uses the maintainer-supplied Painterly Riders Rebuilt logo in `assets/img/logo.webp` and
+  `assets/img/logo-sm.webp`. The site icons use the existing placeholders.
+- The supplied logo is the sole exception to the ban on AI-generated imagery. Use commissioned art,
+  online art with the artist credited, in-game screenshots, or screenshots edited by the maintainer.
+  Add maintainer-approved images to `tools/approved_images.txt`.
 - The background grid is the maintainer's picture, redrawn sharp by `tools/bg/`: `analyse.py <picture>` measures
   every element (grid, crossings, sparkles, streaks, squares) into `elements.json`; `render.py <picture> <scale> <out>
   [x0,y0,x1,y1]` redraws it at any scale (the optional box drops streaks crossing a repeating tile's edges).

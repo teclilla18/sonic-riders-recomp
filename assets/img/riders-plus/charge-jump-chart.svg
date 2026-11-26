@@ -16,7 +16,7 @@
 <rect x="300" y="590" width="260" height="3" rx="1.5" fill="#9fd8ff" opacity="0.05" transform="skewX(-20)"/>
 <rect x="980" y="95" width="200" height="3" rx="1.5" fill="#9fd8ff" opacity="0.08" transform="skewX(-20)"/>
 <text x="48" y="74" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="40" font-style="italic" font-weight="900" fill="#ffffff" letter-spacing="0.5">CHARGING A JUMP KEEPS YOUR SPEED</text>
-<text x="50" y="108" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#b7c6ff">Speed while holding A, measured in PC races (Metal City). Riders Crosswake holds it for 0.75 s.</text>
+<text x="50" y="108" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#b7c6ff">Speed while holding A, measured in PC races (Metal City). Riders Rebuilt holds it for 0.75 s.</text>
 <rect x="110" y="200" width="390" height="300" fill="#4fd8ff" opacity="0.07"/>
 <line x1="110" y1="470" x2="1150" y2="470" stroke="#ffffff" stroke-opacity="0.08"/>
 <text x="98" y="476" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" fill="#8798d8" text-anchor="end">80</text>
@@ -41,7 +41,7 @@
 <line x1="500" y1="192" x2="500" y2="500" stroke="#ffd23f" stroke-width="2" stroke-dasharray="6 6"/>
 <rect x="350" y="154" width="300" height="34" rx="17" fill="#ffd23f"/>
 <text x="500" y="177" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="17" font-style="italic" font-weight="900" fill="#1a1440" text-anchor="middle">0.75 s: SLOWDOWN STARTS</text>
-<text x="656" y="230" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-style="italic" font-weight="900" fill="#8ff0ff">RIDERS CROSSWAKE</text>
+<text x="656" y="230" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-style="italic" font-weight="900" fill="#8ff0ff">RIDERS REBUILT</text>
 <text x="131" y="375" font-family="'Arial Black', 'Segoe UI Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-size="20" font-style="italic" font-weight="900" fill="#c3c9de">ORIGINAL</text>
 <text x="755" y="476" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" fill="#ffb460">80 km/h floor</text>
 </svg>
