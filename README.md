@@ -1,14 +1,14 @@
 <p align="center"><b>New: Riders Plus has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
 
 <p align="center">
-  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Sonic Riders Recomp: now on Nintendo Switch 2! Sonic on his Extreme Gear in the sky. Original artwork by Lanmana.">
+  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw. Sonic Riders now runs on Nintendo Switch 2 via homebrew.">
 </p>
 
 <p align="center">
   <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 77% done"></a>
 </p>
 
-<h3 align="center">Sonic Riders, running natively. No emulator.<br>One of the first homebrew games playable on Nintendo Switch 2.</h3>
+<h3 align="center">Sonic Riders, running natively. No emulator.<br>Now playable on Nintendo Switch 2 via homebrew (experimental alpha).</h3>
 
 <p align="center">
   Also on Nintendo Switch, Windows PC, Android, Linux / Steam Deck and iPhone / iPad.
@@ -247,7 +247,7 @@ forks (`third_party/LICENSE-MPL-2.0`).
 
 ## Credits
 
-- Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request, with the artist's signature preserved.
+- Previous Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana).
 - Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the

@@ -61,7 +61,7 @@ OWN_ART = {
     "docs/images/installation/switch2-select-card.png": "3415e8d035862c907f3cdeefe8bd3dbe7e84a600",
     "docs/images/installation/switch2-select-disc.png": "eff37dd176652aa70c7c8977d04d0e95f70abfcb",
     "docs/images/switch2-alpha1-banner.jpg": "50f383f932945e183f8a2ab34c8d84d9083e9887",  # Temporary commissioned-art notice
-    "docs/images/switch2-poster.jpg": "1b3ad238b2a0864f3b838fbde681415262cc5d47",  # README Switch 2 poster, Lanmana art with signature (user's choice, 2026-11-19)
+    "docs/images/switch2-poster.jpg": "557fff627f1130606981565212eb3223e3e86544",  # Temporary commissioned-art notice and Switch 2 homebrew announcement
     "docs/images/riders-plus/riders-plus-banner.jpg": "7fa3b8313fe95d24cd5c040a76954685fef24315",  # Temporary commissioned-art notice
     "docs/images/v0.9.0/super-sonic-banner.jpg": "79a2665eb5b64fbce7f0c94920175405cf4e656e",  # Temporary commissioned-art notice
     "launcher/banner.jpg": "0c0d252792e9f873acabec1def46d38675b10f8f",  # Temporary commissioned-art notice
@@ -101,6 +101,7 @@ OWN_ART = {
 # the user's choice, 2026-11-07) and cedry2kio's game icon (the user's OK, 2026-11-10); and the maintainer's own
 # touch-control art. Committing any of these again as a new file is still refused unless it is in OWN_ART.
 PAST_ART = {
+    "docs/images/switch2-poster.jpg": {"1b3ad238b2a0864f3b838fbde681415262cc5d47"},
     "docs/images/installation/switch-installer.png": {"c99dbc9b73cd2eff24ca90320837d46c7323a15d"},
     "docs/images/installation/switch-completion.png": {"117e009d71e381fddb4c4cb6332ece8c87c3f63d"},
     "docs/images/installation/switch2-installer.png": {"2d0427e65a7c73bfdd9d84250ac27995cd60bf60"},
