@@ -1,7 +1,7 @@
-# Maintaining the Riders Plus website (gh-pages branch)
+# Maintaining the Riders Crosswake website (gh-pages branch)
 
 For Claude Code, Codex and people. Site: https://teclilla18.github.io/sonic-riders-recomp/
-The project is called **Riders Plus** (since 2026-11-19); the gameplay changes are the "Riders Plus rules".
+The project is called **Riders Crosswake**; the gameplay changes are the "Riders Crosswake rules".
 The repository and URL keep the name `sonic-riders-recomp`.
 
 ## Adding a social media account (no tools needed)
@@ -15,8 +15,8 @@ a minute or two. A typo leaves the previous links on the site, so nothing breaks
 ```json
   {
     "name": "YouTube",
-    "handle": "@ridersplus",
-    "url": "https://www.youtube.com/@ridersplus",
+    "handle": "@riderscrosswake",
+    "url": "https://www.youtube.com/@riderscrosswake",
     "about": "Trailers and gameplay videos."
   }
 ```
@@ -66,8 +66,8 @@ py -3 tools/preview.py            # http://localhost:8018/sonic-riders-recomp/
 Look at the changed pages in the preview (phone and desktop width), then commit and push `gh-pages`
 (after the maintainer's OK for anything visible). Pages redeploys within a minute or two.
 
-Text that is still written by hand and may need a touch after big changes: the Riders Plus rules page
-(`src/pages/riders-plus.html`), FAQ and troubleshooting (`faq.html`), the easy-read guides (`install.html`,
+Text that is still written by hand and may need a touch after big changes: the Riders Crosswake rules page
+(`src/pages/riders-crosswake.html`), FAQ and troubleshooting (`faq.html`), the easy-read guides (`install.html`,
 `update.html`; keep them in step with main's `docs/INSTALL.md`), credits (`community.html`).
 
 ## Brand pictures and the background
