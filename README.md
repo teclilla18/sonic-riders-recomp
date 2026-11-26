@@ -66,6 +66,8 @@
 <p align="center"><b>Twenty years after the GameCube release, you can finally race a friend over the internet.</b><br>
 Your PC against their Switch. Your phone against their PC. Same track, same race, frame for frame.</p>
 
+<p align="center"><b>Online on:</b> 💻 Windows PC · 🎮 Nintendo Switch (original, Lite, OLED) · 📱 Android (64-bit). Not yet on Switch 2, Linux / Steam Deck or iPhone / iPad.</p>
+
 - 🏁 **Online crossplay:** Windows PC, Nintendo Switch and 64-bit Android race each other, at home or across the internet.
 - 👥 **Two players for now, four coming soon:** this beta is one-on-one. A **4-player update** is already in testing and comes next.
 - 🔑 **No game server, no account:** the host shares a short invite code, the friend types it in, and you're on the grid.
