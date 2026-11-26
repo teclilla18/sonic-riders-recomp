@@ -2263,7 +2263,10 @@ static void execute(GxFrame* f) {
             draws++;
             break;
         }
-        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
+        case GXC_PRESENT:  /* the end of every frame; a picture only for the pre-boot Online screen (copy[4]). The */
+            /* others have no copy target: as an EFB copy they wrote into texture 0 each frame (#42) */
+            if (c->copy[4]) efb_copy(c, NULL);
+            break;
         case GXC_COPY:
             if (cur) {
                 efb_copy(c, cur);
