@@ -2,7 +2,6 @@
 
 <p align="center">
   <img src="docs/images/sonic-riders-readme.jpg" width="80%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
-  <br><sub>Sonic Riders promotional artwork &copy; <a href="https://sonic.sega.jp/riders/">SEGA</a>.</sub>
 </p>
 
 <p align="center">
@@ -57,8 +56,7 @@
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
 > Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Crosswake.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
-> [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). A huge thank
-> you to the Switch 2 homebrew developers for making this possible.
+> [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml).
 > [What to expect](docs/SWITCH2-ALPHA.md)
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
@@ -228,10 +226,8 @@ Known issues: [Issues](../../issues). What changed in each version: [CHANGELOG](
 
 The game's PowerPC code (`main.dol` + `_Main.rel`) is translated to C ahead of time on your PC
 (**static recompilation**), and the GameCube hardware (graphics, disc, audio, memory card,
-controllers) is reimplemented natively: deko3d on the Switch, OpenGL 3.3 or Vulkan elsewhere. The approach follows
-[SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
-[ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp), whose PowerPC→C translator this
-project forks. Current status is in [STATE.md](STATE.md); design notes in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/HISTORY.md](docs/HISTORY.md).
+controllers) is reimplemented natively: deko3d on the Switch, OpenGL 3.3 or Vulkan elsewhere.
+Current status is in [STATE.md](STATE.md); design notes in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Legal
 
@@ -243,13 +239,13 @@ project forks. Current status is in [STATE.md](STATE.md); design notes in [docs/
 - **Never share** your built `.nro`, `.exe` or `.nsp`, or your disc image. Issues and pull requests
   that contain game files are deleted.
 
-Licensed under the [Mozilla Public License 2.0](LICENSE), like the ZeldaWWHDRecomp translator it
-forks (`third_party/LICENSE-MPL-2.0`).
+Licensed under the [Mozilla Public License 2.0](LICENSE). The translator license is in `third_party/LICENSE-MPL-2.0`.
 
 ## Credits
 
+- README header: Sonic Riders promotional artwork © [SEGA](https://sonic.sega.jp/riders/).
 - Previous Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana).
-- Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
+- Thanks to the Switch 2 homebrew developers who made the alpha possible, including the teams behind ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell. See the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the
   PowerPC→C translator this project forks (MPL-2.0).

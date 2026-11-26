@@ -13,7 +13,7 @@
 
 ## On main since v0.9.0 (docs only)
 
-- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio.
+- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The attribution is in Credits.
 
 - README: website announcement line at the very top (b35298f).
 
