@@ -13,6 +13,8 @@
 
 ## On main since v0.9.0 (docs only)
 
+- The website uses Riders Rebuilt for the project and gameplay rules. Its old rules-page URLs redirect to the current one.
+
 - The v0.9.0 release notes and website feature overview use the maintainer's annotated gameplay screenshot.
 
 - The Switch 2 Alpha 2 and Alpha 3 release banners and website share previews use the maintainer's blue-background composite.

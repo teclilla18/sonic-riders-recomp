@@ -2184,3 +2184,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 - Carried the maintainer's blue-background revision to both applicable Switch 2 Alpha release banners and the website's share preview.
   The Alpha 2 and Alpha 3 tags and setup downloads remain available.
+
+## 2026-11-26: Riders Rebuilt website naming
+
+- Updated the public site's display name and chart labels to Riders Rebuilt. Kept the old rules-page redirects and social destinations.
