@@ -34,7 +34,7 @@ It holds no game code or data, so a ready-made copy can go in the PC release zip
   list; clashes in red. Tested: the launcher's file read with all 32 entries [confirmed]; real key presses in a
   race not tested by us.
 - Icon (2026-11-26, user's choice): `launcher/icon_256.png` (the RIDERS REBUILT words of the logo, without the Sonic head, user's choice) + `icon_32.png`
-  (the same words); the logo is the maintainer-approved AI exception; pinned in the guard's OWN_ART; build_launcher.py packs them into an .ico. Without that file build_launcher.py falls back to tools/launcher_icon.py's gold ring.
+  ("RR" made from the logo's two R's, maintainer-approved, readable at 16-32 px); the logo is the maintainer-approved AI exception; pinned in the guard's OWN_ART; build_launcher.py packs them into an .ico. Without that file build_launcher.py falls back to tools/launcher_icon.py's gold ring.
   build_launcher.py compiles it in as resource APPICON. **Every launcher uses this art** (user, 2026-11-09): the PC
   launcher, the Switch / Android installer windows (same exe) and the Mac launcher (build_mac_launcher.py makes
   AppIcon.icns from the same two PNGs, sizes up to 256 px, into build/; gold-ring fallback likewise). Not the
