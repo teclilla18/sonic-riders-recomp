@@ -61,19 +61,19 @@ PLATFORMS = [
          pattern=r'Switch2.*\.zip$', fallback='SonicRiders-Switch2-Setup-Alpha2.zip',
          needs='Native Switch 2 homebrew (tested: kaiHEN through Seedsow) and a Windows 10/11 PC to build on.',
          guide='install-switch2.html', guide_label='Illustrated booklet', icon='switch'),
-    dict(id='switch', name='Nintendo Switch', sub='Switch · Lite · OLED', channel='stable',
+    dict(id='switch', online=True, name='Nintendo Switch', sub='Switch · Lite · OLED', channel='stable',
          pattern=r'^SonicRiders-Switch-Setup-.*\.zip$', fallback='SonicRiders-Switch-Setup-v0.8.7.zip',
          needs='Atmosphère custom firmware with the Homebrew Menu, and a Windows 10/11 PC to build on.',
          guide='install-switch.html', guide_label='Illustrated booklet', icon='switch'),
-    dict(id='pc', name='Windows PC', sub='Windows 10 / 11, 64-bit', channel='stable',
+    dict(id='pc', online=True, name='Windows PC', sub='Windows 10 / 11, 64-bit', channel='stable',
          pattern=r'PC-Setup.*\.zip$', fallback='SonicRiders-PC-Setup-v0.8.7.zip',
          needs='A graphics card with OpenGL 3.3 and about 4 GB free. A controller is recommended.',
          guide='install.html#pc', guide_label='Easy-read guide', icon='pc'),
-    dict(id='android', name='Android', sub='64-bit, Android 11+', channel='stable',
+    dict(id='android', online=True, name='Android', sub='64-bit, Android 11+', channel='stable',
          pattern=r'Android-Setup.*\.zip$', fallback='SonicRiders-Android-Setup-v0.8.7.zip',
          needs='A 64-bit phone with Vulkan, a USB cable, and a Windows 10/11 PC to build on.',
          guide='install.html#android', guide_label='Easy-read guide', icon='phone'),
-    dict(id='android-nopc', name='Android, no PC', sub='Beta · 64-bit, Android 11+', channel='stable',
+    dict(id='android-nopc', online=True, name='Android, no PC', sub='Beta · 64-bit, Android 11+', channel='stable',
          pattern=r'Android-NoPC.*\.zip$', fallback='RidersRebuilt-Android-NoPC-v0.10.0.zip',
          needs='Builds on the phone itself from your own disc image. Vulkan 1.1 and about 2 GB free.',
          guide='https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/ANDROID-NO-PC.md', guide_label='Setup guide', icon='phone'),
@@ -234,6 +234,8 @@ def platform_cards(snap):
         meta = f'{r["tag"]} · {fmt_size(a["size"])}' if a else 'See the release page'
         badge = ('<span class="chip chip-alpha">Experimental alpha</span>' if alpha
                  else '<span class="chip chip-stable">Stable</span>')
+        if p.get('online'):
+            badge += '<span class="chip chip-online">Online</span>'
         out.append(f'''<article class="plat panel{' plat-alpha' if alpha else ''}" id="get-{p['id']}" data-platform="{p['id']}">
   <div class="plat-head"><span class="plat-icon">{ICONS[p['icon']]}</span><div><h3>{E(p['name'])}</h3><p class="plat-sub">{E(p['sub'])}</p></div>{badge}</div>
   <p class="plat-needs">{E(p['needs'])}</p>

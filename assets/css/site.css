@@ -631,3 +631,9 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 @media (max-width: 760px) {
   .race-layout { grid-template-columns: 1fr; }
 }
+
+/* "Online on" platform line (v0.10.0) */
+.online-on { margin: 10px 0 0; padding: 8px 14px; border-left: 3px solid var(--cyan); background: rgba(63, 227, 255, .08); }
+.online-on span { display: block; opacity: .75; font-size: .92em; }
+.chip-online { margin-left: 6px; color: #0b1a3f; background: #ffd23f; border-color: #ffd23f; }
+.chip-online::before { content: "🌐 "; }
