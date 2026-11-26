@@ -19,6 +19,8 @@ public final class OnlineRestartActivity extends Activity {
             if (oldPid > 0 && oldPid != Process.myPid()) Process.killProcess(oldPid);
             handler.postDelayed(() -> {
                 Intent game = new Intent(this, SonicRidersActivity.class);
+                String cls = getIntent().getStringExtra("gameClass");
+                if (cls != null) game.setClassName(this, cls);  // standalone installer: its GameActivity
                 game.putExtra("args", "SR_ONLINE=1");
                 game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(game);
