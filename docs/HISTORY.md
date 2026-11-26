@@ -2282,3 +2282,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   stutter: game-code hitches up to ~300 ms on the same frames on both PCs [likely]. Auto spin stuck on after a grind
   until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
 - Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.
+
+## 2026-11-26: Riders Rebuilt v0.10.0 release preparation
+
+- Updated the easy-read install and update sources for the two-player Online Beta and the Android no-PC app. The sources keep the previous download links for Linux, iOS and Switch 2 [confirmed]. Artifact republishing is pending.
+- Refreshed the Pages approvals for the maintainer-supplied logo in two sizes and five charts whose text changed to Riders Rebuilt. The local site link and image checks passed [confirmed]. Pages deploys after the release.

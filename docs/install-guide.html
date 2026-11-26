@@ -122,7 +122,8 @@
     <li><button role="tab" id="t-switch" data-dev="switch">🎮 Switch</button></li>
     <li><button role="tab" id="t-switch2" data-dev="switch2">🎮 Nintendo Switch 2 (Alpha)</button></li>
     <li><button role="tab" id="t-pc" data-dev="pc">💻 PC</button></li>
-    <li><button role="tab" id="t-android" data-dev="android">📱 Android</button></li>
+    <li><button role="tab" id="t-android" data-dev="android">📱 Android with PC</button></li>
+    <li><button role="tab" id="t-android-no-pc" data-dev="android-no-pc">📱 Android without a PC</button></li>
     <li><button role="tab" id="t-linux" data-dev="linux">🐧 Linux / Steam Deck</button></li>
     <li><button role="tab" id="t-ios" data-dev="ios">🍎 iPhone / iPad</button></li>
   </ul>
@@ -155,7 +156,7 @@
     <section class="new" id="switch-install">
       <h2>Install <span class="tag">10–30 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder, for example <span class="file">C:\SonicRiders</span>.</span>
           <span class="detail">Don't run it from inside the zip. Use a path with only English letters and digits.</span></li>
         <li tabindex="0"><span class="txt">Connect your SD card to the PC.</span>
@@ -239,7 +240,7 @@
     <section class="new" id="pc-install">
       <h2>Install <span class="tag">10–30 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-PC-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-PC-Setup-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="file">C:\Games\SonicRiders</span>.</span>
           <span class="detail">The game, your saves and settings live there. Use a path with only English letters and digits.</span></li>
         <li tabindex="0"><span class="txt">Open <span class="file">SonicRidersLauncher.exe</span>.</span>
@@ -277,7 +278,7 @@
     <section class="new" id="android-install">
       <h2>Install <span class="tag">20–40 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract the whole zip to a folder you'll keep, for example <span class="file">C:\SonicRiders</span>.</span></li>
         <li tabindex="0"><span class="txt">Connect the phone with the cable and unlock it.</span>
           <span class="detail">If it asks what the USB connection is for, choose <span class="btn">File transfer</span>.</span></li>
@@ -302,6 +303,20 @@
   </div>
 
   <!-- ============================== LINUX ============================== -->
+  <div class="device" id="d-android-no-pc" role="tabpanel" aria-labelledby="t-android-no-pc" hidden>
+    <section class="old">
+    <h2>📱 Android without a PC <span class="tag">beta</span></h2>
+    <p>Use a 64-bit phone with Android 11 or newer, Vulkan 1.1, about 2 GB free, and your own Sonic Riders USA disc image in ISO format.</p>
+    <ol class="steps">
+      <li tabindex="0"><span class="txt">Download <span class="file">RidersRebuilt-Android-NoPC-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a> and extract it.</span></li>
+      <li tabindex="0"><span class="txt">Open the <span class="file">.apk</span> and follow Android's install prompt.</span><span class="detail">Android may ask you to allow installs from the app that opened the file. The source ZIP is optional.</span></li>
+      <li tabindex="0"><span class="txt">Open <span class="gold">Riders Rebuilt</span>, tap <span class="btn">Choose an ISO</span> and select your disc image.</span></li>
+      <li tabindex="0"><span class="txt">Tap <span class="btn">Build game</span>. Keep the app open for about 5 minutes, then tap <span class="btn">PLAY</span>.</span></li>
+    </ol>
+    <p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/ANDROID-NO-PC.md">Full no-PC guide</a></p>
+    </section>
+  </div>
+
   <div class="device" id="d-linux" role="tabpanel" aria-labelledby="t-linux" hidden>
     <div class="callout info"><span class="ic">🧰</span><div><b>You need:</b> a Linux PC or a Steam Deck (x86_64), about 4 GB free and internet the first time. It builds on the machine itself, no Windows needed.</div></div>
 
@@ -310,7 +325,7 @@
       <ol class="steps">
         <li tabindex="0"><span class="txt">Steam Deck: switch to <span class="gold">Desktop Mode</span>.</span>
           <span class="detail">Power → Switch to Desktop. Do steps 2–5 there.</span></li>
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0">v0.9.0 release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract it to a folder you'll keep, for example <span class="file">~/Games/SonicRiders</span>.</span>
           <span class="detail">Right-click the zip → Extract. Your disc image can stay where it is.</span></li>
         <li tabindex="0"><span class="txt">Double-click <span class="file">Install Sonic Riders (Linux).sh</span>.</span>
@@ -332,7 +347,7 @@
     <section class="new" id="ios-install">
       <h2>Install <span class="tag">15–30 minutes, once</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">On your Mac, download <span class="file">SonicRiders-iOS-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span>
+        <li tabindex="0"><span class="txt">On your Mac, download <span class="file">SonicRiders-iOS-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0">v0.9.0 release</a>.</span>
           <span class="detail">Double-click it and keep the folder it makes, in a path with no spaces (for example <span class="file">~/SonicRiders</span>).</span></li>
         <li tabindex="0"><span class="txt">Open <span class="file">START HERE (Mac).html</span> in that folder.</span>
           <span class="detail">It shows, with pictures, how to allow the launcher the first time (it isn't signed by Apple).</span></li>
@@ -354,13 +369,24 @@
     </div>
   </div>
 
-  <p class="why"><b>Why does it build on my computer?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. It's always made on your computer from your own disc. Already installed? Use the <a href="https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN">update guide</a> instead. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md">INSTALL.md</a>.</p>
+  <section class="old" id="play-online">
+    <h2>🌐 Play online <span class="tag">beta</span></h2>
+    <p>Race one friend on Windows PC, the original Nintendo Switch or Android, including the no-PC app. Update both devices to the same version first.</p>
+    <ol class="steps">
+      <li tabindex="0"><span class="txt">Open the game's settings, choose <span class="btn">Online</span>, then press <span class="btn">Open Online</span>.</span><span class="detail">The game restarts into the lobby.</span></li>
+      <li tabindex="0"><span class="txt">On the same network, have one player host a race and the other choose it from the list.</span></li>
+      <li tabindex="0"><span class="txt">From different homes, choose <span class="btn">Host an internet race</span> or <span class="btn">Join with a code</span>.</span><span class="detail">Share invite codes privately. They contain an internet address.</span></li>
+    </ol>
+    <p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/PLAY-ONLINE.md">Full online play guide</a></p>
+  </section>
+
+  <p class="why"><b>Why does it build on my device?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. The app or installer builds it locally from your own disc. Already installed? Use the <a href="https://claude.ai/artifact/FtNxFJFBdtLqmMFW7QjXFN">update guide</a> instead. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md">INSTALL.md</a>.</p>
 </main>
 
 
 <script>
   (function(){
-    var devs = ["switch","switch2","pc","android","linux","ios"];
+    var devs = ["switch","switch2","pc","android","android-no-pc","linux","ios"];
     function show(dev){
       if (devs.indexOf(dev) < 0) dev = "switch";
       devs.forEach(function(d){

@@ -17,7 +17,9 @@ Live: https://teclilla18.github.io/sonic-riders-recomp/ (since 2026-11-19). The 
   `build_site.py all` on gh-pages and push. `make_console_guides.py` still writes `docs/*.html` on main; those are
   no longer served by Pages. Old `install-guide.html` / `update-guide.html` redirect to `install.html` / `update.html`.
 - Pictures: only ones approved here (OWN_ART SHA-1, checked by `sync`) or by the maintainer, listed in
-  `tools/approved_images.txt` on gh-pages. Brand: logo + round icon (maintainer's files); background = the
+  `tools/approved_images.txt` on gh-pages. The maintainer-supplied Painterly Riders Rebuilt logo is the
+  only AI-generated image approved for the site. Use commissioned artwork, credited online artwork,
+  in-game captures, or captures the maintainer edited for any other art. Brand: logo + round icon (maintainer's files); background = the
   maintainer's grid picture redrawn sharp by `tools/bg/` (analyse.py measures every element, render.py redraws
   at any scale).
 - Social links come from `socials.json` on gh-pages (editable on GitHub's website, no build). Public contact:

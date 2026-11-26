@@ -1,4 +1,4 @@
-# State (2026-11-24)
+# State (2026-11-26)
 
 ## Released
 
@@ -10,6 +10,14 @@
 - **[Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3)**
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
+
+## v0.10.0 candidate
+
+- **Implemented** on `claude/online-balance`: Riders Rebuilt branding, two-player Online Beta for Windows PC, the original Switch family and 64-bit Android, and balanced Super Sonic with the optional Limit Break rules.
+- **Tested on earlier candidates**: PC localhost finished with matching checksums, and an earlier Android/Switch test finished two LAN races with matching checksums. The final packages and cold PC/Android Sandbox checks are release gates.
+- The Android no-PC beta is built from `claude/standalone-online` (6921c1e). Setup is based on the player's own verified disc. The no-PC release APK and the S23 QA APK are distinct.
+- Both easy-read guide sources include Online and the Android no-PC steps. Claude republishes the two Artifacts after approval. The Pages update follows the release.
+- **Accepted** and **released** status for v0.10.0 is pending. v0.9.0 and Switch 2 Alpha 3 remain the public releases.
 
 ## On main since v0.9.0 (docs only)
 
@@ -62,14 +70,8 @@
 
 ## Open items (priority order)
 
-1. Online Beta bugs from the two-home race (above): screen-shape mismatch (each player's own shape, or the room
-   uses the narrower one), Auto spin after a grind (log frame numbers first, try offline), game-code hitches.
-   Also wanted: keyboard number row / numpad in the invite-code box. **#37** (2026-11-24): in-game volume settings;
-   the user promised them for the next release.
-   Then: background texture-pack loading (time each part of a lookup on the OLED first; isolated branch),
-   then beta release prep: website third channel (site.js/build_site.py treat every pre-release as Switch 2),
-   online_bug.yml (still LAN-only text), privacy line about codes, Online page; zips, Sandbox, user OK.
-   Music packs: launcher page, then the guide (above).
+1. Validate the v0.10.0 candidate on the S23 and with cold Sandbox installs, then request approval for release.
+   Follow-ups: #39 Android cutscenes after sleep, #37 in-game volume controls, and first-use texture-pack stalls.
 2. Switch 2 into the main release (above).
 3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.

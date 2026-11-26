@@ -122,7 +122,8 @@
     <li><button role="tab" id="t-switch" data-dev="switch">🎮 Switch</button></li>
     <li><button role="tab" id="t-switch2" data-dev="switch2">🎮 Nintendo Switch 2 (Alpha)</button></li>
     <li><button role="tab" id="t-pc" data-dev="pc">💻 PC</button></li>
-    <li><button role="tab" id="t-android" data-dev="android">📱 Android</button></li>
+    <li><button role="tab" id="t-android" data-dev="android">📱 Android with PC</button></li>
+    <li><button role="tab" id="t-android-no-pc" data-dev="android-no-pc">📱 Android without a PC</button></li>
     <li><button role="tab" id="t-linux" data-dev="linux">🐧 Linux / Steam Deck</button></li>
     <li><button role="tab" id="t-ios" data-dev="ios">🍎 iPhone / iPad</button></li>
   </ul>
@@ -147,7 +148,7 @@
     <section class="old" id="switch-old">
       <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Switch-Setup-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span>
           <span class="detail">A new folder works too.</span></li>
         <li tabindex="0"><span class="txt">Connect your SD card to the PC.</span>
@@ -199,7 +200,7 @@
   </div>
 
   <!-- ============================== PC ============================== -->
-  <div class="device" id="d-switch2" role="tabpanel" aria-labelledby="t-switch2" hidden><section class="old"><h2>Nintendo Switch 2 <span class="tag">experimental Alpha 3</span></h2><div class="callout info"><span class="ic">ℹ️</span><div><b>Switch 2 alpha updates are manual.</b> They are separate from the original Switch’s UPDATE NOW feature and stable v0.9.0. Do not use an original Switch installer to update this target.</div></div><ol class="steps"><li tabindex="0"><span class="txt">Quit the game normally before updating. Keep your SD card data.</span><span class="detail">Do not delete /switch/sonicriders-switch2/, its saves, settings.ini, env.txt or shader caches.</span></li><li tabindex="0"><span class="txt">Open the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3">Switch 2 Alpha 3 release</a> and download <span class="file">SonicRiders-Switch2-Setup-Alpha3.zip</span>.</span><span class="detail">Use the dedicated Switch 2 alpha release for future updates too, not the stable latest-release button.</span></li><li tabindex="0"><span class="txt">Extract to a new PC folder and open <span class="file">Install Sonic Riders (Switch2).exe</span>.</span><span class="detail">Pick the same validated USA disc image and your SD card; read the shader compiler license, then press BUILD AND INSTALL.</span></li><li tabindex="0"><span class="txt">Let the installer replace the NRO and build information only.</span><span class="detail">Existing saves, settings, caches and environment stay. The first build of a changed version may take a while.</span></li><li tabindex="0"><span class="txt">If using FTP, copy the newly built NRO and build-info.json to <span class="path">/switch/sonicriders-switch2/</span>.</span><span class="detail">Do not overwrite existing env.txt/settings.ini or delete saves/caches. Your own disc image stays on the card.</span></li><li tabindex="0"><span class="txt">Eject the SD card safely if you used a card reader, then launch and check the version.</span><span class="detail">Compatible native homebrew is still required; the reported tested setup is firmware 23.0.1 with kaiHEN 20261117.1 through Seedsow.</span></li></ol></section><div class="callout warn"><span class="ic">⚠️</span><div><b>This is an early alpha.</b> You may see stuttering or temporary freezes, missing music/announcer audio, temporary distortion and slow startup. Unlimited rendering is an experimental opt-in; normal 60 FPS remains the default. Fresh defaults are 2x, 60 FPS and no time limit; live resolution changes are disabled.</div></div>
+  <div class="device" id="d-switch2" role="tabpanel" aria-labelledby="t-switch2" hidden><section class="old"><h2>Nintendo Switch 2 <span class="tag">experimental Alpha 3</span></h2><div class="callout info"><span class="ic">ℹ️</span><div><b>Switch 2 alpha updates are manual.</b> They are separate from the original Switch’s UPDATE NOW feature and the original Switch stable release. Do not use an original Switch installer to update this target.</div></div><ol class="steps"><li tabindex="0"><span class="txt">Quit the game normally before updating. Keep your SD card data.</span><span class="detail">Do not delete /switch/sonicriders-switch2/, its saves, settings.ini, env.txt or shader caches.</span></li><li tabindex="0"><span class="txt">Open the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3">Switch 2 Alpha 3 release</a> and download <span class="file">SonicRiders-Switch2-Setup-Alpha3.zip</span>.</span><span class="detail">Use the dedicated Switch 2 alpha release for future updates too, not the stable latest-release button.</span></li><li tabindex="0"><span class="txt">Extract to a new PC folder and open <span class="file">Install Sonic Riders (Switch2).exe</span>.</span><span class="detail">Pick the same validated USA disc image and your SD card; read the shader compiler license, then press BUILD AND INSTALL.</span></li><li tabindex="0"><span class="txt">Let the installer replace the NRO and build information only.</span><span class="detail">Existing saves, settings, caches and environment stay. The first build of a changed version may take a while.</span></li><li tabindex="0"><span class="txt">If using FTP, copy the newly built NRO and build-info.json to <span class="path">/switch/sonicriders-switch2/</span>.</span><span class="detail">Do not overwrite existing env.txt/settings.ini or delete saves/caches. Your own disc image stays on the card.</span></li><li tabindex="0"><span class="txt">Eject the SD card safely if you used a card reader, then launch and check the version.</span><span class="detail">Compatible native homebrew is still required; the reported tested setup is firmware 23.0.1 with kaiHEN 20261117.1 through Seedsow.</span></li></ol></section><div class="callout warn"><span class="ic">⚠️</span><div><b>This is an early alpha.</b> You may see stuttering or temporary freezes, missing music/announcer audio, temporary distortion and slow startup. Unlimited rendering is an experimental opt-in; normal 60 FPS remains the default. Fresh defaults are 2x, 60 FPS and no time limit; live resolution changes are disabled.</div></div>
 <section class="old"><h2>Playing, quitting and reporting a problem</h2><ol class="steps"><li tabindex="0"><span class="txt">Launch through your compatible native homebrew setup.</span><span class="detail">The tested flow: hold R while starting a <b>native Switch 2 game</b>, then choose Sonic Riders in Homebrew Menu.</span></li><li tabindex="0"><span class="txt">To exit normally, hold Minus for about half a second. Choose <span class="btn">Quit Game</span> and confirm.</span><span class="detail">You should return to Homebrew Menu. There is no automatic exit timer.</span></li><li tabindex="0"><span class="txt"><a href="https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml">Report a bug</a> with the alpha/build version and what you did.</span><span class="detail">Include firmware, loader version, handheld/docked mode, known clocks, stage, character and gear. Save sonicriders.log, sonicriders.prev.log and lifecycle logs from /switch/sonicriders-switch2/ before relaunching. Review private paths first. Never share your disc image, NRO, saves or keys.</span></li></ol></section><div class="final"><h2>Check it worked</h2><p>Start the game and check the version in the overlay’s About tab.</p><p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/SWITCH2-ALPHA.md">Full Switch 2 alpha guide</a></p></div></div>
 
   <div class="device" id="d-pc" role="tabpanel" aria-labelledby="t-pc" hidden>
@@ -219,7 +220,7 @@
           <span class="detail">This one time it builds the whole game (a few minutes). Later updates take seconds.</span></li>
         <li tabindex="0"><span class="txt">When it's done, press <span class="btn">PLAY</span>.</span></li>
       </ol>
-      <div class="callout info"><span class="ic">📦</span><div><b>Prefer the zip?</b> Download <span class="file">SonicRiders-PC-Setup-v0.9.0.zip</span>, extract it over your old Sonic Riders folder (<span class="btn">Replace</span>), and run <span class="file">Install Sonic Riders (PC).bat</span> with the same disc image.</div></div>
+      <div class="callout info"><span class="ic">📦</span><div><b>Prefer the zip?</b> Download <span class="file">SonicRiders-PC-Setup-v0.10.0.zip</span>, extract it over your old Sonic Riders folder (<span class="btn">Replace</span>), and run <span class="file">Install Sonic Riders (PC).bat</span> with the same disc image.</div></div>
     </section>
 
     <section class="new" id="pc-new">
@@ -252,7 +253,7 @@
     <section class="old" id="android-old">
       <h2>Coming from v0.8.2 or older <span class="tag">one time only</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Android-Setup-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span></li>
         <li tabindex="0"><span class="txt">Connect your phone with USB debugging on.</span>
           <span class="detail">Use the same PC as before: Android only accepts an update signed by that PC.</span></li>
@@ -284,11 +285,23 @@
   </div>
 
   <!-- ============================== LINUX ============================== -->
+  <div class="device" id="d-android-no-pc" role="tabpanel" aria-labelledby="t-android-no-pc" hidden>
+    <section class="old">
+    <h2>📱 Android without a PC <span class="tag">beta</span></h2>
+    <ol class="steps">
+      <li tabindex="0"><span class="txt">Download <span class="file">RidersRebuilt-Android-NoPC-v0.10.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a> and extract it.</span></li>
+      <li tabindex="0"><span class="txt">Open the new <span class="file">.apk</span> and install it over your current no-PC app.</span><span class="detail">Keep the existing app installed so your disc image, saves, settings and mods stay in place.</span></li>
+      <li tabindex="0"><span class="txt">Open <span class="gold">Riders Rebuilt</span>. If you see <span class="gold">Prepare this version</span>, tap <span class="btn">Build update</span>.</span><span class="detail">Keep the app open while it builds. Tap PLAY when ready.</span></li>
+    </ol>
+    <p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/ANDROID-NO-PC.md">Full no-PC guide</a></p>
+    </section>
+  </div>
+
   <div class="device" id="d-linux" role="tabpanel" aria-labelledby="t-linux" hidden>
     <section class="all" id="linux-all">
       <h2>Every version <span class="tag">no one-press button on Linux yet</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">Download <span class="file">SonicRiders-Linux-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0">v0.9.0 release</a>.</span></li>
         <li tabindex="0"><span class="txt">Extract it over your old install folder. When asked, choose <span class="btn">Replace</span>.</span>
           <span class="detail">On the Steam Deck, do this in Desktop Mode.</span></li>
         <li tabindex="0"><span class="txt">Run <span class="file">Install Sonic Riders (Linux).sh</span> with the same disc image.</span>
@@ -305,7 +318,7 @@
     <section class="all" id="ios-all">
       <h2>Every version <span class="tag">no one-press button on iOS yet</span></h2>
       <ol class="steps">
-        <li tabindex="0"><span class="txt">On your Mac, download <span class="file">SonicRiders-iOS-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest">latest release</a>.</span></li>
+        <li tabindex="0"><span class="txt">On your Mac, download <span class="file">SonicRiders-iOS-Setup-v0.9.0.zip</span> from the <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0">v0.9.0 release</a>.</span></li>
         <li tabindex="0"><span class="txt">Unzip it into a folder whose path has no spaces.</span>
           <span class="detail">Your home folder works, for example <span class="file">~/SonicRiders</span>.</span></li>
         <li tabindex="0"><span class="txt">Open <span class="file">Sonic Riders Launcher</span> from the new folder.</span>
@@ -327,12 +340,23 @@
     </div>
   </div>
 
-  <p class="why"><b>Why is there still a short build?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. It's always made on your PC from your own disc. The big conversion happens only on the first install; updates only rebuild the parts that changed. Installing for the first time? Use the <a href="https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W">install guide</a>. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md#updating-to-a-new-version">INSTALL.md</a>.</p>
+  <section class="old" id="play-online">
+    <h2>🌐 Play online <span class="tag">beta</span></h2>
+    <p>Race one friend on Windows PC, the original Nintendo Switch or Android, including the no-PC app. Update both devices to the same version first.</p>
+    <ol class="steps">
+      <li tabindex="0"><span class="txt">Open the game's settings, choose <span class="btn">Online</span>, then press <span class="btn">Open Online</span>.</span><span class="detail">The game restarts into the lobby.</span></li>
+      <li tabindex="0"><span class="txt">On the same network, have one player host a race and the other choose it from the list.</span></li>
+      <li tabindex="0"><span class="txt">From different homes, choose <span class="btn">Host an internet race</span> or <span class="btn">Join with a code</span>.</span><span class="detail">Share invite codes privately. They contain an internet address.</span></li>
+    </ol>
+    <p><a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/PLAY-ONLINE.md">Full online play guide</a></p>
+  </section>
+
+  <p class="why"><b>Why is there still a short build?</b> The finished game contains Sonic Riders' own code, so it can never be put in a download. The app or installer builds it locally from your own disc. The big conversion happens only on the first install; updates only rebuild the parts that changed. Installing for the first time? Use the <a href="https://claude.ai/artifact/4PSHvwKrxWKTqAp5tDCu6W">install guide</a>. Full guide: <a href="https://github.com/teclilla18/sonic-riders-recomp/blob/main/docs/INSTALL.md#updating-to-a-new-version">INSTALL.md</a>.</p>
 </main>
 
 <script>
   (function(){
-    var devs = ["switch","switch2","pc","android","linux","ios"];
+    var devs = ["switch","switch2","pc","android","android-no-pc","linux","ios"];
     function show(dev){
       if (devs.indexOf(dev) < 0) dev = "switch";
       devs.forEach(function(d){
