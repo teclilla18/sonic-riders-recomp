@@ -1,4 +1,4 @@
-<p align="center"><b>New: Riders Rebuilt has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
+<p align="center"><b>🌐 v0.10.0 is out: Sonic Riders goes online!</b> Race a friend on PC, Switch or Android (2 players now, 4 coming soon). <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0">Get it now</a> · <a href="https://teclilla18.github.io/sonic-riders-recomp/race-room.html">Find racers in the Race Room</a></p>
 
 <p align="center">
   <img src="docs/images/sonic-riders-readme.jpg" width="80%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
@@ -8,13 +8,17 @@
   <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 78% done"></a>
 </p>
 
-<h3 align="center">Sonic Riders, running natively. No emulator.<br>Now playable on Nintendo Switch 2 via homebrew (experimental alpha).</h3>
+<h3 align="center">Sonic Riders, running natively. No emulator.<br>Now with online crossplay: PC, Switch and Android on the same track.</h3>
 
 <p align="center">
-  Also on Nintendo Switch, Windows PC, Android, Linux / Steam Deck and iPhone / iPad.
+  On Windows PC, Nintendo Switch, Android, Linux / Steam Deck, iPhone / iPad, and Switch 2 via homebrew (experimental alpha).
 </p>
 
 <p align="center">
+  <a href="docs/PLAY-ONLINE.md"><b>🌐 Play online</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/race-room.html"><b>💬 Race Room (live chat)</b></a>
+  &nbsp;·&nbsp;
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3"><b>🎮 Play on Switch 2 (Alpha)</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/latest"><b>⬇️ Download for every other platform</b></a>
@@ -53,15 +57,35 @@
   <a href="https://ko-fi.com/teclilla18"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
+<h2 align="center">🌐 Sonic Riders is online</h2>
+
+<p align="center">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0"><img src="docs/images/v0.10.0/online-crossplay.jpg" width="100%" alt="Sonic Riders Online Crossplay: Sonic on his Extreme Gear above Metal City"></a>
+</p>
+
+<p align="center"><b>Twenty years after the GameCube release, you can finally race a friend over the internet.</b><br>
+Your PC against their Switch. Your phone against their PC. Same track, same race, frame for frame.</p>
+
+- 🏁 **Online crossplay:** Windows PC, Nintendo Switch and 64-bit Android race each other, at home or across the internet.
+- 👥 **Two players for now, four coming soon:** this beta is one-on-one. A **4-player update** is already in testing and comes next.
+- 🔑 **No game server, no account:** the host shares a short invite code, the friend types it in, and you're on the grid.
+- 💬 **Race Room:** find a race partner, chat live and open a lobby on the [Race Room](https://teclilla18.github.io/sonic-riders-recomp/race-room.html) page. **Start here.**
+- ⚡ **Balanced Super Sonic:** fast and fair for online races. Hosts can turn on **Limit Break** for the full v0.9.0 power.
+- 📱 **Android without a PC (beta):** build the game right on your phone from your own disc image. [How](docs/ANDROID-NO-PC.md)
+
+<p align="center">
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0"><b>⬇️ Download v0.10.0</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/PLAY-ONLINE.md"><b>📖 How to play online</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/race-room.html"><b>💬 Join the Race Room</b></a>
+</p>
+
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
 > Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Rebuilt.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
 > [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml).
 > [What to expect](docs/SWITCH2-ALPHA.md)
->
-> **🌐 New: the Online Beta.** Race a friend online on PC, Switch and Android, at home or over the internet, and
-> a balanced Super Sonic (or keep him overpowered with Limit Break). [How to play online](docs/PLAY-ONLINE.md) ·
-> [Race Room](https://teclilla18.github.io/sonic-riders-recomp/race-room.html)
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 

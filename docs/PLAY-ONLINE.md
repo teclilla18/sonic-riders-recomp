@@ -4,6 +4,7 @@ Race a friend online in **Riders Rebuilt**. This is a beta: 2 players, one race 
 
 ## What you need
 
+- **Two players for now.** A four-player update is coming soon.
 - **Two devices**, any mix of: **Windows PC**, **Nintendo Switch** (original, Lite or OLED, modded) and
   **Android** phone (64-bit).
 - **The same version on both.** If the versions are different, the game says so and does not connect.
