@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="@PACKAGE@" android:versionCode="@VERSION_CODE@" android:versionName="@VERSION_NAME@">
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <application android:label="@LABEL@" @ICON@ android:allowBackup="false" android:extractNativeLibs="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name="net.srnative.sonicriders.standalone.SetupActivity"
