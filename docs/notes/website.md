@@ -21,4 +21,4 @@ Live: https://teclilla18.github.io/sonic-riders-recomp/ (since 2026-11-19). The 
   maintainer's grid picture redrawn sharp by `tools/bg/` (analyse.py measures every element, render.py redraws
   at any scale).
 - Social links come from `socials.json` on gh-pages (editable on GitHub's website, no build). Public contact:
-  ridersplusgame@gmail.com, Bluesky @ridersplus.bsky.social, Instagram @ridersplusgame.
+  ridersplusgame@gmail.com, Bluesky @riderscrosswake.bsky.social, Instagram @riderscrosswake.

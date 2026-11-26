@@ -25,11 +25,11 @@
 <p align="center">
   <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Crosswake website</a>
   &nbsp;·&nbsp;
-  <a href="https://www.facebook.com/ridersplusgame">Facebook</a>
+  <a href="https://www.facebook.com/riderscrosswake">Facebook</a>
   &nbsp;·&nbsp;
-  <a href="https://www.instagram.com/ridersplusgame/">Instagram</a>
+  <a href="https://www.instagram.com/riderscrosswake/">Instagram</a>
   &nbsp;·&nbsp;
-  <a href="https://bsky.app/profile/ridersplus.bsky.social">Bluesky</a>
+  <a href="https://bsky.app/profile/riderscrosswake.bsky.social">Bluesky</a>
 </p>
 
 <p align="center">
