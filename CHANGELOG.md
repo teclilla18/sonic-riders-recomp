@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.10.0 candidate
+## v0.10.0: Online Beta (2026-11-26)
 
 - The project is now called **Riders Rebuilt**.
 - **Online Beta** supports two players on Windows PC, the original Nintendo Switch family, and 64-bit Android. Open the game's settings and choose **Online > Open Online**. The game restarts into the lobby.

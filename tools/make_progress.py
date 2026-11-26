@@ -19,8 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "Private online gameplay and standings candidate"
-UPDATED = "2026-11-25"
+VERSION = "v0.10.0 Online Beta"
+UPDATED = "2026-11-26"
 
 # (label, weight, percent done); labels must match the README table's first column
 AREAS = [
