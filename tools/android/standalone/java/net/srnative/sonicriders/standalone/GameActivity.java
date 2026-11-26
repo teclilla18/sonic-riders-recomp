@@ -31,6 +31,11 @@ public final class GameActivity extends SonicRidersActivity {
 
     @Override
     protected String[] getArguments() {
-        return new String[] {Installer.get(this).iso().getAbsolutePath()};
+        // the disc, then any launch arguments (Open Online restarts with "SR_ONLINE=1")
+        String[] extra = super.getArguments();
+        String[] all = new String[extra.length + 1];
+        all[0] = Installer.get(this).iso().getAbsolutePath();
+        System.arraycopy(extra, 0, all, 1, extra.length);
+        return all;
     }
 }
