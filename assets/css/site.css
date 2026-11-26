@@ -590,6 +590,8 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
   .online-hero, .online-cards { grid-template-columns: 1fr; }
 }
 .hero-race img { aspect-ratio: 1280 / 536; }
+.hero-crossplay img { aspect-ratio: 1542 / 720; }
+.hero-crossplay .frame, .hero-crossplay .frame::after, .hero-crossplay::before { clip-path: none; } /* keep the logo corner whole */
 
 /* Race Room */
 .race-app [hidden] { display: none !important; }
