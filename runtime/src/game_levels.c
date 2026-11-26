@@ -53,6 +53,7 @@ static float k_super(int f, int ext) {  /* super_tuning.h: the balanced or class
 #define OFF_TOP 0x08u
 #define OFF_DRIFT 0x30u
 #define OFF_BOOST 0x34u
+#define OFF_COST  0x28u  /* boost cost (air / fuel units), boost_hold.c R_BLOCKS */
 
 typedef struct {
     int ext;                     /* 0 = the game's level, 1 = Lv. 4, 2 = Lv. 5 */
@@ -62,6 +63,8 @@ typedef struct {
     uint32_t block, identity;
     int valid;
     int applied;                 /* owned writes, including Super's balanced Base tier (ext == 0) */
+    uint32_t cost_base, cost_wrote;  /* Super balanced: the block's boost cost (+0x28, fuel) before / as written */
+    int cost_on;
 } LvRacer;
 static LvRacer g_lv[8];
 /* boost_hold.c: a racer's Riders Plus tier, 0 = base, 1 = Lv. 4, 2 = Lv. 5 */
@@ -323,6 +326,8 @@ static void restore_level(uint32_t racer, LvRacer* r) {
     for (int f = 0; f < 3; f++)
         if (ld32(racer + r->block + k_off[f]) == r->wrote[f])
             st32(racer + r->block + k_off[f], r->base[f]);
+    if (r->cost_on && ld32(racer + r->block + OFF_COST) == r->cost_wrote) st32(racer + r->block + OFF_COST, r->cost_base);
+    r->cost_on = 0;
 }
 
 /* Before the real stat constructor, not after a new gear's baseline might equal our old raised value. */
@@ -349,6 +354,16 @@ static void write_level(uint32_t racer, LvRacer* r, int ext) {
     }
     if (ext > r->ext) r->levelup = 1;
     if (ext != r->ext) rt_log("[levels] racer %d: Lv. %d (rings %u)", racer_index(racer), 3 + ext, ld32(racer + 0xB98));
+    /* balanced Super Sonic: each boost costs boost_cost_rings rings (1 ring = max air / 100) */
+    uint32_t rings_cost = balance ? super_tune()->boost_cost_rings : 0;
+    if (rings_cost) {
+        r->cost_wrote = ld32(racer + r->block + 0x1Cu) / 100u * rings_cost;
+        st32(racer + r->block + OFF_COST, r->cost_wrote);
+        r->cost_on = 1;
+    } else if (r->cost_on) {
+        if (ld32(racer + r->block + OFF_COST) == r->cost_wrote) st32(racer + r->block + OFF_COST, r->cost_base);
+        r->cost_on = 0;
+    }
     r->ext = ext;
     r->applied = balance || ext;
     if (!ext) r->levelup = 0;
@@ -379,6 +394,10 @@ void lv_racer_update(uint32_t racer) {
         /* Track fields independently: a stat mod rebuilding just boost must not turn our raised top
          * speed into the next baseline. A full race rebuild is also caught explicitly by reset. */
         if (!r->valid || !r->applied || cur != r->wrote[f]) { r->base[f] = cur; changed = 1; }
+    }
+    {
+        uint32_t cur = ld32(racer + block + OFF_COST);
+        if (!r->valid || !r->cost_on || cur != r->cost_wrote) { if (!r->cost_on || cur != r->cost_wrote) r->cost_base = cur; changed |= r->cost_on && cur != r->cost_wrote; }
     }
     r->block = block; r->identity = identity; r->valid = 1;
     int want = 0;

@@ -4,7 +4,7 @@
 
 - Online rooms take **2 players** for this beta (3-4 players later). Hold to boost works online for every character (the host's setting); Super Sonic gets it only with Limit Break Super Sonic, offline too.
 - Online lobby: the mouse wheel scrolls (PC), the number row and number pad type invite codes (PC), bigger code keys on phones, and the touch screen works the menus in Switch handheld mode.
-- **Super Sonic is balanced** (Riders Crosswake rules): a little faster than the original game (top speed 186 / 190 / 195, boost 270 / 280 / 300 km/h at base / 200 / 300 rings), no held-boost climb. With Ring Replenish he gets rings back only from his ring magnet and from trick landings (about a third of before); grinding, flying, smashed objects and spin turns give none.
+- **Super Sonic is balanced** (Riders Crosswake rules): a little faster than the original game (top speed 186 / 190 / 195, boost 270 / 280 / 300 km/h at base / 200 / 300 rings), no held-boost climb. With Ring Replenish he gets rings back only from his ring magnet and from trick landings (about a third of before); grinding, flying, smashed objects and spin turns give none. Each boost costs 50 rings, and he cannot boost with fewer.
 - **Limit Break Super Sonic** option (Gameplay, off by default): the overpowered Super Sonic from v0.9.0, for fun. Online, the host picks it for the room.
 - Online Riders Plus levels and Auto Spin follow each racer through their own finish. The lobby exposes the host’s gameplay settings, including experimental Super Sonic flight. Held boost is disabled online. The shared results table retains its native layout on each screen.
 - The in-game Online lobby can host 2–4 players on LAN or with an internet invite code. The host relays inputs.

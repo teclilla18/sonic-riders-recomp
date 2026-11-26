@@ -21,6 +21,7 @@ typedef struct SuperTune {
     uint32_t grind_num, grind_den;      /* grinding: share kept */
     uint32_t fly_knee, fly_growth_num, fly_growth_den, fly_num, fly_den;  /* flying: growth cut above the knee */
     uint32_t trick_x_reward, trick_x_rings;  /* the game's X-rank landing reward maps to this many rings */
+    uint32_t boost_cost_rings;          /* rings one boost costs (0 = the gear's own cost) */
 } SuperTune;
 
 static const SuperTune k_super_balanced = {
@@ -31,6 +32,7 @@ static const SuperTune k_super_balanced = {
     0u, 1u,                       /* no grinding */
     260u, 3u, 4u, 0u, 1u,         /* no flying */
     100000u, 25u,                 /* X rank: 25 rings (classic 75) */
+    50u,                          /* a boost costs 50 rings (user 2026-11-25: boost spam went unpunished) */
 };
 
 static const SuperTune k_super_classic = {   /* v0.9.0 */
@@ -41,6 +43,7 @@ static const SuperTune k_super_classic = {   /* v0.9.0 */
     7u, 10u,
     260u, 3u, 4u, 9u, 20u,
     100000u, 75u,
+    0u,
 };
 
 int settings_super_classic(void);  /* settings.c: the option, or the room's / recording's value */
