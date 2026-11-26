@@ -2205,3 +2205,6 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   rebuilt on the S23, preserved seeded file hashes and rendered after Play. The beta payload matched QA.
   The updated module was reused after a cold restart. The working v0.2 app and data stayed in place.
   APK signing, source notices, relevant corresponding sources, private paths and game-data packaging were audited.
+
+- End-of-session handoff records the official name Riders Crosswake and the verified v0.3 artifact pair.
+  Public beta branding and publication approval are pending.

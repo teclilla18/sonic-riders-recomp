@@ -1,5 +1,7 @@
 # State (2026-11-25)
 
+**Official project name:** Riders Crosswake. The verified v0.3 files still carry the earlier Riders Plus label.
+
 ## Standalone Android installer (local feature branch)
 
 - Phase 1 feasibility documented in [the Android installer roadmap](docs/notes/android-standalone-installer.md).
@@ -19,6 +21,9 @@
   settings, mod fixture and ISO hashes survived the rebuild. The candidate uses the same tested native
   payload, the existing production certificate and bundled redistribution materials. Wider physical device
   coverage is pending beta. Publishing needs the user's approval.
+- Verified checkpoint `0cef40e`. Under `build/standalone/` in this worktree:
+  `RidersPlus-Android-Standalone-Beta-v0.3-arm64.apk` and
+  `RidersPlus-Android-Standalone-Beta-v0.3-source.zip`. The roadmap lists the hashes and release steps.
 
 ## Released
 

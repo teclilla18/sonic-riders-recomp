@@ -1,4 +1,4 @@
-# Standalone Android installer
+# Riders Crosswake standalone Android installer
 
 Phase 1 feasibility, 2026-11-25. Source reviewed at `2f1d028`. The existing Android game runs on the S23 Ultra
 (see [Android notes](android.md)). The synthetic probe and first full-game launch passed on the S23 Ultra.
@@ -257,4 +257,16 @@ activity with advancing render frames. The race and overlay changes were tested 
   The embedded notices cover 200 dtk dependency records and include the corresponding sources for the three
   MPL-covered crates, as well as matching libiconv and zstd sources.
 - Keep the candidate paired with `RidersPlus-Android-Standalone-Beta-v0.3-source.zip` when distribution is
-  authorized. The companion contains the exact standalone installer and Android runtime source from this branch.
+  authorized. The companion is in the same `build/standalone/` directory. It contains the installer and
+  Android runtime source from checkpoint `0cef40e`. Source ZIP SHA-256
+  `3d534d8dcfccaa42c45bc7a0340ca882780a5f4c983373478aabb14ffc738a26d`.
+
+### Remaining public beta steps
+
+1. Apply the official **Riders Crosswake** name to the public-facing Android branding and release copy. Preserve
+   the package ID and signing certificate. Keep the verified v0.3 pair as a checkpoint under its existing filenames.
+2. If the rebrand changes the APK, verify the new signature, package identity and native fingerprint against
+   the checkpoint. Pair the resulting APK with its exact source archive. The completed S23 reliability matrix
+   applies to the verified native payload.
+3. Prepare limited-beta install and feedback notes for ARM64 devices with 4 KB pages. Physical evidence covers
+   the S23 Ultra. Confirm explicit approval before publishing the signed APK and matching source ZIP together.
