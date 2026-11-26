@@ -20,29 +20,10 @@
 ## On main since v0.10.0 (docs only)
 
 - README and website: v0.10.0 online spotlight with the maintainer's Online Crossplay art; both guides open with a
-  "Race your friends online" box pointing to the Race Room.
-
-## Before v0.10.0 (docs only, on main)
-
-- The website uses Riders Rebuilt for the project and gameplay rules. Its old rules-page URLs redirect to the current one.
-
-- The v0.9.0 release notes and website feature overview use the maintainer's annotated gameplay screenshot.
-
-- The Switch 2 Alpha 2 and Alpha 3 release banners and website share previews use the maintainer's blue-background composite.
-
-- The v0.8.2 release notes use the Riders Rebuilt name and the maintainer-approved Rainbow Rush artwork credited to Lanmana.
-
-- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The README uses the Riders Rebuilt name, embeds the supplied gameplay-section GIF from Reddit, and keeps attribution in Credits.
-
-- README: website announcement line at the very top (b35298f).
-
-- docs/TEXTURE-PACKS.md: texture packs on every device with nine drawn pictures; linked from the README (Get it
-  line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
-
-- Website (gh-pages fa21b1d, 98f33f0, 2026-11-21): v0.9.0 features on the Riders Rebuilt page (Hold to boost, Auto
-  spin, same character, Super Sonic 350 km/h / magnet / Ring Replenish / flight option, toggles, Cheats tab, release
-  charts), home ticker/teaser, FAQ (texture guide link, sleep fix, FINISH UPDATE). Checked in Chrome at desktop and
-  phone width. Rule (user, 2026-11-21): update the website after every release, pleasing and easy to read.
+  "Race your friends online" box pointing to the Race Room; an "Online on: Windows PC · Nintendo Switch · Android
+  (64-bit)" line on the release notes, README, guides and site; the Race Room platform picker lists only those three.
+- #41 (jmontenez, first outside code PR since #28): `tools/android_build.py` picks the `darwin-x86_64` NDK tag on
+  macOS + a BUILDING.md section. Merged d796ab1; built on the contributor's Mac only, not run here.
 
 ## Work in progress (branches, not on main)
 
@@ -83,8 +64,11 @@
 
 ## Open items (priority order)
 
-1. Validate the v0.10.0 candidate on the S23 and with cold Sandbox installs, then request approval for release.
-   Follow-ups: #39 Android cutscenes after sleep, #37 in-game volume controls, and first-use texture-pack stalls.
+1. **Four-player online update** (promised in every v0.10.0 text as "coming soon"): `codex/online-four` (compat 8,
+   private) has 3-4P rooms; v0.10.0 limits rooms to 2 (LAN_ROOM_LIMIT on `claude/online-balance`). The 3P test showed
+   each device drawing every split view (blurry HUD, S23 GPU-bound ~53 fps): one screen per player first.
+   Also promised for the next release: **#37** in-game volume sliders. Follow-ups: #39 Android cutscenes after sleep,
+   first-use texture-pack stalls online, #38 can be answered/closed (no-PC Android shipped in v0.10.0; user's call).
 2. Switch 2 into the main release (above).
 3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
@@ -118,6 +102,8 @@
 
 ## Next hardware test
 
+- v0.10.0 release builds: the S23 has the v0.10.0 APK (d3a83ee game code); race it online against the PC or the OLED
+  (update both to v0.10.0 first). Same house and internet code; state the Switch mode + clocks.
 - Online PC vs PC (user + brother): both at the same screen shape (4:3 or 16:9): do rings/HUD and the other racer
   look right? Grind with Auto spin on: does it stay stuck? Both send sonicriders.log.
 

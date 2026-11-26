@@ -2326,3 +2326,10 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   launcher icon (now the maintainer's "RR" from the Riders Rebuilt logo) and docs; the user chose to skip a Sandbox rerun.
 - The S23 got the v0.10.0 APK (d3a83ee game code) for the maintainer's own play test; no new device race was run this session.
 - README, website home and both easy-read guides lead with online play, the Race Room and "two players now, four coming soon".
+- Published 2026-11-26 with the user's OK: tag ecdd995, four ZIPs (PC, Switch, Android, Android no-PC), asset SHA-256
+  matched the local builds [confirmed]; both easy-read guide Artifacts republished; v0.9.0 page points to v0.10.0;
+  website synced (gh-pages 5380bf4) with the Android no-PC card and "Online" tags, checked at desktop and phone width.
+- Follow-ups the same day: "Online on: PC · Switch · Android (64-bit)" line everywhere the release appears; the Race Room
+  platform picker lists only those three (stored values unchanged, so the lobby service needs no change) [confirmed by
+  the live page]; the site favicon is the logo's Sonic head (the old one was the "Removing AI art" notice).
+- #41 (macOS NDK host tag) merged as d796ab1 after review; only the contributor's Mac build proves it [likely].
