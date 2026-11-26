@@ -1,5 +1,5 @@
 {
- "main": "f0e0cf6",
+ "main": "121edcf",
  "releases": [
   {
    "name": "Riders Rebuilt v0.10.0: Online Beta",
@@ -191,7 +191,7 @@
  "progress": {
   "version": "v0.10.0 Online Beta",
   "updated": "2026-11-26",
-  "overall": 78,
+  "overall": 80,
   "areas": [
    {
     "label": "Whole game playable",
@@ -220,8 +220,8 @@
    {
     "label": "Online play",
     "weight": 15,
-    "done": 64,
-    "left": "Four local PC peers tested through race completion with individual solo HUDs, cameras, aspects and FPS settings. Player Entry alignment and opponent draw distance tested in the private PC build. A two-device session retained matching simulation checksums across three races. Candidate gameplay and standings fixes await physical review. Additional cross-network and cross-platform four-player tests, and an internet relay service remain open"
+    "done": 72,
+    "left": "Released in v0.10.0: two-player online on PC, Switch and 64-bit Android, LAN and internet invite codes, checksums equal in every tested race (PC, OLED, S23, two homes). Left: four-player rooms (in testing, one screen per player), texture-pack stalls online, Switch 2 / Linux / iOS online"
    },
    {
     "label": "Features and polish",
