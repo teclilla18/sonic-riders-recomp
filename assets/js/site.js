@@ -7,7 +7,7 @@
   var RAW = 'https://raw.githubusercontent.com/' + REPO + '/main/';
   var FILES = {
     switch2: /Switch2.*\.zip$/, switch: /^SonicRiders-Switch-Setup-.*\.zip$/, pc: /PC-Setup.*\.zip$/,
-    android: /Android-Setup.*\.zip$/, linux: /Linux-Setup.*\.zip$/, ios: /iOS-Setup.*\.zip$/
+    android: /Android-Setup.*\.zip$/, 'android-nopc': /Android-NoPC.*\.zip$/, linux: /Linux-Setup.*\.zip$/, ios: /iOS-Setup.*\.zip$/
   };
   var TTL = 20 * 60 * 1000; // GitHub allows 60 anonymous API calls an hour; cache for 20 minutes
   document.documentElement.classList.add('js');

@@ -5,6 +5,7 @@ a923937180bbc360e62aad021cbf4baa9839c16d  assets/img/grid-portrait.jpg  (backgro
 a21002258bf31bebe3c8722eb3f653a6ee54651c  assets/img/logo-sm.webp  (Painterly Riders Rebuilt logo supplied by the maintainer)
 91b1314e58a53d91907758dc39fb10b77b9af6b6  assets/img/icon-64.png  (Riders Rebuilt logo, maintainer-approved, 2026-11-26)
 34f7efcc4f6ea91ece8abdd22e0cb18fe9c99367  assets/img/icon-180.png  (Riders Rebuilt logo, maintainer-approved, 2026-11-26)
+1fb6043cac313be0962b687faa259c942cea5de0  assets/img/riders-plus/skyway-adventure.jpg  (maintainer screenshot and Sonic Riders logo combined with ChatGPT; approved for the rules header and homepage teaser)
 b8f599c76f1e13e4ba8349b89cf02fd203cfb042  assets/guide/switch-build.svg  (from main:docs/images/installation/switch-build.svg)
 c1833b072d3b42d5115d0240fa5e0765124810ce  assets/guide/switch-card.svg  (from main:docs/images/installation/switch-card.svg)
 1cb4e8d8313b987baf8fdc731e780fd6b4de6dc0  assets/guide/switch-completion.png  (from main:docs/images/installation/switch-completion.png)
@@ -61,4 +62,4 @@ d8d432b8da8a8a35b25ecaf7131ad59e8620f533  assets/img/riders-plus/trick-rank-ss.j
 8ac53a61c267a2e2cbb103b35d38f4c7b229803d  assets/img/riders-plus/tunnel-294.jpg  (from main:docs/images/riders-plus/tunnel-294.jpg)
 c02503fd7d6f88b77049d5b695505cab0fc6bb7b  assets/img/settings-display.jpg  (from main:docs/images/settings-display.jpg)
 ccbd00b191343185ca1d6a2145c82a1ebd9fe09d  assets/img/switch2-poster.jpg  (from main:docs/images/switch2-poster.jpg)
-1fb6043cac313be0962b687faa259c942cea5de0  assets/img/riders-plus/skyway-adventure.jpg  (maintainer screenshot and Sonic Riders logo combined with ChatGPT; approved for the rules header and homepage teaser)
+f129cedbdcb85a73034e8369a40d640181d00cb0  assets/img/v0.10.0/online-crossplay.jpg  (from main:docs/images/v0.10.0/online-crossplay.jpg)
