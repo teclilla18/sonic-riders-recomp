@@ -2165,3 +2165,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   The illustration is unchanged, with its SEGA attribution in the Credits section. Removed the JPEG metadata block and set the display width to 80% with automatic height [confirmed].
 - Renamed the README section and its charts to Riders Rebuilt, kept the old anchor, and removed the former poster credit [confirmed].
 - Replaced the image under the Riders Rebuilt heading with the supplied GIF. The Reddit URL serves the exact attached animation [confirmed].
+
+## 2026-11-26: v0.8.2 release artwork
+
+- Added Lanmana's Rainbow Rush artwork for the v0.8.2 release notes and updated the display name to Riders Rebuilt. The release tag and setup downloads remain available.
