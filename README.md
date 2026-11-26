@@ -1,4 +1,4 @@
-# gh-pages: the Riders Crosswake website
+# gh-pages: the Riders Rebuilt website
 
 This branch is the project website, https://teclilla18.github.io/sonic-riders-recomp/ .
 The game port itself lives on [main](https://github.com/teclilla18/sonic-riders-recomp).
