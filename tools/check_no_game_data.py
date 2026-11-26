@@ -49,6 +49,7 @@ HOME_OK = re.compile(r"(?i)(users[\\/](?:<[^>]+>|(?:you|name|username|me|public)
 # maintainer's own art (not from the game), exactly these files with exactly this content. A new or changed
 # picture is refused until its SHA-1 is put here. The temporary art notices are also listed by exact hash.
 OWN_ART = {
+    "docs/images/v0.10.0/online-crossplay.jpg": "f129cedbdcb85a73034e8369a40d640181d00cb0",  # Maintainer's Canva artwork (v0.10.0 Online Crossplay) using their gameplay capture
     "docs/images/v0.9.0/riders-rebuilt-overview.jpg": "367159e2206ec59ffcba9181a18b0c29b865df58",  # Maintainer's Canva artwork using their gameplay capture
     "docs/images/switch2-alpha3-banner.jpg": "ccbd00b191343185ca1d6a2145c82a1ebd9fe09d",  # Maintainer-approved Switch 2 composite with blue background
     "docs/images/v0.8.2/rainbow-rush.jpg": "4ef97573b2fd22e9a5ad24c321dfa982fdda91bd",  # Lanmana artwork supplied and approved by the maintainer for v0.8.2
