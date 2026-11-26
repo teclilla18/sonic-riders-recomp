@@ -130,11 +130,11 @@ final class Installer {
 
     String compatibility() {
         if (!Arrays.asList(Build.SUPPORTED_64_BIT_ABIS).contains("arm64-v8a"))
-            return "Riders Crosswake requires a 64-bit ARM device.";
+            return "Riders Rebuilt requires a 64-bit ARM device.";
         if (Os.sysconf(OsConstants._SC_PAGESIZE) != 4096)
             return "This build requires 4 KB memory pages. A 16 KB build is not available yet.";
         if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_VERSION, 0x401000))
-            return "Riders Crosswake requires a device with Vulkan 1.1 support.";
+            return "Riders Rebuilt requires a device with Vulkan 1.1 support.";
         return "";
     }
 
@@ -334,7 +334,7 @@ final class Installer {
             }
         }
         long elapsed = preferences.getLong("elapsed", -1);
-        return "Riders Crosswake · " + version
+        return "Riders Rebuilt · " + version
             + "\n" + Build.MODEL + " · Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")"
             + "\n" + Os.sysconf(OsConstants._SC_PAGESIZE) + "-byte pages · "
             + (context.getFilesDir().getUsableSpace() / (1024 * 1024)) + " MiB free"

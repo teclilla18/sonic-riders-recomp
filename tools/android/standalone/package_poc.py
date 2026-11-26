@@ -254,7 +254,7 @@ def main():
         write_release_icon(icon)
     android_build.step_apk(SimpleNamespace(
         out=str(out), manifest=str(HERE / "AndroidManifest.xml.in"),
-        package=PACKAGE + (".qa" if args.qa else ""), label="Riders Crosswake QA" if args.qa else "Riders Crosswake",
+        package=PACKAGE + (".qa" if args.qa else ""), label="Riders Rebuilt QA" if args.qa else "Riders Rebuilt",
         version_code=str(args.version_code), version_name=args.version_name,
         icon=str(icon), build_tools=bt, platform=platform,
         jdk=jdk, dex=str(dex), keystore=str(key), strip="",

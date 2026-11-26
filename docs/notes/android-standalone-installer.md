@@ -1,4 +1,4 @@
-# Riders Crosswake standalone Android installer
+# Riders Rebuilt standalone Android installer
 
 Phase 1 feasibility, 2026-11-25. Source reviewed at `2f1d028`. The existing Android game runs on the S23 Ultra
 (see [Android notes](android.md)). The synthetic probe and first full-game launch passed on the S23 Ultra.
@@ -263,7 +263,7 @@ activity with advancing render frames. The race and overlay changes were tested 
 
 ### Remaining public beta steps
 
-1. Apply the official **Riders Crosswake** name to the public-facing Android branding and release copy. Preserve
+1. Apply the official **Riders Rebuilt** name to the public-facing Android branding and release copy. Preserve
    the package ID and signing certificate. Keep the verified v0.3 pair as a checkpoint under its existing filenames.
 2. If the rebrand changes the APK, verify the new signature, package identity and native fingerprint against
    the checkpoint. Pair the resulting APK with its exact source archive. The completed S23 reliability matrix
