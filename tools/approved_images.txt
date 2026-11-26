@@ -55,7 +55,7 @@ deeb85743759a6a582b341b5bbc65aa4057e89fe  assets/img/riders-plus/charge-jump-cha
 56cefaa56117aa79fc437d676cc7f10fe9287daa  assets/img/riders-plus/lv5-boost.jpg  (from main:docs/images/riders-plus/lv5-boost.jpg)
 e943e0f254e90fc9076ac0dedd5fbbde8db8b0c1  assets/img/riders-plus/lv5-level-up.jpg  (from main:docs/images/riders-plus/lv5-level-up.jpg)
 375be659a369e84c093c2b46d65b56a2f1aa2553  assets/img/riders-plus/super-ring-sources.svg  (from main:docs/images/v0.9.0/super-ring-sources.svg)
-79a2665eb5b64fbce7f0c94920175405cf4e656e  assets/img/riders-plus/super-sonic-banner.jpg  (from main:docs/images/v0.9.0/super-sonic-banner.jpg)
+367159e2206ec59ffcba9181a18b0c29b865df58  assets/img/riders-plus/super-sonic-banner.jpg  (from main:docs/images/v0.9.0/riders-rebuilt-overview.jpg)
 1fc82b41279b2b7d8c5711f86728ffc1d34c2b07  assets/img/riders-plus/trick-rank-rings.svg  (from main:docs/images/v0.9.0/trick-rank-rings.svg)
 d8d432b8da8a8a35b25ecaf7131ad59e8620f533  assets/img/riders-plus/trick-rank-ss.jpg  (from main:docs/images/riders-plus/trick-rank-ss.jpg)
 8ac53a61c267a2e2cbb103b35d38f4c7b229803d  assets/img/riders-plus/tunnel-294.jpg  (from main:docs/images/riders-plus/tunnel-294.jpg)
