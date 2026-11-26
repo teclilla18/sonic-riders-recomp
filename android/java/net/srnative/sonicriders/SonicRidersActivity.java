@@ -18,6 +18,7 @@ public class SonicRidersActivity extends SDLActivity {
         runOnUiThread(() -> {
             Intent intent = new Intent(this, OnlineRestartActivity.class);
             intent.putExtra("oldPid", android.os.Process.myPid());
+            intent.putExtra("gameClass", getClass().getName());  // the standalone app's GameActivity, not this base class
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         });
