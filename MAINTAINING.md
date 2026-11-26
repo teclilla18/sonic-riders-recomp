@@ -72,9 +72,9 @@ Text that is still written by hand and may need a touch after big changes: the R
 
 ## Brand pictures and the background
 
-- Logo (`assets/img/logo.webp`, `logo-sm.webp`) and round icon (`icon-64.png`, `icon-180.png`) come from the
-  maintainer's own files (logo PNG with transparency, round social-media icon). Regenerate them from those files;
-  list any new picture in `tools/approved_images.txt`.
+- The logo (`assets/img/logo.webp`, `logo-sm.webp`) and icon (`icon-64.png`, `icon-180.png`) use gray placeholder
+  images while the maintainer arranges commissioned artwork. List approved replacements in
+  `tools/approved_images.txt`.
 - The background grid is the maintainer's picture, redrawn sharp by `tools/bg/`: `analyse.py <picture>` measures
   every element (grid, crossings, sparkles, streaks, squares) into `elements.json`; `render.py <picture> <scale> <out>
   [x0,y0,x1,y1]` redraws it at any scale (the optional box drops streaks crossing a repeating tile's edges).
