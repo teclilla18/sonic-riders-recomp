@@ -1304,7 +1304,7 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
 - Not checked: other tracks, 2-4P, docked, stock clocks with three images; Android with the shared vk_blur change
   (Android always passes color.w = 0, so the old path) [uncertain, not built]; the PC Auto mode with the new GP figure.
 
-## 2026-11-14 (PC, Mike, evening): v0.8.2 checks; Riders Plus charge jump
+## 2026-11-14 (PC, Mike, evening): v0.8.2 checks; Riders Crosswake charge jump
 
 - v0.8.2 checks: OLED c840558 (user): Splash Canyon Lv. 5 at 350, gold capsule after 25 s, dash panel +20-30,
   docked 60, 2P handheld/docked 60 [accepted]. Logs (log-reader): 59.9 fps; above 6k draws 55 handheld / 54 docked,
@@ -1322,17 +1322,17 @@ Design: notes/picture-options-port.md. Linux: the WSL run with captures was star
   (store 81815ABC, racer r24) takes over [confirmed]; it now waits too. User picked 0.75 s after playing 1 s.
   Verified by replaying the user's SR_RECORD runs: speed holds 0.73 s, then the old curve [confirmed]; accepted on
   PC. A recording fixes the option for the whole run, so the menu toggle did nothing in the test (by design).
-- Option renamed "Riders Plus" (user's choice). Not done: Switch/phone play of the charge jump, CPU racers.
+- Option renamed "Riders Crosswake" (user's choice). Not done: Switch/phone play of the charge jump, CPU racers.
 - Tooling notes: ninja missed a patches.txt change once (run gcrecomp.py directly after editing patches); sed -i in
   Git Bash turns CRLF files into LF (restore with sed 's/$/\r/' for files git lists as i/crlf).
 
-## 2026-11-13 (Mac): v0.8.2 iOS zip; Riders Plus on an iPad (A16)
+## 2026-11-13 (Mac): v0.8.2 iOS zip; Riders Crosswake on an iPad (A16)
 
 - iOS zip built with `make_release.py --version v0.8.2 --flavor ios --ref v0.8.2` (VERSION "v0.8.2 (81ee3358)",
   211 files); cold Mac unzip test PASS (ditto into a fresh folder, unsigned, fresh tools dir, 7/7 steps, .ipa
   built) [confirmed]; uploaded to the v0.8.2 release, the notes' last line now points at it.
 - iPad (A16) over the cable, build 3ed95db (the tag only changes CHANGELOG.md), no settings file = defaults:
-  `SR_TEST_MENU=3` frame shows the Gameplay tab with "Riders Plus" ticked [confirmed, SR_SCREENSHOT].
+  `SR_TEST_MENU=3` frame shows the Gameplay tab with "Riders Crosswake" ticked [confirmed, SR_SCREENSHOT].
 - Scripted Metal City Free Race (the PC menu route with a new card `SR_CARD=saves/test_v082.raw`, then SY=100,
   SX +-60 every 120 fields; A held 90 fields at cruise and 30 fields after a B+X boost; `SR_RAMHASH=30000
   SR_RAMHASH_BLOCKS=none SR_RAMSAMPLE=ramsample.txt` on racer 0 speed 81A0E1EC, flags 81A0E168, charge 81A0E134):
@@ -1582,10 +1582,10 @@ a mod manager; online paused, stages on hold. Research only for the roster (Step
 - #23: Kiri235's zipped data folder held three logs; log-reader: GPU-bound on the Thor's wide 1x EFB (3416x1056)
   [likely]; reply posted asking for a race in 4:3. Android INTERNET permission added (not run on a phone).
 
-## 2026-11-16 (PC, Mike): README Riders Plus section, Ko-fi, hold-B boost queued
+## 2026-11-16 (PC, Mike): README Riders Crosswake section, Ko-fi, hold-B boost queued
 
-- README: "Riders Plus" featured section under the intro (1ba9d5e): the user's banner with Sonic's hand fixed
-  (also replaces docs/images/v0.8.2/riders-plus-banner.jpg), original vs Riders Plus table, six stills in
+- README: "Riders Crosswake" featured section under the intro (1ba9d5e): the user's banner with Sonic's hand fixed
+  (also replaces docs/images/v0.8.2/riders-plus-banner.jpg), original vs Riders Crosswake table, six stills in
   docs/images/riders-plus/ from the user's recorded Metal City race, charts redrawn (gear-levels, charge-jump).
   Top banner cropped to 1529x600 (6e088b6). Guard hashes updated; JPEGs kept under 512 KB.
 - Pictures: the recording held camera k 1.3344 (window was 4:3 when the run started); patching k to 1.7917 in the
@@ -1649,7 +1649,7 @@ map, regression chronology, cache measurements and resume gates [confirmed exist
 records]. Audio causes and permanent freeze elimination remain unproven. No runtime
 edits, builds, log deletion, rollout or release changes during this handoff.
 
-## 2026-11-18: local Riders Plus Super Sonic and adaptive split HUD review
+## 2026-11-18: local Riders Crosswake Super Sonic and adaptive split HUD review
 
 - [confirmed, static + minimized PC] Super stays native level 0 and reads first live block, while old extension
   required level 2/third block. Actual gear +BB=18, transformed +BA=11/original +BF=0; +1034 is an ability mask.
@@ -1689,7 +1689,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 ### 2026-11-18 - Local Super balance and OunceMTP workflow
 
-- [confirmed] Super-only Riders Plus active top/boost/drift targets: Base195/270/110, Lv4 220/300/125,
+- [confirmed] Super-only Riders Crosswake active top/boost/drift targets: Base195/270/110, Lv4 220/300/125,
   Lv5 240/330/140 km/h. Ratios from captured baselines preserve stat mods; applied ownership includes Base.
   No fuel/cost/cap/native-level/feedback/HUD/acceleration/animation/board changes in this follow-up.
 - [confirmed] Actual-source regressions pass, including100 updates/tier, whole-racer non-speed isolation,
@@ -1813,7 +1813,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 
 ### 2026-11-18 - v0.8.7 stable published; Alpha2 validation in progress
-- Explicit user publication authorization. Merge381a3694 integrates validated Riders Plus/Super/HUD/finish
+- Explicit user publication authorization. Merge381a3694 integrates validated Riders Crosswake/Super/HUD/finish
   fixes with mainAndroid32/Linux30 work; dirty sr-main/concurrent native/private checkouts preserved.
 - Cold Windows Sandbox PC and Android PASS separately, fresh downloads and space-path repeat. Four setup
   ZIPs audited against source and full uploaded SHA256 readbacks equal. v0.8.7 published as latest stable.
@@ -1908,7 +1908,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 - README rewritten around the Switch 2 alpha: new Lanmana "Now on Nintendo Switch 2!" poster on top
   (`docs/images/switch2-poster.jpg`), a two-line hook and three buttons, all badges together under it, a short
-  Switch 2 box, the new Riders Plus "Break the limits" banner (`docs/images/riders-plus/riders-plus-banner.jpg`),
+  Switch 2 box, the new Riders Crosswake "Break the limits" banner (`docs/images/riders-plus/riders-plus-banner.jpg`),
   a screenshot gallery, side-by-side original vs port, and one Get it table for every platform and guide. The
   neon-city banner (unknown artist) and the stale "updates paused" box are gone; long sections fold away.
 - All 8 release pages rewritten to one layout (banner, title + one line, Highlights, Download, Already
@@ -1921,12 +1921,12 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   and a live shields.io badge (`docs/progress.json`), both drawn with the Status card and the table numbers by
   `tools/make_progress.py`; `.github/workflows/progress.yml` reruns it on push to main. [confirmed] first CI run
   passed with nothing to change; the badge renders "Road to v1.0: 77%". The style rules went into CLAUDE.md.
-## 2026-11-19: Riders Plus website live (Claude, gh-pages branch; main docs only)
+## 2026-11-19: Riders Crosswake website live (Claude, gh-pages branch; main docs only)
 
-- The user named the project **Riders Plus** and asked for an official site. Built a static site on a new orphan
+- The user chose a public project name and asked for an official site. Built a static site on a new orphan
   `gh-pages` branch (worktree `.local/gh-pages`): home (hero with the new logo and the Lanmana poster, stable vs
   experimental release cards, one download card per platform with direct ZIP links, GameCube-vs-port slider, Road
-  to v1.0, community), Download, Riders Plus rules, guides hub, easy-read install/update guides (ported from the
+  to v1.0, community), Download, Riders Crosswake rules, guides hub, easy-read install/update guides (ported from the
   Claude guides), both console booklets rendered from `tools/console_guide_data.py`, FAQ/troubleshooting,
   community/credits/legal, 404. Background: the user's grid picture, measured element by element and redrawn
   at 2x (4x master in the user's Pictures folder). Details and procedures: docs/notes/website.md.
@@ -1986,8 +1986,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   while that button stays held, taking the refunded frames' air at cost / 120 each. User-played on PC: works, X
   too, out-of-air stop, Super Sonic 626 extra frames [confirmed].
 - User follow-ups, implemented, not played: pull back to boost speed (10 % of the gap per frame) after turns and
-  bumps; Super Sonic ramps exponentially to 350 km/h in 4 s held (integer curve, no libm); "Riders Plus features"
-  fold-out with Auto spin and Hold to boost (on by default, only with Riders Plus); Super Sonic +5000 fuel per
+  bumps; Super Sonic ramps exponentially to 350 km/h in 4 s held (integer curve, no libm); "Riders Crosswake features"
+  fold-out with Auto spin and Hold to boost (on by default, only with Riders Crosswake); Super Sonic +5000 fuel per
   counted spin turn (hook 818A78EC, turn set at 818A78E8); Auto spin hands the stick back when +0xA20 does not move
   for 2 s. The user lost the stick near the end of a last lap right after a spin section was taken over: that the
   section never ran is [likely], not proven.
@@ -1999,7 +1999,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 ## 2026-11-20 (later): Ring Replenish, Super boost view + sound, Super Sonic flight test (branch claude/auto-spin)
 
 - User-played Hold to boost on the Switch OLED: fun. Asked for, implemented (builds 01fcbeb..132ec19):
-  - **Ring Replenish** (Riders Plus features toggle, on by default): air rewards of a step collect in racer +0x988
+  - **Ring Replenish** (Riders Crosswake features toggle, on by default): air rewards of a step collect in racer +0x988
     and are thrown away for ring-powered gear (+0x9D4 bit 0x400) at 81815EEC; Super Sonic keeps them (capped at
     4 rings a step), and every net fuel gain in the fuel step (81815F70 / 81816098 start, clamps 81815FEC /
     818160C8) is cut to 30 %. In spin sections the game's own refill (5000 a turn) also lands there: dropped; only
@@ -2044,7 +2044,7 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 
 ## 2026-11-20 (late): v0.9.0 release prep
 
-- Super Sonic flight became an experimental Riders Plus feature, off by default (F1 > Gameplay > Riders Plus
+- Super Sonic flight became an experimental Riders Crosswake feature, off by default (F1 > Gameplay > Riders Crosswake
   features > "Super Sonic flight"; off in online races, recordings and replays). Why: on the user's Switch 1
   (a363ae30) and Switch 2 (1e6033829f7d) builds he stayed on his board after an air trick until the next action.
   The cause is not found [uncertain]; the toggle only hides it. Builds (Switch) with the toggle; not played.
@@ -2206,3 +2206,79 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [tested] Windows direct two-player and invite-code four-player rooms each matched 23,000 input/checksum records per seat through race completion. All seats reached both extended levels. The three-player room matched 21,100 steps. Native ranks agreed with crossing order. Results captures showed the same rows and times across seats. The Windows/Eden v0.1.1 pair matched the first 5,442 complete records, including the guest reaching levels 4 and 5. The Android arm64 candidate built and passed APK signature verification.
 - [uncertain] Physical play on this candidate, Android race behavior, full-course Auto Spin coverage and the experimental pose in an actual online Super Sonic race remain open. Private candidates only.
 - [tested] A second Windows host and Eden Switch guest matched 20,202 complete records through both finishes. The guest reached levels 4 and 5 after the host finished. Both displayed ranks in the same order in the simulation log. The four-player replay matched all 20,400 logged checksums. Offline solo and local four-player control captures matched their recovery images byte for byte.
+
+## 2026-11-21: website brought up to v0.9.0
+
+- What was wrong: the site's release cards and downloads update from GitHub on their own, but the hand-written
+  pages (Riders Crosswake rules, home, FAQ) still described v0.8.7 after the v0.9.0 release.
+- Fix (gh-pages fa21b1d + 98f33f0): Riders Crosswake page gets a v0.9.0 section (Hold to boost, Auto spin, same
+  character), the Super Sonic section (350 km/h held boost, ring magnet, Ring Replenish, flight option), the feature
+  toggles and Cheats tab, plus the five approved v0.9.0 release pictures; home ticker/teaser; FAQ texture-pack answer
+  links docs/TEXTURE-PACKS.md, troubleshooting rows for the Switch sleep fix and FINISH UPDATE.
+- Tested: link check, site guard, and a look in Chrome at 1440 and 390 px wide (no sideways scroll); that look
+  found a narrow banner, an unbalanced Super Sonic panel and a wrapping home stat label, all fixed [confirmed].
+- Rule (user): after every release, update all relevant website info, keeping it pleasing and easy to read.
+
+## 2026-11-21 (afternoon): LAN lobby between two consoles; Switch 2 online crash narrowed
+
+- **Neither console saw the other** (OLED + Switch 2, Online Beta lobby). A PC probe listening on the lobby ports
+  heard the Switch 2's 255.255.255.255 room announcements, and the OLED listed the probe's fake room, but nothing
+  from the OLED ever arrived [confirmed]. Fix: rooms and searches also go to the /24 network's own broadcast
+  (x.x.x.255; address looked up on a helper thread), plus a **Join by address** keypad and the host's address on
+  screen. Result: the OLED found the Switch 2's race and joined, 600 checksums equal (both handheld) [confirmed].
+  Branches codex/online-beta 5d70c89, codex/online-beta-switch2 be04843 (not merged, not released).
+- Switch 2 only: the address lookup hung the lobby (black screen) and sending to x.x.x.255 blocked ~200 ms per
+  packet, so neither is used there [likely]. Handheld Joy-Cons can report style 6 / attributes 7 (only the left
+  half connected) and were read as a sideways single Joy-Con (d-pad down = A) [confirmed]; the per-button
+  `[input2]` SD log line took 0.2-1.8 s per write and froze the menu controls [confirmed]. Both fixed on be04843;
+  the released Alpha 3 probably has them too [uncertain].
+- **Switch 2 GPU device loss** (`completion join failed status 7`, then vkCreateDevice -4) at game frame ~662-712 on
+  8 of 8 runs; once (loading screen off) it reached frame 5788 and failed at track load. Still with direct SR_NET (no
+  lobby), no loading screen, no texture packs [confirmed]; read-ahead ruled out earlier. Cause unknown; the 11-20
+  build (c572d99 + music) raced 22,618 frames on the same console.
+- The user accepted the OLED + S23 LAN match. Decisions: the first public online test ships LAN and internet play
+  together, without any server we run; a second app/icon per device sharing one disc image; a "Play together"
+  board on the website; Switch 2 left out until the crash is fixed.
+
+## 2026-11-21 (night): internet play on the Online Beta branch
+
+- `codex/online-beta` (ed371f1..75d6b87, not merged): internet races with invite codes and no server (STUN, UPnP,
+  both-codes punching, host approval, ping-based delay), per-player finish fix, flight following the host. Device
+  results and details: that branch's docs/HISTORY.md and docs/notes/online-beta.md. [confirmed] S23 on a phone
+  hotspot vs PC and vs OLED raced with equal checksums; LAN regression passed.
+- GXSRTE texture pack: its blank `tex1_256x256_d8d7b29f...` hides the 1P-4P / COM markers [likely, file found
+  fully transparent]; renamed to .png.off on the user's devices.
+
+## 2026-11-22: README website line; #33 PowerVR test build
+- README: one line at the very top announcing the website (b35298f).
+- #33 (Redmi A3, PowerVR GE8320, 32-bit, legacy render passes): the reporter's screenshot shows races as a blue
+  screen with only a small top-left corner of the scene; menus fine, some freezes. [confirmed] Not reproduced on the
+  S23 with the 32-bit APK, legacy path forced, no dual-source, no push descriptors and the reporter's settings
+  (4:3, 1x, sharpness 0): races draw normally.
+- Test 2 on `claude/android-armv7` (a06bdc5, not merged): on Imagination GPUs (vendor 0x1010) EFB passes cover the
+  whole image and colour clears are drawn as quads instead of vkCmdClearAttachments; SR_VK_FULLAREA / SR_VK_QUADCLEAR
+  = 0/1 override; startup logs `[vk] vendor ...`. Both forced on the S23: pictures unchanged. Setup zip posted on #33.
+- [uncertain] Whether either change fixes the PowerVR picture; the reporter's log decides.
+
+## 2026-11-23 (Mac): iOS v0.9.0 setup zip
+
+- v0.9.0 shipped without an iOS zip ("iOS stays on v0.8.7 for now"). Built with `make_release.py --flavor ios
+  --version v0.9.0 --ref v0.9.0` (331 files, commit bce3a5f9; guard refused nothing) and uploaded to v0.9.0; the
+  notes' iOS line, both easy-read guides (republished) now point to it.
+- Local build of main (code identical to v0.9.0): ninja + .ipa OK, binary shows "Hold to boost" and "Super Sonic
+  flight (experimental)" [confirmed]. Not installed on a device and no cold Mac test from the zip [uncertain].
+
+## 2026-11-23/24: Online Beta, first race between two homes (PC vs PC)
+
+- A PC setup zip of `codex/online-beta` (beta.3, ab358f6) for the user and a relative in another city; each built
+  it from his own disc. Fixes on the way: in menu text boxes W/A/S/D/J/K/Q/E now type letters instead of moving the
+  menu (input_sdl.c, `overlay_text_typing`; built, not tried by typing) [uncertain]; the launcher's Online page now
+  says internet play is in the game (F1 > Online > Internet).
+- Race (user-played, internet invite codes): connected with no issues. Both logs (log-reader): same build, NET_COMPAT
+  3, ping ~55 ms, delay 5, two races, 54,639 frames, every checksum equal, network wait under 0.2 ms/frame, no audio
+  underruns [confirmed].
+- Seen by the players: glitchy rings/HUD and the other racer vanishing after a short distance; logs show the host
+  at 2.39 (ultrawide, Fit) and the joiner at 1.78, with the room camera following the host [likely cause]. Audio
+  stutter: game-code hitches up to ~300 ms on the same frames on both PCs [likely]. Auto spin stuck on after a grind
+  until the next auto path ended; `[autospin]` lines have no frame numbers [uncertain].
+- Notes: docs/notes/online-beta.md (on the branch). Wish: number row / numpad digits in the invite-code box.

@@ -1,43 +1,84 @@
 name: Bug report
-description: Something does not work, looks wrong, or runs slowly.
+description: Something in Riders Rebuilt does not work, looks or sounds wrong, runs slowly, or will not install.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        **Never attach game files**: no disc image, builds (.nro/.exe/.nsp), saves, extracted files or keys.
-        Issues containing them are deleted. Logs and screenshots are fine.
+        Thanks for helping make Riders Rebuilt better!
+
+        **Never attach game files**: no disc image (.iso/.rvz), builds (.nro/.nsp/.exe/.apk/.ipa), saves,
+        extracted game files or keys. Issues containing them are deleted. Logs and screenshots are fine.
   - type: input
     id: build
     attributes:
       label: Version / build
-      description: Release version or git commit (the first lines of sonicriders.log show the build).
-      placeholder: v0.1.0, or commit 8bf41dd
+      description: Release version or git commit. The first lines of sonicriders.log show it; on PC also F1 > About.
+      placeholder: v0.9.0, or commit 8bf41dd
     validations:
       required: true
   - type: dropdown
     id: platform
     attributes:
       label: Where does it happen?
+      description: Pick every device where you saw it.
+      multiple: true
       options:
-        - Switch 2 (native experimental alpha)
-        - Switch (hardware)
-        - Switch emulator
-        - PC test build
-        - Setup tool (building)
+        - Windows PC
+        - Linux / Steam Deck
+        - Android phone or tablet
+        - iPhone / iPad (iOS)
+        - Mac (building the iPhone / iPad app)
+        - Nintendo Switch (original, OLED or Lite)
+        - Nintendo Switch 2 (native alpha)
+        - Switch emulator (Eden, Ryujinx or similar)
+        - Other (say which in the description)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is it?
+      multiple: true
+      options:
+        - Gameplay or controls
+        - Graphics (wrong colours, missing objects, glitches, screen size)
+        - Audio or music
+        - Performance (low fps, stutter, slow loading)
+        - Crash or freeze
+        - Online multiplayer (LAN or internet)
+        - Installation, setup or updating
+        - Mods (texture packs, music packs)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Device and system information
+      description: |
+        Whatever applies to your device: model, OS or system version, CPU, GPU, RAM, and firmware.
+        - **Windows / Linux / Steam Deck:** OS version, CPU, graphics card and driver, RAM. (The F1 "Save a bug report" zip includes this.)
+        - **Android:** phone model, Android version, chip (for example Snapdragon 8 Gen 2), RAM.
+        - **iPhone / iPad / Mac:** model and iOS / iPadOS / macOS version, and how you installed (Xcode, Sideloadly...).
+        - **Switch:** model, system firmware, Atmosphère version, CPU/GPU/memory clocks (stock or overclocked), handheld or docked.
+        - **Switch 2:** system firmware, loader / kaiHEN version, handheld or docked, known clocks.
+      placeholder: |
+        Galaxy S23 Ultra, Android 15, Snapdragon 8 Gen 2, 12 GB RAM
+        Switch OLED, firmware 20.1.0, Atmosphère 1.9.0, CPU 1785 / GPU 1152 / MEM 2133, docked
     validations:
       required: true
   - type: input
-    id: console
-    attributes:
-      label: Console and firmware
-      description: Model, system firmware, Atmosphère version, and CPU/GPU/memory clocks (overclocked or stock). For Switch 2, give native loader/kaiHEN version, handheld/docked mode and known clocks. Skip for the PC build.
-      placeholder: OLED, 20.1.0, Atmosphère 1.9.0, CPU 1785 / GPU 1152 / MEM 2133
-  - type: input
     id: mode
     attributes:
-      label: Game mode and stage
-      placeholder: Free Race, 2 players, Splash Canyon
+      label: Game mode, stage and character
+      placeholder: Free Race, 2 players, Splash Canyon, Sonic on the Default Gear
+  - type: textarea
+    id: online
+    attributes:
+      label: Online details (online problems only)
+      description: LAN or internet, number of players, the other players' devices and versions, who was the host, about when it went wrong.
+      placeholder: Internet, 2 players, I hosted on a Windows PC, the other player joined from a Switch OLED (v0.9.1-online-beta.4). Desync on lap 2.
   - type: textarea
     id: what
     attributes:
@@ -57,19 +98,22 @@ body:
     attributes:
       label: Logs
       description: |
-        Switch 2 Alpha: include sonicriders.log, sonicriders.prev.log and lifecycle-NNNNNN.log from switch/sonicriders-switch2/. Include stage/character/gear, approximate event times and whether audio or controls kept working. Review private paths before sharing.
-        PC, Linux, Steam Deck: settings menu (F1) > About > "Save a bug report", then attach the
-        bug-report-<date>.zip from the game's folder. Switch: attach sonicriders.log and
-        sonicriders.prev.log from switch/sonicriders/ on the SD card (or setup.log for setup problems). Copy them soon after the problem: each start of the game moves
-        the last log to sonicriders.prev.log (on PC and Linux the four before it are kept, up to .prev4.log).
+        Copy them soon after the problem: each start of the game moves the last log to sonicriders.prev.log.
+        - **Windows, Linux, Steam Deck:** settings menu (F1) > About > "Save a bug report", then attach the bug-report-<date>.zip from the game's folder.
+        - **Android:** sonicriders.log and sonicriders.prev.log from Android/data/net.srnative.sonicriders/files/ (over USB), or the crash report the app shows after a crash.
+        - **iPhone / iPad:** sonicriders.log from the Files app (On My iPhone > Sonic Riders).
+        - **Switch:** sonicriders.log and sonicriders.prev.log from switch/sonicriders/ on the SD card.
+        - **Switch 2:** sonicriders.log, sonicriders.prev.log and lifecycle-NNNNNN.log from switch/sonicriders-switch2/.
+        - **Installation problems:** setup.log from the setup folder, or a screenshot of the error.
+        - **Online:** logs from every player, if you can.
+        Logs can contain folder names from your device; look through them first if that matters to you.
     validations:
       required: true
   - type: textarea
     id: screenshots
     attributes:
-      label: Screenshots
+      label: Screenshots or video
       description: |
-        For anything visual. In the game: hold − (Minus), choose "Save screenshot (A)", press A. The
-        picture is saved as shot_<number>.bmp in switch/sonicriders/ on the SD card. GitHub doesn't take
-        .bmp files: open it in Paint and save as PNG (or zip it), then drag it here. A picture of how it
-        should look (GameCube or Dolphin) helps too.
+        For anything visual. In the game, open the settings menu (hold − on Switch, F1 or the controller's Back/View button on PC, top-left button on Android), choose "Save screenshot (A)" and press A.
+        The picture is saved as shot_<number>.png (some devices write .bmp) next to the log. GitHub does not take .bmp files: zip it or save it as PNG first.
+        A picture of how it should look (GameCube or Dolphin) helps too.

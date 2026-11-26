@@ -1,12 +1,14 @@
+<p align="center"><b>New: Riders Rebuilt has its own website!</b> &#127881; <a href="https://teclilla18.github.io/sonic-riders-recomp/">teclilla18.github.io/sonic-riders-recomp</a></p>
+
 <p align="center">
-  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Sonic Riders Recomp: now on Nintendo Switch 2! Sonic on his Extreme Gear in the sky. Original artwork by Lanmana.">
+  <img src="docs/images/switch2-poster.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw. Sonic Riders now runs on Nintendo Switch 2 via homebrew.">
 </p>
 
 <p align="center">
   <a href="#status"><img src="docs/images/progress-bar.svg" width="100%" alt="Road to v1.0: 78% done"></a>
 </p>
 
-<h3 align="center">Sonic Riders, running natively. No emulator.<br>One of the first homebrew games playable on Nintendo Switch 2.</h3>
+<h3 align="center">Sonic Riders, running natively. No emulator.<br>Now playable on Nintendo Switch 2 via homebrew (experimental alpha).</h3>
 
 <p align="center">
   Also on Nintendo Switch, Windows PC, Android, Linux / Steam Deck and iPhone / iPad.
@@ -21,13 +23,13 @@
 </p>
 
 <p align="center">
-  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Plus website</a>
+  <a href="https://teclilla18.github.io/sonic-riders-recomp/">Riders Rebuilt website</a>
   &nbsp;·&nbsp;
-  <a href="https://www.facebook.com/ridersplusgame">Facebook</a>
+  <a href="https://www.facebook.com/riderscrosswake">Facebook</a>
   &nbsp;·&nbsp;
-  <a href="https://www.instagram.com/ridersplusgame/">Instagram</a>
+  <a href="https://www.instagram.com/riderscrosswake/">Instagram</a>
   &nbsp;·&nbsp;
-  <a href="https://bsky.app/profile/ridersplus.bsky.social">Bluesky</a>
+  <a href="https://bsky.app/profile/riderscrosswake.bsky.social">Bluesky</a>
 </p>
 
 <p align="center">
@@ -52,7 +54,7 @@
 </p>
 
 > **🎉 Now playable on Nintendo Switch 2.** I've been working on running Sonic Riders natively on Switch 2 since
-> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Plus.
+> Seedsow came out, and the alpha already runs several races in a row at 2x internal resolution with Riders Rebuilt.
 > Audio can still break up and there is some stuttering, so it's an alpha: please
 > [report bugs](https://github.com/teclilla18/sonic-riders-recomp/issues/new?template=bug_report.yml). A huge thank
 > you to the Switch 2 homebrew developers for making this possible.
@@ -60,16 +62,16 @@
 >
 > **🚀 New in v0.9.0:** Hold to boost for everyone, Auto spin, the same character for several players, and a supercharged Super Sonic. Switch 2 gets the same in Alpha 3.
 
-## Riders Plus: break the limits
+## Riders Rebuilt: break the limits
 
 <p align="center">
-  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Riders Plus: Break the limits. Sonic and Super Sonic on Extreme Gear in Metal City, with 999 rings and a Lv. 5 badge">
+  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
 </p>
 
-**Riders Plus** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
-gear; the limits are what change. Turn it off any time in **Settings > Gameplay > Riders Plus** for the original rules.
+**Riders Rebuilt** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
+gear; the limits are what change. Turn it off any time in **Settings > Gameplay > Riders Rebuilt** for the original rules.
 
-| | Original game | Riders Plus |
+| | Original game | Riders Rebuilt |
 |---|---|---|
 | Ring limit | 100 | **999** (a hit or a fall still costs 100) |
 | Gear levels | Lv. 1-3 | **Lv. 4 at 200 rings, Lv. 5 at 300** |
@@ -99,7 +101,7 @@ at Lv. 4 and 215 / 300 at Lv. 5.
 
 <p align="center">
   <img src="docs/images/gear-levels-chart.svg" width="49%" alt="Chart: Blue Star top speed and boost from Lv. 1 to Lv. 5">
-  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Plus">
+  <img src="docs/images/v0.8.2/charge-jump-chart.svg" width="49%" alt="Chart: speed while charging a jump, original vs Riders Rebuilt">
   <br>
   <img src="docs/images/riders-plus/trick-rank-ss.jpg" width="49%" alt="Rank SS trick in Metal City">
 </p>
@@ -245,7 +247,7 @@ forks (`third_party/LICENSE-MPL-2.0`).
 
 ## Credits
 
-- Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana), used here at the maintainer's request, with the artist's signature preserved.
+- Previous Switch 2 poster: original artwork by [Lanmana on DeviantArt](https://www.deviantart.com/lanmana).
 - Switch 2 homebrew and native tools: ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell developers; see the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the

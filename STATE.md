@@ -1,4 +1,4 @@
-# State (2026-11-25): Private four-player gameplay and standings candidate
+# State (2026-11-24)
 
 ## Released
 
@@ -6,58 +6,24 @@
   tag `bce3a5f`): Hold to boost, Auto spin (#23), same character for several players, Super Sonic ring magnet /
   Ring Replenish / 350 km/h held boost, Cheats tab, Switch sleep + start-up clock fixes, unpacked-not-installed
   check. Super Sonic flight is an experimental option, off by default. Zips: PC, Switch, Android, Linux. Cold
-  Sandbox PASS: PC (+ space path), Android. iOS v0.9.0 not built yet (needs the Mac); guides point iOS to v0.8.7.
+  Sandbox PASS: PC (+ space path), Android. iOS zip SonicRiders-iOS-Setup-v0.9.0.zip added to v0.9.0 2026-11-23 (no cold Mac test); guides point to it.
 - **[Switch 2 Alpha 3](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.9.0-switch2-alpha.3)**
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
 ## On main since v0.9.0 (docs only)
 
+- README: website announcement line at the very top (b35298f).
+
 - docs/TEXTURE-PACKS.md: texture packs on every device with nine drawn pictures; linked from the README (Get it
   line, texture details) and MODDING.md. Switch 2 section: copy by hand (its installer has no pack button yet).
 
+- Website (gh-pages fa21b1d, 98f33f0, 2026-11-21): v0.9.0 features on the Riders Rebuilt page (Hold to boost, Auto
+  spin, same character, Super Sonic 350 km/h / magnet / Ring Replenish / flight option, toggles, Cheats tab, release
+  charts), home ticker/teaser, FAQ (texture guide link, sleep fix, FINISH UPDATE). Checked in Chrome at desktop and
+  phone width. Rule (user, 2026-11-21): update the website after every release, pleasing and easy to read.
+
 ## Work in progress (branches, not on main)
-
-**Four-player online candidate** (`codex/online-four`, from beta.4). In-game LAN and invite-code rooms
-hold 2–4 players. PROTO 6 / NET_COMPAT 8 bundles all inputs through the host. A common visibility
-camera keeps game state in sync while each player chooses their screen shape and presentation rate.
-The PC test runner defaults to Fit at 1910×800 (2.39:1).
-
-- PC-tested [confirmed]: Metal City, four players on LAN and through the invite-code path on loopback,
-  5,400 matching input/checksum records per peer. Mixed local ratios and 30, 45, 60, 120 FPS choices.
-  Three-player direct race 5,400 and two-player regression 4,800. The invite-code lobby refused a fifth.
-  Disconnecting a guest ended lockstep on all three remaining copies.
-- Implemented private four-player race HUD. Each peer schedules the original personal HUD, lap
-  panel and gauge for all four controller owners. The renderer composes the selected camera,
-  full-frame speed trail and one personal HUD. The map uses its original solo position.
-- Tested on four local Windows peers at four aspects. The direct candidate matched 28,200 full
-  records, and the LAN candidate matched 23,000, including all four finishes in both races.
-  The invite-code iteration matched 21,000. The recovery Windows build (SHA-256 9aaedb7dcb7e)
-  matched 20,500 direct-room steps through the same four finishes. Its offline solo and local
-  four-player control captures matched their pre-change references byte for byte.
-- Recovery point 97543c7. The new private Windows build (4735839df57a, compatibility 7) uses native solo racer distance limits,
-  delegates the missing EFB depth test to the renderer, keeps Player Entry models on their cards,
-  and replays the same menu-state update as live sessions. Tested 20,500 matching steps through all finishes.
-- The subsequent user PC/Switch test exposed extended-level and results issues. The host log matched all 103,340 checksums across three races. Compatibility 8 keeps unfinished racers eligible after the first finish, shares the native standings table, and exposes effective host rules before play. See docs/notes/online-beta.md. PC races matched through the finish in 2P/3P/4P. Windows and Eden matched 20,202 complete records through both finishes, including the Switch guest reaching levels 4 and 5 after the host finished. Physical validation of these changes is pending.
-
-0. **Online Beta 1** (`codex/online-beta`, not released): in-game LAN lobby, saved player names, restart to Online,
-   black loading screen, NET_COMPAT check, deterministic disc read-ahead and tester issue form implemented.
-   PC-PC finish: all checksums equal through 25,200 frames with cache enabled. Earlier cache-on PC pair through 6,600; PC/OLED racing
-   through 17,400 equal (mode/clocks not captured, so no hardware speed claim). S23 restart into lobby tested;
-   PC/Android race segment through 6,600 equal on both. Final affinity/clocks menu/cache check passed.
-   Separate native candidate: `codex/online-beta-switch2` from public Alpha 3, builds; hardware pending.
-   2026-11-21: Windows relaunch keeps an explicit ISO (a5fc6a2, PC-tested); Back to offline PASS on PC; cold Sandbox
-   PASS for PC and Android zips (a5fc6a2). Native Switch 2: GPU device loss at game frame 712 blocks it (see
-   `codex/online-beta-switch2` STATE.md).
-   2026-11-24 beta.4 implemented: NET_COMPAT 4 uses the narrower aspect for both pictures and the game camera.
-   Auto spin logs frame and section transitions and checks the movement state before taking the stick.
-   PC-tested [confirmed]: Metal City on localhost with 1910×800 and 1424×800 windows, all checksums equal
-   through the frame-15,600 checkpoint. Captures show both nearby racers, HUD and rings. The offline
-   stale-flag injection preserves manual input, and natural spin sections still work offline and on both peers.
-   **Next:** two-home PC beta.4 retest with the ultrawide host and 16:9 joiner. Check HUD, rings, racer
-   visibility at distance and steering after a grind. The audio stutter report is still open.
-   Every release, issue post or Discussions thread requires explicit OK. Notes: docs/notes/online-beta.md.
-
 
 1. **Music packs** (`claude/music-loader`, worktree `.local/music-loader`, pushed): own songs per stage
    (`mods/<pack>/music/<stage>/`, MP3/OGG/FLAC/WAV/ADX), shuffle per race, D-pad hold picks song 1-4, Music tab in
@@ -74,37 +40,75 @@ The PC test runner defaults to Fit at 1910×800 (2.39:1).
    build; nothing run on a device yet. Next: PC launcher check, Switch 2 hardware run (log `[vk] ... dynamic`),
    README/booklets/guides, then one release with the user's OK and Sandbox tests (PC, Android, Switch 2).
 
+3. **Online Beta: LAN + internet** (`codex/online-beta` 6bef6d4, pushed, not merged; PC / Switch / Android;
+   `codex/online-beta-switch2` be04843 for Switch 2, left out). Internet play **implemented and tested**: invite
+   codes (public IPv4, 10 digits / 15 with the port), one UDP socket STUN + lobby + game, host approval, session id,
+   ping-based delay, both-codes punching, best-effort UPnP (unproven: nothing answered at home), 10 s STUN keepalive.
+   [confirmed] S23 on an iPhone hotspot hosting vs PC (ethernet): equal through 14,400; vs OLED (handheld, CPU 1785 /
+   GPU 614.4 / MEM 2133): equal through 26,328; both needed both codes. LAN regression S23 host / OLED join: two
+   races equal through 29,741 (user-played). Fixed: player 2 losing control when player 1 finished (per-player
+   finish, racer +0xBC) [confirmed]; Super Sonic flight now follows the host online (NET_COMPAT 2) [PC only].
+   Known: slow-motion countdown online when a device has texture packs (first-use lookups up to 682 ms on the OLED
+   stall the lockstep); posted codes reveal the host's IP (share privately). Notes: docs/notes/online-beta.md.
+   Since: no CPU racers online (43110ca, NET_COMPAT 3, PC localhost tested); letter keys type text in menu text
+   boxes (ab358f6, built, not tried by typing); launcher Online page points to in-game internet play.
+   **First two-home race (2026-11-24, user-played, PC vs PC, beta.3 zip ab358f6)**: connected fine; 2 races, 54,639
+   frames, all checksums equal, ping ~55 ms, no network stalls [confirmed by both logs]. Bugs seen: glitchy rings/HUD
+   and the other racer vanishing after a short distance (likely: host 2.39 ultrawide vs joiner 1.78, the room camera
+   follows the host) [likely]; audio stutter (game-code hitches up to ~300 ms on both PCs) [likely]; Auto spin stuck
+   on after a grind until the next auto path ended (no frame numbers in [autospin] lines) [uncertain cause].
+   Plan only (needs approval): docs/notes/online-roadmap.md (4P, Super Sonic online rules: no held boost + Ring
+   Replenish at half, quick chat, stage voting, rematches).
+
 ## Open items (priority order)
 
-1. Music packs: launcher page, then the guide (above).
+1. Online Beta bugs from the two-home race (above): screen-shape mismatch (each player's own shape, or the room
+   uses the narrower one), Auto spin after a grind (log frame numbers first, try offline), game-code hitches.
+   Also wanted: keyboard number row / numpad in the invite-code box. **#37** (2026-11-24): in-game volume settings;
+   the user promised them for the next release.
+   Then: background texture-pack loading (time each part of a lookup on the OLED first; isolated branch),
+   then beta release prep: website third channel (site.js/build_site.py treat every pre-release as Switch 2),
+   online_bug.yml (still LAN-only text), privacy line about codes, Online page; zips, Sandbox, user OK.
+   Music packs: launcher page, then the guide (above).
 2. Switch 2 into the main release (above).
 3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
-4. **Online Beta 1 validation** (60 %): finish candidate testing/packages; internet room codes and relay, a shared
-   30 fps mode, 3-4 players and ping/delay controls remain later work.
-5. **#33 32-bit Android**: branch `claude/android-armv7`; the reporter's APK ran but found no disc image; plain
-   copy-the-iso steps posted 2026-11-20. The reporter acknowledged the request on 2026-11-25. The race log is pending.
+4. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
+   f0a106b8) to split build vs console, then bisect c572d99..be04843.
+5. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
+   (menus fine), but races show only a small top-left corner of the scene; not reproduced on the S23 (32-bit,
+   legacy path forced, reporter's settings). Test 2 posted 2026-11-22: on PowerVR, EFB passes over the whole image
+   + colour clears as quads (SR_VK_FULLAREA / SR_VK_QUADCLEAR). Waiting for the reporter's race log. [uncertain]
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-7. **Discussion #34**: user replied. #35: private PC fix tested in local 2P and online 4P Player Entry. Personal review pending.
+7. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
 8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
-9. Super Sonic overhaul (Riders Plus only; plan only). History-only CI failure: ask before changing `--history`.
-10. **#37** in-game volume controls, requested and acknowledged on GitHub. **Discussion #36** asks about more netplay players.
+9. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
 
-## Development device checks
+## Devices (user's own)
 
-- OLED: the ONLINE application has development build 59f17677537b, NRO and manifest readbacks verified.
-  Normal application preserved; previous online build backed up locally. Final menu/cache check: handheld,
-  CPU 1785 / GPU 614.4 / MEM 2133 MHz, no worker-core affinity failure. The earlier race used unrecorded clocks.
-- S23 Ultra: beta APK cb7ff5ce78a8 installed with readback verification and original APK retained.
-  Open Online process restart and PC/Android race segment tested; settings/saves/caches retained.
-- Native Switch 2: separate candidate built, not installed or hardware-tested.
+- **Switch 1 (OLED)**: v0.9.0 + music loader + Music tab (NRO dda4015f..., from claude/music-loader before the format
+  commit); v0.9.0 kept as /switch/sonicriders/sonicriders.before-music.nro. Mods: the user's own local music pack (64
+  songs, 16 stages) and an HD texture pack shrunk to 512 max. Online app sonicriders-online.nro = beta build
+  c4519639 (794a9f8; previous kept as sonicriders-online.before-inet.nro). GXSRTE marker file renamed .png.off.
+- **Son's Switch 1** (2026-11-21, by USB mass storage): the OLED's normal NRO (0b2467b8), Online app c4519639,
+  /NSP/SonicRidersOnline.nsp (to install with DBI/Goldleaf), mods GXSRTE (marker fix) + astro waterfall +
+  super-srdx-hd-textures; his old NRO kept as sonicriders.before-20261121.nro. SD nearly full (2.5 GB free).
+- **S23**: online beta APK 9503d679 (794a9f8); backup of the previous one in .local/online-beta/build/old/phone-backup/.
+- **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
+  Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
+  Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed
+  on a folder create by full path; cwd + MKD name worked.
 
 ## Next hardware test
 
-- Native Switch 2 candidate: name entry, discovery in both directions, loading screen and a cross-platform race.
-  Record mode and actual CPU/GPU/memory clocks. Preserve the normal application, settings/saves/caches;
-  backup and verify staged/installed NRO and manifest by SHA-256, keep rollback.
-- Slow-SD comparison: deterministic read-ahead must keep checksums equal and reduce disc-wait hitches.
-- Cold candidate packages need explicit permission before Windows Sandbox; no release/post without OK.
+- Online PC vs PC (user + brother): both at the same screen shape (4:3 or 16:9): do rings/HUD and the other racer
+  look right? Grind with Auto spin on: does it stay stuck? Both send sonicriders.log.
+
+- Online (OLED + S23 or the son's Switch, LAN and internet): a race with Super Sonic flight on at the host; CPU / 1P
+  markers visible with GXSRTE (marker file renamed); host waits 3+ min before the join (keepalive); state mode +
+  clocks. Texture packs on vs off: countdown speed.
+- Switch 2: play the music build (Music tab, D-pad picks) and the 512 texture pack; report whether the music speed
+  wobble is gone on both consoles (docked CPU 1785 / GPU 1152 / MEM 2133; handheld GPU 614; state the mode).
+- An MP3 or OGG song in a pack on a Switch: conversion time at the race's loading.

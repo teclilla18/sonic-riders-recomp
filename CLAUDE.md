@@ -82,7 +82,7 @@ recompilation: the PowerPC code becomes C on each contributor's machine from the
   other extras in a release's assets. A checksum, if wanted, goes in the notes' folded test details; pictures go
   in `docs/images/` and are linked by their raw `main` URL.
 - **Release-notes style** (user approved, 2026-11-19; copy v0.8.7 / Switch 2 Alpha 2): banner picture (Switch 2
-  releases: `docs/images/switch2-poster.jpg`; Riders Plus: `docs/images/riders-plus/riders-plus-banner.jpg`),
+  releases: `docs/images/switch2-poster.jpg`; Riders Rebuilt: `docs/images/riders-plus/riders-plus-banner.jpg`),
   centred title + one line, ✨ Highlights (emoji + bold lead per bullet), 📥 Download, 🔄 Already installed?,
   ⚠️ Known issues, ❤️ Thanks, test details folded in `<details>`, then "Full changelog" + a compare link. Plain,
   short words. The newest stable notes show in the app's "See what's new", which prints tables as raw text: use

@@ -1,15 +1,48 @@
 name: Feature request
-description: An idea or improvement for the port.
+description: An idea or improvement for Riders Rebuilt.
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach game files**: no disc image, builds, saves, extracted game files or keys.
   - type: textarea
     id: idea
     attributes:
       label: What would you like?
     validations:
       required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is it about?
+      multiple: true
+      options:
+        - Gameplay or controls
+        - Graphics
+        - Audio or music
+        - Performance
+        - Online multiplayer
+        - Installation or updating
+        - Mods (texture packs, music packs, characters)
+        - Menus and settings
+        - Other
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Which devices?
+      multiple: true
+      options:
+        - All devices
+        - Windows PC
+        - Linux / Steam Deck
+        - Android
+        - iPhone / iPad (iOS)
+        - Nintendo Switch
+        - Nintendo Switch 2
+        - Other
   - type: textarea
     id: why
     attributes:
       label: Why, and how would it work?
-      description: For enhancements that change gameplay or visuals, say whether it should be optional.
+      description: For changes to gameplay or visuals, say whether it should be optional.
