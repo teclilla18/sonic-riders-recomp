@@ -1,20 +1,20 @@
 [
   {
     "name": "Bluesky",
-    "handle": "@ridersplus.bsky.social",
-    "url": "https://bsky.app/profile/ridersplus.bsky.social",
+    "handle": "@riderscrosswake.bsky.social",
+    "url": "https://bsky.app/profile/riderscrosswake.bsky.social",
     "about": "News, clips and release announcements."
   },
   {
     "name": "Instagram",
-    "handle": "@ridersplusgame",
-    "url": "https://www.instagram.com/ridersplusgame/",
+    "handle": "@riderscrosswake",
+    "url": "https://www.instagram.com/riderscrosswake/",
     "about": "Screenshots and art from the project."
   },
   {
     "name": "Facebook",
-    "handle": "@ridersplusgame",
-    "url": "https://www.facebook.com/ridersplusgame",
+    "handle": "@riderscrosswake",
+    "url": "https://www.facebook.com/riderscrosswake",
     "about": "Project news and release updates."
   }
 ]
