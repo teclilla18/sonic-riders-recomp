@@ -66,7 +66,7 @@
 ## Riders Rebuilt: break the limits
 
 <p align="center">
-  <img src="docs/images/riders-plus/riders-plus-banner.jpg" width="100%" alt="Removing AI art. Will be replaced with commissioned art because I can't draw">
+  <img src="https://i.redd.it/20rt6qvlpr1e1.gif" width="500" alt="Sonic wearing green racing goggles">
 </p>
 
 **Riders Rebuilt** is our own take on the game's racing, built in and **on by default**. Same tracks, characters and
@@ -246,6 +246,7 @@ Licensed under the [Mozilla Public License 2.0](LICENSE). The translator license
 ## Credits
 
 - README header: Sonic Riders promotional artwork © [SEGA](https://sonic.sega.jp/riders/).
+- Riders Rebuilt section animation: [Sonic Riders GIF hosted on Reddit](https://i.redd.it/20rt6qvlpr1e1.gif).
 - Thanks to the Switch 2 homebrew developers who made the alpha possible, including the teams behind ouncebrew/ounce-devkit, libounce, OunceVK, kaiHEN, Seedsow and OunceShell. See the [alpha guide](docs/SWITCH2-ALPHA.md#credits-and-transparency).
 - [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) and
   [ZeldaWWHDRecomp](https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp): the approach, and the

@@ -2164,3 +2164,4 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Replaced the placeholder at the top of the README with the maintainer-supplied Sonic Riders promotional artwork.
   The illustration is unchanged, with its SEGA attribution in the Credits section. Removed the JPEG metadata block and set the display width to 80% with automatic height [confirmed].
 - Renamed the README section and its charts to Riders Rebuilt, kept the old anchor, and removed the former poster credit [confirmed].
+- Replaced the image under the Riders Rebuilt heading with the supplied GIF. The Reddit URL serves the exact attached animation [confirmed].

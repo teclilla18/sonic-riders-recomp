@@ -13,7 +13,7 @@
 
 ## On main since v0.9.0 (docs only)
 
-- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The README uses the Riders Rebuilt name and credits the art it still displays.
+- The README opens with SEGA promotional artwork displayed at 80% width with its original aspect ratio. The README uses the Riders Rebuilt name, embeds the supplied gameplay-section GIF from Reddit, and keeps attribution in Credits.
 
 - README: website announcement line at the very top (b35298f).
 
