@@ -53,6 +53,35 @@ DEB_HASH = {
     "zlib": "e3027565ae50bcd8ba5113c988b589754ae192c9cc3e6afbe3e4ed7c06b2598e",
     "zstd": "c487af7d68664585cc5187330acc7a7a054614cb742fcbb1d8a62e214bb3368a",
 }
+# 32-bit ARM phones (#33/#45): the same Termux 21.1.8-3 package versions, built for arm.
+DEB_HASH_ARM = {
+    "clang": "7f3659870dcaed013f084cb718cf569e12fb328199096e0557fc2244283b5310",
+    "lld": "29d03be507061b500843359d111437bb03c7c3e718d793bceed61e24642948a2",
+    "libllvm": "7612dfb00b1662d9ef57efbe5059eb04594e99dc09ab11c42620b948971bfb97",
+    "libc++": "5d4e4dfea77402c0b3ee05b6cb4c73108bb69cc149e2d3a73d4ec6ee6919fd16",
+    "libffi": "50ceea8a6739f52a69f8bad09a3c99174fdd0d1f9fcba05d19b109ca39a66812",
+    "libiconv": "d0c21741ba47c89d8a86c23cf434376b116d4c0c27834cf35cbe4e35f7523132",
+    "libxml2": "0b163b7b9b454a59454018c3fb39fa8d6af46249d44c82450217d9a0ec5e49c9",
+    "zlib": "a04f6ce4f36749b49a7ee0432e6fe3f235bdde95ed53f6b9f86138d58fbdc816",
+    "zstd": "e74a53b61dadc85844112b401c6999f79aa3d42b970f16dcdc1085c430076251",
+}
+# Per-ABI inputs. Chaquopy has no 32-bit ARM Python after 3.11, so armeabi-v7a uses 3.11.17-0.
+ABIS = {
+    "arm64-v8a": SimpleNamespace(
+        triple="aarch64-linux-android", clang="aarch64-linux-android30", rust="aarch64-linux-android",
+        builtins="aarch64", debs="debs", deb_hash=DEB_HASH, suffix="arm64", recipe=MODULE_RECIPE,
+        python=("python-arm64.zip", "c19f39fecada0b3932ab7a61b0f214c1212068cbbae0dc22c2afa38a4f354b8e"),
+        stdlib=("python-stdlib.zip", "d5765953d06dc3412c2925d211f188683e1c7936cca985a3091b4183051f0587"),
+        libpython="libpython3.13.so"),
+    "armeabi-v7a": SimpleNamespace(
+        triple="arm-linux-androideabi", clang="armv7a-linux-androideabi30", rust="armv7-linux-androideabi",
+        builtins="arm", debs="debs-arm", deb_hash=DEB_HASH_ARM, suffix="armv7",
+        recipe=b"android-armv7-gx-recomp-v1",
+        python=("python311-armeabi-v7a.zip", "7516b90fcb8a5a2df70e5f9899aab7e63fa43efa0455c3ba7b846ae54d70ee2c"),
+        stdlib=("python311-stdlib.zip", "860d5684cfb30cb4b7ff71dd3ba3f9b352e7a91a7329552e1be7ca87a4ae4cf5"),
+        libpython="libpython3.11.so"),
+}
+ABI = ABIS["arm64-v8a"]
 
 
 def verify(path, digest):
@@ -75,7 +104,7 @@ def deb_tar(path):
 
 
 def package_deb(archive, package):
-    path = verify(DEPS / "debs" / (package + ".deb"), DEB_HASH[package])
+    path = verify(DEPS / ABI.debs / (package + ".deb"), ABI.deb_hash[package])
     with deb_tar(path) as payload:
         for item in payload:
             if not item.isfile():
@@ -94,7 +123,7 @@ def package_deb(archive, package):
 
 def module_key(bundle, native):
     """Fingerprint build inputs, excluding UI, reporting code and notices."""
-    digest = hashlib.sha256(MODULE_RECIPE)
+    digest = hashlib.sha256(ABI.recipe)
     with ZipFile(bundle) as z:
         recipe = ast.parse(z.read("build_on_phone.py"))
         for node in ast.walk(recipe):
@@ -144,6 +173,7 @@ def check_release_paths(paths):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tools", type=Path, required=True)
+    parser.add_argument("--abi", choices=sorted(ABIS), default="arm64-v8a")
     parser.add_argument("--version-code", type=int, default=2)
     parser.add_argument("--version-name", default="0.2")
     parser.add_argument("--qa", action="store_true", help="Build an isolated test package with synthetic storage limits.")
@@ -151,6 +181,8 @@ def main():
     parser.add_argument("--qa-remapped", action="store_true", help="Use the beta's remapped native inputs in the QA package.")
     parser.add_argument("--release-keystore", type=Path, help=f"Use the protected standalone signer. Set {SIGNING_PASSWORD}.")
     args = parser.parse_args()
+    global ABI
+    ABI = ABIS[args.abi]
     t = args.tools.resolve()
     sdk = t / "android-sdk"
     jdk = str(t / "jdk17")
@@ -160,7 +192,7 @@ def main():
     exe = ".exe" if sys.platform == "win32" else ""
     sysroot = ndk / "sysroot/usr"
     qualifier = "-QA" if args.qa else "-Beta" if args.release_keystore else ""
-    out = WORK / f"RidersPlus-Android-Standalone{qualifier}-v{args.version_name}-arm64.apk"
+    out = WORK / f"RidersPlus-Android-Standalone{qualifier}-v{args.version_name}-{ABI.suffix}.apk"
     assets = WORK / "standalone-tools.zip"
     key = args.release_keystore or WORK / ("qa.keystore" if args.qa else "local.keystore")
     notices = DEPS / "licenses" / "standalone-third-party.zip"
@@ -177,24 +209,34 @@ def main():
     remapped = args.release_keystore or args.qa_remapped
     inputs = WORK / "release-inputs" if remapped else ROOT / "build"
     dtk_target = inputs / "rust-target" if remapped else dtk / "target"
-    shutil.copyfile(dtk_target / "aarch64-linux-android/release/dtk", WORK / "libsr_dtk.so")
-    runtime = inputs / "android-arm64-v8a/runtime.o"
-    python_zip = verify(DEPS / "python-arm64.zip", "c19f39fecada0b3932ab7a61b0f214c1212068cbbae0dc22c2afa38a4f354b8e")
-    stdlib = verify(DEPS / "python-stdlib.zip", "d5765953d06dc3412c2925d211f188683e1c7936cca985a3091b4183051f0587")
+    shutil.copyfile(dtk_target / ABI.rust / "release/dtk", WORK / "libsr_dtk.so")
+    runtime = inputs / f"android-{args.abi}/runtime.o"
+    python_zip = verify(DEPS / ABI.python[0], ABI.python[1])
+    stdlib = verify(DEPS / ABI.stdlib[0], ABI.stdlib[1])
     with ZipFile(assets, "w", ZIP_DEFLATED) as z:
         for package in DEB_HASH:
             package_deb(z, package)
-        z.write(stdlib, "python/stdlib.zip")
+        if args.abi == "arm64-v8a":
+            z.write(stdlib, "python/stdlib.zip")
+        else:  # Chaquopy 3.11 loads zlib from lib-dynload, so zipimport must read the stdlib uncompressed
+            stored = io.BytesIO()
+            with ZipFile(stdlib) as source, ZipFile(stored, "w") as target:
+                for entry in source.infolist():
+                    target.writestr(entry.filename, source.read(entry))
+            z.writestr("python/stdlib.zip", stored.getvalue())
         with ZipFile(python_zip) as bundle:
             for name in bundle.namelist():
-                if name.endswith(".so") and name.startswith("jniLibs/arm64-v8a/"):
+                if name.endswith(".so") and name.startswith(f"jniLibs/{args.abi}/"):
                     z.writestr("tool_libs/" + Path(name).name, bundle.read(name))
-                elif name.endswith(".so") and name.startswith("lib-dynload/arm64-v8a/"):
+                elif name.endswith(".so") and name.startswith(f"lib-dynload/{args.abi}/"):
                     z.writestr("python/dynload/" + Path(name).name, bundle.read(name))
         for name in ("LICENSE-APACHE", "LICENSE-MIT"):
             z.write(dtk / name, "notices/dtk/" + name)
         z.write(runtime, "runtime.o")
         worker = (HERE / "build_on_phone.py").read_bytes()
+        if args.abi != "arm64-v8a":  # the recipe is written for arm64; same steps, other target
+            worker = worker.replace(b'"--target=aarch64-linux-android30"', f'"--target={ABI.clang}"'.encode(), 1)
+            worker = worker.replace(b'"include/aarch64-linux-android"', f'"include/{ABI.triple}"'.encode(), 1)
         if args.qa_rebuild:
             worker = worker.replace(b'"--build-id=sha1"', b'"--build-id=md5"', 1)
         z.writestr("build_on_phone.py", worker)
@@ -210,24 +252,27 @@ def main():
                 z.write(header, "include/" + header.name)
         for header in (sysroot / "include").rglob("*.h"):
             path = header.relative_to(sysroot / "include")
-            if not path.parts[0].endswith("-linux-android") or path.parts[0] == "aarch64-linux-android":
+            if not path.parts[0].endswith("-linux-android") or path.parts[0] == ABI.triple:
                 z.write(header, "sdk/include/" + path.as_posix())
-        link_dir = sysroot / "lib/aarch64-linux-android/30"
+        link_dir = sysroot / "lib" / ABI.triple / "30"
         for name in ("crtbegin_so.o", "crtend_so.o", "libvulkan.so", "libandroid.so", "liblog.so",
                      "libdl.so", "libm.so", "libc.so"):
             z.write(link_dir / name, "sdk/link/" + name)
-        builtins = next(ndk.glob("lib/clang/*/lib/linux/libclang_rt.builtins-aarch64-android.a"))
+        builtins = next(ndk.glob(f"lib/clang/*/lib/linux/libclang_rt.builtins-{ABI.builtins}-android.a"))
         z.write(builtins, "sdk/link/libbuiltins.a")
 
     python = WORK / "libsr_python.so"
     with ZipFile(python_zip) as bundle:
-        python_so = WORK / "libpython3.13.so"
-        python_so.write_bytes(bundle.read("jniLibs/arm64-v8a/libpython3.13.so"))
+        python_so = WORK / ABI.libpython
+        python_so.write_bytes(bundle.read(f"jniLibs/{args.abi}/{ABI.libpython}"))
     android_build.run([
-        str(ndk / "bin" / ("clang" + exe)), "--target=aarch64-linux-android30",
-        "-Wl,-z,max-page-size=16384", str(HERE / "python_main.c"), str(python_so), "-o", str(python),
+        str(ndk / "bin" / ("clang" + exe)), f"--target={ABI.clang}",
+        "-Wl,-z,max-page-size=16384", str(HERE / "python_main.c"),
+        # Chaquopy's 3.11 library has no SONAME: link it by name, or the host path becomes its NEEDED entry
+        *([str(python_so)] if args.abi == "arm64-v8a" else ["-L", str(WORK), "-l" + ABI.libpython[3:-3]]),
+        "-o", str(python),
     ])
-    libs = inputs / "android/sdl/arm64-v8a/libs/arm64-v8a"
+    libs = inputs / f"android/sdl/{args.abi}/libs/{args.abi}"
     apk_libs = [libs / "libSDL2.so", libs / "libc++_shared.so", python, WORK / "libsr_dtk.so"]
     apk_libs.extend(WORK / target for _, target in NATIVE.values())
     stripped = WORK / "apk-libs"
@@ -242,7 +287,7 @@ def main():
     current_key = module_key(assets, [(p.name, p.read_bytes()) for p in apk_libs])
     bundle_key = hashlib.sha256(current_key.encode() + b"\0" + worker).hexdigest()
     metadata.write_text(f"module={current_key}\nlegacy={LEGACY_MODULE_KEY}\nbundle={bundle_key}\n"
-                        f"version={args.version_name} ({args.version_code})\n", encoding="ascii")
+                        f"version={args.version_name} ({args.version_code})\nabi={args.abi}\n", encoding="ascii")
     android_build.step_dex(jdk, bt, platform, str(dex), [
         str(HERE / "java"), str(ROOT / "android/java"), str(t / "sdl2-src/android-project/app/src/main/java"),
     ])
@@ -259,7 +304,7 @@ def main():
         icon=str(icon), build_tools=bt, platform=platform,
         jdk=jdk, dex=str(dex), keystore=str(key), strip="",
         password=f"env:{SIGNING_PASSWORD}" if args.release_keystore else "pass:android",
-        lib=[f"arm64-v8a={path}" for path in apk_libs],
+        lib=[f"{args.abi}={path}" for path in apk_libs],
         asset=[str(assets), str(metadata)] + ([str(notices)] if args.release_keystore else []),
     ))
     if args.release_keystore:

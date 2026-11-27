@@ -71,11 +71,14 @@ final class Installer {
         legacyKey = key(manifest, "legacy");
         bundleKey = key(manifest, "bundle");
         version = manifest.getProperty("version", "");
+        arm32 = "armeabi-v7a".equals(manifest.getProperty("abi", "arm64-v8a"));
         root = new File(context.getFilesDir(), "installer");
         output = new File(root, "prepared/" + moduleKey);
         tools = new File(root, "toolset");
         preferences = context.getSharedPreferences("installer", Context.MODE_PRIVATE);
     }
+
+    private final boolean arm32;  /* this APK carries the 32-bit ARM tools (installer.properties abi=) */
 
     private static String key(Properties manifest, String name) {
         String value = manifest.getProperty(name, "");
@@ -115,22 +118,24 @@ final class Installer {
         return other != null && other.length > 0;
     }
 
-    private static boolean complete(File directory) {
+    private boolean complete(File directory) {
         File image = new File(directory, "libmain.so");
         if (!new File(directory, "report.txt").isFile() || image.canWrite()) return false;
         try (var input = new FileInputStream(image)) {
             byte[] elf = new byte[20];
             return input.read(elf) == elf.length && elf[0] == 0x7f && elf[1] == 'E'
-                && elf[2] == 'L' && elf[3] == 'F' && elf[4] == 2 && elf[5] == 1
-                && elf[16] == 3 && elf[17] == 0 && (elf[18] & 0xff) == 183 && elf[19] == 0;
+                && elf[2] == 'L' && elf[3] == 'F' && elf[4] == (arm32 ? 1 : 2) && elf[5] == 1
+                && elf[16] == 3 && elf[17] == 0 && (elf[18] & 0xff) == (arm32 ? 40 : 183) && elf[19] == 0;
         } catch (IOException ignored) {
             return false;
         }
     }
 
     String compatibility() {
-        if (!Arrays.asList(Build.SUPPORTED_64_BIT_ABIS).contains("arm64-v8a"))
-            return "Riders Rebuilt requires a 64-bit ARM device.";
+        if (arm32 ? !Arrays.asList(Build.SUPPORTED_32_BIT_ABIS).contains("armeabi-v7a")
+                  : !Arrays.asList(Build.SUPPORTED_64_BIT_ABIS).contains("arm64-v8a"))
+            return arm32 ? "This version of Riders Rebuilt is for 32-bit ARM phones."
+                         : "Riders Rebuilt requires a 64-bit ARM device.";
         if (Os.sysconf(OsConstants._SC_PAGESIZE) != 4096)
             return "This build requires 4 KB memory pages. A 16 KB build is not available yet.";
         if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_VERSION, 0x401000))

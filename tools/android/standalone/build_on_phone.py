@@ -17,7 +17,15 @@ def build(root, native, iso, output):
     temp = output / "stage"
     shutil.rmtree(temp, ignore_errors=True)
     temp.mkdir()
-    shutil.copytree(root / "config", temp / "config")
+    # Plain copies: copytree's copystat also copies the SELinux label, which Android refuses (EACCES) and
+    # Python 3.11 (the 32-bit ARM build) does not ignore.
+    for source in (root / "config").rglob("*"):
+        target = temp / source.relative_to(root)
+        if source.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
     (temp / "baserom").mkdir()
     gen = temp / "gen"
     log = output / "build.log"
