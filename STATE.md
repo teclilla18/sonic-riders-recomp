@@ -1,8 +1,16 @@
-# State (2026-11-26, night)
+# State (2026-11-26, late night)
 
 ## Released
 
-- **[v0.10.1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1)** (latest, 2026-11-26; tag `30ba4c3`):
+- **[v0.10.2](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.2)** (latest, 2026-11-26 late night):
+  Switch Open Online crash fixed: the in-game restart is impossible on Switch (the loader maps the next NRO in the same
+  process), so online has its own app sonicriders-online.nro ("Sonic Riders Online", Online icon) in
+  /switch/sonicriders-online/, plus an Online HOME icon (make_forwarder.py --online, 010053520d9b0000). OLED handheld
+  (CPU 1785 / GPU 614 / MEM 2133) vs PC v0.10.1 LAN: 15,600 checksums equal [confirmed]; user ran the update on a second
+  Switch 1 with both HOME icons [confirmed, user]. #42: ARM Mali uses legacy Vulkan render passes, crash reports name the
+  renderer step (S23 validation 0 errors both paths; no Mali device) [likely]. Launcher banner restored. No-PC app v0.7
+  (code 7). Cold Sandbox PASS PC (+ space) and Android. NET_COMPAT unchanged (races v0.10.0 / v0.10.1).
+- **[v0.10.1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1)** (2026-11-26; tag `30ba4c3`):
   #42 fix. Since v0.10.0 every frame's end-of-frame present ran as an EFB copy into texture 0 (0x0 area); after the
   texture cache freed texture 0 (often at race start) frames wrote into a destroyed image, and Mali drivers crashed.
   Now only the pre-boot Online screen copies (copy[4] set), in render_vk.c / render_gl.c / render_deko.c. Tested: S23
@@ -77,8 +85,8 @@
 
 ## Open items (priority order)
 
-1. **#42 Mali crash still there on v0.10.1** (see Released). Next: read the log with log-reader, find which GL/Vulkan
-   call reaches the Mali driver at race start (texture cache free vs present path), reply on #42 only with the user OK.
+1. **#42**: v0.10.2 moves Mali to legacy render passes (unproven on Mali). Next: the reporter's result; if it still
+   crashes, the new crash.txt names the Vulkan step and thread. #43 closed as duplicate.
 2. **Four-player online update** (promised in every v0.10.0 text as "coming soon"): `codex/online-four` (compat 8,
    private) has 3-4P rooms; v0.10.0 limits rooms to 2 (LAN_ROOM_LIMIT on `claude/online-balance`). The 3P test showed
    each device drawing every split view (blurry HUD, S23 GPU-bound ~53 fps): one screen per player first.
