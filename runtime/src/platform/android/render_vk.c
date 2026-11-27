@@ -38,6 +38,13 @@
 #include "settings.h"
 #include "touch_android.h"
 #include "touch_icons.h"     /* generated: tools/embed_icons.py (android/touch_icons) */
+#ifndef __APPLE__
+extern const char* volatile g_crash_step;  /* platform_host.c: printed in crash.txt (#42) */
+extern volatile unsigned long long g_crash_step_val;
+#define VK_STEP(name, val) (g_crash_step_val = (unsigned long long)(val), g_crash_step = (name))
+#else
+#define VK_STEP(name, val) ((void)0)
+#endif
 
 void input_init(void);
 void input_pump(void);
@@ -546,7 +553,9 @@ static VkPipeline pipe_build(VkShaderModule vs, VkShaderModule fs, VkPipelineLay
                                        VK_NULL_HANDLE, -1};
     VkPipeline p;
     uint64_t t0 = platform_now_ns();
+    VK_STEP("vkCreateGraphicsPipelines (target << 32 | fragment module)", ((uint64_t)target << 32) | (uint32_t)(uintptr_t)fs);
     VKC(vkCreateGraphicsPipelines(g_dev, g_pcache, 1, &gi, NULL, &p));  /* the cache is internally synchronized */
+    VK_STEP("after vkCreateGraphicsPipelines", 0);
     __atomic_fetch_add(&g_pipes_new, 1, __ATOMIC_RELAXED);
     uint64_t dt = platform_now_ns() - t0;
     if (dt > 20000000ull) rt_log("[vk] a pipeline took %.0f ms to make", dt / 1e6);
@@ -965,7 +974,11 @@ static void vk_setup(void) {
     }
     const char* force = getenv("SR_VK_FORCE_LEGACY");
     int forced = force && atoi(force) == 1;
-    g_dynamic = !forced && dynamic_supported(api, has_dr, has_resolve, has_rp2, drf.dynamicRendering);
+    /* #42: a Mali-G57 (Vulkan 1.3.303) crashed in its driver at race start on the dynamic path; the
+     * Mali-G57 of #32 raced fine on legacy render passes. ARM GPUs take legacy unless SR_VK_FORCE_LEGACY=0. */
+    int mali = g_props.vendorID == 0x13B5 && !(force && atoi(force) == 0);
+    g_dynamic = !forced && !mali && dynamic_supported(api, has_dr, has_resolve, has_rp2, drf.dynamicRendering);
+    if (mali) rt_log("[vk] ARM Mali GPU: legacy render passes (SR_VK_FORCE_LEGACY=0 tries dynamic rendering)");
     g_dr_deps = api < VK_API_VERSION_1_2;
     rt_log("[vk] rendering path: %s%s (dynamic feature %u, extension %d, 1.1 dependencies %d/%d)",
            g_dynamic ? "dynamic" : "legacy render passes", forced ? " (SR_VK_FORCE_LEGACY=1)" : "",
@@ -1517,6 +1530,7 @@ static int acquire(void) {
     }
     uint32_t idx;
     uint64_t t0 = platform_now_ns();
+    VK_STEP("vkAcquireNextImageKHR (frame slot)", g_slot);
     VkResult r = vkAcquireNextImageKHR(g_dev, g_swap, 1000000000ull, g_acq[g_slot], VK_NULL_HANDLE, &idx);
     g_fr_acq_ns += platform_now_ns() - t0;
     if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_ERROR_SURFACE_LOST_KHR) {
@@ -1880,6 +1894,7 @@ static int shot_thread(void* arg) {
 static void slot_reclaim(unsigned slot) {
     if (g_fenced[slot]) {
         uint64_t t0 = platform_now_ns();
+        VK_STEP("vkWaitForFences (frame slot)", slot);
         VkResult wr = vkWaitForFences(g_dev, 1, &g_fence[slot], VK_TRUE, UINT64_MAX);
         g_fr_wait_ns += platform_now_ns() - t0;
         if (wr != VK_SUCCESS) {
@@ -2263,7 +2278,10 @@ static void execute(GxFrame* f) {
             draws++;
             break;
         }
-        case GXC_PRESENT: efb_copy(c, NULL); break; /* pre-boot Online screen */
+        case GXC_PRESENT:  /* the end of every frame; a picture only for the pre-boot Online screen (copy[4]). The */
+            /* others have no copy target: as an EFB copy they wrote into texture 0 each frame (#42) */
+            if (c->copy[4]) efb_copy(c, NULL);
+            break;
         case GXC_COPY:
             if (cur) {
                 efb_copy(c, cur);
@@ -2313,6 +2331,7 @@ static void execute(GxFrame* f) {
         vkCmdWriteTimestamp(g_cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_qpool, g_slot * 2 + 1);
         g_ts_written[g_slot] = 1;
     }
+    VK_STEP("vkEndCommandBuffer + vkQueueSubmit (frame slot)", g_slot);
     int ended = vk_ok(vkEndCommandBuffer(g_cmd), "vkEndCommandBuffer");
     uint64_t t_sub = platform_now_ns();
     VkPipelineStageFlags wst = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
@@ -2324,7 +2343,9 @@ static void execute(GxFrame* f) {
     if (presenting) {
         uint32_t idx = (uint32_t)g_swap_idx;
         VkPresentInfoKHR pi = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, NULL, 1, &g_sdone[idx], 1, &g_swap, &idx, NULL};
+        VK_STEP("vkQueuePresentKHR (frame slot)", g_slot);
         VkResult r = vkQueuePresentKHR(g_q, &pi);
+        VK_STEP("after vkQueuePresentKHR", 0);
         if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_ERROR_SURFACE_LOST_KHR) g_swap_bad = 1;
         if (r == VK_ERROR_DEVICE_LOST) vk_ok(r, "vkQueuePresentKHR");
         g_slayout[idx] = VK_IMAGE_LAYOUT_UNDEFINED;  /* contents not kept between frames */

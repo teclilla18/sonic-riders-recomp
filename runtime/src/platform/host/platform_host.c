@@ -120,6 +120,9 @@ void cpu_dump_trace(void);
 void mmio_dump(void);
 void sched_dump(void);
 extern const char g_build_version[];
+/* what the renderer was doing (#42: a Mali driver crash with no caller frames); set by render_vk.c */
+const char* volatile g_crash_step;
+volatile unsigned long long g_crash_step_val;
 
 /* a native crash (Android, Linux), as the Windows crash_handler: the report goes to crash.txt first
  * (plain write(), works even if the log's stdio lock is held), then to logcat and the log, then the
@@ -172,6 +175,15 @@ static void crash_signal(int sig, siginfo_t* si, void* uctx) {
                   (unsigned long long)((uintptr_t)si->si_addr - (uintptr_t)ppc_mem_base_var));
     ucontext_t* uc = uctx;
     (void)uc;
+    {
+#if defined(__linux__) || defined(__ANDROID__)
+        char tn[32] = "?";
+        pthread_getname_np(pthread_self(), tn, sizeof tn);
+        crash_add("[crash] thread %d \"%s\"\n", (int)gettid(), tn);
+#endif
+        const char* st = g_crash_step;
+        if (st) crash_add("[crash] renderer step: %s (%llX)\n", st, g_crash_step_val);
+    }
 #if defined(__APPLE__) && defined(__aarch64__)
     crash_add("[crash] at:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext->__ss.__pc);
@@ -182,6 +194,18 @@ static void crash_signal(int sig, siginfo_t* si, void* uctx) {
     crash_frame(0, (uintptr_t)uc->uc_mcontext.pc);
     crash_add("[crash] lr:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext.regs[30]);
+    {   /* the frame-pointer chain: the unwinder below finds nothing from inside a driver without unwind tables */
+        int fd0 = open("crash.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);  /* a first copy, in case the walk faults */
+        if (fd0 >= 0) { write(fd0, crash_buf, (size_t)crash_len); close(fd0); }
+        uintptr_t sp = (uintptr_t)uc->uc_mcontext.sp, fp = (uintptr_t)uc->uc_mcontext.regs[29];
+        crash_add("[crash] frame pointers:\n");
+        for (int i = 0; i < 24 && fp >= sp && fp < sp + (8u << 20) && !(fp & 15); i++) {
+            uintptr_t next = ((uintptr_t*)fp)[0], ret = ((uintptr_t*)fp)[1];
+            crash_frame(i, ret);
+            if (next <= fp) break;
+            fp = next;
+        }
+    }
 #elif defined(__x86_64__) && defined(REG_RIP)
     crash_add("[crash] at:\n");
     crash_frame(0, (uintptr_t)uc->uc_mcontext.gregs[REG_RIP]);
