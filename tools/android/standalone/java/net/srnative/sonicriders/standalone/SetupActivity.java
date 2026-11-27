@@ -178,20 +178,20 @@ public final class SetupActivity extends Activity {
             display("INSTALLED", "Ready to play", "Your game is ready. Your disc, saves, settings and mods stay on this phone.", "PLAY");
         } else if (!installer.error().isEmpty()) {
             display("SETUP STOPPED", "Installation needs attention", installer.error(),
-                installer.hasIso() ? "Try again" : "Choose an ISO");
+                installer.hasIso() ? "Try again" : "Choose ISO or RVZ");
         } else if (installer.interrupted()) {
             display("SETUP INTERRUPTED", "Continue installation",
                 installer.hasIso() ? "Your verified disc is safe. Continue to rebuild the game."
                     : "Choose your disc image again to restart the interrupted copy.",
-                installer.hasIso() ? "Continue" : "Choose an ISO");
+                installer.hasIso() ? "Continue" : "Choose ISO or RVZ");
         } else if (installer.needsUpdateBuild()) {
             display("UPDATE READY", "Prepare this version", "This update needs a new game build. Your disc, saves, settings and mods will stay in place.", "Build update");
         } else if (installer.hasIso()) {
             display("DISC READY", "Build Riders Rebuilt", "Your verified disc is on this phone. The build takes a few minutes.", "Build game");
         } else {
             display("FIRST-TIME SETUP", "Choose your disc image",
-                "Select your own Sonic Riders ISO for GameCube (USA, revision 0). Keep about 2 GB free for setup. The build runs offline on this phone.",
-                "Select ISO");
+                "Select your own Sonic Riders ISO or Dolphin RVZ for GameCube (USA, revision 0). Keep about 2 GB free for setup (about 3 GB with an RVZ). The build runs offline on this phone.",
+                "Select ISO or RVZ");
         }
     }
 

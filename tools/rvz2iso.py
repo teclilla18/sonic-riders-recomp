@@ -1,6 +1,6 @@
 """Convert a GameCube RVZ or WIA disc image (Dolphin's compressed formats) back to a plain 1:1 ISO.
 
-    python -I tools/rvz2iso.py IMAGE.rvz OUT.iso [--sha1 HEX] [--zstd-dir DIR]
+    python -I tools/rvz2iso.py IMAGE.rvz OUT.iso [--sha1 HEX] [--zstd-dir DIR] [--zstd-lib PATH]
 
 The setup runs this when the player picks an .rvz/.wia instead of an .iso, then builds from the ISO
 as usual. Everything the formats allow for GameCube discs is handled: compression none, purge (WIA),
@@ -8,16 +8,16 @@ bzip2, LZMA, LZMA2 and Zstandard (RVZ's default), any block size, and RVZ's pack
 disc's padding is regenerated with Nintendo's generator, as Dolphin does). Wii images are refused.
 
 zstd needs Python 3.14's compression.zstd or the 'zstandard' package (--zstd-dir: a folder holding the
-unpacked wheel; the Windows setup downloads a pinned one). The rest is the standard library.
+unpacked wheel; the Windows setup downloads a pinned one), or else a libzstd shared library loaded with
+ctypes (--zstd-lib, or libzstd.so.1 on the library path: the Android no-PC app's way). The rest is the
+standard library.
 
 The output is written to OUT.iso.part and renamed when complete. --sha1 checks the result's SHA-1
 (computed while writing) and deletes it on a mismatch. Format reference: Dolphin's docs/WiaAndRvz.md.
 The input file is only read, never changed.
 """
 import argparse
-import bz2
 import hashlib
-import lzma
 import os
 import struct
 import sys
@@ -25,6 +25,16 @@ import time
 
 BLOCK = 0x8000           # junk data restarts every 32 KiB of the disc (Wii block size in Dolphin)
 COMP_NAMES = {0: "none", 1: "purge", 2: "bzip2", 3: "LZMA", 4: "LZMA2", 5: "zstd"}
+
+
+try:  # optional: a Python without _bz2 / _lzma (a minimal Android build) can still convert zstd images
+    import bz2
+except ImportError:
+    bz2 = None
+try:
+    import lzma
+except ImportError:
+    lzma = None
 
 
 class Bad(Exception):
@@ -107,7 +117,7 @@ def rvz_unpack(data, disc_offset, out_len):
 
 
 # ---------------------------------------------------------------- decompression
-def make_decompressor(ctype, cdata, zstd_dir):
+def make_decompressor(ctype, cdata, zstd_dir, zstd_lib=None):
     if ctype == 0:
         return lambda d, n: d
     if ctype == 1:
@@ -121,6 +131,9 @@ def make_decompressor(ctype, cdata, zstd_dir):
                 p += s
             return out
         return purge
+    if ctype in (2, 3, 4) and (bz2 if ctype == 2 else lzma) is None:
+        raise Bad("this Python has no %s support; convert the image to ISO in Dolphin "
+                  "(right-click the game > Convert File > ISO)" % COMP_NAMES[ctype])
     if ctype == 2:
         return lambda d, n: bz2.decompress(d)
     if ctype in (3, 4):
@@ -148,16 +161,84 @@ def make_decompressor(ctype, cdata, zstd_dir):
             sys.path.insert(0, zstd_dir)
         try:
             import zstandard
+            return lambda d, n: zstandard.ZstdDecompressor().decompressobj().decompress(d)
         except ImportError:
-            raise NeedZstd("this image uses zstd compression, which needs Python 3.14+ or the 'zstandard' package "
-                      "(python3 -m pip install zstandard); or convert it to ISO in Dolphin "
-                      "(right-click the game > Convert File > ISO)")
-        return lambda d, n: zstandard.ZstdDecompressor().decompressobj().decompress(d)
+            pass
+        dec = libzstd_decompressor(zstd_lib)
+        if dec:
+            return dec
+        raise NeedZstd("this image uses zstd compression, which needs Python 3.14+ or the 'zstandard' package "
+                       "(python3 -m pip install zstandard); or convert it to ISO in Dolphin "
+                       "(right-click the game > Convert File > ISO)")
     raise Bad("unknown compression type %d" % ctype)
 
 
+def libzstd_decompressor(path=None):
+    """zstd through the C library with ctypes (the Android no-PC app ships libzstd.so.1 for clang and has
+    Python 3.11, so neither compression.zstd nor the zstandard wheel is there). None if not loadable."""
+    try:
+        import ctypes
+        import ctypes.util
+    except ImportError:
+        return None
+    names = [path] if path else ["libzstd.so.1", ctypes.util.find_library("zstd"), "libzstd.dylib", "libzstd.dll"]
+    lib = None
+    for name in names:
+        if not name:
+            continue
+        try:
+            lib = ctypes.CDLL(name)
+            break
+        except OSError:
+            continue
+    if lib is None:
+        return None
+
+    class Buf(ctypes.Structure):  # ZSTD_inBuffer / ZSTD_outBuffer have the same layout
+        _fields_ = [("ptr", ctypes.c_void_p), ("size", ctypes.c_size_t), ("pos", ctypes.c_size_t)]
+
+    size_t = ctypes.c_size_t
+    lib.ZSTD_createDCtx.restype = ctypes.c_void_p
+    lib.ZSTD_DCtx_reset.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.ZSTD_DCtx_reset.restype = size_t
+    lib.ZSTD_decompressStream.argtypes = [ctypes.c_void_p, ctypes.POINTER(Buf), ctypes.POINTER(Buf)]
+    lib.ZSTD_decompressStream.restype = size_t
+    lib.ZSTD_isError.argtypes = [size_t]
+    lib.ZSTD_isError.restype = ctypes.c_uint
+    lib.ZSTD_getErrorName.argtypes = [size_t]
+    lib.ZSTD_getErrorName.restype = ctypes.c_char_p
+    dctx = lib.ZSTD_createDCtx()
+    if not dctx:
+        return None
+    cap = 1 << 20
+    out_mem = ctypes.create_string_buffer(cap)
+
+    def check(code):
+        if lib.ZSTD_isError(code):
+            raise Bad("zstd: %s" % lib.ZSTD_getErrorName(code).decode("ascii", "replace"))
+        return code
+
+    def dec(d, n):
+        d = bytes(d)
+        src = ctypes.create_string_buffer(d, len(d))
+        inb = Buf(ctypes.cast(src, ctypes.c_void_p), len(d), 0)
+        check(lib.ZSTD_DCtx_reset(dctx, 1))  # ZSTD_reset_session_only
+        parts = []
+        while True:
+            outb = Buf(ctypes.cast(out_mem, ctypes.c_void_p), cap, 0)
+            left = check(lib.ZSTD_decompressStream(dctx, ctypes.byref(outb), ctypes.byref(inb)))
+            parts.append(ctypes.string_at(out_mem, outb.pos))
+            if inb.pos == inb.size:
+                if left == 0:  # frame complete and flushed (calling again would start a new frame)
+                    return b"".join(parts)
+                if outb.pos < cap:
+                    raise Bad("zstd: the compressed data ends early (damaged image?)")
+
+    return dec
+
+
 # ---------------------------------------------------------------- the image
-def convert(src, dst, want_sha1=None, zstd_dir=None, progress=True):
+def convert(src, dst, want_sha1=None, zstd_dir=None, progress=True, zstd_lib=None):
     f = open(src, "rb")
     h1 = f.read(0x48)
     if len(h1) < 0x48 or h1[:4] not in (b"RVZ\x01", b"WIA\x01"):
@@ -178,7 +259,7 @@ def convert(src, dst, want_sha1=None, zstd_dir=None, progress=True):
         raise Bad("this is a Wii image; only GameCube discs are supported")
     if chunk == 0 or chunk % BLOCK:
         raise Bad("unusual block size %d" % chunk)
-    dec = make_decompressor(ctype, cdata, zstd_dir)
+    dec = make_decompressor(ctype, cdata, zstd_dir, zstd_lib)
     fsize = os.fstat(f.fileno()).st_size
 
     def read_at(off, n):
@@ -280,12 +361,14 @@ def main():
     ap.add_argument("dst")
     ap.add_argument("--sha1", help="expected SHA-1 of the ISO (fail and delete it on a mismatch)")
     ap.add_argument("--zstd-dir", help="folder holding the unpacked 'zstandard' package")
+    ap.add_argument("--zstd-lib", help="path of a libzstd shared library (used through ctypes when there is no "
+                    "compression.zstd or zstandard)")
     a = ap.parse_args()
     if os.path.abspath(a.src) == os.path.abspath(a.dst):
         sys.exit("error: the output must be a different file")
     try:
-        convert(a.src, a.dst, a.sha1, a.zstd_dir)
-    except (Bad, OSError, lzma.LZMAError, ValueError) as e:
+        convert(a.src, a.dst, a.sha1, a.zstd_dir, zstd_lib=a.zstd_lib)
+    except (Bad, OSError, ValueError) + ((lzma.LZMAError,) if lzma else ()) as e:
         try:
             os.remove(a.dst + ".part")
         except OSError:

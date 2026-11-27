@@ -130,7 +130,8 @@ def module_key(bundle, native):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run":
                 digest.update(ast.dump(node.args[1]).encode() + b"\0")
         for name in sorted(z.namelist()):
-            if name == "build_on_phone.py" or name.startswith("notices/"):
+            # rvz2iso.py only turns a picked RVZ/WIA into the ISO before the build; not a build input
+            if name in ("build_on_phone.py", "tools/rvz2iso.py") or name.startswith("notices/"):
                 continue
             with z.open(name) as entry:
                 digest.update(name.encode() + b"\0" + hashlib.file_digest(entry, "sha256").digest())
@@ -244,7 +245,7 @@ def main():
             path = ROOT / "config/GXEE8P" / name
             if path.is_file():
                 z.write(path, f"config/GXEE8P/{name}")
-        for name in ("extract_iso.py", "gcbin.py", "recomp/gcrecomp.py", "recomp/ppc2c.py",
+        for name in ("extract_iso.py", "rvz2iso.py", "gcbin.py", "recomp/gcrecomp.py", "recomp/ppc2c.py",
                      "recomp/crlive.py", "recomp/leaflocal.py", "recomp/singleflow.py"):
             z.write(ROOT / "tools" / name, "tools/" + name)
         for directory in ("runtime/include", "runtime/src"):
@@ -285,7 +286,9 @@ def main():
         check_release_paths([runtime, *apk_libs])
     metadata = WORK / "installer.properties"
     current_key = module_key(assets, [(p.name, p.read_bytes()) for p in apk_libs])
-    bundle_key = hashlib.sha256(current_key.encode() + b"\0" + worker).hexdigest()
+    # the tools folder is re-extracted when this changes: it covers the files left out of the module key too
+    converter = (ROOT / "tools/rvz2iso.py").read_bytes()
+    bundle_key = hashlib.sha256(current_key.encode() + b"\0" + worker + b"\0" + converter).hexdigest()
     metadata.write_text(f"module={current_key}\nlegacy={LEGACY_MODULE_KEY}\nbundle={bundle_key}\n"
                         f"version={args.version_name} ({args.version_code})\nabi={args.abi}\n", encoding="ascii")
     android_build.step_dex(jdk, bt, platform, str(dex), [

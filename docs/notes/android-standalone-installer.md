@@ -66,7 +66,7 @@ current monolithic `libmain.so` with a prebuilt SDL entry library and a locally 
 - **Storage and build cost.** The full ISO copy alone adds 1,459,978,240 bytes. Measure peak storage for ISO staging,
   tools, analysis, C/object files and two module generations, plus peak RSS, elapsed time and thermal behavior on the
   S23 Ultra. Check free space before copying or compiling. Keep the first worker foreground-visible, cancellable and
-  restartable. Keep RVZ conversion, additional ABIs and zero-copy URI paths for follow-up work after the arm64 ISO gate.
+  restartable. Zero-copy URI paths stay follow-up work (RVZ/WIA import: see the end of this note).
   [Storage Access Framework](https://developer.android.com/training/data-storage/shared/documents-files)
 - **Updates and distribution.** Give the GitHub APK its own stable package ID, secure release signing key and
   increasing version code. Existing local builds use per-installation tool-folder keys with the same legacy package ID,
@@ -281,3 +281,23 @@ activity with advancing render frames. The race and overlay changes were tested 
 - 32-bit quirks: stdlib packed stored (zipimport cannot inflate before zlib loads); libpython3.11 has no SONAME
   (link with -l); build_on_phone copies config without copystat (SELinux xattr EACCES on 3.11).
 - Release-signed: `build/standalone/sign-release-armv7.ps1`. Tested on the S23 in 32-bit only (race ~43-47 fps).
+
+## RVZ / WIA import (2026-11-27, `claude/standalone-rvz`)
+
+- The picker takes Dolphin's `.rvz` / `.wia` as well as an ISO. `Installer.importDisc` reads the first four bytes
+  (`RVZ\x01` / `WIA\x01`); an ISO goes the old way (copy + SHA-1). A compressed image is copied to
+  `baserom/import-rvz.pending`, the tools are prepared, then `tools/rvz2iso.py <rvz> SonicRiders.iso --sha1 <clean>
+  --zstd-lib <toolset>/tool_libs/libzstd.so.1` runs with the APK's Python (same environment as the build:
+  `pythonCommand`). Its `NN% (MB)` lines drive the 4-12 % progress; on a SHA-1 mismatch it deletes the output.
+- zstd: Chaquopy's Python (3.11 armv7, 3.13 arm64) has no `compression.zstd` and no `zstandard`, so rvz2iso.py
+  falls back to ctypes on the libzstd.so.1 that the bundle already ships for clang (`libzstd_decompressor`).
+  bz2 / lzma are optional imports (only needed for those rare compressions).
+- Storage: the RVZ and the 1.46 GB ISO sit side by side during conversion: RVZ size + ISO + 64 MiB, checked before
+  the copy (provider size) and after it. Leftovers (`import.pending`, `import-rvz.pending`, `SonicRiders.iso.part`)
+  are deleted at import start and end and count as reclaimable in `spaceCheck`.
+- Keys: `tools/rvz2iso.py` is in the tool bundle but left out of `module_key` (not a build input, so no forced
+  "Build update"); it is in `bundle_key`, so the toolset is re-extracted when the converter changes.
+- Tested: `tools/test_rvz2iso.py` (synthetic zstd RVZ, ctypes path, multi-pass output, truncated data, SHA-1
+  mismatch) on Linux; Installer.java compiled against stubs only. **Not built into an APK and not run on a phone**
+  [uncertain]: needs `_ctypes` in the APK's Python (check `python/dynload/_ctypes*.so`), conversion time on a
+  slow phone (pure-Python junk-data generator) and a real RVZ.

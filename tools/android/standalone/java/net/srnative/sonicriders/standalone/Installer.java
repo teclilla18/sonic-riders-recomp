@@ -3,9 +3,11 @@ package net.srnative.sonicriders.standalone;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
+import android.provider.OpenableColumns;
 import android.system.Os;
 import android.system.OsConstants;
 
@@ -14,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -33,6 +37,8 @@ final class Installer {
     private static final String ISO_SHA1 = "ce0cecf57034bef8bab7d6f588ce92c85a849613";
     private static final long WORK_SPACE = 512L * 1024 * 1024;
     private static final long IMPORT_SPACE = ISO_SIZE + 64L * 1024 * 1024;
+    private static final byte[] RVZ_MAGIC = {'R', 'V', 'Z', 1};
+    private static final byte[] WIA_MAGIC = {'W', 'I', 'A', 1};
     private static Installer instance;
 
     final Context context;
@@ -144,10 +150,10 @@ final class Installer {
     }
 
     String spaceCheck(boolean importing) {
-        long discSpace = qaStorageLimit.equals("disc") ? 0 : gameData().getUsableSpace() + pendingIso().length();
+        long discSpace = qaStorageLimit.equals("disc") ? 0 : gameData().getUsableSpace() + leftovers();
         if (importing && discSpace < IMPORT_SPACE)
             return "Free at least 1.5 GB for the imported disc image and try again.";
-        long reclaimable = importing ? pendingIso().length() : 0;
+        long reclaimable = importing ? leftovers() : 0;
         long workSpace = qaStorageLimit.equals("build") ? 0 : context.getFilesDir().getUsableSpace() + reclaimable;
         if (workSpace < WORK_SPACE)
             return "Free at least 512 MiB for the build workspace and try again.";
@@ -192,7 +198,7 @@ final class Installer {
             require(compatibility());
             require(spaceCheck(source != null));
             if (source != null) importDisc(source);
-            if (!hasIso()) throw new IOException("Choose a clean Sonic Riders USA revision 0 ISO to continue.");
+            if (!hasIso()) throw new IOException("Choose a clean Sonic Riders USA revision 0 ISO or RVZ to continue.");
             require(spaceCheck(false));
             prepareTools();
             buildGame();
@@ -216,42 +222,163 @@ final class Installer {
     private void importDisc(Uri source) throws Exception {
         File disc = iso();
         Files.createDirectories(disc.getParentFile().toPath());
+        deleteLeftovers();
+        update(1, "Checking your disc image");
+        try (InputStream opened = context.getContentResolver().openInputStream(source)) {
+            if (opened == null) throw new IOException("The selected file could not be opened.");
+            var input = new PushbackInputStream(opened, 4);
+            byte[] magic = new byte[4];
+            int got = 0;
+            for (int n; got < 4 && (n = input.read(magic, got, 4 - got)) != -1; ) got += n;
+            input.unread(magic, 0, got);
+            if (got == 4 && (Arrays.equals(magic, RVZ_MAGIC) || Arrays.equals(magic, WIA_MAGIC)))
+                importCompressed(input, sourceSize(source));
+            else
+                importIso(input);
+        } finally {
+            deleteLeftovers();
+        }
+    }
+
+    /** A plain ISO/GCM: copied while its SHA-1 is computed, kept only when it is the clean disc. */
+    private void importIso(InputStream input) throws Exception {
         File pending = pendingIso();
         MessageDigest hash = MessageDigest.getInstance("SHA-1");
-        update(1, "Checking your disc image");
-        try {
-            long total = 0;
-            int displayed = 0;
-            try (var input = context.getContentResolver().openInputStream(source);
-                 var contents = Files.newOutputStream(pending.toPath())) {
-                if (input == null) throw new IOException("The selected file could not be opened.");
-                byte[] buffer = new byte[1024 * 1024];
-                int length;
-                while ((length = input.read(buffer)) != -1) {
-                    total += length;
-                    if (total > ISO_SIZE) throw new IOException("Choose a complete Sonic Riders ISO (1.46 GB).");
-                    hash.update(buffer, 0, length);
-                    contents.write(buffer, 0, length);
-                    int percent = 1 + (int)(total * 11 / ISO_SIZE);
-                    if (percent != displayed) {
-                        displayed = percent;
-                        update(percent, "Checking and copying your disc");
-                    }
+        long total = 0;
+        int displayed = 0;
+        try (var contents = Files.newOutputStream(pending.toPath())) {
+            byte[] buffer = new byte[1024 * 1024];
+            int length;
+            while ((length = input.read(buffer)) != -1) {
+                total += length;
+                if (total > ISO_SIZE) throw new IOException("Choose a complete Sonic Riders ISO (1.46 GB).");
+                hash.update(buffer, 0, length);
+                contents.write(buffer, 0, length);
+                int percent = 1 + (int)(total * 11 / ISO_SIZE);
+                if (percent != displayed) {
+                    displayed = percent;
+                    update(percent, "Checking and copying your disc");
                 }
             }
-            StringBuilder digest = new StringBuilder();
-            for (byte part : hash.digest()) digest.append(String.format(Locale.ROOT, "%02x", part & 0xff));
-            if (total != ISO_SIZE || !ISO_SHA1.contentEquals(digest))
-                throw new IOException("This file is not the clean USA revision 0 ISO. Choose a different disc image.");
-            Files.move(pending.toPath(), disc.toPath(), StandardCopyOption.ATOMIC_MOVE,
-                StandardCopyOption.REPLACE_EXISTING);
-        } finally {
-            Files.deleteIfExists(pending.toPath());
         }
+        StringBuilder digest = new StringBuilder();
+        for (byte part : hash.digest()) digest.append(String.format(Locale.ROOT, "%02x", part & 0xff));
+        if (total != ISO_SIZE || !ISO_SHA1.contentEquals(digest))
+            throw new IOException("This file is not the clean USA revision 0 ISO. Choose a different disc image.");
+        Files.move(pending.toPath(), iso().toPath(), StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * Dolphin's RVZ / WIA: copied in, then turned into the ISO by tools/rvz2iso.py with the APK's Python
+     * (zstd through the bundled libzstd.so.1). The converter checks the SHA-1 and only renames a match.
+     * Needs the RVZ and the 1.46 GB ISO side by side for a moment; the RVZ copy is deleted afterwards.
+     */
+    private void importCompressed(InputStream input, long size) throws Exception {
+        if (size > 0 && !qaStorageLimit.equals("disc") && gameData().getUsableSpace() < size + IMPORT_SPACE)
+            throw new IOException(spaceForCompressed(size));
+        File pending = pendingImage();
+        long total = 0;
+        int displayed = 0;
+        try (var contents = Files.newOutputStream(pending.toPath())) {
+            byte[] buffer = new byte[1024 * 1024];
+            int length;
+            while ((length = input.read(buffer)) != -1) {
+                total += length;
+                if (total > ISO_SIZE) throw new IOException("This RVZ is larger than the whole disc. Choose a different file.");
+                contents.write(buffer, 0, length);
+                int percent = 1 + (int)(total * 3 / Math.max(size > 0 ? size : ISO_SIZE / 2, total));
+                if (percent != displayed) {
+                    displayed = percent;
+                    update(percent, "Copying your RVZ");
+                }
+            }
+        }
+        if (!qaStorageLimit.equals("disc") && gameData().getUsableSpace() < IMPORT_SPACE)
+            throw new IOException(spaceForCompressed(total));
+        prepareTools();
+        update(4, "Converting your RVZ to ISO");
+        ProcessBuilder command = pythonCommand(new File(tools, "tools/rvz2iso.py").getPath(), pending.getPath(),
+            iso().getPath(), "--sha1", ISO_SHA1, "--zstd-lib", new File(tools, "tool_libs/libzstd.so.1").getPath());
+        Process process = command.start();
+        String error = "";
+        try (var stream = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = stream.readLine()) != null) {
+                line = line.trim();
+                if (line.startsWith("error: ")) {
+                    error = line.substring(7);
+                } else if (line.matches("[0-9]{1,3}% .*")) {
+                    int done = Integer.parseInt(line.substring(0, line.indexOf('%')));
+                    update(4 + Math.min(done, 100) * 8 / 100, "Converting your RVZ to ISO  " + done + "%");
+                }
+            }
+        }
+        int exit = process.waitFor();
+        if (exit == 0 && hasIso()) return;
+        Files.deleteIfExists(iso().toPath());
+        if (error.contains("known-good dump"))
+            throw new IOException("This RVZ is not a 1:1 copy of the clean USA revision 0 disc (for example, it was made"
+                + " with Dolphin's Remove Junk Data). Choose a different disc image.");
+        if (!error.matches("[\\p{L}\\p{N} .,:;'_()/>+?!-]{1,200}")) error = "status " + exit;
+        throw new IOException("This RVZ could not be converted on this phone. In Dolphin on a PC, right-click the game"
+            + " > Convert File > ISO, then choose the ISO.\nDetails: " + error);
+    }
+
+    private static String spaceForCompressed(long size) {
+        long gb = (size + IMPORT_SPACE + 99_999_999L) / 100_000_000L;
+        return "Free at least " + (gb / 10) + "." + (gb % 10) + " GB to convert this RVZ (it needs the RVZ and the"
+            + " full disc image side by side for a moment) and try again.";
+    }
+
+    private long sourceSize(Uri source) {
+        try (Cursor cursor = context.getContentResolver().query(source,
+                new String[] {OpenableColumns.SIZE}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
+        } catch (RuntimeException ignored) {
+            // providers without a size column: checked again after the copy
+        }
+        return -1;
     }
 
     private File pendingIso() {
         return new File(iso().getParentFile(), "import.pending");
+    }
+
+    private File pendingImage() {
+        return new File(iso().getParentFile(), "import-rvz.pending");
+    }
+
+    private File convertingIso() {  /* rvz2iso.py writes OUT.part and renames it on a SHA-1 match */
+        return new File(iso().getPath() + ".part");
+    }
+
+    private long leftovers() {
+        return pendingIso().length() + pendingImage().length() + convertingIso().length();
+    }
+
+    private void deleteLeftovers() throws IOException {
+        Files.deleteIfExists(pendingIso().toPath());
+        Files.deleteIfExists(pendingImage().toPath());
+        Files.deleteIfExists(convertingIso().toPath());
+    }
+
+    /** The APK's Python with its bundled stdlib and tool libraries (also how the game build runs). */
+    private ProcessBuilder pythonCommand(String... args) {
+        String libs = context.getApplicationInfo().nativeLibraryDir;
+        String[] all = new String[args.length + 1];
+        all[0] = libs + "/libsr_python.so";
+        System.arraycopy(args, 0, all, 1, args.length);
+        ProcessBuilder command = new ProcessBuilder(all);
+        command.redirectErrorStream(true);
+        var env = command.environment();
+        env.put("LD_LIBRARY_PATH", new File(tools, "tool_libs").getPath() + ":" + libs);
+        env.put("PYTHONHOME", new File(tools, "python").getPath());
+        env.put("PYTHONPATH", new File(tools, "python/stdlib.zip") + ":" + new File(tools, "python/dynload"));
+        env.put("PYTHONDONTWRITEBYTECODE", "1");
+        env.put("PYTHONNOUSERSITE", "1");
+        env.put("TMPDIR", tools.getPath());
+        return command;
     }
 
     private void prepareTools() throws IOException {
@@ -294,16 +421,8 @@ final class Installer {
 
     private void buildGame() throws IOException, InterruptedException {
         String libs = context.getApplicationInfo().nativeLibraryDir;
-        ProcessBuilder command = new ProcessBuilder(libs + "/libsr_python.so",
-            new File(tools, "build_on_phone.py").getPath(), tools.getPath(), libs, iso().getPath(), output.getPath());
-        command.redirectErrorStream(true);
-        var env = command.environment();
-        env.put("LD_LIBRARY_PATH", new File(tools, "tool_libs").getPath() + ":" + libs);
-        env.put("PYTHONHOME", new File(tools, "python").getPath());
-        env.put("PYTHONPATH", new File(tools, "python/stdlib.zip") + ":" + new File(tools, "python/dynload"));
-        env.put("PYTHONDONTWRITEBYTECODE", "1");
-        env.put("PYTHONNOUSERSITE", "1");
-        env.put("TMPDIR", tools.getPath());
+        ProcessBuilder command = pythonCommand(new File(tools, "build_on_phone.py").getPath(), tools.getPath(), libs,
+            iso().getPath(), output.getPath());
         update(17, "Starting the game build");
         Process process = command.start();
         String failure = "";

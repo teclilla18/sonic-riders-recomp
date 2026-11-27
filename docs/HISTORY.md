@@ -2332,3 +2332,14 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [tested] Windows direct two-player and invite-code four-player rooms each matched 23,000 input/checksum records per seat through race completion. All seats reached both extended levels. The three-player room matched 21,100 steps. Native ranks agreed with crossing order. Results captures showed the same rows and times across seats. The Windows/Eden v0.1.1 pair matched the first 5,442 complete records, including the guest reaching levels 4 and 5. The Android arm64 candidate built and passed APK signature verification.
 - [uncertain] Physical play on this candidate, Android race behavior, full-course Auto Spin coverage and the experimental pose in an actual online Super Sonic race remain open. Private candidates only.
 - [tested] A second Windows host and Eden Switch guest matched 20,202 complete records through both finishes. The guest reached levels 4 and 5 after the host finished. Both displayed ranks in the same order in the simulation log. The four-player replay matched all 20,400 logged checksums. Offline solo and local four-player control captures matched their recovery images byte for byte.
+
+## 2026-11-27 — no-PC Android app: RVZ / WIA import (#45 follow-up)
+
+- The no-PC app only accepted a plain ISO (SHA-1 on the copy); RVZ needed a PC or Dolphin. Branch
+  `claude/standalone-rvz` (off `claude/standalone-armv7`): the installer detects RVZ/WIA, copies it, and runs
+  `tools/rvz2iso.py` with the APK's Python; zstd through ctypes on the bundled libzstd.so.1 (no zstd module in
+  Chaquopy 3.11 / 3.13). Details: docs/notes/android-standalone-installer.md.
+- [tested] rvz2iso ctypes path on a synthetic zstd RVZ (Linux, `tools/test_rvz2iso.py`); found and fixed an
+  end-of-frame bug in the first draft (a frame ending exactly at the 1 MiB output buffer made zstd start a new frame).
+- [uncertain] No APK built, not run on a phone; `_ctypes` presence in the APK's Python unchecked.
+
