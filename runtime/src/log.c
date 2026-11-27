@@ -13,6 +13,16 @@
 #include <android/log.h>
 #endif
 
+enum { RECENT_LINES = 48 };
+static char g_recent[RECENT_LINES][200];
+static _Atomic unsigned g_recent_next;
+
+/* the newest log lines, oldest first */
+void rt_log_recent(void (*line)(const char* text, void* user), void* user) {
+    unsigned end = atomic_load(&g_recent_next);
+    for (unsigned i = end > RECENT_LINES ? end - RECENT_LINES : 0; i < end; i++) line(g_recent[i % RECENT_LINES], user);
+}
+
 void rt_log(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -35,6 +45,13 @@ void rt_log(const char* fmt, ...) {
         fputc('\n', stdout);
     }
 #endif
+    {   /* the last lines, for FPS drop reports (drop_report.c); a torn line under a race is harmless there */
+        va_list ap2;
+        va_copy(ap2, ap);
+        unsigned slot = atomic_fetch_add(&g_recent_next, 1) % RECENT_LINES;
+        vsnprintf(g_recent[slot], sizeof g_recent[slot], fmt, ap2);
+        va_end(ap2);
+    }
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fputc('\n', stderr);

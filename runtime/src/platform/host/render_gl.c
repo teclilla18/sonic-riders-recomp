@@ -19,6 +19,7 @@
 #include "overlay.h"
 #include "online_boot.h"
 #include "runtime.h"
+#include "drop_report.h"
 #include "settings.h"
 #include "fsr1_gl.h"  /* AMD FSR 1 shaders (MIT) */
 
@@ -232,6 +233,7 @@ static void gl_setup(void) {
     GLFUNCS(LOAD)
 #undef LOAD
     rt_log("[gl] %s / %s", glGetString(GL_RENDERER), glGetString(GL_VERSION));
+    { char gpu[300]; snprintf(gpu, sizeof gpu, "%s / %s", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION)); drop_report_set_gpu(gpu); }
     GLuint vs = compile(GL_VERTEX_SHADER, k_gx_vert_glsl), fs = compile(GL_FRAGMENT_SHADER, k_gx_frag_glsl);
     g_prog = p_glCreateProgram();
     p_glAttachShader(g_prog, vs);

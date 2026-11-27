@@ -133,6 +133,25 @@ final class CrashReport {
         b.show();
     }
 
+    // any report the game wrote in its folder (FPS drop reports): a copy in Download/SonicRiders, then the share sheet
+    static void shareFile(Activity a, String path, String subject) {
+        try {
+            File f = new File(path);
+            byte[] bytes = java.nio.file.Files.readAllBytes(f.toPath());
+            Uri u = saveToDownloads(a, f.getName(), bytes);
+            if (u == null) return;
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_STREAM, u);
+            send.putExtra(Intent.EXTRA_SUBJECT, subject);
+            send.setClipData(ClipData.newRawUri(f.getName(), u));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            a.startActivity(Intent.createChooser(send, "Share " + f.getName()));
+        } catch (Throwable e) {
+            Log.w(TAG, "share failed", e);
+        }
+    }
+
     private void share(Activity a) {
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");

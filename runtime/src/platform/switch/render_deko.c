@@ -23,6 +23,7 @@
 #include "gx_shader_key.h"
 #include "overlay.h"
 #include "runtime.h"
+#include "drop_report.h"
 #include "settings.h"
 #include "third_party/stb_image_write.h"  /* the implementation is compiled in runtime/src/texpack.c */
 
@@ -472,6 +473,7 @@ static void dk_setup(void) {
     dkQueueSubmitCommands(g_queue, dkCmdBufFinishList(g_cmd));
     dkQueueWaitIdle(g_queue);
     dkCmdBufClear(g_cmd);
+    drop_report_set_gpu("Nintendo Switch (deko3d)");
     rt_log("[deko3d] ready: EFB %dx%d, image pool %u MiB, %d swapchain images", EFB_W, EFB_H, IMAGE_POOL >> 20, g_nfb);
 }
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **FPS drop reports:** when a race slows down or stutters, the game saves the last 5 seconds to a small text file
+  (`fps-drop-reports/` next to the log). **F1 > Bug reports > Share the last FPS drop report** sends it (Android: the
+  share menu, plus a copy in Download/SonicRiders; PC: opens the folder). On by default, a checkbox turns it off.
+
 ## v0.10.2: Switch online fix (2026-11-26)
 
 - **Fixed (Switch):** choosing **Online > Open Online** in the game closed it with a crash. On Switch, online now has its own app, **Sonic Riders Online**, with its own icon. It opens straight into the online lobby and shares your disc image and saves. The installer puts it on the SD card, and with HOME-screen icons on it makes a second icon for it.

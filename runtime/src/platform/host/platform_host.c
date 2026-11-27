@@ -741,3 +741,37 @@ void platform_open_game_folder(void) {
     SDL_OpenURL(url);
 }
 #endif
+
+/* F1 > Bug reports > Share the last FPS drop report (drop_report.c). Android: the activity copies it to
+ * Download/SonicRiders and opens the share sheet; elsewhere the folder opens. */
+void platform_share_drop_report(const char* path) {
+    char dir[1024];
+#ifdef _WIN32
+    if (!GetCurrentDirectoryA(sizeof dir, dir)) return;
+    for (char* c = dir; *c; c++)
+        if (*c == '\\') *c = '/';
+#else
+    if (!getcwd(dir, sizeof dir)) return;
+#endif
+#ifdef __ANDROID__
+    char full[1400];
+    snprintf(full, sizeof full, "%s/%s", dir, path);
+    JNIEnv* env = (JNIEnv*)SDL_AndroidGetJNIEnv();
+    jobject activity = (jobject)SDL_AndroidGetActivity();
+    if (!env || !activity) return;
+    jclass cls = (*env)->GetObjectClass(env, activity);
+    jmethodID method = (*env)->GetMethodID(env, cls, "shareDropReport", "(Ljava/lang/String;)V");
+    jstring jpath = (*env)->NewStringUTF(env, full);
+    if (method && jpath) (*env)->CallVoidMethod(env, activity, method, jpath);
+    if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+    if (jpath) (*env)->DeleteLocalRef(env, jpath);
+    (*env)->DeleteLocalRef(env, cls);
+    (*env)->DeleteLocalRef(env, activity);
+    rt_log("[drop] share %s (%s)", path, method ? "share sheet" : "no shareDropReport in this app");
+#else
+    (void)path;
+    char url[1200];
+    snprintf(url, sizeof url, "file://%s%s/fps-drop-reports", dir[0] == '/' ? "" : "/", dir);
+    SDL_OpenURL(url);
+#endif
+}

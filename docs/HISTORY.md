@@ -2403,3 +2403,16 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   (32-bit runs only on the slower cores) [confirmed]. PowerVR untested [uncertain].
 - Test zip added to the v0.10.2 release assets and posted on #45 (user OK). S23 QA slot restored to arm64
   (code 11, data kept); the user's apps were never touched.
+
+## 2026-11-27 (evening) - FPS drop reports (player request on Discord)
+
+- A player (Android handheld) asked for a log "at the exact moment my fps drops". New runtime/src/drop_report.c:
+  gx_render.c hands every presented frame's split (game code, GX draws, textures, render-thread wait, disc, idle)
+  to it; in a race, under 85 % of 60 (or 30) fps over the last second, or one frame over 100 ms, writes the last
+  300 frames + the newest 48 log lines (log.c ring, rt_log_recent) + GPU name + settings to
+  fps-drop-reports/fps-drop-<time>.txt; one per 30 s, 10 per session; first 3 s of a race and after F1 / pauses /
+  suspends skipped. Setting drop_reports (default 1). F1 > Bug reports: Share (Android share sheet via
+  SonicRidersActivity.shareDropReport + CrashReport.shareFile; PC opens the folder; Switch shows the path).
+- [confirmed] PC (RTX 3060): SR_PERFTEST=1 SR_TEST_GAME_LOAD_MS=14 saved 3 reports (one 177 ms stutter, drops to
+  46 and 26 fps), each naming "the game's own code (CPU)" as the biggest part, ~25 KB each.
+- [uncertain] Not built for Switch; Android share sheet and the F1 page not seen on a device yet.
