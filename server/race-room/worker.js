@@ -233,7 +233,7 @@ export class RaceRoom {
     const gifId = typeof body.gif === 'string' ? body.gif : '';
     if (!text && !gifId) fail(400, 'Type a message first.');
     if ([...text].length > MAX_TEXT) fail(400, 'Messages can be up to ' + MAX_TEXT + ' characters.');
-    if (text && hasLink(text)) fail(400, 'Links can’t be sent in the Race Room.');
+    if (text && !me.dev && hasLink(text)) fail(400, 'Only the Game Dev can send links in the Race Room.');
     if (!me.dev) {
       this.limit('msg:' + me.uid, 1, 1500, 'Slow down a little.');
       this.limit('msg10:' + me.uid, 6, 20 * 1000, 'Slow down a little.');
