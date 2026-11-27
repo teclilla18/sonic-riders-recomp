@@ -1,4 +1,4 @@
-# State (2026-11-27, night)
+# State (2026-11-27, late night)
 
 ## Released
 
@@ -43,6 +43,19 @@
 
 ## Work in progress (branches, not on main)
 
+0. **FPS drop reports** (`claude/fps-drop-report` 90075f5 from main, pushed; no-PC Android copy `claude/standalone-drop`
+   04191d08, pushed): in a race, under 85 % of 60 fps over a second or one frame over 100 ms saves the last 5 s
+   (per-frame split, GPU, settings, newest log lines) to fps-drop-reports/; F1 > About > FPS drops > Share (Android
+   share sheet + copy in Download/SonicRiders; PC opens the folder; Switch shows the path). On by default
+   (drop_reports). Tested: PC perftest with SR_TEST_GAME_LOAD_MS=14; S23 QA slot: 3 reports, share sheet, earlier
+   report found after restart [confirmed]. Not built for Switch. A test zip (no-PC arm64 code 10, same signer as v0.7)
+   went to the requesting Ayn Thor player on Discord (user sent it). Next: read their report; merge for the next release.
+00. **RVZ import + clear disc errors** (`claude/standalone-rvz` 925c28e, on top of standalone-armv7, pushed): the
+   no-PC app converts Dolphin RVZ/WIA on the phone and names wrong files (PAL / Japanese / other game / Wii /
+   archive / GCZ / NKit / trimmed / damaged). S23: 32-bit and 64-bit RVZ setups ~16-20 s, race OK [confirmed];
+   not tried on a slow phone. Shipped to #45 as the 32-bit test zip v0.9 (code 9, replaced on the v0.10.2 release
+   with the user's OK).
+
 1. **Music packs** (`claude/music-loader`, worktree `.local/music-loader`, pushed): own songs per stage
    (`mods/<pack>/music/<stage>/`, MP3/OGG/FLAC/WAV/ADX), shuffle per race, D-pad hold picks song 1-4, Music tab in
    the settings menu, `music.ini` choices. Notes: docs/notes/music.md (on the branch).
@@ -80,8 +93,11 @@
 
 ## Open items (priority order)
 
-1. **#42**: v0.10.2 moves Mali to legacy render passes (unproven on Mali). Next: the reporter's result; if it still
-   crashes, the new crash.txt names the Vulkan step and thread. #43 closed as duplicate.
+1. **#42 NOT fixed by v0.10.2** (reporter, 2026-11-27, 4 tries; log in .local/issue42-logs/): the legacy render-pass
+   path really ran, yet the same driver SIGSEGV (libGLES_mali.so+8FB1A0, addr 0x64) on the render thread right
+   "after vkCreateGraphicsPipelines (0)", after the 7 race-start pipelines (90-310 ms each) [confirmed]. Not the
+   render-pass path. Next: a test build that logs each pipeline's key/state before creating it, plus Mali switches
+   to turn off dual-source blending and push descriptors (and try without the pipeline cache). No reply posted yet.
 2. **Four-player online update** (promised in every v0.10.0 text as "coming soon"): `codex/online-four` (compat 8,
    private) has 3-4P rooms; v0.10.0 limits rooms to 2 (LAN_ROOM_LIMIT on `claude/online-balance`). The 3P test showed
    each device drawing every split view (blurry HUD, S23 GPU-bound ~53 fps): one screen per player first.
@@ -96,14 +112,16 @@
    32-bit app** (`claude/standalone-armv7` 91ee6eb, not merged): 32-bit Termux clang/lld, Python 3.11 (last Chaquopy
    with 32-bit ARM), armv7 dtk; includes test 2 (PowerVR full-area EFB + quad clears). Tested on the S23 in 32-bit:
    on-phone build ~6 min, Metal City race ~43-47 fps [confirmed on S23]; **not tried on PowerVR** [uncertain].
-   Test zip RidersRebuilt-Android-NoPC-32bit-test.zip added to the v0.10.2 release (user OK); #45 comment
-   7212295325. The reporter attached a crash-report.txt from the OLD #33 build (not read yet) and is trying the new
-   zip. Next: their race screenshot; if it works, ship 32-bit in the next release.
+   Test zip RidersRebuilt-Android-NoPC-32bit-test.zip on the v0.10.2 release, **replaced 2026-11-27 night by v0.9**
+   (code 9: RVZ import + clear disc errors; the reporter's "ISO" was rejected by v0.8's one generic message).
+   #45 comment 7228732515 (user's casual tone). Next: their new message or race screenshot; if it works, ship
+   32-bit in the next release.
    Zip names from the next release: RidersRebuilt-Android-NoPC-64bit-<v>.zip (+ -32bit-); never rename
    SonicRiders-Android-Setup-<v>.zip (the launcher updater matches it).
 7. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-8. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
+8. **#46** (opened by the user 2026-11-27 from a Discord idea): Mario Kart style catch-up items, an off-by-default
+   option; ideas only. Discussion #44 ("Sonic Riders future support", EzyGC) not answered yet.
 9. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
 10. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
@@ -120,7 +138,9 @@
 - **S23**: no-PC app net.srnative.sonicriders.standalone v0.7 (code 7, v0.10.2 engine), updated over v0.6 with data
   kept; on-phone Build update started 2026-11-26 (result not checked). Main app: v0.9.0-25 dev APK (backup
   .local/issue42-mali/build/old/phone-backup/before-issue42-mali.apk); a debuggable validation APK was installed
-  over it for #42 tests and is still there (GPU debug-layer settings removed after the tests).
+  over it for #42 tests and is still there (GPU debug-layer settings removed after the tests). QA slot
+  (net.srnative.sonicriders.standalone.qa): FPS-drop test build code 15 (arm64), data kept; rollback APK (code 11
+  d0221ad5) + saves in .local/standalone-armv7/build/old/phone-backup/qa-before-rvz/.
 - **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
   Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
   Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed
@@ -131,6 +151,7 @@
 - OLED Online race again now that sys-clk covers the Riders title IDs: state mode + clocks from the log's
   [hardware] line; the bad race (stock 1020/307/1331, host) fell to ~28 fps at 8,000+ draws/frame late in the
   stage, checksums all equal.
-- #42 reporter (Mali-G57) on no-PC v0.7: race start; if it crashes, crash.txt now names the Vulkan step.
+- #42 reporter (Mali-G57): the next test build (pipeline logging + Mali feature switches), once built.
+- Ayn Thor player: an FPS drop report from the test zip (Discord, via the user).
 - Online PC vs PC (user + brother): same screen shape; rings/HUD and the other racer; Auto spin on a grind.
 - Switch 2: music build + 512 texture pack (music speed wobble), state the mode and clocks.

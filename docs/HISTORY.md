@@ -2403,3 +2403,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   (32-bit runs only on the slower cores) [confirmed]. PowerVR untested [uncertain].
 - Test zip added to the v0.10.2 release assets and posted on #45 (user OK). S23 QA slot restored to arm64
   (code 11, data kept); the user's apps were never touched.
+
+## 2026-11-27 (late night) - #42 still crashing, #45 RVZ + clear disc errors, FPS drop reports, #46
+
+- #42: the reporter's v0.10.2 crash log (log-reader): the legacy render-pass path ran, yet the same Mali driver
+  SIGSEGV (libGLES_mali.so+8FB1A0, address 0x64) on the render thread right after vkCreateGraphicsPipelines
+  returned 0, after the 7 race-start pipelines [confirmed]. The render-pass path was not the cause; suspects are a
+  pipeline's state (dual-source blending, push descriptors) or the cache [uncertain]. No reply posted.
+- #45: the 32-bit test app rejected the reporter's disc with one generic message. Branch claude/standalone-rvz
+  (925c28e): RVZ / WIA import (cloud-session code) checked and tested on the S23 (32-bit and 64-bit setups ~16-20 s,
+  clean SHA-1, race OK) plus plain-language reasons for a wrong file read from its header [confirmed on S23]. The
+  32-bit test zip on v0.10.2 was replaced by v0.9 (code 9) with the user's OK; #45 comment posted.
+- FPS drop reports (a Discord player's request): branch claude/fps-drop-report (90075f5), no-PC copy
+  claude/standalone-drop. Tested on PC (perftest + SR_TEST_GAME_LOAD_MS) and on the S23 (reports, share sheet)
+  [confirmed]; not built for Switch [uncertain]. Test zip sent to the player by the user.
+- #46 opened: Mario Kart style catch-up items (idea, option, nothing built).
