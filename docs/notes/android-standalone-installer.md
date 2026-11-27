@@ -298,6 +298,8 @@ activity with advancing render frames. The race and overlay changes were tested 
 - Keys: `tools/rvz2iso.py` is in the tool bundle but left out of `module_key` (not a build input, so no forced
   "Build update"); it is in `bundle_key`, so the toolset is re-extracted when the converter changes.
 - Tested: `tools/test_rvz2iso.py` (synthetic zstd RVZ, ctypes path, multi-pass output, truncated data, SHA-1
-  mismatch) on Linux; Installer.java compiled against stubs only. **Not built into an APK and not run on a phone**
-  [uncertain]: needs `_ctypes` in the APK's Python (check `python/dynload/_ctypes*.so`), conversion time on a
-  slow phone (pure-Python junk-data generator) and a real RVZ.
+  mismatch) on Linux. On the S23 (2026-11-27, QA slot): 32-bit and 64-bit RVZ setups ~16-20 s, clean SHA-1,
+  build and a race OK [confirmed]; `_ctypes` is in both Chaquopy bundles. Not tried on a slow phone [uncertain].
+- Disc errors: `Installer.wrongFile` / `gameProblem` / `wrongSize` read the first 0x220 bytes (RVZ / WIA: the disc
+  header copy at 0x58) and name the problem before any copy: PAL / Japanese / other revision / other game / Wii /
+  ZIP-7z-RAR / GCZ / CISO / NKit ("NKIT" at 0x200) / wrong size; a right-size GXEE8P with a wrong SHA-1 is "damaged or changed".

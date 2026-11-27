@@ -2342,4 +2342,16 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - [tested] rvz2iso ctypes path on a synthetic zstd RVZ (Linux, `tools/test_rvz2iso.py`); found and fixed an
   end-of-frame bug in the first draft (a frame ending exactly at the 1 MiB output buffer made zstd start a new frame).
 - [uncertain] No APK built, not run on a phone; `_ctypes` presence in the APK's Python unchecked.
+- Later (PC session): `_ctypes` is in both Chaquopy bundles (lib-dynload, libffi linked in, no extra NEEDED) and the
+  packager copies every lib-dynload module. Added plain-language disc errors (Installer.wrongFile / gameProblem /
+  wrongSize), read from the first 0x220 bytes (RVZ: the disc header copy at 0x58) before anything is copied:
+  PAL / Japanese / other revision / other GameCube game / Wii / ZIP-7z-RAR / GCZ / CISO / NKit / wrong size /
+  right game but damaged. Synthetic headers checked with a PC JDK.
+- [confirmed] S23, QA slot, fresh install, 32-bit (code 12): Dolphin RVZ (zstd 5, 128 KiB) converted in ~20 s, ISO
+  SHA-1 clean, on-phone build to Ready to play (~9 min), SR_PERFTEST race: demo_1p 53.3 fps, demo_2p 57.8 fps, 0 of
+  1800 steps over 16.7 ms. Scrubbed RVZ -> "not a 1:1 copy" (~20 s). Custom Robo RVZ -> "different GameCube game
+  (GXCE01, CustomRobo)" at once. Plain ISO -> Ready to play. 64-bit QA (code 13): RVZ setup 16 s, SHA-1 clean.
+  Android shows its own "isn't compatible with the latest version of Android" notice for the 32-bit app on the S23.
+- [uncertain] Not run on PowerVR or a slow phone (pure-Python junk generator cost unknown there); the
+  release-signed 32-bit APK (code 8) is built but not published.
 

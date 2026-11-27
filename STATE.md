@@ -100,10 +100,15 @@
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
 4. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
    f0a106b8) to split build vs console, then bisect c572d99..be04843.
-5. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
-   (menus fine), but races show only a small top-left corner of the scene; not reproduced on the S23 (32-bit,
-   legacy path forced, reporter's settings). Test 2 posted 2026-11-22: on PowerVR, EFB passes over the whole image
-   + colour clears as quads (SR_VK_FULLAREA / SR_VK_QUADCLEAR). Waiting for the reporter's race log. [uncertain]
+5. **#45 32-bit no-PC Android app** (was #33; Redmi A3, PowerVR GE8320): test zip (code 8) on the v0.10.2 release;
+   the reporter's ISO was rejected (any non-clean dump got one generic message). Branch `claude/standalone-rvz`:
+   **RVZ / WIA import + plain-language disc errors** (PAL / Japanese / other game / Wii / archive / GCZ / CISO / NKit /
+   trimmed size / damaged copy), checked from the header before any copy. Tested on the S23 2026-11-27 (QA slot):
+   32-bit RVZ setup ~20 s conversion -> build -> perftest race (Metal City 53.3 fps, 2P 57.8 fps); scrubbed RVZ ->
+   "not a 1:1 copy"; Custom Robo RVZ -> "different GameCube game (GXCE01...)"; plain ISO -> Ready to play; 64-bit QA
+   RVZ setup 16 s, SHA-1 matches [confirmed on S23]. Not tried on PowerVR or a slow phone [uncertain]. Release-signed
+   32-bit APK built (code 8) but the release zip is NOT replaced (needs the user's OK). Next: user OK to replace
+   RidersRebuilt-Android-NoPC-32bit-test.zip, then merge with the next release.
 6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 7. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.

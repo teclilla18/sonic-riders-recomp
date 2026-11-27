@@ -226,15 +226,24 @@ final class Installer {
         update(1, "Checking your disc image");
         try (InputStream opened = context.getContentResolver().openInputStream(source)) {
             if (opened == null) throw new IOException("The selected file could not be opened.");
-            var input = new PushbackInputStream(opened, 4);
-            byte[] magic = new byte[4];
+            var input = new PushbackInputStream(opened, HEAD);
+            byte[] head = new byte[HEAD];
             int got = 0;
-            for (int n; got < 4 && (n = input.read(magic, got, 4 - got)) != -1; ) got += n;
-            input.unread(magic, 0, got);
-            if (got == 4 && (Arrays.equals(magic, RVZ_MAGIC) || Arrays.equals(magic, WIA_MAGIC)))
-                importCompressed(input, sourceSize(source));
-            else
+            for (int n; got < HEAD && (n = input.read(head, got, HEAD - got)) != -1; ) got += n;
+            input.unread(head, 0, got);
+            byte[] magic = Arrays.copyOf(head, 4);
+            long size = sourceSize(source);
+            if (got >= 4 && (Arrays.equals(magic, RVZ_MAGIC) || Arrays.equals(magic, WIA_MAGIC))) {
+                // RVZ / WIA keep a copy of the disc header at 0x58: say what disc it is before converting
+                String problem = got >= 0x58 + 0x60 ? gameProblem(Arrays.copyOfRange(head, 0x58, HEAD)) : null;
+                if (problem != null) throw new IOException(problem);
+                importCompressed(input, size);
+            } else {
+                String problem = wrongFile(head, got);
+                if (problem == null && size > 0 && size != ISO_SIZE) problem = wrongSize(size);
+                if (problem != null) throw new IOException(problem);
                 importIso(input);
+            }
         } finally {
             deleteLeftovers();
         }
@@ -251,7 +260,8 @@ final class Installer {
             int length;
             while ((length = input.read(buffer)) != -1) {
                 total += length;
-                if (total > ISO_SIZE) throw new IOException("Choose a complete Sonic Riders ISO (1.46 GB).");
+                if (total > ISO_SIZE) throw new IOException("This file is larger than the Sonic Riders disc (1.46 GB)."
+                    + " Choose the plain ISO of the USA disc.");
                 hash.update(buffer, 0, length);
                 contents.write(buffer, 0, length);
                 int percent = 1 + (int)(total * 11 / ISO_SIZE);
@@ -263,8 +273,11 @@ final class Installer {
         }
         StringBuilder digest = new StringBuilder();
         for (byte part : hash.digest()) digest.append(String.format(Locale.ROOT, "%02x", part & 0xff));
-        if (total != ISO_SIZE || !ISO_SHA1.contentEquals(digest))
-            throw new IOException("This file is not the clean USA revision 0 ISO. Choose a different disc image.");
+        if (total != ISO_SIZE) throw new IOException(wrongSize(total));
+        if (!ISO_SHA1.contentEquals(digest))
+            throw new IOException("This is Sonic Riders (USA), but the file is damaged or changed: a mod, a patched copy,"
+                + " or a copy that broke on its way to the phone. Copy it to the phone again; if that doesn't help,"
+                + " use a fresh, unmodified dump of the disc.");
         Files.move(pending.toPath(), iso().toPath(), StandardCopyOption.ATOMIC_MOVE,
             StandardCopyOption.REPLACE_EXISTING);
     }
@@ -329,6 +342,79 @@ final class Installer {
         long gb = (size + IMPORT_SPACE + 99_999_999L) / 100_000_000L;
         return "Free at least " + (gb / 10) + "." + (gb % 10) + " GB to convert this RVZ (it needs the RVZ and the"
             + " full disc image side by side for a moment) and try again.";
+    }
+
+    /** First bytes read from a chosen file: enough for the GameCube header and NKit's mark at 0x200. */
+    private static final int HEAD = 0x220;
+
+    /** A plain-language reason why this file is not a usable ISO, from its first bytes; null when it may be one. */
+    static String wrongFile(byte[] h, int n) {
+        String extract = " archive. Extract it first (for example with ZArchiver), then choose the .iso or .rvz inside.";
+        if (n >= 4 && starts(h, 0x50, 0x4B, 0x03, 0x04)) return "This is a ZIP" + extract;
+        if (n >= 4 && starts(h, 0x37, 0x7A, 0xBC, 0xAF)) return "This is a 7z" + extract;
+        if (n >= 4 && starts(h, 0x52, 0x61, 0x72, 0x21)) return "This is a RAR" + extract;
+        String convert = " image. In Dolphin on a PC, right-click the game > Convert File > ISO (or RVZ), then choose that file.";
+        if (n >= 4 && starts(h, 0x01, 0xC0, 0x0B, 0xB1)) return "This is a GCZ" + convert;
+        if (n >= 4 && starts(h, 0x43, 0x49, 0x53, 0x4F)) return "This is a CISO" + convert;
+        if (n >= 4 && starts(h, 0x57, 0x42, 0x46, 0x53)) return WII;
+        if (n < 0x60) return "This file is too small to be a disc image. Choose the Sonic Riders ISO (USA, 1.46 GB).";
+        String game = gameProblem(h);
+        if (game != null) return game;
+        if (n >= 0x204 && h[0x200] == 'N' && h[0x201] == 'K' && h[0x202] == 'I' && h[0x203] == 'T')
+            return "This is an NKit image (a shrunk copy). On a PC, turn it back into a full ISO with NKit's ConvertToISO,"
+                + " then choose that ISO.";
+        return null;
+    }
+
+    private static final String WII = "This is a Wii disc. Riders Rebuilt needs the GameCube Sonic Riders (USA).";
+
+    /** Checks a GameCube disc header (game ID, revision, disc magic); null when it is Sonic Riders USA revision 0. */
+    static String gameProblem(byte[] h) {
+        if (u32(h, 0x18) == 0x5D1C9EA3L) return WII;
+        if (u32(h, 0x1C) != 0xC2339F3DL)
+            return "This file is not a GameCube disc image. Choose the Sonic Riders ISO (USA, 1.46 GB).";
+        String id = text(h, 0, 6);
+        if (!id.equals("GXEE8P")) {
+            if (id.startsWith("GXE") && id.endsWith("8P")) {
+                char r = id.charAt(3);
+                String region = r == 'P' ? "European (PAL)" : r == 'J' ? "Japanese" : "\"" + id + "\"";
+                return "This is the " + region + " version of Sonic Riders (" + id + "). Riders Rebuilt needs the USA"
+                    + " version (GXEE8P), because the game code is different in each version.";
+            }
+            String title = text(h, 0x20, 0x40).trim();
+            return "This is a different GameCube game (" + id + (title.isEmpty() ? "" : ", " + title)
+                + "), not Sonic Riders (USA).";
+        }
+        if (h[7] != 0)
+            return "This is Sonic Riders (USA) revision " + (h[7] & 0xff) + ". Riders Rebuilt needs revision 0.";
+        return null;
+    }
+
+    static String wrongSize(long size) {
+        String gb = String.format(Locale.ROOT, "%.2f GB", size / 1e9);
+        if (size < ISO_SIZE)
+            return "This disc image is incomplete or trimmed: it is " + gb + ", the full disc is 1.46 GB. Copy the"
+                + " file to the phone again (wait until the copy finishes), or use an untrimmed ISO.";
+        return "This file is " + gb + ", larger than the Sonic Riders disc (1.46 GB). Choose the plain ISO of the USA disc.";
+    }
+
+    private static boolean starts(byte[] h, int... bytes) {
+        for (int i = 0; i < bytes.length; i++) if ((h[i] & 0xff) != bytes[i]) return false;
+        return true;
+    }
+
+    private static long u32(byte[] h, int at) {
+        return ((h[at] & 0xffL) << 24) | ((h[at + 1] & 0xffL) << 16) | ((h[at + 2] & 0xffL) << 8) | (h[at + 3] & 0xffL);
+    }
+
+    /** Printable ASCII only (titles come from the user's file), cut at the first zero byte. */
+    private static String text(byte[] h, int at, int max) {
+        StringBuilder out = new StringBuilder();
+        for (int i = at; i < at + max && i < h.length && h[i] != 0; i++) {
+            char c = (char)(h[i] & 0xff);
+            out.append(c >= 0x20 && c < 0x7f ? c : '?');
+        }
+        return out.toString();
     }
 
     private long sourceSize(Uri source) {
