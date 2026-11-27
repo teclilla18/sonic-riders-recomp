@@ -8,7 +8,8 @@ The `codex/online-four` candidate supports two to four players, one per device, 
 internet invite code. Tests so far used PC copies on localhost.
 
 1. Choose **Online > Open Online** in the Windows launcher or the game's settings.
-   Opening Online restarts the game before any race begins. Switch can also use its separate ONLINE application.
+   Opening Online restarts the game before any race begins. On Switch, start the separate Sonic Riders Online
+   application instead (sonicriders-online.nro; the in-game restart is not possible there).
 2. Choose your own name once. It is saved; the game never uses the device or account name.
 3. For LAN, one player chooses **Host a race** and each guest chooses **Join** in the list. For internet,
    choose **Internet**, share the host's invite code privately, and let each guest into the room.

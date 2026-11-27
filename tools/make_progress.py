@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "v0.10.1 Online Beta"
+VERSION = "v0.10.2 Online Beta"
 UPDATED = "2026-11-26"
 
 # (label, weight, percent done); labels must match the README table's first column

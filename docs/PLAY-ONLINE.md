@@ -17,6 +17,8 @@ Not in this beta: Switch 2, iPhone / iPad, Linux, 3 or 4 players.
 
 1. **Open Online.** In the game, open the settings menu (**F1** on PC), go to **Online** and press
    **Open Online**. The game restarts into the online lobby. Your offline save is kept.
+   **On a Switch**, close the game and start **Sonic Riders Online** instead (its own icon in the Homebrew
+   Menu, and on the HOME screen if you installed the HOME-screen icons). It opens straight into the lobby.
 2. **Pick a name** the first time. Only this name is shown to the other player.
 3. **Same house** (same Wi-Fi or network):
    - The host presses **Host a race**.

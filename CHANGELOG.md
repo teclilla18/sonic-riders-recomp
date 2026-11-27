@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.10.2: Switch online fix (2026-11-26)
+
+- **Fixed (Switch):** choosing **Online > Open Online** in the game closed it with a crash. On Switch, online now has its own app, **Sonic Riders Online**, with its own icon. It opens straight into the online lobby and shares your disc image and saves. The installer puts it on the SD card, and with HOME-screen icons on it makes a second icon for it.
+- **Android (#42):** phones with an ARM Mali GPU now use the older, well-tested Vulkan drawing path, which another Mali-G57 phone already raced on. Crash reports now say what the renderer was doing.
+- The PC launcher shows its original banner again.
+- v0.10.2 can race v0.10.0 and v0.10.1 online.
+
 ## v0.10.1: Android crash fix (2026-11-26)
 
 - **Fixed (#42):** on some Android phones (seen on a Mali-G57 GPU) the game closed when a race or Story Mode started. Since v0.10.0 every frame wrote into a texture the game may already have unloaded. That write now happens only for the online loading screen. The same fix is in the PC and Switch versions, where it had not caused crashes.
