@@ -36,15 +36,10 @@
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
-## On main since v0.10.1
+## On main since v0.10.2
 
-- #41 (macOS NDK host tag, d796ab1) shipped in v0.10.1; only the contributor's Mac build proves it.
-- **Race Room typing chat** (website, 2026-11-26): server `server/race-room/` (Cloudflare Worker + Durable Object,
-  deployed as riders-rebuilt-race-room on riders-rebuilt.workers.dev; secrets DEV_KEY / GIPHY_KEY set by the user).
-  Typing, chosen names, emoji, GIPHY GIFs, links refused on the server, Rules tab, Game Dev (gold) with Delete / Mute;
-  only the Game Dev may post links, and picture / video links (.png .jpg .gif .webp / .mp4 .webm) show inline.
-  Live on gh-pages 1a6cf86. Accepted: the user signed in as Game Dev on the live site. Tested: local wrangler + Chrome desktop/phone; live server: GIF search + a GIF sent from
-  the preview [confirmed]; Game Dev picture shown on the local server; video player untested. Deploy: its README.md.
+- Race Room typing chat (website) is live: server/race-room/ (Cloudflare Worker riders-rebuilt-race-room); deploy steps in
+  its README.md; Game Dev links/media accepted live, video player untested.
 
 ## Work in progress (branches, not on main)
 
@@ -110,16 +105,17 @@
 
 ## Devices (user's own)
 
-- **Switch 1 (OLED)**: v0.9.0 + music loader + Music tab (NRO dda4015f..., from claude/music-loader before the format
-  commit); v0.9.0 kept as /switch/sonicriders/sonicriders.before-music.nro. Mods: the user's own local music pack (64
-  songs, 16 stages) and an HD texture pack shrunk to 512 max. Online app sonicriders-online.nro = beta build
-  c4519639 (794a9f8; previous kept as sonicriders-online.before-inet.nro). GXSRTE marker file renamed .png.off.
-- **Son's Switch 1** (2026-11-21, by USB mass storage): the OLED's normal NRO (0b2467b8), Online app c4519639,
-  /NSP/SonicRidersOnline.nsp (to install with DBI/Goldleaf), mods GXSRTE (marker fix) + astro waterfall +
-  super-srdx-hd-textures; his old NRO kept as sonicriders.before-20261121.nro. SD nearly full (2.5 GB free).
-- **S23**: production no-PC app net.srnative.sonicriders.standalone v0.6 (APK e78858f5..., v0.10.1 engine; backup of v0.2
-  in .local/android-standalone-installer/build/standalone/before-v06-production-v02.apk). Main app: the user's v0.10.0 APK.
-  **Race Room chat** (website): unfinished, copied to `.local/race-room-chat-wip/` (not on any branch; see AI_HANDOFF).
+- **Switch 1 (OLED)**: v0.10.2 test builds from claude/issue42-mali: /switch/sonicriders/sonicriders.nro (bdaf608a) and
+  /switch/sonicriders-online/sonicriders-online.nro (cb6713de, Online icon); the user's music-pack build kept as
+  sonicriders.music-v090-before-v0101.nro; old builds/shots in /switch/sonicriders/_delete-me/. Online HOME icon NSP
+  in /switch/sonicriders-online/ (install with DBI). sys-clk: profiles for 010053520D9A0000 and 010053520D9B0000 added
+  2026-11-26 (handheld 1785/614/2133, docked 1785/1152/2133); before that Riders ran at stock clocks from HOME icons.
+- **Second Switch 1**: updated to v0.10.2 with the release installer (both HOME icons installed, user-confirmed);
+  leftovers in /switch/sonicriders/_delete-me/. Runs stock clocks (no sys-clk profile; user's call).
+- **S23**: no-PC app net.srnative.sonicriders.standalone v0.7 (code 7, v0.10.2 engine), updated over v0.6 with data
+  kept; on-phone Build update started 2026-11-26 (result not checked). Main app: v0.9.0-25 dev APK (backup
+  .local/issue42-mali/build/old/phone-backup/before-issue42-mali.apk); a debuggable validation APK was installed
+  over it for #42 tests and is still there (GPU debug-layer settings removed after the tests).
 - **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
   Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
   Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed
@@ -127,14 +123,9 @@
 
 ## Next hardware test
 
-- v0.10.0 release builds: the S23 has the v0.10.0 APK (d3a83ee game code); race it online against the PC or the OLED
-  (update both to v0.10.0 first). Same house and internet code; state the Switch mode + clocks.
-- Online PC vs PC (user + brother): both at the same screen shape (4:3 or 16:9): do rings/HUD and the other racer
-  look right? Grind with Auto spin on: does it stay stuck? Both send sonicriders.log.
-
-- Online (OLED + S23 or the son's Switch, LAN and internet): a race with Super Sonic flight on at the host; CPU / 1P
-  markers visible with GXSRTE (marker file renamed); host waits 3+ min before the join (keepalive); state mode +
-  clocks. Texture packs on vs off: countdown speed.
-- Switch 2: play the music build (Music tab, D-pad picks) and the 512 texture pack; report whether the music speed
-  wobble is gone on both consoles (docked CPU 1785 / GPU 1152 / MEM 2133; handheld GPU 614; state the mode).
-- An MP3 or OGG song in a pack on a Switch: conversion time at the race's loading.
+- OLED Online race again now that sys-clk covers the Riders title IDs: state mode + clocks from the log's
+  [hardware] line; the bad race (stock 1020/307/1331, host) fell to ~28 fps at 8,000+ draws/frame late in the
+  stage, checksums all equal.
+- #42 reporter (Mali-G57) on no-PC v0.7: race start; if it crashes, crash.txt now names the Vulkan step.
+- Online PC vs PC (user + brother): same screen shape; rings/HUD and the other racer; Auto spin on a grind.
+- Switch 2: music build + 512 texture pack (music speed wobble), state the mode and clocks.
