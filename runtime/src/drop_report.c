@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #ifdef _WIN32
 #include <direct.h>
 #endif
@@ -31,7 +32,21 @@ static char g_gpu[160] = "unknown GPU";
 void drop_report_set_gpu(const char* name) {
     if (name && name[0]) snprintf(g_gpu, sizeof g_gpu, "%s", name);
 }
-const char* drop_report_last(void) { return g_last; }
+/* the newest report, also from an earlier session (the player may share it after restarting the game) */
+const char* drop_report_last(void) {
+    static int scanned;
+    if (!g_last[0] && !scanned) {
+        scanned = 1;
+        DIR* d = opendir(DROP_REPORT_DIR);
+        char best[64] = "";
+        for (struct dirent* e; d && (e = readdir(d));)  /* fps-drop-<date>-<time>.txt sorts by time */
+            if (!strncmp(e->d_name, "fps-drop-", 9) && strlen(e->d_name) < sizeof best && strcmp(e->d_name, best) > 0)
+                snprintf(best, sizeof best, "%s", e->d_name);
+        if (d) closedir(d);
+        if (best[0]) snprintf(g_last, sizeof g_last, DROP_REPORT_DIR "/%s", best);
+    }
+    return g_last;
+}
 int drop_report_count(void) { return g_reports; }
 
 static const DropFrame* nth_newest(unsigned i) { return &g_ring[(g_head + RING - 1 - i) % RING]; }

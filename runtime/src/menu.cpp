@@ -842,6 +842,7 @@ void tab_about() {
 #endif
         char line[200];
         snprintf(line, sizeof line, "%d saved this session. Newest: %s", drop_report_count(), drop);
+        if (!drop_report_count()) snprintf(line, sizeof line, "Newest (from an earlier game): %s", drop);
         note(line);
     } else if (g_settings.drop_reports) {
         note("No FPS drop saved this session yet.");
