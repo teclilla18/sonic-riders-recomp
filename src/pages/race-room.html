@@ -1,15 +1,29 @@
-<!-- title="Race Room" nav="online" noanalytics="1" description="Riders Rebuilt live quick chat, public race lobbies and private race rooms." share_image="assets/img/compare/recomp-1.jpg" -->
+<!-- title="Race Room" nav="online" noanalytics="1" description="Riders Rebuilt live chat, public race lobbies and private race rooms." share_image="assets/img/compare/recomp-1.jpg" -->
 <section class="page-hero race-heading">
   <p class="eyebrow">Riders Rebuilt Online Beta</p>
   <h1 class="slant">Race <span class="accent">Room</span></h1>
-  <p class="lead">Find a race partner, use live quick chat and set up an in-game lobby.</p>
+  <p class="lead">Find a race partner, chat live and set up an in-game lobby.</p>
   <p class="online-on"><b>Online on:</b> 💻 Windows PC · 🎮 Nintendo Switch (original, Lite, OLED) · 📱 Android (64-bit). <span>Not yet on Switch 2, Linux / Steam Deck or iPhone / iPad.</span></p>
   <p class="note-line"><a href="online.html#play">How to play online</a></p>
 </section>
 
 <section class="wrap race-app" id="race-room" data-api="https://riders-plus-race-room.ultrawolfbane.chatgpt.site">
+  <div class="race-tabs" role="tablist" aria-label="Race Room">
+    <button type="button" role="tab" id="race-tab-room" aria-controls="race-room-view" aria-selected="true">Race Room</button>
+    <button type="button" role="tab" id="race-tab-rules" aria-controls="race-rules" aria-selected="false" tabindex="-1">Rules</button>
+  </div>
+  <div id="race-room-view" role="tabpanel" aria-labelledby="race-tab-room">
   <p id="race-status" class="panel race-status" role="status">Connecting to the Race Room…</p>
-  <noscript><p class="panel">Enable JavaScript to use live lobbies and quick chat.</p></noscript>
+  <form id="race-dev-form" class="panel race-form" hidden>
+    <label>Game Dev key <input name="key" type="password" autocomplete="off" required></label>
+    <button class="btn btn-primary btn-sm" type="submit"><span class="btn-in">Sign in as Game Dev</span></button>
+  </form>
+  <div id="race-dev-tools" class="panel race-form" hidden>
+    <span>Signed in as <strong class="race-author is-dev">Game Dev</strong>. Delete and Mute buttons show on messages.</span>
+    <button class="btn btn-ghost btn-sm" id="race-dev-unmute" type="button"><span class="btn-in">Unmute everyone</span></button>
+    <button class="btn btn-ghost btn-sm" id="race-dev-signout" type="button"><span class="btn-in">Sign out</span></button>
+  </div>
+  <noscript><p class="panel">Enable JavaScript to use live lobbies and chat.</p></noscript>
 
   <div class="race-layout" id="race-board" hidden>
     <section class="panel race-panel" aria-labelledby="race-lobbies-title">
@@ -41,11 +55,41 @@
 
     <section class="panel race-panel" aria-labelledby="race-public-title">
       <div>
-        <h2 id="race-public-title">Public quick chat</h2>
-        <p>Pick a message to send it live. The room gives everyone a temporary rider name.</p>
+        <h2 id="race-public-title">Public chat</h2>
+        <p>Chat live with other riders. Emoji and GIFs are welcome; links, photos and videos can’t be sent. <a href="#rules" data-open-rules>Read the rules</a>.</p>
       </div>
-      <ol id="race-public-log" class="race-log" role="log" aria-label="Public quick-chat messages" tabindex="0"></ol>
-      <div id="race-public-phrases" class="race-phrases" aria-label="Public quick-chat messages to send"></div>
+      <div class="race-me">
+        <span>Your name: <strong id="race-my-name" class="race-author">…</strong></span>
+        <button id="race-name-edit" class="btn btn-ghost btn-sm" type="button"><span class="btn-in">Change name</span></button>
+      </div>
+      <form id="race-name-form" class="race-form" hidden>
+        <label>New name (3 to 20 letters or numbers)
+          <input name="name" type="text" maxlength="20" autocomplete="nickname" required>
+        </label>
+        <button class="btn btn-primary btn-sm" type="submit"><span class="btn-in">Save name</span></button>
+        <button class="btn btn-ghost btn-sm" id="race-name-cancel" type="button"><span class="btn-in">Cancel</span></button>
+      </form>
+      <p id="race-muted" class="race-link-warn" hidden>You are muted in the Race Room.</p>
+      <ol id="race-public-log" class="race-log" role="log" aria-label="Public chat messages" tabindex="0"></ol>
+      <form id="race-public-form" class="race-composer" autocomplete="off">
+        <div class="race-compose-row">
+          <button type="button" class="race-tool race-emoji-toggle" aria-label="Emoji">😀</button>
+          <button type="button" class="race-tool race-gif-toggle" aria-label="GIFs" hidden>GIF</button>
+          <label class="race-input-wrap"><span class="sr-only">Message for everyone</span>
+            <input class="race-input" type="text" enterkeyhint="send" placeholder="Type a message…">
+          </label>
+          <button class="btn btn-primary btn-sm race-send" type="submit"><span class="btn-in">Send</span></button>
+        </div>
+        <p class="race-link-warn" hidden role="alert">Links can’t be sent in the Race Room. Remove the link to send.</p>
+        <span class="race-count" aria-live="polite"></span>
+        <div class="race-picker race-emoji" hidden><div class="race-emoji-grid"></div></div>
+        <div class="race-picker race-gifs" hidden>
+          <label>Search GIFs <input type="search" placeholder="Try: sonic, gg, fast" maxlength="50"></label>
+          <div class="race-gif-grid"></div>
+          <p class="race-gif-note"></p>
+          <p class="race-giphy">Powered by GIPHY</p>
+        </div>
+      </form>
     </section>
   </div>
 
@@ -66,8 +110,26 @@
       <label class="race-invite-link" id="race-invite-link" hidden>Lobby link
         <input type="url" id="race-invite-url" readonly>
       </label>
-      <ol id="race-lobby-log" class="race-log" role="log" aria-label="Lobby quick-chat messages" tabindex="0"></ol>
-      <div id="race-lobby-phrases" class="race-phrases" aria-label="Lobby quick-chat messages to send"></div>
+      <ol id="race-lobby-log" class="race-log" role="log" aria-label="Lobby chat messages" tabindex="0"></ol>
+      <form id="race-lobby-form" class="race-composer" autocomplete="off">
+        <div class="race-compose-row">
+          <button type="button" class="race-tool race-emoji-toggle" aria-label="Emoji">😀</button>
+          <button type="button" class="race-tool race-gif-toggle" aria-label="GIFs" hidden>GIF</button>
+          <label class="race-input-wrap"><span class="sr-only">Message for your lobby</span>
+            <input class="race-input" type="text" enterkeyhint="send" placeholder="Type a message…">
+          </label>
+          <button class="btn btn-primary btn-sm race-send" type="submit"><span class="btn-in">Send</span></button>
+        </div>
+        <p class="race-link-warn" hidden role="alert">Links can’t be sent in the Race Room. Remove the link to send.</p>
+        <span class="race-count" aria-live="polite"></span>
+        <div class="race-picker race-emoji" hidden><div class="race-emoji-grid"></div></div>
+        <div class="race-picker race-gifs" hidden>
+          <label>Search GIFs <input type="search" placeholder="Try: sonic, gg, fast" maxlength="50"></label>
+          <div class="race-gif-grid"></div>
+          <p class="race-gif-note"></p>
+          <p class="race-giphy">Powered by GIPHY</p>
+        </div>
+      </form>
       <div id="race-code-box" class="race-code-box">
         <h3>In-game invite</h3>
         <p id="race-code-help">Open your in-game internet lobby first. Share its code with a race partner you trust. The code can contain your public IP address.</p>
@@ -82,9 +144,29 @@
       </div>
     </div>
   </section>
+  </div>
+
+  <section id="race-rules" class="panel race-panel race-rules" role="tabpanel" aria-labelledby="race-tab-rules" hidden>
+    <h2>Race Room rules</h2>
+    <p>The Race Room is for finding races and talking about Riders Rebuilt. Keep it fun for everyone, kids included.</p>
+    <ol>
+      <li><b>Be kind.</b> No insults, bullying, hate, threats or harassment. Trash talk stays friendly.</li>
+      <li><b>Keep it clean.</b> No sexual, gory or shocking messages or GIFs. GIFs are filtered to family-friendly ones.</li>
+      <li><b>No links.</b> Links can’t be sent, and writing them around the filter (like “site dot com”) counts as spam.</li>
+      <li><b>No spam.</b> Don’t flood the chat, repeat the same message or advertise.</li>
+      <li><b>Stay safe.</b> Never share your real name, address, phone number, passwords or accounts. Only give an in-game invite code to someone you trust: it can contain your IP address.</li>
+      <li><b>No pretending.</b> Don’t pretend to be the Game Dev or another player. The real Game Dev always shows in gold.</li>
+      <li><b>No cheating talk or piracy.</b> Don’t ask for or share game files (ISOs). Everyone uses their own disc.</li>
+      <li><b>Pick a fair name.</b> Names follow the same rules. Rude names get muted.</li>
+    </ol>
+    <h3>What happens if someone breaks them</h3>
+    <p>The Game Dev can delete messages and mute riders. Muted riders can’t chat, rename or make lobbies. Messages disappear on their own after 30 minutes.</p>
+    <h3>Something wrong?</h3>
+    <p>Report a problem on the <a href="community.html">Community page</a>.</p>
+  </section>
 </section>
 
 <section class="section race-privacy">
-  <p>Race Room names are generated from a random browser ID. Public quick chat and lobby details expire after 30 minutes. Lobby chat and game invites are visible to the host and their race partner.</p>
+  <p>Race Room names are generated from a random browser ID. You can pick your own name. Public chat and lobby details expire after 30 minutes. GIFs are shown from GIPHY. Lobby chat and game invites are visible to the host and their race partner.</p>
 </section>
 <script src="assets/js/race-room.js" defer></script>

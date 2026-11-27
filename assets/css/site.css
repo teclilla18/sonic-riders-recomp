@@ -617,12 +617,77 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .race-log li:last-child, .race-lobbies li:last-child { border-bottom: 0; }
 .race-log strong { color: var(--cyan); margin-right: 8px; }
 .race-lobbies li { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
-.race-phrases { display: flex; flex-wrap: wrap; gap: 8px; }
-.race-phrases button {
-  min-height: 40px; border: 1px solid #527d9a; color: var(--ink); background: #10243a;
-  border-radius: 4px; padding: 6px 10px; font: inherit; cursor: pointer;
+.race-log { height: clamp(240px, 42vh, 380px); }
+.race-log li.is-dev { background: rgba(255, 210, 63, .07); }
+.race-empty { color: var(--dim); font-style: italic; }
+.race-author.is-dev, .race-log .is-dev .race-author {
+  color: var(--gold); font: 800 1.06em/1 var(--display); letter-spacing: .04em; text-transform: uppercase;
 }
-.race-phrases button:hover { border-color: var(--cyan); }
+.race-author.is-dev::before, .race-log .is-dev .race-author::before { content: "★ "; }
+.race-text { white-space: pre-wrap; }
+.race-gif { display: block; margin-top: 6px; max-width: min(100%, 260px); height: auto; max-height: 160px; width: auto; border-radius: 4px; background: #10243a; }
+.race-mod-tools { display: inline-flex; gap: 6px; margin-left: 10px; vertical-align: middle; }
+.race-app .race-mod {
+  min-height: 26px; padding: 2px 8px; font: 600 .78rem/1 var(--ui); color: var(--boost); background: transparent;
+  border: 1px solid rgba(255, 143, 46, .55); border-radius: 3px; cursor: pointer;
+}
+.race-app .race-mod:hover { color: #fff; border-color: var(--boost); }
+
+/* Race Room tabs */
+.race-tabs { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid #36556d; }
+.race-app .race-tabs button {
+  min-height: 44px; padding: 8px 18px; margin-bottom: -1px; font: 700 1rem/1 var(--ui); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); background: transparent; border: 0;
+  border-bottom: 3px solid transparent; cursor: pointer;
+}
+.race-app .race-tabs button:hover { color: var(--ink); }
+.race-app .race-tabs button[aria-selected="true"] { color: var(--cyan); border-bottom-color: var(--cyan); }
+.race-rules ol { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; }
+.race-rules h3 { margin: 6px 0 0; font: 700 1.2rem/1.2 var(--ui); }
+.race-rules > p, .race-rules li { color: var(--muted); max-width: 70ch; }
+.race-rules li b { color: var(--ink); }
+
+/* Name and Game Dev rows */
+.race-me { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+#race-dev-form, #race-dev-tools { margin: 0 0 14px; align-items: center; }
+#race-dev-form label { min-width: min(100%, 18rem); }
+.race-link-warn { margin: 0; color: var(--boost) !important; font-weight: 600; }
+
+/* Chat box: emoji, GIF, text, Send */
+.race-composer { display: grid; gap: 8px; min-width: 0; }
+.race-compose-row { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.race-app .race-input-wrap { flex: 1; min-width: 0; display: block; }
+.race-app .race-tool {
+  flex: none; min-width: 44px; min-height: 42px; padding: 4px 8px; font: 700 1.15rem/1 var(--ui);
+  color: var(--ink); background: #10243a; border: 1px solid #527d9a; border-radius: 4px; cursor: pointer;
+}
+.race-app .race-gif-toggle { font-size: .8rem; letter-spacing: .08em; }
+.race-app .race-tool:hover { border-color: var(--cyan); }
+.race-app .race-send { flex: none; min-height: 42px; }
+.race-count { justify-self: end; color: var(--dim); font: .85rem var(--mono); }
+.race-count[data-over] { color: var(--boost); }
+.race-count:empty { display: none; }
+.race-picker { border: 1px solid #36556d; border-radius: 4px; background: #081428; padding: 10px; }
+.race-emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 4px; }
+.race-app .race-emoji-grid button {
+  justify-self: stretch; min-height: 42px; font-size: 1.35rem; line-height: 1; background: transparent;
+  border: 1px solid transparent; border-radius: 4px; cursor: pointer; color: var(--ink);
+}
+.race-app .race-emoji-grid button:hover { background: #10243a; border-color: #527d9a; }
+.race-gifs { display: grid; gap: 10px; }
+.race-gif-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px;
+  max-height: 290px; overflow-y: auto;
+}
+.race-app .race-gif-grid button {
+  justify-self: stretch; padding: 0; height: 96px; overflow: hidden; background: #10243a;
+  border: 2px solid transparent; border-radius: 4px; cursor: pointer;
+}
+.race-app .race-gif-grid button:hover, .race-app .race-gif-grid button:focus-visible { border-color: var(--cyan); }
+.race-gif-grid img { width: 100%; height: 100%; object-fit: cover; }
+.race-gif-note:empty { display: none; }
+.race-panel .race-giphy { margin: 0; justify-self: end; font: 600 .72rem/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.race-panel .race-platforms { margin: 0; flex-basis: 100%; font-size: .92rem; }
 .race-lobby-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
 .race-code-box { border-block-start: 1px solid #36556d; padding-block-start: 16px; }
 .race-code-box .race-form { margin-top: 12px; }
@@ -630,6 +695,10 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .race-privacy { color: var(--muted); }
 @media (max-width: 760px) {
   .race-layout { grid-template-columns: 1fr; }
+  .race-app .race-tabs button { flex: 1; padding-inline: 8px; }
+  .race-log { height: clamp(220px, 50vh, 360px); }
+  .race-gif-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .race-app .race-gif-grid button { height: 80px; }
 }
 
 /* "Online on" platform line (v0.10.0) */
