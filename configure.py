@@ -432,6 +432,18 @@ with open(os.path.join(ROOT, "build.ninja"), "w") as f:
                description="NRO $out")
         n.build(OUT + "/sonicriders.nro", "nro", exe, implicit=[OUT + "/sonicriders.nacp"] + ([nro_icon] if nro_icon else []))
         n.default(OUT + "/sonicriders.nro")
+        # "Sonic Riders Online" in the Homebrew Menu: the same program; a path containing "online" opens the
+        # online lobby before the game starts (online_boot.c). A restart from inside the game cannot work on
+        # Switch: the loader runs the next NRO in the same process while the game's threads still exist.
+        n.rule("nacp_online", "%s/tools/bin/nacptool.exe --create \"Sonic Riders Online\" \"native port (own disc image required)\" 0.1.0 $out" % dkp,
+               description="NACP $out")
+        n.build(OUT + "/sonicriders-online.nacp", "nacp_online")
+        # its icon: the maintainer's "Sonic Riders Online" picture (setup/icon_online_256.jpg), so it is not mixed up
+        online_icon = "setup/icon_online_256.jpg" if os.path.isfile(os.path.join(ROOT, "setup/icon_online_256.jpg")) else nro_icon
+        n.rule("nro_online", "%s/tools/bin/elf2nro.exe $in $out --nacp=%s/sonicriders-online.nacp%s" % (dkp, OUT, " --icon=" + online_icon if online_icon else ""),
+               description="NRO $out")
+        n.build(OUT + "/sonicriders-online.nro", "nro_online", exe, implicit=[OUT + "/sonicriders-online.nacp"] + ([online_icon] if online_icon else []))
+        n.default(OUT + "/sonicriders-online.nro")
     if args.target == "host" and sdl_dll:
         n.rule("copy", "%s -c \"import shutil,sys; shutil.copy(sys.argv[1], sys.argv[2])\" $in $out" % py, description="COPY $out")
         n.build(OUT + "/SDL2.dll", "copy", sdl_dll)

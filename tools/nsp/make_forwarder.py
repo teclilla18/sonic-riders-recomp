@@ -37,6 +37,10 @@ import android_icon  # noqa: E402  (.png/.ico/save icon loader, resampling)
 
 TITLE_ID = "010053520d9a0000"   # the same id as the forwarder of 2026-10-18 (tools/nsp/sonicriders.json)
 NRO_PATH = "sdmc:/switch/sonicriders/sonicriders.nro"
+NAME = "Sonic Riders"
+NPDM_JSON = os.path.join(HERE, "sonicriders.json")
+# --online: "Sonic Riders Online", its own title id, starts the online app (opens the online lobby first)
+ONLINE = ("010053520d9b0000", "sdmc:/switch/sonicriders-online/sonicriders-online.nro", "Sonic Riders Online")
 SOURCES = {
     "nx-hbloader": ("switchbrew/nx-hbloader", "82b95122c5ae8dc059bf23893ba7623c72c86773",
                     "804481d74027c090bab9a64491257988966da69c5a3fee7234880161810b17a8"),
@@ -150,7 +154,7 @@ def build_hbloader(work, dkp):
     nso = os.path.join(out, "main")
     npdm = os.path.join(out, "main.npdm")
     run([os.path.join(tools, "elf2nso" + exe), elf, nso])
-    run([os.path.join(tools, "npdmtool" + exe), os.path.join(HERE, "sonicriders.json"), npdm])
+    run([os.path.join(tools, "npdmtool" + exe), NPDM_JSON, npdm])
     return nso, npdm
 
 
@@ -175,7 +179,7 @@ def build_hacbrewpack(work, cc):
 # ------------------------------------------------------------------ title info and icon
 def make_nacp(dkp, path):
     exe = ".exe" if os.name == "nt" else ""
-    run([os.path.join(dkp, "tools", "bin", "nacptool" + exe), "--create", "Sonic Riders",
+    run([os.path.join(dkp, "tools", "bin", "nacptool" + exe), "--create", NAME,
          "SEGA (native port by fans)", "1.0.0", path, "--titleid=" + TITLE_ID])
 
 
@@ -332,15 +336,27 @@ def main():
     ap.add_argument("--keys", default="", help="your console's prod.keys")
     ap.add_argument("--icon", default="", help="your picture (.png/.ico); default: setup/icon.png")
     ap.add_argument("--out", default=os.path.join(ROOT, "build", "nsp", "SonicRiders.nsp"))
-    ap.add_argument("--work", default=os.path.join(ROOT, "build", "nsp", "work"))
+    ap.add_argument("--work", default="", help="build folder (default build/nsp/work, or work-online)")
+    ap.add_argument("--online", action="store_true", help='the "Sonic Riders Online" icon (sonicriders-online.nro)')
     ap.add_argument("--icon-only", metavar="JPG", help="only write the icon JPEG (to check a picture)")
     ap.add_argument("--print-hashes", action="store_true", help="(maintainers) print the sources' tree hashes")
     a = ap.parse_args()
+    global TITLE_ID, NRO_PATH, NAME, NPDM_JSON
+    a.work = a.work or os.path.join(ROOT, "build", "nsp", "work-online" if a.online else "work")
+    default_icon = os.path.join(ROOT, "setup", "icon_online.png" if a.online else "icon.png")
     try:
-        icon_src = a.icon or os.path.join(ROOT, "setup", "icon.png")
+        if a.online:
+            TITLE_ID, NRO_PATH, NAME = ONLINE
+            os.makedirs(a.work, exist_ok=True)
+            NPDM_JSON = os.path.join(a.work, "sonicriders-online.json")
+            j = open(os.path.join(HERE, "sonicriders.json"), encoding="utf-8").read()
+            j = j.replace("0x010053520D9A0000", "0x" + TITLE_ID.upper())
+            with open(NPDM_JSON, "w", encoding="utf-8") as f:
+                f.write(j)
+        icon_src = a.icon or default_icon
         if not os.path.isfile(icon_src):
             raise Error("icon picture not found: %s" % icon_src)
-        log("Icon: %s" % (a.icon or "the Sonic Riders fan icon (setup/icon.png)"))
+        log("Icon: %s" % (a.icon or os.path.relpath(default_icon, ROOT)))
         jpg = jpeg(icon_pixels(icon_src))
         if a.icon_only:
             open(a.icon_only, "wb").write(jpg)

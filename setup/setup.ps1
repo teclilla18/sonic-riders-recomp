@@ -526,9 +526,10 @@ if ($doSwitch) {
     Run "build the Switch homebrew (the first time takes a while; updates only rebuild what changed)" $ninja @() @{ DEVKITPRO = $dkp }
     $builtNro = Copy-Built "build\switch\sonicriders.nro"
     if (-not $builtNro -or -not (Test-Path $builtNro)) { Fail "The build finished but build\switch\sonicriders.nro is missing." }
+    Copy-Built "build\switch\sonicriders-online.nro" | Out-Null
     Log ("Switch build: {0} ({1:N0} bytes)" -f $builtNro, (Get-Item $builtNro).Length) "Green"
 }
-$builtNsp = $null
+$builtNsp = $null; $builtNspOnline = $null
 if ($doSwitch -and $HomeIcon -eq "yes") {
     $builtNsp = Join-Path $Root "build\nsp\SonicRiders-HOME-icon.nsp"
     $fwArgs = @("tools\nsp\make_forwarder.py", "--devkitpro", $dkp, "--cc", (Join-Path $llvm "bin\x86_64-w64-mingw32-clang.exe"), "--keys", $Keys, "--out", $builtNsp)
@@ -538,6 +539,14 @@ if ($doSwitch -and $HomeIcon -eq "yes") {
     $RunDir = $Work
     if (-not (Test-Path $builtNsp)) { Fail "The HOME-screen icon was not made (see setup.log)." }
     Log "HOME-screen icon: $builtNsp (yours only: it is packed with your keys, never share it)" "Green"
+    # the second icon, "Sonic Riders Online" (its own picture): opens the online lobby (sonicriders-online.nro)
+    $builtNspOnline = Join-Path $Root "build\nsp\SonicRiders-Online-HOME-icon.nsp"
+    $fwArgs = @("tools\nsp\make_forwarder.py", "--online", "--devkitpro", $dkp, "--cc", (Join-Path $llvm "bin\x86_64-w64-mingw32-clang.exe"), "--keys", $Keys, "--out", $builtNspOnline)
+    $RunDir = $null
+    Run "make the Online HOME-screen icon (forwarder .nsp)" $python $fwArgs
+    $RunDir = $Work
+    if (-not (Test-Path $builtNspOnline)) { Fail "The Online HOME-screen icon was not made (see setup.log)." }
+    Log "Online HOME-screen icon: $builtNspOnline (yours only, like the other one)" "Green"
 }
 if ($doPc) {
     $pcArgs = @("configure.py", "--target", "host", "--toolchain", "mingw", "--llvm-mingw", $llvm, "--sdl", $sdl, "--imgui", $imgui)
@@ -583,6 +592,17 @@ if ($sdDir) {
     Copy-Item $builtNro $nroDest -Force
     if ((Get-FileHash $nroDest -Algorithm SHA256).Hash -ne (Get-FileHash $builtNro -Algorithm SHA256).Hash) { Fail "The copy on the SD card does not match the build (card full or failing?)." }
     Log "Copied sonicriders.nro to $sdDir (verified)."
+    # "Sonic Riders Online" in the Homebrew Menu (same game, opens the online lobby first). Its own folder:
+    # the menu lists one app per folder. The game still reads the disc image and saves from $sdDir.
+    $builtOnline = Join-Path (Split-Path $builtNro) "sonicriders-online.nro"
+    if (Test-Path -LiteralPath $builtOnline) {
+        $onlineDir = Join-Path (Split-Path $sdDir) "sonicriders-online"
+        New-Item -ItemType Directory -Force -Path $onlineDir | Out-Null
+        $onlineDest = Join-Path $onlineDir "sonicriders-online.nro"
+        Copy-Item -LiteralPath $builtOnline $onlineDest -Force
+        if ((Get-FileHash $onlineDest -Algorithm SHA256).Hash -ne (Get-FileHash $builtOnline -Algorithm SHA256).Hash) { Fail "The copy of sonicriders-online.nro on the SD card does not match the build (card full or failing?)." }
+        Log "Copied sonicriders-online.nro (Sonic Riders Online) to $onlineDir (verified)."
+    }
     $modsSrc = Join-Path $Root "mods"
     if (Test-Path -LiteralPath $modsSrc -PathType Container) {
         # mods\ (texture packs added in the installer) -> /switch/sonicriders/mods/; only new or changed files are copied
@@ -608,16 +628,21 @@ if ($sdDir) {
         New-Item -ItemType Directory -Force -Path $nspDir | Out-Null
         Copy-Item $builtNsp (Join-Path $nspDir "SonicRiders-HOME-icon.nsp") -Force
         Log "Copied the HOME-screen icon to $nspDir\SonicRiders-HOME-icon.nsp"
+        if ($builtNspOnline -and (Test-Path $builtNspOnline)) {
+            Copy-Item $builtNspOnline (Join-Path $nspDir "SonicRiders-Online-HOME-icon.nsp") -Force
+            Log "Copied the Online HOME-screen icon to $nspDir\SonicRiders-Online-HOME-icon.nsp"
+        }
     }
     Log ""
     Log "Done. Eject the SD card safely, put it in the Switch, hold R while starting any game to open the" "Green"
     Log "Homebrew Menu with full memory, and start 'Sonic Riders'." "Green"
     if ($builtNsp) {
         Log ""
-        Log "HOME-screen icon: install it once on the Switch:" "Green"
-        Log "  DBI: Browse SD card > NSP > SonicRiders-HOME-icon.nsp > Install (to SD card)." "Green"
-        Log "  or Goldleaf: Explore SD card > NSP > SonicRiders-HOME-icon.nsp > Install > SD card." "Green"
-        Log "  It needs an up-to-date sys-patch (or sigpatches). The icon starts switch/sonicriders/sonicriders.nro: keep it there." "Green"
+        Log "HOME-screen icons: install both once on the Switch (Sonic Riders, and Sonic Riders Online for online races):" "Green"
+        Log "  DBI: Browse SD card > NSP > SonicRiders-HOME-icon.nsp and SonicRiders-Online-HOME-icon.nsp > Install (to SD card)." "Green"
+        Log "  or Goldleaf: Explore SD card > NSP > each .nsp > Install > SD card." "Green"
+        Log "  They need an up-to-date sys-patch (or sigpatches). They start switch/sonicriders/sonicriders.nro and" "Green"
+        Log "  switch/sonicriders-online/sonicriders-online.nro: keep them there." "Green"
         Log "  You can delete the .nsp from the SD card afterwards." "Green"
     }
 } elseif ($builtNro) {

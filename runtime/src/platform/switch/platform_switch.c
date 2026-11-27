@@ -104,14 +104,12 @@ void platform_log_clocks(void) {
            hz[0]/1000000.0,hz[1]/1000000.0,hz[2]/1000000.0,rc);
 }
 
+/* Not possible on Switch (v0.10.0 / v0.10.1 crashed here): the homebrew loader runs the next NRO in the
+ * same process, and the game's threads were still running (Instruction Abort) or, when paused, still held
+ * their stacks (the next copy's heap setup failed: Data Abort in malloc). The menu points to the
+ * "Sonic Riders Online" entry (sonicriders-online.nro) instead. */
 int platform_restart_online(void) {
-    extern const char* g_launch_path;
-    if (!g_launch_path || !*g_launch_path) return 0;
-    char args[1024];
-    snprintf(args,sizeof args,"%s online",g_launch_path);
-    envSetNextLoad(g_launch_path,args);
-    exit(0);
-    return 1;
+    return 0;
 }
 
 void platform_init(void) {

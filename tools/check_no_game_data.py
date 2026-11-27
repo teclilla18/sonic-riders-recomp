@@ -92,6 +92,9 @@ OWN_ART = {
     "launcher/icon_32.png": "1ab1e760b6743d71eb7b37359346e99703ab4242",  # "RR" from the Riders Rebuilt logo (maintainer-approved, 2026-11-26)
     "setup/icon.png": "b84f997daba5df2563d0c3526cf633aa87151ebf",  # game icon: cedry2kio's fan-made icon (user's OK, 2026-11-10; README credits)
     "setup/icon_256.jpg": "4ab58b2f4da4418a9febadea57937eae7f2da5a6",  # the same, 256 x 256 for the Switch NRO
+    # "Sonic Riders Online" icon (the maintainer's picture, user's OK 2026-11-26): Online NRO + HOME-screen icon
+    "setup/icon_online.png": "2c16680f0209e6aca912c08385f90e3d2a0185e8",
+    "setup/icon_online_256.jpg": "1ebc5b526fa80f5ff89c32174ed03e16f651a9cb",
     "android/touch_icons/boost_b.png": "e91d748d8a99c76b0aad985ea40ae1437c10e982",
     "android/touch_icons/drift_r.png": "45e1558994abaad8f85966ad7c8ff32ee5cde5ac",
     "android/touch_icons/jump_a.png": "d1ff0d81d64478b89993997059c635d42cd3c331",

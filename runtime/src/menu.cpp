@@ -888,6 +888,10 @@ void tab_online() {
     else {
 #ifdef __SWITCH2__
         ImGui::TextWrapped("Close the game and open the Online application to start a lobby.");
+#elif defined(__SWITCH__)
+        /* no restart from inside the game on Switch: see platform_restart_online */
+        ImGui::TextWrapped("To play online: close the game (HOME, then X), then start \"Sonic Riders Online\" "
+                           "from the Homebrew Menu. Your offline save is kept.");
 #else
         ImGui::TextWrapped("Opening Online restarts the game. Your offline save is kept.");
         if (ImGui::Button("Open Online")) {
