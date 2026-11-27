@@ -1,4 +1,4 @@
-<p align="center"><b>🌐 v0.10.0 is out: Sonic Riders goes online!</b> Race a friend on PC, Switch or Android (2 players now, 4 coming soon). <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0">Get it now</a> · <a href="https://teclilla18.github.io/sonic-riders-recomp/race-room.html">Find racers in the Race Room</a></p>
+<p align="center"><b>🌐 v0.10.1 is out: Sonic Riders goes online!</b> Race a friend on PC, Switch or Android (2 players now, 4 coming soon). <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1">Get it now</a> · <a href="https://teclilla18.github.io/sonic-riders-recomp/race-room.html">Find racers in the Race Room</a></p>
 
 <p align="center">
   <img src="docs/images/sonic-riders-readme.jpg" width="80%" alt="Sonic, Jet, and their teams riding Extreme Gear against a blue background">
@@ -60,7 +60,7 @@
 <h2 align="center">🌐 Sonic Riders is online</h2>
 
 <p align="center">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0"><img src="docs/images/v0.10.0/online-crossplay.jpg" width="100%" alt="Sonic Riders Online Crossplay: Sonic on his Extreme Gear above Metal City"></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1"><img src="docs/images/v0.10.0/online-crossplay.jpg" width="100%" alt="Sonic Riders Online Crossplay: Sonic on his Extreme Gear above Metal City"></a>
 </p>
 
 <p align="center"><b>Twenty years after the GameCube release, you can finally race a friend over the internet.</b><br>
@@ -76,7 +76,7 @@ Your PC against their Switch. Your phone against their PC. Same track, same race
 - 📱 **Android without a PC (beta):** build the game right on your phone from your own disc image. [How](docs/ANDROID-NO-PC.md)
 
 <p align="center">
-  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0"><b>⬇️ Download v0.10.0</b></a>
+  <a href="https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1"><b>⬇️ Download v0.10.1</b></a>
   &nbsp;·&nbsp;
   <a href="docs/PLAY-ONLINE.md"><b>📖 How to play online</b></a>
   &nbsp;·&nbsp;

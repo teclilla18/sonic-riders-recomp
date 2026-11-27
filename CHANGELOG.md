@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.1: Android crash fix (2026-11-26)
+
+- **Fixed (#42):** on some Android phones (seen on a Mali-G57 GPU) the game closed when a race or Story Mode started. Since v0.10.0 every frame wrote into a texture the game may already have unloaded. That write now happens only for the online loading screen. The same fix is in the PC and Switch versions, where it had not caused crashes.
+- v0.10.1 and v0.10.0 can race each other online.
+
 ## v0.10.0: Online Beta (2026-11-26)
 
 - The project is now called **Riders Rebuilt**. The launchers and installers use the new Riders Rebuilt logo as their icon.
