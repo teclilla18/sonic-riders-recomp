@@ -2364,3 +2364,27 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - #42: the reporter's new log shows the same Mali-G57 crash on v0.10.1 (30ba4c3e): the release did not fix that phone
   [confirmed]. Not investigated yet.
 
+
+## 2026-11-26 (late night): v0.10.2, Switch Open Online crash; #42 Mali path; launcher banner back
+
+- Switch Open Online crashed on a second Switch 1 (v0.10.1, handheld default clocks). Atmosphère report: Instruction
+  Abort at the NRO base; stack symbolised against a v0.10.1 build (30/30 return addresses on call sites): a game
+  thread (8009BB14) in f_800A98D8. Cause: platform_restart_online called envSetNextLoad + exit(0); the loader maps
+  the next NRO in the same process while the game, GP and audio threads still run [confirmed]. Pausing the threads
+  first (svcSetThreadActivity) was tried on the OLED: the relaunch then died in malloc during heap setup (Data Abort;
+  paused threads keep their stacks) [confirmed]. In-place restart is not possible on Switch.
+- Fix: the build also makes sonicriders-online.nro ("Sonic Riders Online", the maintainer's Online icon,
+  setup/icon_online*.{png,jpg}); a path containing "online" opens the lobby first (online_boot.c). The installer puts it in
+  /switch/sonicriders-online/ (the Homebrew Menu lists one NRO per folder; data stays in /switch/sonicriders) and, with
+  HOME icons on, makes SonicRiders-Online-HOME-icon.nsp (make_forwarder.py --online, title 010053520d9b0000). The Switch
+  Online page points to the app. OLED (handheld, CPU 1785 / GPU 614 / MEM 2133) vs PC v0.10.1, LAN: 15,600 checksums
+  equal [confirmed]. Online forwarder built, install on the console not yet confirmed [uncertain].
+- #42 (Mali-G57 MC2, Vulkan 1.3.303): log-reader showed the dynamic-rendering path, 0 EFB copies per frame (so the
+  v0.10.1 fix never ran there) and seven new pipelines (95-299 ms) right before the driver SIGSEGV at 0x64. ARM GPUs now
+  use legacy render passes (the #32 Mali-G57 raced on them); SR_VK_FORCE_LEGACY=0 restores dynamic. Crash reports add
+  thread id/name, the renderer's last Vulkan step and a frame-pointer walk. S23 + Khronos validation, perf test 1P/2P,
+  dynamic and forced legacy: 0 errors [confirmed]; no Mali device [likely fix, unproven].
+- Launcher banner: the 2026-11-25 placeholder commit (e6fc3cd) had replaced the user's 2026-11-07 banner (not AI art);
+  restored byte-for-byte (a1d51fb7).
+- No-PC Android app v0.7 (code 7, same signer 988da477): runtime.o with both fixes; S23 update 6 -> 7 kept data.
+- #43 (same reporter, duplicate of #42) closed with the user's OK.

@@ -1138,9 +1138,14 @@ void installer_next_steps() {
                                "SD card.");
         ImGui::TextWrapped("1. Eject the SD card and put it in the Switch.");
         eject_button();
-        ImGui::TextWrapped("2. Hold R while starting any game to open the Homebrew Menu, then start Sonic Riders.");
+        ImGui::TextWrapped("2. Hold R while starting any game to open the Homebrew Menu, then start Sonic Riders. "
+                           "To play online, start Sonic Riders Online instead.");
         if (g_ic.home_icon)
-            ImGui::TextWrapped("3. HOME-screen icon: install NSP\\SonicRiders-HOME-icon.nsp with DBI or Goldleaf.");
+            ImGui::TextWrapped("3. HOME-screen icons: install NSP\\SonicRiders-HOME-icon.nsp and "
+                               "NSP\\SonicRiders-Online-HOME-icon.nsp with DBI or Goldleaf.");
+        else
+            ImGui::TextWrapped("Want Sonic Riders Online on the HOME screen? Run the installer again with "
+                               "\"Make HOME-screen icons\" ticked.");
         note("In game: hold Minus for the settings menu.");
     } else {
         ImGui::TextWrapped(g_ic.phone_install ? "Start Sonic Riders from the phone's app list (if the log above says "
@@ -1257,8 +1262,9 @@ void page_installer(float w) {
         note("Otherwise the Sonic Riders fan icon by cedry2kio (DeviantArt), credited in the README. Square pictures of 256 x 256 or more look best.");
         if (g_mode == M_SWITCH) {
             ImGui::Spacing();
-            ImGui::Checkbox("Make a HOME-screen icon", &g_ic.home_icon);
-            note("Starts the game from the HOME menu, without holding R.");
+            ImGui::Checkbox("Make HOME-screen icons", &g_ic.home_icon);
+            note("Two icons: Sonic Riders, and Sonic Riders Online (opens the online lobby). They start the game from "
+                 "the HOME menu, without holding R. Updating? Tick this once to get the Online icon too.");
             if (g_ic.home_icon) {
                 if (ImGui::Button("Pick prod.keys...")) {
                     std::wstring f = pick_file(GetActiveWindow(), L"prod.keys\0*.keys\0All files (*.*)\0*.*\0",
