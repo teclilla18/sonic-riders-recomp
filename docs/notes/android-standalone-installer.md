@@ -270,3 +270,14 @@ activity with advancing render frames. The race and overlay changes were tested 
    applies to the verified native payload.
 3. Prepare limited-beta install and feedback notes for ARM64 devices with 4 KB pages. Physical evidence covers
    the S23 Ultra. Confirm explicit approval before publishing the signed APK and matching source ZIP together.
+
+## 32-bit ARM build (#45, 2026-11-27)
+
+- `package_poc.py --abi armeabi-v7a` (arm64 output and module key unchanged). Inputs: Termux 21.1.8-3 `arm`
+  debs in `build/standalone/deps/debs-arm` (hashes in DEB_HASH_ARM), Chaquopy 3.11.17-0 armeabi-v7a + stdlib
+  (`python311-*.zip`; Chaquopy has no 32-bit ARM after 3.11), runtime.o/SDL from `configure.py --android-app
+  runtime-objects --abi armeabi-v7a --android-remap-prefix <home>`, dtk `cargo +1.88.0 build --release --locked
+  --target armv7-linux-androideabi` with the NDK armv7a clang as linker, llvm-mingw as the host CC and a Windows TMP.
+- 32-bit quirks: stdlib packed stored (zipimport cannot inflate before zlib loads); libpython3.11 has no SONAME
+  (link with -l); build_on_phone copies config without copystat (SELinux xattr EACCES on 3.11).
+- Release-signed: `build/standalone/sign-release-armv7.ps1`. Tested on the S23 in 32-bit only (race ~43-47 fps).
