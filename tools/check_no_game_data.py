@@ -69,7 +69,7 @@ OWN_ART = {
     "docs/images/switch2-poster.jpg": "ccbd00b191343185ca1d6a2145c82a1ebd9fe09d",  # Maintainer-approved Switch 2 composite with blue background
     "docs/images/riders-plus/riders-plus-banner.jpg": "7fa3b8313fe95d24cd5c040a76954685fef24315",  # Temporary commissioned-art notice
     "docs/images/v0.9.0/super-sonic-banner.jpg": "79a2665eb5b64fbce7f0c94920175405cf4e656e",  # Temporary commissioned-art notice
-    "launcher/banner.jpg": "0c0d252792e9f873acabec1def46d38675b10f8f",  # Temporary commissioned-art notice
+    "launcher/banner.jpg": "a1d51fb7890668be5dfd126311b946aec8744339",  # the original banner again: official-style art, not AI (user, 2026-11-26)
     # README comparison screenshots, original vs this port (the user's OK, 2026-11-11): exactly these four
     "docs/images/compare/original-1.jpg": "4bd5401024ca6f240715dc878434d6d298f59421",
     "docs/images/compare/recomp-1.jpg": "0c6a55e5adb65b61a34af262b847ada0e7df3a8e",
@@ -120,7 +120,7 @@ PAST_ART = {
     "launcher/icon_256.png": {"f9b393122164043da06b4002970f1a78aee9d7af", "80541e60eb82d9440c001da3bc4c7240bda2b111"},
     "launcher/icon_32.png": {"086786f3ba04dfc99c50e9956dd6614db8327640", "24e3018e7e6651be4cbba8228f81364bf9d0a70e"},
     "docs/images/banner.jpg": {"54c9de3ff1b1c31237fc9649449e1f4bdfae4f9b", "4c0e681fef3ff69d583129825b1023f00a86f0c5"},  # removed from README 2026-11-19
-    "launcher/banner.jpg": {"a1d51fb7890668be5dfd126311b946aec8744339"},
+    "launcher/banner.jpg": {"0c0d252792e9f873acabec1def46d38675b10f8f"},  # the 2026-11-25 placeholder notice
     "setup/icon.png": {"b84f997daba5df2563d0c3526cf633aa87151ebf", "b42362f551138986cd53dda64721510c101a80e2"},
     "setup/icon_256.jpg": {"4ab58b2f4da4418a9febadea57937eae7f2da5a6", "849b075587a60443ed7ac41ab4cbf3f61736b4a0"},
     "android/touch_icons/stick_knob.png": {"0c95f1650e2502ae0522a3da1351c9961b19b472"},
