@@ -2415,4 +2415,8 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   SonicRidersActivity.shareDropReport + CrashReport.shareFile; PC opens the folder; Switch shows the path).
 - [confirmed] PC (RTX 3060): SR_PERFTEST=1 SR_TEST_GAME_LOAD_MS=14 saved 3 reports (one 177 ms stutter, drops to
   46 and 26 fps), each naming "the game's own code (CPU)" as the biggest part, ~25 KB each.
-- [uncertain] Not built for Switch; Android share sheet and the F1 page not seen on a device yet.
+- [confirmed] S23 (QA slot, no-PC app with this runtime, branch claude/standalone-drop): SR_PERFTEST with load saved
+  3 reports (Adreno 740 named, "waiting for the GPU" biggest); after a restart F1 > About > FPS drops found the
+  earlier report, Share opened the Android share sheet and put a copy in Download/SonicRiders.
+- Test zip for the requesting player (release-signed no-PC arm64, code 10, label "v0.10.2 + FPS drop reports test
+  (04191d08)", same signer as v0.7) handed to the user to send privately. [uncertain] Not built for Switch.
