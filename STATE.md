@@ -1,8 +1,16 @@
-# State (2026-11-26)
+# State (2026-11-26, late)
 
 ## Released
 
-- **[v0.10.0 Online Beta](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0)** (latest, 2026-11-26;
+- **[v0.10.1](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.1)** (latest, 2026-11-26; tag `30ba4c3`):
+  #42 fix. Since v0.10.0 every frame's end-of-frame present ran as an EFB copy into texture 0 (0x0 area); after the
+  texture cache freed texture 0 (often at race start) frames wrote into a destroyed image, and Mali drivers crashed.
+  Now only the pre-boot Online screen copies (copy[4] set), in render_vk.c / render_gl.c / render_deko.c. Tested: S23
+  Vulkan validation 15 -> 0 errors, PC scripted demo, Switch built only; **not run on a Mali phone** [likely fixed].
+  Cold Sandbox PASS (PC + space path, Android). Android no-PC app v0.6 (code 6, same signer) carries the fixed
+  runtime.o: S23 update over v0.2 kept data, Build update on the phone, scripted 1P/2P races ran [confirmed on S23].
+  NET_COMPAT unchanged: v0.10.0 and v0.10.1 race each other.
+- **[v0.10.0 Online Beta](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0)** (2026-11-26;
   tag `ecdd995`): two-player online crossplay (PC, Switch family, 64-bit Android; LAN + internet invite codes; Race Room
   live chat on the website), balanced Super Sonic + Limit Break option, Android without a PC (beta,
   `RidersRebuilt-Android-NoPC-v0.10.0.zip`), Riders Rebuilt name, RR launcher icon. Cold Sandbox PASS (PC + space path,
@@ -17,13 +25,9 @@
   (pre-release; tag `67710d8`). Cold Sandbox PASS.
 - **Rule (user, 2026-11-20): never delete a GitHub release** (the download totals reset when one is deleted).
 
-## On main since v0.10.0 (docs only)
+## On main since v0.10.1
 
-- README and website: v0.10.0 online spotlight with the maintainer's Online Crossplay art; both guides open with a
-  "Race your friends online" box pointing to the Race Room; an "Online on: Windows PC · Nintendo Switch · Android
-  (64-bit)" line on the release notes, README, guides and site; the Race Room platform picker lists only those three.
-- #41 (jmontenez, first outside code PR since #28): `tools/android_build.py` picks the `darwin-x86_64` NDK tag on
-  macOS + a BUILDING.md section. Merged d796ab1; built on the contributor's Mac only, not run here.
+- Nothing yet. #41 (macOS NDK host tag, d796ab1) shipped in v0.10.1; only the contributor's Mac build proves it.
 
 ## Work in progress (branches, not on main)
 
@@ -94,7 +98,9 @@
 - **Son's Switch 1** (2026-11-21, by USB mass storage): the OLED's normal NRO (0b2467b8), Online app c4519639,
   /NSP/SonicRidersOnline.nsp (to install with DBI/Goldleaf), mods GXSRTE (marker fix) + astro waterfall +
   super-srdx-hd-textures; his old NRO kept as sonicriders.before-20261121.nro. SD nearly full (2.5 GB free).
-- **S23**: online beta APK 9503d679 (794a9f8); backup of the previous one in .local/online-beta/build/old/phone-backup/.
+- **S23**: production no-PC app net.srnative.sonicriders.standalone v0.6 (APK e78858f5..., v0.10.1 engine; backup of v0.2
+  in .local/android-standalone-installer/build/standalone/before-v06-production-v02.apk). Main app: the user's v0.10.0 APK.
+  **Race Room chat** (website): unfinished, copied to `.local/race-room-chat-wip/` (not on any branch; see AI_HANDOFF).
 - **Switch 2**: Alpha 3 + music loader + Music tab (NRO cf00d5dc..., local branch claude/s2-music, never pushed);
   Alpha 3 kept as sonicriders-switch2.nro.before-music on the console and in .local/s2-music/build/mtp/. Same mods.
   Its FTP server (OunceFTP, 10.0.0.114:1337) needs cwd + short names (full paths with spaces fail) and once crashed

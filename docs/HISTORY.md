@@ -2333,3 +2333,17 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   platform picker lists only those three (stored values unchanged, so the lobby service needs no change) [confirmed by
   the live page]; the site favicon is the logo's Sonic head (the old one was the "Removing AI art" notice).
 - #41 (macOS NDK host tag) merged as d796ab1 after review; only the contributor's Mac build proves it [likely].
+
+## 2026-11-26: v0.10.1, Android crash at race start (#42)
+
+- Report: the no-PC app v0.5 (v0.10.0 engine) closed when a race or Story Mode started on an Infinix Hot 60 Pro+
+  (Mali-G57 MC2). My first reply blamed the Cool colour filter; a correction was posted.
+- Found with the Khronos validation layer in a debuggable APK on the S23 (15 VUID-vkDestroyImage-image-01000 errors)
+  and addr2line on logged return addresses: GXC_PRESENT ran efb_copy into texture 0 with a 0x0 area every frame
+  (cedf4e6, the pre-boot Online screen). Once the texture cache freed texture 0, frames used a destroyed image.
+- Fix (12076a2): the present copies only when copy[4] is set (pre-boot Online screen), in the Vulkan, GL and deko3d
+  renderers. S23 validation 0 errors and full-speed 1P/2P demo [confirmed]; PC demo [confirmed]; Switch built only;
+  no Mali device tested [likely fixed].
+- Released as v0.10.1 (tag 30ba4c3) with the user's OK: PC, Switch, Android and Android no-PC zips (no-PC app v0.6,
+  same signer; S23 update + on-phone build + scripted races [confirmed]). Cold Sandbox PASS PC (+ space) and Android.
+  Website (gh-pages d46be0c) and both guide Artifacts updated; v0.10.0 and v0.9.0 pages point to v0.10.1.
