@@ -13,6 +13,12 @@ import org.libsdl.app.SDLActivity;
 public class SonicRidersActivity extends SDLActivity {
     private static boolean crashChecked;
 
+    // F1 > Bug reports > Share the last FPS drop report (platform_host.c platform_share_drop_report): the report
+    // is copied to Download/SonicRiders (phone file managers cannot reach the app folder) and the share sheet opens.
+    public void shareDropReport(String path) {
+        runOnUiThread(() -> CrashReport.shareFile(this, path, "Sonic Riders FPS drop report"));
+    }
+
     // A new process starts lockstep at frame 1; SDL's native state cannot be reused mid-game.
     public void restartOnline() {
         runOnUiThread(() -> {

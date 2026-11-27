@@ -31,8 +31,11 @@
 #include <switch.h>
 #endif
 
+#include "drop_report.h"
+
 extern "C" {
 extern const char g_build_version[];
+void platform_share_drop_report(const char* path); /* platform_host.c; Switch: none, the path is shown */
 int mods_count(void);
 const char* mods_title(int i);
 int mods_enabled(int i);
@@ -819,6 +822,30 @@ void tab_about() {
         note(line);
     }
 #endif
+    heading("FPS drops");
+    if (::check("Save a report when the frame rate drops", &g_settings.drop_reports,
+              "In races: when the game slows down or stutters, the last 5 seconds are saved to a small text file "
+              "(at most one every 30 seconds). Nothing is sent anywhere unless you share it."))
+        settings_apply();
+    const char* drop = drop_report_last();
+    if (drop[0]) {
+#ifndef __SWITCH__
+        if (ImGui::Button("Share the last FPS drop report")) platform_share_drop_report(drop);
+#endif
+#ifdef __ANDROID__
+        help("Opens Android's share menu: send it on Discord or attach it on GitHub. A copy is also in "
+             "Download/SonicRiders.");
+#elif defined(__SWITCH__)
+        help("Copy the file from the SD card (the path is below) and send it on Discord or attach it on GitHub.");
+#else
+        help("Opens the folder with the reports. Send the newest one on Discord or attach it on GitHub.");
+#endif
+        char line[200];
+        snprintf(line, sizeof line, "%d saved this session. Newest: %s", drop_report_count(), drop);
+        note(line);
+    } else if (g_settings.drop_reports) {
+        note("No FPS drop saved this session yet.");
+    }
 }
 
 /* Up / Down wrap (the user, 2026-11-20): Up on the tab row jumps to the Close / Quit row with the page scrolled to its

@@ -36,6 +36,7 @@ void game_mods_frame(void);   /* once a presented frame (gx_render.c) */  /* bel
 
 /* log.c */
 void rt_log(const char* fmt, ...);
+void rt_log_recent(void (*line)(const char* text, void* user), void* user);  /* the last ~48 lines */
 _Noreturn void rt_fatal(const char* fmt, ...);
 /* Application-owned persistent-data handlers; Android runs these before process termination. */
 int rt_atexit(void (*handler)(void));

@@ -42,6 +42,7 @@ typedef struct Settings {
     int super_classic;  /* Classic Super Sonic: v0.9.0 numbers (super_tuning.h); off = balanced; host selects for online */
     int super_flight;   /* experimental: Super Sonic flies off his board (super_flight.c); off by default, host selects for online */
     int no_ring_drain;  /* cheat: a player's Super Sonic never loses rings (game_levels.c); off online */
+    int drop_reports;   /* races: save a short report when the frame rate drops (drop_report.c), on by default */
     char online_name[21]; /* chosen by the player; never a device/account name */
 } Settings;
 

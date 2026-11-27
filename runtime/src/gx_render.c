@@ -13,6 +13,7 @@
 #include "settings.h"
 #include "overlay.h"
 #include "runtime.h"
+#include "drop_report.h"
 
 void gx_texture_load_tlut(void);
 int gx_texture_lookup(int map);
@@ -1561,6 +1562,7 @@ static void efb_copy(uint32_t v) {
         uint32_t ndraws = 0;
         for (uint32_t i = 0; i < g_frame->ncmds; i++) ndraws += g_frame->cmds[i].type == GXC_DRAW;
         uint64_t ts = rt_ticks();
+        int frame_in_race = g_frame->in_race;
         render_submit(g_frame);
         { uint64_t d = rt_ticks() - ts; g_wait_ticks += d; g_wait_total += d; }
         g_frame = NULL;
@@ -1574,11 +1576,17 @@ static void efb_copy(uint32_t v) {
             uint64_t now = rt_ticks();
             unsigned long long dec, decb;
             gx_texture_decode_stats(&dec, &decb);
+            double ms = 1000.0 / 40500000.0;
+            double total = (now - last) * ms, disc = (di_read_ticks() - disc_t0) * ms, tex = (g_tex_total - tex0) * ms;
+            double wait = (g_wait_total - wait0) * ms;
+            double drw = (g_draw_total - draw0) * ms - tex, idle = (sched_idle_total() - idle0) * ms;
+            if (last) {  /* FPS drop reports (drop_report.c) see every frame */
+                DropFrame df = {(float)total, (float)(total - disc - tex - wait - drw - idle), (float)idle, (float)drw,
+                                (float)tex, (float)wait, (float)disc, (unsigned short)(ndraws > 65535 ? 65535 : ndraws),
+                                (unsigned short)(dec - dec0 > 65535 ? 65535 : dec - dec0)};
+                drop_report_frame(&df, frame_in_race, overlay_menu_open());
+            }
             if (last && now - last > 40500000ull / 20) {
-                double ms = 1000.0 / 40500000.0;
-                double total = (now - last) * ms, disc = (di_read_ticks() - disc_t0) * ms, tex = (g_tex_total - tex0) * ms;
-                double wait = (g_wait_total - wait0) * ms;
-                double drw = (g_draw_total - draw0) * ms - tex, idle = (sched_idle_total() - idle0) * ms;
                 rt_log("[hitch] frame %llu took %.0f ms: game code %.0f ms, guest idle %.0f ms, GX draws %.1f ms, disc %.1f ms "
                        "(%llu KB), %llu new textures (%llu KB RGBA, lookups %.1f ms), waiting for the render thread %.1f ms, "
                        "card file writes %u", g_frames, total, total - disc - tex - wait - drw - idle, idle, drw, disc,

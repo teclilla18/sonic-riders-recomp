@@ -35,6 +35,7 @@
 #include "overlay.h"
 #include "online_boot.h"
 #include "runtime.h"
+#include "drop_report.h"
 #include "settings.h"
 #include "touch_android.h"
 #include "touch_icons.h"     /* generated: tools/embed_icons.py (android/touch_icons) */
@@ -1054,6 +1055,7 @@ static void device_setup(void) {
     rt_log("[vk] %s, Vulkan %u.%u.%u, driver %08X; dual-source blending %s, push descriptors %s", g_props.deviceName,
            VK_VERSION_MAJOR(g_props.apiVersion), VK_VERSION_MINOR(g_props.apiVersion), VK_VERSION_PATCH(g_props.apiVersion),
            g_props.driverVersion, g_dual_src ? "yes" : "no (separate alpha pass)", g_push_desc ? "yes" : "no (descriptor pool)");
+    { char gpu[300]; snprintf(gpu, sizeof gpu, "%s, Vulkan driver %08X", g_props.deviceName, g_props.driverVersion); drop_report_set_gpu(gpu); }
 
     static const VkFormat depths[3] = {VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT};
     for (int i = 0; i < 3 && g_depth_fmt == VK_FORMAT_UNDEFINED; i++) {
