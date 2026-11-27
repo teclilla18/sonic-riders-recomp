@@ -2358,4 +2358,9 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Tested: wrangler dev + preview in Chrome at desktop and phone width (typing, link refusal, rename, Game Dev,
   Delete / Mute / Unmute all, lobby full + private chat + code) [confirmed]; live server: GIF search and a sent GIF
   [confirmed]; live Game Dev sign-in not tried [uncertain]. Free plan: 100,000 requests a day (page polls every 4-8 s).
+- Later the same night (user request): only the Game Dev may post links (server check skipped for DEV_KEY); Game Dev
+  links are clickable and picture / video file links show inline (page only). Server tested locally and live (a rider's
+  link still refused) [confirmed]; video player untested [uncertain].
+- #42: the reporter's new log shows the same Mali-G57 crash on v0.10.1 (30ba4c3e): the release did not fix that phone
+  [confirmed]. Not investigated yet.
 

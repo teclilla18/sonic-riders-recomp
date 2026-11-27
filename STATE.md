@@ -1,4 +1,4 @@
-# State (2026-11-26, late)
+# State (2026-11-26, night)
 
 ## Released
 
@@ -10,6 +10,9 @@
   Cold Sandbox PASS (PC + space path, Android). Android no-PC app v0.6 (code 6, same signer) carries the fixed
   runtime.o: S23 update over v0.2 kept data, Build update on the phone, scripted 1P/2P races ran [confirmed on S23].
   NET_COMPAT unchanged: v0.10.0 and v0.10.1 race each other.
+  **#42 NOT fixed for the reporter** (comment 2026-11-26 night): same crash at race / story start on v0.10.1 itself
+  (no-PC app 0.6, build 30ba4c3e), Infinix X6886, Mali-G57 MC2, Android 16: SIGSEGV address 0x64 inside
+  libGLES_mali.so (+8FB1A0). Log kept locally in .local/issue42-logs/ [confirmed: the fix did not cover this phone].
 - **[v0.10.0 Online Beta](https://github.com/teclilla18/sonic-riders-recomp/releases/tag/v0.10.0)** (2026-11-26;
   tag `ecdd995`): two-player online crossplay (PC, Switch family, 64-bit Android; LAN + internet invite codes; Race Room
   live chat on the website), balanced Super Sonic + Limit Break option, Android without a PC (beta,
@@ -30,9 +33,10 @@
 - #41 (macOS NDK host tag, d796ab1) shipped in v0.10.1; only the contributor's Mac build proves it.
 - **Race Room typing chat** (website, 2026-11-26): server `server/race-room/` (Cloudflare Worker + Durable Object,
   deployed as riders-rebuilt-race-room on riders-rebuilt.workers.dev; secrets DEV_KEY / GIPHY_KEY set by the user).
-  Typing, chosen names, emoji, GIPHY GIFs, links refused on the server, Rules tab, Game Dev (gold) with Delete / Mute.
-  Live on gh-pages c4d1d61. Tested: local wrangler + Chrome desktop/phone; live server: GIF search + a GIF sent from
-  the preview [confirmed]; live Game Dev sign-in not tried (only the user has the key). Deploy steps: its README.md.
+  Typing, chosen names, emoji, GIPHY GIFs, links refused on the server, Rules tab, Game Dev (gold) with Delete / Mute;
+  only the Game Dev may post links, and picture / video links (.png .jpg .gif .webp / .mp4 .webm) show inline.
+  Live on gh-pages 1a6cf86. Accepted: the user signed in as Game Dev on the live site. Tested: local wrangler + Chrome desktop/phone; live server: GIF search + a GIF sent from
+  the preview [confirmed]; Game Dev picture shown on the local server; video player untested. Deploy: its README.md.
 
 ## Work in progress (branches, not on main)
 
@@ -73,26 +77,28 @@
 
 ## Open items (priority order)
 
-1. **Four-player online update** (promised in every v0.10.0 text as "coming soon"): `codex/online-four` (compat 8,
+1. **#42 Mali crash still there on v0.10.1** (see Released). Next: read the log with log-reader, find which GL/Vulkan
+   call reaches the Mali driver at race start (texture cache free vs present path), reply on #42 only with the user OK.
+2. **Four-player online update** (promised in every v0.10.0 text as "coming soon"): `codex/online-four` (compat 8,
    private) has 3-4P rooms; v0.10.0 limits rooms to 2 (LAN_ROOM_LIMIT on `claude/online-balance`). The 3P test showed
    each device drawing every split view (blurry HUD, S23 GPU-bound ~53 fps): one screen per player first.
    Also promised for the next release: **#37** in-game volume sliders. Follow-ups: #39 Android cutscenes after sleep,
    first-use texture-pack stalls online, #38 can be answered/closed (no-PC Android shipped in v0.10.0; user's call).
-2. Switch 2 into the main release (above).
-3. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
+3. Switch 2 into the main release (above).
+4. **Super Sonic flight fix** (off-by-default option): after an air trick he stays on his board. SR_FLYLOG=1
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
-4. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
+5. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
    f0a106b8) to split build vs console, then bisect c572d99..be04843.
-5. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
+6. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
    (menus fine), but races show only a small top-left corner of the scene; not reproduced on the S23 (32-bit,
    legacy path forced, reporter's settings). Test 2 posted 2026-11-22: on PowerVR, EFB passes over the whole image
    + colour clears as quads (SR_VK_FULLAREA / SR_VK_QUADCLEAR). Waiting for the reporter's race log. [uncertain]
-6. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
+7. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-7. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
-8. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
+8. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
+9. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
-9. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
+10. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
 
 ## Devices (user's own)
 
