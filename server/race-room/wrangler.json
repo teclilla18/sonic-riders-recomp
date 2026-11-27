@@ -1,0 +1,10 @@
+{
+  "name": "riders-rebuilt-race-room",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "durable_objects": {
+    "bindings": [{ "name": "RACE_ROOM", "class_name": "RaceRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RaceRoom"] }],
+  "observability": { "enabled": true }
+}
