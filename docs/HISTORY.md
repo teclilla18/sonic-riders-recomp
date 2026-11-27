@@ -2388,3 +2388,18 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   restored byte-for-byte (a1d51fb7).
 - No-PC Android app v0.7 (code 7, same signer 988da477): runtime.o with both fixes; S23 update 6 -> 7 kept data.
 - #43 (same reporter, duplicate of #42) closed with the user's OK.
+
+## 2026-11-27 night: 32-bit no-PC Android app (#45)
+
+- #33 had gone off topic; closed with the user's OK and restarted as #45 (status summary, no personal details).
+- The reporter has no PC, so the no-PC app was ported to 32-bit ARM (`claude/standalone-armv7`): package_poc.py
+  `--abi armeabi-v7a` (Termux clang/lld 21.1.8-3 arm debs, Chaquopy Python 3.11.17-0 because Chaquopy has no 32-bit
+  ARM after 3.11, dtk for armv7-linux-androideabi with Rust 1.88), Installer.java reads `abi=` for its checks.
+- Two 32-bit-only failures found on the phone (the app hides build output, so reproduced over adb shell):
+  zipimport could not read the compressed stdlib (zlib is a separate module in Chaquopy 3.11: stdlib now stored),
+  and copytree's copystat copies the SELinux label, which Android refuses with EACCES and 3.11 does not ignore
+  (plain file copies now). [confirmed]
+- S23 Ultra in 32-bit mode: on-phone build 360 s (peak 196 MB), save loaded, Metal City race at ~43-47 fps
+  (32-bit runs only on the slower cores) [confirmed]. PowerVR untested [uncertain].
+- Test zip added to the v0.10.2 release assets and posted on #45 (user OK). S23 QA slot restored to arm64
+  (code 11, data kept); the user's apps were never touched.

@@ -1,4 +1,4 @@
-# State (2026-11-26, late night)
+# State (2026-11-27, night)
 
 ## Released
 
@@ -92,10 +92,15 @@
    (runtime/src/super_flight.c). Also: iOS v0.9.0 zip from the Mac session.
 5. **Switch 2 online GPU crash** (frame ~700, above): rerun the 11-20 pair (S2 normal app 37c357d9510b + OLED
    f0a106b8) to split build vs console, then bisect c572d99..be04843.
-6. **#33 32-bit Android** (Redmi A3, PowerVR GE8320): branch `claude/android-armv7` (a06bdc5). The game runs there
-   (menus fine), but races show only a small top-left corner of the scene; not reproduced on the S23 (32-bit,
-   legacy path forced, reporter's settings). Test 2 posted 2026-11-22: on PowerVR, EFB passes over the whole image
-   + colour clears as quads (SR_VK_FULLAREA / SR_VK_QUADCLEAR). Waiting for the reporter's race log. [uncertain]
+6. **#45 32-bit Android** (was #33, closed 2026-11-27 as off topic; Redmi A3, PowerVR GE8320). New: a **no-PC
+   32-bit app** (`claude/standalone-armv7` 91ee6eb, not merged): 32-bit Termux clang/lld, Python 3.11 (last Chaquopy
+   with 32-bit ARM), armv7 dtk; includes test 2 (PowerVR full-area EFB + quad clears). Tested on the S23 in 32-bit:
+   on-phone build ~6 min, Metal City race ~43-47 fps [confirmed on S23]; **not tried on PowerVR** [uncertain].
+   Test zip RidersRebuilt-Android-NoPC-32bit-test.zip added to the v0.10.2 release (user OK); #45 comment
+   7212295325. The reporter attached a crash-report.txt from the OLD #33 build (not read yet) and is trying the new
+   zip. Next: their race screenshot; if it works, ship 32-bit in the next release.
+   Zip names from the next release: RidersRebuilt-Android-NoPC-64bit-<v>.zip (+ -32bit-); never rename
+   SonicRiders-Android-Setup-<v>.zip (the launcher updater matches it).
 7. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
 8. **Discussion #34** ("why the GameCube version?"): answered by the user 2026-11-21.
