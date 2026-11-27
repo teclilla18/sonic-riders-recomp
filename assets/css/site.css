@@ -626,6 +626,8 @@ h3 { font: 700 1.25rem/1.2 var(--ui); margin: 0; }
 .race-author.is-dev::before, .race-log .is-dev .race-author::before { content: "★ "; }
 .race-text { white-space: pre-wrap; }
 .race-gif { display: block; margin-top: 6px; max-width: min(100%, 260px); height: auto; max-height: 160px; width: auto; border-radius: 4px; background: #10243a; }
+.race-text a { color: var(--gold); overflow-wrap: anywhere; }
+.race-media { display: block; margin-top: 8px; max-width: min(100%, 420px); max-height: 320px; width: auto; height: auto; border-radius: 4px; background: #10243a; }
 .race-mod-tools { display: inline-flex; gap: 6px; margin-left: 10px; vertical-align: middle; }
 .race-app .race-mod {
   min-height: 26px; padding: 2px 8px; font: 600 .78rem/1 var(--ui); color: var(--boost); background: transparent;

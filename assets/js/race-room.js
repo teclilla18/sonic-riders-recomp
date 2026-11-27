@@ -110,6 +110,47 @@
     return /^[A-Za-z0-9]{5,40}$/.test(id) ? 'https://media.giphy.com/media/' + id + '/200.gif' : '';
   }
 
+  // Only Game Dev messages can hold links, pictures and videos (the server refuses links from everyone else).
+  // A link to a picture or video file shows the picture or a player under the text.
+  function addLinks(target, text, row) {
+    const pattern = /\bhttps?:\/\/[^\s<>"]+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"]*)?/gi;
+    let last = 0;
+    const media = [];
+    for (const match of text.matchAll(pattern)) {
+      const url = match[0].replace(/[.,!?;:)\]]+$/, '');
+      if (!hasLink(url)) continue;
+      const href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+      target.append(text.slice(last, match.index));
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer nofollow';
+      target.append(link);
+      last = match.index + url.length;
+      const path = href.split(/[?#]/)[0].toLowerCase();
+      if (/\.(png|jpe?g|gif|webp|avif)$/.test(path)) {
+        const image = document.createElement('img');
+        image.className = 'race-media';
+        image.src = href;
+        image.alt = 'Picture from the Game Dev';
+        image.loading = 'lazy';
+        image.referrerPolicy = 'no-referrer';
+        media.push(image);
+      } else if (/\.(mp4|webm|mov)$/.test(path)) {
+        const video = document.createElement('video');
+        video.className = 'race-media';
+        video.src = href;
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+        media.push(video);
+      }
+    }
+    target.append(text.slice(last));
+    row.append(...media);
+  }
+
   function modButton(label, path, id) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -146,8 +187,9 @@
       if (message.text) {
         const text = document.createElement('span');
         text.className = 'race-text';
-        text.textContent = message.text;
         row.append(text);
+        if (message.dev) addLinks(text, message.text, row);
+        else text.textContent = message.text;
       }
       if (message.gif && gifUrl(message.gif.id)) {
         const image = document.createElement('img');
@@ -243,6 +285,7 @@
     for (const button of document.querySelectorAll('.race-gif-toggle')) button.hidden = !gifsReady;
     byId('race-muted').hidden = !data.muted;
     byId('race-dev-tools').hidden = !isDev;
+    for (const input of document.querySelectorAll('.race-input')) input.dispatchEvent(new Event('input'));
   }
 
   function schedule() {
@@ -336,7 +379,7 @@
 
     function update() {
       const length = [...input.value].length;
-      const link = hasLink(input.value);
+      const link = !isDev && hasLink(input.value);
       warn.hidden = !link;
       count.textContent = length > MAX_TEXT - 40 ? length + ' / ' + MAX_TEXT : '';
       count.toggleAttribute('data-over', length > MAX_TEXT);
