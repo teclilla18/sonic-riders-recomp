@@ -27,7 +27,12 @@
 
 ## On main since v0.10.1
 
-- Nothing yet. #41 (macOS NDK host tag, d796ab1) shipped in v0.10.1; only the contributor's Mac build proves it.
+- #41 (macOS NDK host tag, d796ab1) shipped in v0.10.1; only the contributor's Mac build proves it.
+- **Race Room typing chat** (website, 2026-11-26): server `server/race-room/` (Cloudflare Worker + Durable Object,
+  deployed as riders-rebuilt-race-room on riders-rebuilt.workers.dev; secrets DEV_KEY / GIPHY_KEY set by the user).
+  Typing, chosen names, emoji, GIPHY GIFs, links refused on the server, Rules tab, Game Dev (gold) with Delete / Mute.
+  Live on gh-pages c4d1d61. Tested: local wrangler + Chrome desktop/phone; live server: GIF search + a GIF sent from
+  the preview [confirmed]; live Game Dev sign-in not tried (only the user has the key). Deploy steps: its README.md.
 
 ## Work in progress (branches, not on main)
 

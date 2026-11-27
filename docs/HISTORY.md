@@ -2347,3 +2347,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Released as v0.10.1 (tag 30ba4c3) with the user's OK: PC, Switch, Android and Android no-PC zips (no-PC app v0.6,
   same signer; S23 update + on-phone build + scripted races [confirmed]). Cold Sandbox PASS PC (+ space) and Android.
   Website (gh-pages d46be0c) and both guide Artifacts updated; v0.10.0 and v0.9.0 pages point to v0.10.1.
+
+## 2026-11-26 (night): Race Room typing chat goes live
+
+- The website's Race Room had only quick-chat phrases on a temporary host. New server in `server/race-room/`: a
+  Cloudflare Worker with one SQLite Durable Object; typing (240 characters), chosen names (reserved staff-like names
+  refused), emoji, GIPHY GIFs (rating pg, only ids from the picker), links refused on the server (filter.js +
+  test_filter.mjs), Game Dev key (DEV_KEY) for a gold name and Delete / Mute (mute covers the hashed IP), 5 wrong
+  keys per 15 minutes per IP. Page (gh-pages): Rules tab, composer, emoji and GIF pickers, CSS.
+- Tested: wrangler dev + preview in Chrome at desktop and phone width (typing, link refusal, rename, Game Dev,
+  Delete / Mute / Unmute all, lobby full + private chat + code) [confirmed]; live server: GIF search and a sent GIF
+  [confirmed]; live Game Dev sign-in not tried [uncertain]. Free plan: 100,000 requests a day (page polls every 4-8 s).
+
