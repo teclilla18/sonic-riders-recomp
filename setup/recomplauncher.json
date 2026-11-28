@@ -1,0 +1,23 @@
+{
+  "$schema": "https://recomplauncher.com/schema/recomplauncher.json",
+  "format": 1,
+  "name": "Sonic Riders Recomp",
+  "inputs": [
+    {
+      "id": "game",
+      "role": "game",
+      "label": "Sonic Riders (USA) disc image, GXEE8P (.iso, or Dolphin's .rvz / .wia)",
+      "formats": [
+        { "type": "file", "extensions": ["iso", "gcm", "rvz", "wia"] }
+      ]
+    }
+  ],
+  "start": {
+    "program": ["SonicRidersLauncher.exe"],
+    "args": ["--iso", "{input:game}"]
+  },
+  "folders": {
+    "saves": [{ "path": "{install}/saves" }]
+  },
+  "saves": ["{install}/saves"]
+}

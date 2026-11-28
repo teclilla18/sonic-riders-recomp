@@ -2988,6 +2988,17 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
         if (installer()) load_install_choices();
         if (g_mode == M_SWITCH) find_sd_cards();
         if (wcsstr(GetCommandLineW(), L"--after-update")) g_after_update = true;
+        /* --iso <path> or --iso=<path>: pre-selects the disc image (RecompLauncher passes the player's copy) */
+        int argc = 0;
+        if (wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc)) {
+            for (int i = 1; i < argc; i++) {
+                std::wstring a = argv[i], d;
+                if (a == L"--iso" && i + 1 < argc) d = argv[++i];
+                else if (a.rfind(L"--iso=", 0) == 0) d = a.substr(6);
+                if (!d.empty() && exists(d)) g_disc_choice = d;
+            }
+            LocalFree(argv);
+        }
     }
     if (!(getenv("SR_LAUNCHER_UI_TEST") && getenv("SR_LAUNCHER_SHOT"))) start_update_check();
     else g_update_done = true;

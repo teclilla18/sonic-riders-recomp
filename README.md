@@ -38,6 +38,7 @@
 
 <p align="center">
   <a href="https://decompbuddy.com/games/sonic-riders-gamecube"><img src="https://decompbuddy.com/badge.svg" alt="Listed on Decomp Buddy"></a>
+  <a href="https://recomplauncher.com/game/sonic-riders-recomp"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a>
   <a href="https://decompbuddy.com/games/sonic-riders-gamecube?install"><img src="https://decompbuddy.com/install-button.svg" alt="Install With Decomp Buddy"></a>
 </p>
 
