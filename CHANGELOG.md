@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **RecompLauncher:** the PC zip carries a `recomplauncher.json`, so RecompLauncher can set the game up from your
+  disc image and back up your saves. When RecompLauncher starts the game it installs the updates, so the
+  launcher's own Update page and the in-game update banner stay off.
+
 ## v0.10.2: Switch online fix (2026-11-26)
 
 - **Fixed (Switch):** choosing **Online > Open Online** in the game closed it with a crash. On Switch, online now has its own app, **Sonic Riders Online**, with its own icon. It opens straight into the online lobby and shares your disc image and saves. The installer puts it on the SD card, and with HOME-screen icons on it makes a second icon for it.

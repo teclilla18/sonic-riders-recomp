@@ -2429,3 +2429,15 @@ edits, builds, log deletion, rollout or release changes during this handoff.
 - Not explained [uncertain]: "game code" hitches of 50-90 ms in the same frame ranges on both PCs (21,000-24,000 and
   39,000-42,000, ~50 each) and 385/421 ms at frame 30,690. The [net] waited lines are 600-frame averages, so bursts
   are invisible. Also: the joiner's [settings] line said 1x while the [gl] EFB ran 3x.
+
+## 2026-11-28: RecompLauncher support, v1.0 plan
+
+- RecompLauncher (a catalogue and launcher for recomps; it already listed us as `sonic-riders-recomp`) can set up a
+  game from a `recomplauncher.json` manifest. Added `setup/recomplauncher.json` (validated against its schema, 0 errors)
+  and make_release.py puts it next to SonicRidersLauncher.exe in the PC zip (checked in a test zip) [confirmed].
+- Launcher `--iso <path>` / `--iso=<path>` pre-selects the disc image: launcher screenshot with a path containing
+  spaces showed it [confirmed]. RECOMPLAUNCHER=1 (set by RecompLauncher) turns off the launcher's and the game's
+  update checks, F1 > About says RecompLauncher keeps the port up to date: compiled (syntax check), not run [likely].
+  Not tried inside RecompLauncher [uncertain]. Same changes pushed to the Sonic Heroes repo (7e9885f).
+- v1.0 scope set with the user: crashes fixed everywhere, four-player online, #37, music packs and achievements
+  (Unleashed Recompiled style, cheats lock them, player 1 only in split-screen); graphics polish after v1.0.

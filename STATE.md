@@ -1,4 +1,4 @@
-# State (2026-11-27, night: online lag check)
+# State (2026-11-28: RecompLauncher support, v1.0 plan)
 
 ## Released
 
@@ -38,6 +38,10 @@
 
 ## On main since v0.10.2
 
+- **RecompLauncher support** (f43bf7b, 837844f): `setup/recomplauncher.json` (schema-valid) goes into the PC zip next to
+  the launcher; the launcher takes `--iso <path>` (pre-selects the disc; tested by launcher screenshot, path with
+  spaces); with RECOMPLAUNCHER=1 the launcher and game skip their update checks (compiled only, not run); README
+  badge. Not tried inside RecompLauncher itself [uncertain]. Ships in the next release's PC zip.
 - Race Room typing chat (website) is live: server/race-room/ (Cloudflare Worker riders-rebuilt-race-room); deploy steps in
   its README.md; Game Dev links/media accepted live, video player untested.
 
@@ -93,6 +97,10 @@
 
 ## Open items (priority order)
 
+0. **v1.0 scope (user, 2026-11-28):** no crashes on any platform + what was promised (four-player online, #37
+   volume sliders) + **achievements** (built in on every platform, own list, Unleashed Recompiled style; no unlocks
+   with any Cheats option on; split-screen: player 1 only; also forwarded to RecompLauncher's Recomp Achievements
+   when it starts the game) + music packs. Graphics polish (#7, #4, #3) and stock-clock 60 fps (#1, #2) after v1.0.
 1. **#42 NOT fixed by v0.10.2** (reporter, 2026-11-27, 4 tries; log in .local/issue42-logs/): the legacy render-pass
    path really ran, yet the same driver SIGSEGV (libGLES_mali.so+8FB1A0, addr 0x64) on the render thread right
    "after vkCreateGraphicsPipelines (0)", after the 7 race-start pipelines (90-310 ms each) [confirmed]. Not the
