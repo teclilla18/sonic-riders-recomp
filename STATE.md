@@ -1,4 +1,4 @@
-# State (2026-11-27, late night)
+# State (2026-11-27, night: online lag check)
 
 ## Released
 
@@ -120,11 +120,19 @@
    SonicRiders-Android-Setup-<v>.zip (the launcher updater matches it).
 7. **#6** rare post-race "Now Loading" hang (docs/notes/loading-hang.md). **#29**: fix released in v0.8.7; ask the
    user whether it can be closed. **#31**: Switch Lite update stuck at 0.1.0, no reply yet.
-8. **#46** (opened by the user 2026-11-27 from a Discord idea): Mario Kart style catch-up items, an off-by-default
-   option; ideas only. Discussion #44 ("Sonic Riders future support", EzyGC) not answered yet.
-9. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
+8. **Online lag, PC vs PC internet (user + brother, 2026-11-27, v0.10.2)**: race 2 of the 20:24 session lagged
+   because the joiner's PC (RTX 4060, GL, 3x resolution + 4x MSAA + FSR + bloom) fell to 46-49 fps at ~8,000
+   draws/frame (12 ms render-thread wait); lockstep made the host wait 7-15 ms/frame [confirmed by both logs].
+   Ping 30-32 ms, 46,782 checksums equal. Advice given: 1x/2x, MSAA off. Open [uncertain]: ~100 "game code" hitches
+   (50-90 ms) at the same frames on BOTH PCs (21,000-24,000, 39,000-42,000) and 385/421 ms at frame 30,690; cause
+   not logged (needs per-interval worst net wait + what game code waited on). Joiner's [settings] says 1x while
+   [gl] EFB ran 3x (pc_scale=3): check the line. Logs: the user's Desktop/SonicRiders-PC/sonicriders.log, brother's
+   bug-report-20261127-212250.zip (user's Downloads).
+9. **#46** (opened by the user 2026-11-27 from a Discord idea): Mario Kart style catch-up items, an off-by-default
+   option; ideas only. Discussions #44 (EzyGC, future support) and #47 ("Free Play" mode, the user's brother) not answered yet.
+10. **Switch texture-pack first-appearance freezes**: decode on a worker (texpack.c, gx_texture.c). The user's 4K pack
    caused 113 of 126 stalls on Switch 1 (and audio speed wobble, since everything follows game speed).
-10. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
+11. Super Sonic overhaul (Riders Rebuilt only; plan only). History-only CI failure: ask before changing `--history`.
 
 ## Devices (user's own)
 

@@ -2418,3 +2418,14 @@ edits, builds, log deletion, rollout or release changes during this handoff.
   claude/standalone-drop. Tested on PC (perftest + SR_TEST_GAME_LOAD_MS) and on the S23 (reports, share sheet)
   [confirmed]; not built for Switch [uncertain]. Test zip sent to the player by the user.
 - #46 opened: Mario Kart style catch-up items (idea, option, nothing built).
+
+## 2026-11-27 night: online lag, PC vs PC over the internet (no code change)
+
+- The user reported serious lag in their latest online races (v0.10.2, host PC vs the brother's PC, internet room).
+- log-reader on both logs of the 20:24 session (46,782 frames, 3 races, all checksums equal, ping 30-32 ms):
+  race 2 (frames ~16,200-28,750, ~8,000 draws/frame) put the joiner at 46-49 fps with 12 ms/frame waiting for its
+  render thread (GL, RTX 4060, 3x EFB 1920x1584 + 4x MSAA + FSR + bloom); the host waited 7-15 ms/frame for its
+  inputs while its own work was ~4-5 ms [confirmed]. Settings advice: 1x/2x, MSAA off [likely fixes it, not retested].
+- Not explained [uncertain]: "game code" hitches of 50-90 ms in the same frame ranges on both PCs (21,000-24,000 and
+  39,000-42,000, ~50 each) and 385/421 ms at frame 30,690. The [net] waited lines are 600-frame averages, so bursts
+  are invisible. Also: the joiner's [settings] line said 1x while the [gl] EFB ran 3x.
