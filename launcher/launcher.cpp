@@ -1882,6 +1882,7 @@ void start_update_check() {
     std::string ini = read_text(path(L"saves\\settings.ini"));
     int v[3];
     if (ini.find("update_check=0") != std::string::npos || !update_parse_version(g_version.c_str(), v)) return;
+    if (getenv("RECOMPLAUNCHER")) return;  /* started by RecompLauncher: it installs the updates (no Update page) */
     g_update_done = false;
     std::thread([]() {
         char fmt[64];

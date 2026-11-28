@@ -84,7 +84,7 @@ void update_check_start(void) {
     if (g_unpacked[0] && !getenv("SR_NET") && !getenv("SR_REPLAY") && !getenv("SR_RECORD") && !getenv("SR_PERFTEST"))
         rt_thread_start(unbuilt_thread, NULL);
     int forced = getenv("SR_UPDATECHECK") != NULL;  /* testing: check even in a scripted run */
-    if (!g_settings.update_check || getenv("SR_NOUPDATECHECK") || (!forced && (getenv("SR_INPUT") || getenv("SR_PERFTEST")))) return;
+    if (!g_settings.update_check || getenv("SR_NOUPDATECHECK") || getenv("RECOMPLAUNCHER") || (!forced && (getenv("SR_INPUT") || getenv("SR_PERFTEST")))) return;
     int v[3];
     if (!update_parse_version(g_build_version, v)) return;  /* a build without a release tag */
     rt_thread_start(update_thread, NULL);

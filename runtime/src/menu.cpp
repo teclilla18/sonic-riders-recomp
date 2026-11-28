@@ -766,13 +766,17 @@ void tab_about() {
         if (ImGui::Button("Open the download page")) SDL_OpenURL(UPDATE_PAGE);
         help("Opens the newest release on GitHub in your browser. The launcher's Update page downloads and installs it for you.");
     }
-    bool check = g_settings.update_check != 0;
-    if (ImGui::Checkbox("Check for updates at start-up", &check)) {
-        g_settings.update_check = check;
-        settings_apply();
+    if (getenv("RECOMPLAUNCHER")) {  /* RecompLauncher installs the updates (no check, no banner) */
+        ImGui::TextUnformatted("RecompLauncher keeps this up to date.");
+    } else {
+        bool check = g_settings.update_check != 0;
+        if (ImGui::Checkbox("Check for updates at start-up", &check)) {
+            g_settings.update_check = check;
+            settings_apply();
+        }
+        help("Asks GitHub once at start-up whether a newer version of the port exists and says so at the top of the "
+             "screen. Only the newest version number is downloaded.");
     }
-    help("Asks GitHub once at start-up whether a newer version of the port exists and says so at the top of the "
-         "screen. Only the newest version number is downloaded.");
 #endif
 #ifdef SR_IOS
     {
